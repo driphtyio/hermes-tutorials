@@ -8,7 +8,6 @@ import FormattedDate from '../components/FormattedDate.astro';
 
 const siteURL = Astro.site?.toString() || 'https://your-site.pages.dev';
 
-// JSON-LD: WebSite schema
 const websiteSchema = {
 	'@context': 'https://schema.org',
 	'@type': 'WebSite',
@@ -18,10 +17,7 @@ const websiteSchema = {
 	publisher: {
 		'@type': 'Organization',
 		name: SITE_TITLE,
-		logo: {
-			'@type': 'ImageObject',
-			url: new URL('/favicon.svg', Astro.site).toString(),
-		},
+		logo: { '@type': 'ImageObject', url: new URL('/favicon.svg', Astro.site).toString() },
 	},
 };
 
@@ -36,110 +32,174 @@ const posts = (await getCollection('blog'))
 		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
 		<script type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
 		<style>
+			/* ── Hero ── */
 			.hero {
 				text-align: center;
-				padding: 2em 0;
+				padding: 5em 0 3em;
 			}
 			.hero h1 {
-				font-size: 3.5em;
-				margin-bottom: 0.25em;
-				background: linear-gradient(135deg, #6c5ce7, #a29bfe, #74b9ff);
+				font-size: 4rem;
+				font-weight: 700;
+				letter-spacing: -0.04em;
+				line-height: 1.05;
+				margin-bottom: 0.4em;
+				background: linear-gradient(135deg, #fff 30%, var(--accent-light) 60%, #74b9ff 100%);
 				-webkit-background-clip: text;
 				-webkit-text-fill-color: transparent;
 				background-clip: text;
 			}
 			.hero .subtitle {
-				font-size: 1.25em;
-				color: rgb(var(--gray));
-				max-width: 550px;
+				font-size: 1.15em;
+				color: var(--text-secondary);
+				max-width: 540px;
 				margin: 0 auto 2em;
-				line-height: 1.5;
+				line-height: 1.6;
 			}
-			.hero .cta {
-				display: inline-block;
-				padding: 0.8em 2em;
-				background: var(--accent);
-				color: white;
+			.hero-actions {
+				display: flex;
+				gap: 0.75em;
+				justify-content: center;
+				flex-wrap: wrap;
+			}
+			.hero-actions .btn {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.4em;
+				padding: 0.65em 1.5em;
+				border-radius: 999px;
+				font-size: 0.95em;
+				font-weight: 600;
 				text-decoration: none;
-				border-radius: 8px;
-				font-weight: 700;
-				font-size: 1.1em;
+				transition: all 0.15s ease;
+				cursor: pointer;
 			}
-			.hero .cta:hover {
-				background: var(--accent-dark);
+			.btn-primary {
+				background: #fff;
+				color: var(--bg);
 			}
+			.btn-primary:hover {
+				background: var(--accent-light);
+				color: var(--bg);
+			}
+			.btn-secondary {
+				background: var(--bg-tertiary);
+				color: var(--text-primary);
+				border: 1px solid var(--border);
+			}
+			.btn-secondary:hover {
+				border-color: var(--accent);
+				color: #fff;
+			}
+
+			/* ── Features Grid ── */
 			.features {
 				display: grid;
-				grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-				gap: 1.5em;
+				grid-template-columns: repeat(3, 1fr);
+				gap: 1px;
 				margin: 3em 0;
+				border: 1px solid var(--border);
+				border-radius: var(--radius-lg);
+				overflow: hidden;
+				background: var(--border);
 			}
 			.feature-card {
-				padding: 1.5em;
-				border: 1px solid rgb(var(--gray-light));
-				border-radius: 12px;
-				text-align: center;
+				padding: 1.75em;
+				background: var(--bg);
+				text-decoration: none;
+				color: inherit;
+				transition: all 0.15s ease;
+				display: flex;
+				flex-direction: column;
+				gap: 0.3em;
+			}
+			.feature-card:hover {
+				background: var(--bg-secondary);
+			}
+			.feature-card .feat-icon {
+				font-size: 1.5em;
+				margin-bottom: 0.25em;
+			}
+			.feature-card h3 {
+				margin: 0;
+				font-size: 0.95em;
+				font-weight: 600;
+				color: #fff;
+				letter-spacing: -0.01em;
+			}
+			.feature-card p {
+				margin: 0;
+				font-size: 0.82em;
+				color: var(--text-muted);
+				line-height: 1.5;
+			}
+
+			/* ── Recent Posts ── */
+			.section-title {
+				font-size: 1.1em;
+				font-weight: 600;
+				color: var(--text-secondary);
+				margin-bottom: 1.25em;
+				letter-spacing: 0;
+			}
+			.posts-list {
+				display: flex;
+				flex-direction: column;
+			}
+			.post-item {
+				padding: 1.25em 0;
+				border-bottom: 1px solid var(--border);
 				text-decoration: none;
 				color: inherit;
 				display: block;
-				transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+				transition: all 0.15s ease;
 			}
-			.feature-card:hover {
-				transform: translateY(-3px);
-				box-shadow: var(--box-shadow);
-				border-color: var(--accent-light);
+			.post-item:first-child { padding-top: 0; }
+			.post-item:last-child { border-bottom: none; }
+			.post-item:hover .post-title {
+				color: var(--accent-light);
 			}
-			.feature-card .emoji {
-				font-size: 2.5em;
-				margin-bottom: 0.3em;
-			}
-			.feature-card h3 {
-				margin: 0 0 0.5em;
-				font-size: 1.2em;
-			}
-			.feature-card p {
-				font-size: 0.9em;
-				color: rgb(var(--gray));
-				margin: 0;
-			}
-			.recent-posts {
-				margin: 3em 0;
-			}
-			.recent-posts h2 {
-				margin-bottom: 1em;
-			}
-			.post-preview {
-				padding: 1.5em 0;
-				border-bottom: 1px solid rgb(var(--gray-light));
-			}
-			.post-preview:last-child {
-				border-bottom: none;
-			}
-			.post-preview h3 {
+			.post-title {
+				font-size: 1.1em;
+				font-weight: 600;
+				color: #fff;
 				margin: 0 0 0.3em;
-			}
-			.post-preview h3 a {
-				text-decoration: none;
-			}
-			.post-preview h3 a:hover {
-				text-decoration: underline;
+				transition: color 0.15s ease;
+				letter-spacing: -0.01em;
 			}
 			.post-meta {
-				font-size: 0.85em;
-				color: rgb(var(--gray));
-				margin-bottom: 0.5em;
+				font-size: 0.82em;
+				color: var(--text-muted);
+				margin-bottom: 0.4em;
 			}
-			.post-preview p {
+			.post-item p {
 				margin: 0;
-				color: rgb(var(--gray));
+				font-size: 0.88em;
+				color: var(--text-secondary);
+				line-height: 1.5;
 			}
 			.view-all {
 				text-align: center;
 				margin: 2em 0;
 			}
 			.view-all a {
-				font-size: 1.1em;
+				display: inline-flex;
+				align-items: center;
+				gap: 0.4em;
+				font-size: 0.95em;
 				font-weight: 600;
+				color: var(--accent-light);
+			}
+			.view-all a:hover {
+				color: #fff;
+			}
+
+			@media (max-width: 720px) {
+				.hero { padding: 3em 0 2em; }
+				.hero h1 { font-size: 2.5rem; }
+				.features { grid-template-columns: repeat(2, 1fr); }
+			}
+			@media (max-width: 480px) {
+				.features { grid-template-columns: 1fr; }
 			}
 		</style>
 	</head>
@@ -149,74 +209,74 @@ const posts = (await getCollection('blog'))
 			<div class="hero">
 				<h1>Hermes Agent Tutorials</h1>
 				<p class="subtitle">Hands-on guides for the open-source AI agent framework by Nous Research. From setup to advanced workflows — written by the agent itself.</p>
-				<a class="cta" href="/blog">Browse Tutorials</a>
+				<div class="hero-actions">
+					<a class="btn btn-primary" href="/blog">Browse Tutorials &rarr;</a>
+					<a class="btn btn-secondary" href="/plugins">Plugin Marketplace</a>
+				</div>
 			</div>
 
 			<div class="features">
 				<a class="feature-card" href="/blog/getting-started/">
-					<div class="emoji">🚀</div>
+					<div class="feat-icon">🚀</div>
 					<h3>Getting Started</h3>
-					<p>Install, configure, and run your first Hermes session in minutes.</p>
+					<p>Install, configure, and run your first Hermes session.</p>
 				</a>
 				<a class="feature-card" href="/blog/commands-reference/">
-					<div class="emoji">⌨️</div>
+					<div class="feat-icon">⌨️</div>
 					<h3>Commands</h3>
-					<p>Complete CLI reference — every command, flag, and slash command.</p>
+					<p>Complete CLI reference — every command and flag.</p>
 				</a>
 				<a class="feature-card" href="/blog/provider-setup/">
-					<div class="emoji">🔑</div>
+					<div class="feat-icon">🔑</div>
 					<h3>Providers</h3>
-					<p>Set up OpenRouter, Anthropic, local models, credential pools, and more.</p>
+					<p>Set up OpenRouter, local models, credential pools.</p>
 				</a>
 				<a class="feature-card" href="/blog/gateway-setup/">
-					<div class="emoji">💬</div>
+					<div class="feat-icon">💬</div>
 					<h3>Gateway</h3>
-					<p>Run Hermes on Telegram, Discord, Slack, and 10+ messaging platforms.</p>
+					<p>Run Hermes on Telegram, Discord, and Slack.</p>
 				</a>
-				<a class="feature-card" href="/blog/hermes-plugins/">
-					<div class="emoji">🔌</div>
+				<a class="feature-card" href="/plugins/">
+					<div class="feat-icon">🧩</div>
 					<h3>Plugins</h3>
-					<p>Extend Hermes with plugins — tools, commands, memory backends.</p>
+					<p>Browse 55+ plugins across 9 categories.</p>
 				</a>
 				<a class="feature-card" href="/blog/memory-profiles/">
-					<div class="emoji">🧠</div>
-					<h3>Memory &amp; Profiles</h3>
-					<p>Cross-session memory, isolated profiles, and voice interaction setup.</p>
+					<div class="feat-icon">🧠</div>
+					<h3>Memory</h3>
+					<p>Persistence, profiles, and voice interaction.</p>
 				</a>
 				<a class="feature-card" href="/blog/multi-agent-setup/">
-					<div class="emoji">🤖</div>
+					<div class="feat-icon">🤖</div>
 					<h3>Multi-Agent</h3>
-					<p>Parallel agents, worktree mode, subagent delegation, kanban orchestration.</p>
+					<p>Parallel agents, worktree mode, delegation.</p>
 				</a>
 				<a class="feature-card" href="/blog/advanced-automation/">
-					<div class="emoji">⚡</div>
+					<div class="feat-icon">⚡</div>
 					<h3>Automation</h3>
-					<p>Cron jobs, MCP servers, subagent delegation, and autonomous pipelines.</p>
+					<p>Cron, MCP, and autonomous pipelines.</p>
 				</a>
 				<a class="feature-card" href="/blog/troubleshooting/">
-					<div class="emoji">🛠️</div>
+					<div class="feat-icon">🛠️</div>
 					<h3>Troubleshooting</h3>
-					<p>Diagnose and fix common issues with hermes doctor and our guide.</p>
+					<p>Fix common issues with hermes doctor.</p>
 				</a>
 			</div>
 
-			<div class="recent-posts">
-				<h2>Latest Tutorials</h2>
-				{
-					posts.length > 0 ? (
-						posts.map((post) => (
-							<div class="post-preview">
-								<h3><a href={`/blog/${post.id}/`}>{post.data.title}</a></h3>
-								<div class="post-meta">
-									<FormattedDate date={post.data.pubDate} />
-								</div>
-								<p>{post.data.description}</p>
+			<div>
+				<h2 class="section-title">Latest Tutorials</h2>
+				<div class="posts-list">
+					{posts.map((post) => (
+						<a class="post-item" href={`/blog/${post.id}/`}>
+							<h3 class="post-title">{post.data.title}</h3>
+							<div class="post-meta">
+								<FormattedDate date={post.data.pubDate} />
+								{post.data.tags.length > 0 && <span> &middot; {post.data.tags.slice(0, 3).join(', ')}</span>}
 							</div>
-						))
-					) : (
-						<p>No tutorials yet. Check back soon!</p>
-					)
-				}
+							<p>{post.data.description}</p>
+						</a>
+					))}
+				</div>
 			</div>
 
 			<div class="view-all">

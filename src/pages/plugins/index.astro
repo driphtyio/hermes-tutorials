@@ -3,7 +3,7 @@ import BaseHead from '../../components/BaseHead.astro';
 import Footer from '../../components/Footer.astro';
 import Header from '../../components/Header.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
-import { plugins, categories, type Plugin } from '../../data/plugins';
+import { plugins, categories } from '../../data/plugins';
 
 const totalPlugins = plugins.length;
 const bundledCount = plugins.filter(p => p.status === 'bundled').length;
@@ -15,236 +15,70 @@ const communityCount = plugins.filter(p => p.status === 'community' || p.status 
 	<head>
 		<BaseHead title={`Plugin Marketplace — ${SITE_TITLE}`} description="Browse, search, and install Hermes Agent plugins. 55+ plugins across 9 categories with ratings, requirements, and install instructions." />
 		<style>
-			.header-section {
-				text-align: center;
-				padding: 2em 0 1em;
-			}
-			.header-section h1 {
-				margin-bottom: 0.3em;
-			}
-			.header-section .subtitle {
-				color: rgb(var(--gray));
-				font-size: 1.1em;
-				max-width: 600px;
-				margin: 0 auto;
-			}
-			.stats {
-				display: flex;
-				justify-content: center;
-				gap: 2em;
-				margin: 1.5em 0;
-				flex-wrap: wrap;
-			}
-			.stat {
-				text-align: center;
-			}
-			.stat .num {
-				font-size: 1.8em;
-				font-weight: 700;
-				color: var(--accent);
-			}
-			.stat .label {
-				font-size: 0.85em;
-				color: rgb(var(--gray));
-			}
-
-			/* ── Filters ── */
-			.filters {
-				display: flex;
-				gap: 0.6em;
-				margin: 1.5em 0;
-				flex-wrap: wrap;
-				justify-content: center;
-			}
+			.header-section { text-align: center; padding: 2em 0 1em; }
+			.header-section h1 { margin-bottom: 0.3em; font-size: 2.8rem; font-weight: 700; letter-spacing: -0.03em; }
+			.header-section .subtitle { color: var(--text-secondary); font-size: 1.05em; max-width: 600px; margin: 0 auto; }
+			.stats { display: flex; justify-content: center; gap: 2.5em; margin: 1.5em 0; flex-wrap: wrap; }
+			.stat { text-align: center; }
+			.stat .num { font-size: 1.8em; font-weight: 700; color: var(--accent-light); }
+			.stat .label { font-size: 0.85em; color: var(--text-muted); }
+			.filters { display: flex; gap: 0.5em; margin: 1.5em 0; flex-wrap: wrap; justify-content: center; }
 			.filter-btn {
-				padding: 0.4em 1em;
-				border: 1px solid rgb(var(--gray-light));
-				border-radius: 20px;
-				background: white;
-				color: rgb(var(--gray-dark));
-				cursor: pointer;
-				font-size: 0.85em;
-				transition: all 0.15s ease;
+				padding: 0.35em 1em; border: 1px solid var(--border); border-radius: 999px;
+				background: transparent; color: var(--text-secondary); cursor: pointer;
+				font-size: 0.82em; transition: all 0.15s ease; font-family: inherit;
 			}
-			.filter-btn:hover {
-				border-color: var(--accent-light);
-				color: var(--accent);
-			}
-			.filter-btn.active {
-				background: var(--accent);
-				color: white;
-				border-color: var(--accent);
-			}
-
-			/* ── Search ── */
-			.search-wrapper {
-				max-width: 400px;
-				margin: 0 auto 1.5em;
-			}
+			.filter-btn:hover { border-color: var(--accent); color: #fff; }
+			.filter-btn.active { background: #fff; color: var(--bg); border-color: #fff; }
+			.search-wrapper { max-width: 360px; margin: 0 auto 1.5em; }
 			.search-input {
-				width: 100%;
-				padding: 0.6em 1em;
-				border: 1px solid rgb(var(--gray-light));
-				border-radius: 8px;
-				font-size: 1em;
-				font-family: inherit;
-				box-sizing: border-box;
+				width: 100%; padding: 0.5em 0.8em; border: 1px solid var(--border); border-radius: var(--radius-md);
+				background: var(--bg-secondary); color: var(--text-primary); font-size: 0.9em;
+				font-family: inherit; box-sizing: border-box; outline: none;
 			}
-			.search-input:focus {
-				outline: none;
-				border-color: var(--accent);
-				box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.15);
-			}
-
-			/* ── Plugin Grid ── */
-			.plugins-grid {
-				display: grid;
-				grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-				gap: 1.2em;
-				margin: 1em 0 2em;
-			}
+			.search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+			.search-input::placeholder { color: var(--text-muted); }
+			.plugins-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1em; margin: 1em 0 2em; }
 			.plugin-card {
-				border: 1px solid rgb(var(--gray-light));
-				border-radius: 12px;
-				padding: 1.2em;
-				transition: box-shadow 0.15s ease, transform 0.15s ease;
-				display: flex;
-				flex-direction: column;
+				border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25em;
+				background: var(--bg-secondary); transition: all 0.15s ease;
+				display: flex; flex-direction: column;
 			}
-			.plugin-card:hover {
-				box-shadow: var(--box-shadow);
-				transform: translateY(-2px);
-			}
-			.plugin-card .top-row {
-				display: flex;
-				justify-content: space-between;
-				align-items: flex-start;
-				margin-bottom: 0.5em;
-			}
-			.plugin-card .name-row {
-				display: flex;
-				align-items: center;
-				gap: 0.5em;
-				flex-wrap: wrap;
-			}
-			.plugin-card h2 {
-				margin: 0;
-				font-size: 1.15em;
-			}
-			.plugin-card .badge {
-				font-size: 0.7em;
-				padding: 0.15em 0.5em;
-				border-radius: 4px;
-				font-weight: 600;
-				text-transform: uppercase;
-			}
-			.badge-bundled {
-				background: #e8f5e9;
-				color: #2e7d32;
-			}
-			.badge-community {
-				background: #fff3e0;
-				color: #e65100;
-			}
-			.badge-request {
-				background: #fce4ec;
-				color: #c62828;
-			}
-			.plugin-card .rating {
-				color: #f59e0b;
-				font-size: 0.9em;
-				white-space: nowrap;
-			}
-			.plugin-card .category-label {
-				font-size: 0.75em;
-				color: var(--accent);
-				margin-bottom: 0.4em;
-			}
-			.plugin-card p {
-				font-size: 0.88em;
-				color: rgb(var(--gray));
-				margin: 0 0 0.8em;
-				line-height: 1.5;
-				flex-grow: 1;
-			}
-			.plugin-card .details {
-				font-size: 0.8em;
-				color: rgb(var(--gray));
-				margin-bottom: 0.8em;
-				line-height: 1.6;
-			}
-			.plugin-card .details strong {
-				color: rgb(var(--gray-dark));
-			}
-			.plugin-card .actions {
-				display: flex;
-				gap: 0.5em;
-				flex-wrap: wrap;
-			}
+			.plugin-card:hover { border-color: var(--border-light); background: var(--bg-tertiary); }
+			.plugin-card .top-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.4em; }
+			.plugin-card .name-row { display: flex; align-items: center; gap: 0.4em; flex-wrap: wrap; }
+			.plugin-card h2 { margin: 0; font-size: 1em; font-weight: 600; letter-spacing: -0.01em; }
+			.plugin-card .badge { font-size: 0.65em; padding: 0.15em 0.5em; border-radius: 999px; font-weight: 600; }
+			.badge-bundled { background: rgba(46, 125, 50, 0.2); color: #66bb6a; }
+			.badge-community { background: rgba(230, 81, 0, 0.2); color: #ffa726; }
+			.badge-request { background: rgba(198, 40, 40, 0.2); color: #ef5350; }
+			.plugin-card .rating { color: #f59e0b; font-size: 0.85em; white-space: nowrap; }
+			.plugin-card .category-label { font-size: 0.72em; color: var(--text-muted); margin-bottom: 0.2em; }
+			.plugin-card p { font-size: 0.84em; color: var(--text-secondary); margin: 0 0 0.6em; line-height: 1.5; flex-grow: 1; }
+			.plugin-card .details { font-size: 0.78em; color: var(--text-muted); margin-bottom: 0.8em; line-height: 1.6; }
+			.plugin-card .details strong { color: var(--text-secondary); }
+			.plugin-card .actions { display: flex; gap: 0.4em; }
 			.install-cmd {
-				background: #1e1e2e;
-				color: #cdd6f4;
-				padding: 0.4em 0.8em;
-				border-radius: 6px;
-				font-size: 0.8em;
-				font-family: monospace;
-				user-select: all;
-				flex: 1;
-				min-width: 0;
-				overflow: hidden;
-				text-overflow: ellipsis;
-				white-space: nowrap;
+				background: var(--bg); color: var(--text-primary); padding: 0.35em 0.7em;
+				border-radius: var(--radius-sm); font-size: 0.78em; font-family: var(--font-mono);
+				user-select: all; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+				border: 1px solid var(--border);
 			}
 			.copy-btn {
-				background: var(--accent);
-				color: white;
-				border: none;
-				border-radius: 6px;
-				padding: 0.4em 0.8em;
-				font-size: 0.8em;
-				cursor: pointer;
-				white-space: nowrap;
-				transition: background 0.15s;
+				background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm);
+				padding: 0.35em 0.7em; font-size: 0.78em; cursor: pointer; white-space: nowrap;
+				transition: background 0.15s; font-family: inherit;
 			}
-			.copy-btn:hover {
-				background: var(--accent-dark);
-			}
-			.copy-btn.copied {
-				background: #2e7d32;
-			}
-			.plugin-card .req-badge {
-				display: inline-block;
-				font-size: 0.7em;
-				padding: 0.15em 0.4em;
-				border-radius: 3px;
-				background: rgb(var(--gray-light));
-				color: rgb(var(--gray));
-			}
-			.plugin-card .issue-link {
-				font-size: 0.8em;
-			}
-			.plugin-card .issue-link a {
-				color: var(--accent);
-			}
-			.empty-state {
-				text-align: center;
-				padding: 3em;
-				color: rgb(var(--gray));
-			}
-			.empty-state .emoji {
-				font-size: 2.5em;
-				margin-bottom: 0.5em;
-			}
-
-			.no-results { display: none; }
-
+			.copy-btn:hover { background: var(--accent-dark); }
+			.copy-btn.copied { background: #2e7d32; }
+			.plugin-card .issue-link { font-size: 0.78em; }
+			.plugin-card .issue-link a { color: var(--accent-light); }
+			.empty-state { text-align: center; padding: 3em; color: var(--text-muted); display: none; }
+			.empty-state .emoji { font-size: 2.5em; margin-bottom: 0.5em; }
 			@media (max-width: 720px) {
-				.plugins-grid {
-					grid-template-columns: 1fr;
-				}
-				.stats {
-					gap: 1em;
-				}
+				.plugins-grid { grid-template-columns: 1fr; }
+				.stats { gap: 1em; }
+				.header-section h1 { font-size: 2rem; }
 			}
 		</style>
 	</head>
@@ -279,9 +113,7 @@ const communityCount = plugins.filter(p => p.status === 'community' || p.status 
 			<div class="plugins-grid" id="pluginGrid">
 				{plugins.map((p, i) => (
 					<div class="plugin-card" data-category={p.category} data-rating={p.rating} data-status={p.status} data-name={p.name.toLowerCase()} data-desc={p.description.toLowerCase()}>
-						<div class="category-label">
-							{categories.find(c => c.id === p.category)?.icon} {categories.find(c => c.id === p.category)?.label}
-						</div>
+						<div class="category-label">{categories.find(c => c.id === p.category)?.icon} {categories.find(c => c.id === p.category)?.label}</div>
 						<div class="top-row">
 							<div class="name-row">
 								<h2>{p.name}</h2>
@@ -289,17 +121,13 @@ const communityCount = plugins.filter(p => p.status === 'community' || p.status 
 								{p.status === 'community' && <span class="badge badge-community">Community</span>}
 								{p.status === 'request' && <span class="badge badge-request">Request</span>}
 							</div>
-							{p.rating > 0 && (
-								<div class="rating">{'★'.repeat(p.rating)}{'☆'.repeat(5 - p.rating)}</div>
-							)}
+							{p.rating > 0 && <div class="rating">{'★'.repeat(p.rating)}{'☆'.repeat(5 - p.rating)}</div>}
 						</div>
 						<p>{p.description}</p>
 						<div class="details">
-							{p.autoLoad ? <span>✅ Auto-loaded</span> : <span>🔌 Opt-in</span>}
-							<span> · </span>
-							<strong>Type:</strong> {p.kind}
-							<br />
-							<strong>Requires:</strong> {p.requirements}
+							{p.autoLoad ? '✅ Auto-loaded' : '🔌 Opt-in'}
+							<span> · </span><strong>Type:</strong> {p.kind}
+							<br /><strong>Requires:</strong> {p.requirements}
 							{p.auth !== 'None' && <><br /><strong>Auth:</strong> {p.auth}</>}
 							{p.githubIssue && <><br /><span class="issue-link">🐛 <a href={`https://github.com/NousResearch/hermes-agent/issues/${p.githubIssue.replace('#', '')}`} target="_blank">{p.githubIssue}</a></span></>}
 						</div>
@@ -313,7 +141,7 @@ const communityCount = plugins.filter(p => p.status === 'community' || p.status 
 				))}
 			</div>
 
-			<div class="empty-state no-results" id="emptyState">
+			<div class="empty-state" id="emptyState">
 				<div class="emoji">🔍</div>
 				<p>No plugins match your search. Try a different filter or keyword.</p>
 			</div>
@@ -322,7 +150,6 @@ const communityCount = plugins.filter(p => p.status === 'community' || p.status 
 
 		<script>
 			let activeCategory = 'all';
-
 			function setCategory(cat) {
 				activeCategory = cat;
 				document.querySelectorAll('.filter-btn').forEach(b => {
@@ -330,35 +157,27 @@ const communityCount = plugins.filter(p => p.status === 'community' || p.status 
 				});
 				filterPlugins();
 			}
-
 			function filterPlugins() {
 				const query = document.getElementById('search').value.toLowerCase();
 				let visible = 0;
-
 				document.querySelectorAll('.plugin-card').forEach(card => {
 					const cat = card.dataset.category;
 					const name = card.dataset.name;
 					const desc = card.dataset.desc;
 					const matchesCat = activeCategory === 'all' || cat === activeCategory;
 					const matchesSearch = !query || name.includes(query) || desc.includes(query);
-					const show = matchesCat && matchesSearch;
-					card.style.display = show ? '' : 'none';
-					if (show) visible++;
+					card.style.display = matchesCat && matchesSearch ? '' : 'none';
+					if (matchesCat && matchesSearch) visible++;
 				});
-
 				document.getElementById('emptyState').style.display = visible === 0 ? '' : 'none';
 			}
-
 			function copyCmd(index) {
 				const cmd = document.getElementById(`cmd-${index}`);
 				const btn = cmd.nextElementSibling;
 				navigator.clipboard.writeText(cmd.textContent).then(() => {
 					btn.textContent = 'Copied!';
 					btn.classList.add('copied');
-					setTimeout(() => {
-						btn.textContent = 'Copy';
-						btn.classList.remove('copied');
-					}, 2000);
+					setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
 				});
 			}
 		</script>

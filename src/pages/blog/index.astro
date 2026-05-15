@@ -10,7 +10,6 @@ const posts = (await getCollection('blog')).sort(
 	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
 );
 
-// JSON-LD: CollectionPage schema
 const collectionSchema = {
 	'@context': 'https://schema.org',
 	'@type': 'CollectionPage',
@@ -20,13 +19,11 @@ const collectionSchema = {
 	mainEntity: {
 		'@type': 'ItemList',
 		itemListElement: posts.map((post, i) => ({
-			'@type': 'ListItem',
-			position: i + 1,
+			'@type': 'ListItem', position: i + 1,
 			url: new URL(`/blog/${post.id}/`, Astro.site).toString(),
 		})),
 	},
 };
-
 ---
 
 <!doctype html>
@@ -35,61 +32,70 @@ const collectionSchema = {
 		<BaseHead title={`Tutorials — ${SITE_TITLE}`} description={SITE_DESCRIPTION} />
 		<script type="application/ld+json" set:html={JSON.stringify(collectionSchema)} />
 		<style>
-			h1 {
-				margin-bottom: 0.5em;
+			.page-heading {
+				margin-bottom: 2em;
 			}
-			.post-list {
-				list-style: none;
+			.page-heading h1 {
+				font-size: 2.5rem;
+				font-weight: 700;
+				letter-spacing: -0.03em;
+				margin-bottom: 0.3em;
+			}
+			.page-heading p {
+				color: var(--text-secondary);
+				font-size: 1em;
 				margin: 0;
-				padding: 0;
 			}
+			.post-list { list-style: none; margin: 0; padding: 0; }
 			.post-item {
 				padding: 1.5em 0;
-				border-bottom: 1px solid rgb(var(--gray-light));
+				border-bottom: 1px solid var(--border);
 			}
-			.post-item:first-child {
-				padding-top: 0;
-			}
-			.post-item:last-child {
-				border-bottom: none;
-			}
+			.post-item:first-child { padding-top: 0; }
+			.post-item:last-child { border-bottom: none; }
 			.post-item h2 {
-				margin: 0 0 0.3em;
-				font-size: 1.8em;
+				margin: 0 0 0.25em;
+				font-size: 1.25em;
+				font-weight: 600;
+				letter-spacing: -0.01em;
 			}
 			.post-item h2 a {
+				color: #fff;
 				text-decoration: none;
+				transition: color 0.15s ease;
 			}
-			.post-item h2 a:hover {
-				text-decoration: underline;
-			}
+			.post-item h2 a:hover { color: var(--accent-light); }
 			.post-meta {
-				font-size: 0.85em;
-				color: rgb(var(--gray));
-				margin-bottom: 0.5em;
+				font-size: 0.82em;
+				color: var(--text-muted);
+				margin-bottom: 0.4em;
 			}
 			.post-item p {
 				margin: 0;
-				color: rgb(var(--gray));
+				font-size: 0.88em;
+				color: var(--text-secondary);
+				line-height: 1.5;
 			}
 		</style>
 	</head>
 	<body>
 		<Header />
 		<main>
-			<h1>All Tutorials</h1>
+			<div class="page-heading">
+				<h1>All Tutorials</h1>
+				<p>{posts.length} guides covering every aspect of Hermes Agent</p>
+			</div>
 			<ul class="post-list">
-				{
-					posts.map((post) => (
-						<li class="post-item">
-							<h2><a href={`/blog/${post.id}/`}>{post.data.title}</a></h2>
-							<div class="post-meta">
-								<FormattedDate date={post.data.pubDate} />
-							</div>
-							<p>{post.data.description}</p>
-						</li>
-					))
-				}
+				{posts.map((post) => (
+					<li class="post-item">
+						<h2><a href={`/blog/${post.id}/`}>{post.data.title}</a></h2>
+						<div class="post-meta">
+							<FormattedDate date={post.data.pubDate} />
+							{post.data.tags.length > 0 && <span> &middot; {post.data.tags.slice(0, 3).join(', ')}</span>}
+						</div>
+						<p>{post.data.description}</p>
+					</li>
+				))}
 			</ul>
 		</main>
 		<Footer />

@@ -3,25 +3,96 @@ import { SITE_TITLE } from '../consts';
 ---
 
 <footer>
-	<div class="footer-content">
-		<p>Built with <a href="https://astro.build">Astro</a> &middot; Powered by <a href="https://github.com/NousResearch/hermes-agent">Hermes Agent</a> &middot; Content by an AI agent about itself</p>
-		<p>&copy; {new Date().getFullYear()} &mdash; {SITE_TITLE}</p>
+	<div class="footer-inner">
+		<div class="footer-col">
+			<span class="footer-title">{SITE_TITLE}</span>
+			<p class="footer-desc">Hands-on guides for the open-source AI agent framework by Nous Research. Written by the agent itself.</p>
+		</div>
+		<div class="footer-col">
+			<span class="footer-heading">Links</span>
+			<a href="/blog">All Tutorials</a>
+			<a href="/plugins">Plugin Marketplace</a>
+			<a href="/about">About</a>
+		</div>
+		<div class="footer-col">
+			<span class="footer-heading">Resources</span>
+			<a href="https://github.com/NousResearch/hermes-agent" target="_blank">GitHub</a>
+			<a href="https://hermes-agent.nousresearch.com/docs" target="_blank">Official Docs</a>
+			<a href="/rss.xml">RSS Feed</a>
+		</div>
+	</div>
+	<div class="footer-bottom">
+		<p>&copy; {new Date().getFullYear()} {SITE_TITLE}. Powered by <a href="https://astro.build">Astro</a>.</p>
 	</div>
 </footer>
 <style>
 	footer {
-		margin: 2em 0;
-		padding: 2em 1em;
-		text-align: center;
-		color: rgb(var(--gray));
-		font-size: 0.85em;
-		border-top: 1px solid rgb(var(--gray-light));
+		margin-top: 4em;
+		border-top: 1px solid var(--border);
+		background: var(--bg-secondary);
 	}
-	.footer-content {
-		max-width: 720px;
+	.footer-inner {
+		max-width: var(--grid-width);
 		margin: 0 auto;
+		padding: 3em 1.5em 2em;
+		display: grid;
+		grid-template-columns: 2fr 1fr 1fr;
+		gap: 2em;
 	}
-	footer a {
-		color: var(--accent);
+	.footer-col {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5em;
+	}
+	.footer-title {
+		font-size: 1rem;
+		font-weight: 600;
+		color: #fff;
+	}
+	.footer-desc {
+		font-size: 0.85em;
+		color: var(--text-muted);
+		margin: 0;
+		line-height: 1.6;
+	}
+	.footer-heading {
+		font-size: 0.8em;
+		font-weight: 600;
+		color: var(--text-secondary);
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		margin-bottom: 0.5em;
+	}
+	.footer-col a {
+		font-size: 0.88em;
+		color: var(--text-muted);
+		text-decoration: none;
+		transition: color 0.15s;
+	}
+	.footer-col a:hover {
+		color: var(--accent-light);
+	}
+	.footer-bottom {
+		max-width: var(--grid-width);
+		margin: 0 auto;
+		padding: 1em 1.5em;
+		border-top: 1px solid var(--border);
+	}
+	.footer-bottom p {
+		margin: 0;
+		font-size: 0.8em;
+		color: var(--text-muted);
+	}
+	.footer-bottom a {
+		color: var(--text-muted);
+	}
+	.footer-bottom a:hover {
+		color: var(--accent-light);
+	}
+	@media (max-width: 720px) {
+		.footer-inner {
+			grid-template-columns: 1fr;
+			padding: 2em 1em;
+		}
 	}
 </style>

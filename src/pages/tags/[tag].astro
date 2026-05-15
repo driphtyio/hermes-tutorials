@@ -35,59 +35,31 @@ const taggedPosts = allPosts
 			description={`Tutorials tagged with "${tag}" — Hermes Agent guides and tutorials.`}
 		/>
 		<style>
-			h1 {
-				margin-bottom: 0.3em;
-				text-transform: capitalize;
+			.back-link {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.3em;
+				margin-bottom: 1.5em;
+				color: var(--text-muted);
+				font-size: 0.88em;
+				text-decoration: none;
+				transition: color 0.15s;
 			}
-			.post-count {
-				color: rgb(var(--gray));
-				font-size: 0.9em;
-				margin-bottom: 2em;
-			}
-			.post-list {
-				list-style: none;
-				margin: 0;
-				padding: 0;
-			}
+			.back-link:hover { color: var(--accent-light); }
+			h1 { margin-bottom: 0.1em; text-transform: capitalize; font-size: 2.5rem; }
+			.post-count { color: var(--text-muted); font-size: 0.9em; margin-bottom: 2em; }
+			.post-list { list-style: none; margin: 0; padding: 0; }
 			.post-item {
 				padding: 1.5em 0;
-				border-bottom: 1px solid rgb(var(--gray-light));
+				border-bottom: 1px solid var(--border);
 			}
-			.post-item:first-child {
-				padding-top: 0;
-			}
-			.post-item:last-child {
-				border-bottom: none;
-			}
-			.post-item h2 {
-				margin: 0 0 0.3em;
-				font-size: 1.5em;
-			}
-			.post-item h2 a {
-				text-decoration: none;
-			}
-			.post-item h2 a:hover {
-				text-decoration: underline;
-			}
-			.post-meta {
-				font-size: 0.85em;
-				color: rgb(var(--gray));
-				margin-bottom: 0.5em;
-			}
-			.post-item p {
-				margin: 0;
-				color: rgb(var(--gray));
-			}
-			.back-link {
-				display: inline-block;
-				margin-bottom: 1.5em;
-				color: var(--accent);
-				text-decoration: none;
-				font-size: 0.9em;
-			}
-			.back-link:hover {
-				text-decoration: underline;
-			}
+			.post-item:first-child { padding-top: 0; }
+			.post-item:last-child { border-bottom: none; }
+			.post-item h2 { margin: 0 0 0.25em; font-size: 1.25em; font-weight: 600; letter-spacing: -0.01em; }
+			.post-item h2 a { color: #fff; text-decoration: none; transition: color 0.15s; }
+			.post-item h2 a:hover { color: var(--accent-light); }
+			.post-meta { font-size: 0.82em; color: var(--text-muted); margin-bottom: 0.4em; }
+			.post-item p { margin: 0; font-size: 0.88em; color: var(--text-secondary); line-height: 1.5; }
 		</style>
 	</head>
 	<body>
