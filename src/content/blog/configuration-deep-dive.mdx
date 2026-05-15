@@ -221,6 +221,70 @@ gateway:
       bot_token: "..."
 ```
 
+## Environment Variables
+
+Hermes loads environment variables from `~/.hermes/.env`. This file keeps secrets separate from `config.yaml` and is excluded from config checksums.
+
+```bash
+hermes config env-path  # → /home/you/.hermes/.env
+```
+
+### API Keys
+
+| Variable | Provider |
+|----------|----------|
+| `OPENROUTER_API_KEY` | OpenRouter |
+| `ANTHROPIC_API_KEY` | Anthropic |
+| `OPENAI_API_KEY` | OpenAI |
+| `DEEPSEEK_API_KEY` | DeepSeek |
+| `GOOGLE_API_KEY` (or `GEMINI_API_KEY`) | Google Gemini |
+| `XAI_API_KEY` | xAI / Grok |
+| `GROQ_API_KEY` | Groq (and STT) |
+| `TOGETHER_API_KEY` | Together AI |
+| `NOVITA_API_KEY` | Novita AI |
+| `HF_TOKEN` | Hugging Face |
+| `GLM_API_KEY` | Z.AI / GLM |
+| `MINIMAX_API_KEY` | MiniMax |
+| `DASHSCOPE_API_KEY` | Alibaba / DashScope |
+| `KIMI_API_KEY` | Kimi / Moonshot |
+| `XIAOMI_API_KEY` | Xiaomi MiMo |
+| `KILOCODE_API_KEY` | Kilo Code |
+| `AI_GATEWAY_API_KEY` | AI Gateway (Vercel) |
+| `OPENCODE_ZEN_API_KEY` | OpenCode Zen |
+| `OPENCODE_GO_API_KEY` | OpenCode Go |
+| `COPILOT_GITHUB_TOKEN` | GitHub Copilot (token auth) |
+
+### Voice & Media
+
+| Variable | Purpose |
+|----------|---------|
+| `VOICE_TOOLS_OPENAI_KEY` | OpenAI TTS and STT |
+| `ELEVENLABS_API_KEY` | ElevenLabs TTS |
+| `MISTRAL_API_KEY` | Mistral STT (Voxtral) |
+| `REPLICATE_API_TOKEN` | Replicate image generation |
+
+### OAuth Providers
+
+For OAuth-based providers, use `hermes login` instead of env vars:
+
+```bash
+hermes login --provider nous          # Nous Portal
+hermes login --provider openai-codex  # OpenAI Codex
+```
+
+The `hermes model` interactive picker guides you through OAuth flows automatically when you select an OAuth provider.
+
+### Custom Endpoints
+
+For custom OpenAI-compatible endpoints, use `config.yaml`:
+
+```yaml
+model:
+  base_url: "https://your-endpoint.com/v1"
+  api_key: "your-key"
+  provider: "custom"
+```
+
 ## Curator Section
 
 Controls the skill lifecycle manager:

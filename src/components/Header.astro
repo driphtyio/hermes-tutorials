@@ -6,7 +6,12 @@ import HeaderLink from './HeaderLink.astro';
 <header>
 	<nav>
 		<a href="/" class="logo">{SITE_TITLE}</a>
-		<div class="nav-links">
+		<button class="hamburger" aria-label="Toggle menu" data-hamburger>
+			<span class="hamburger-line"></span>
+			<span class="hamburger-line"></span>
+			<span class="hamburger-line"></span>
+		</button>
+		<div class="nav-links" data-nav-links>
 			<HeaderLink href="/">Home</HeaderLink>
 			<HeaderLink href="/projects">Projects</HeaderLink>
 			<HeaderLink href="/hosting">Hosting</HeaderLink>
@@ -83,8 +88,110 @@ import HeaderLink from './HeaderLink.astro';
 		color: #fff;
 		background: var(--bg-tertiary);
 	}
+
+	/* ── Hamburger ── */
+	.hamburger {
+		display: none;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+		gap: 5px;
+		width: 36px;
+		height: 36px;
+		padding: 0;
+		border: none;
+		border-radius: var(--radius-sm);
+		background: transparent;
+		cursor: pointer;
+		z-index: 110;
+		transition: background 0.15s ease;
+	}
+	.hamburger:hover {
+		background: var(--bg-tertiary);
+	}
+	.hamburger-line {
+		display: block;
+		width: 20px;
+		height: 2px;
+		background: var(--text-secondary);
+		border-radius: 2px;
+		transition: all 0.2s ease;
+	}
+	/* Hamburger → X animation */
+	header[data-menu-open] .hamburger-line:nth-child(1) {
+		transform: translateY(7px) rotate(45deg);
+	}
+	header[data-menu-open] .hamburger-line:nth-child(2) {
+		opacity: 0;
+	}
+	header[data-menu-open] .hamburger-line:nth-child(3) {
+		transform: translateY(-7px) rotate(-45deg);
+	}
+
+	/* ── Mobile nav panel ── */
 	@media (max-width: 720px) {
 		.social-links { display: none; }
 		nav { padding: 0 1em; }
+
+		.hamburger {
+			display: flex;
+		}
+
+		.nav-links {
+			position: fixed;
+			top: var(--nav-height);
+			left: 0;
+			right: 0;
+			flex-direction: column;
+			align-items: stretch;
+			gap: 0;
+			padding: 0.5em;
+			background: rgba(10, 10, 11, 0.97);
+			backdrop-filter: blur(12px);
+			-webkit-backdrop-filter: blur(12px);
+			border-bottom: 1px solid var(--border);
+			opacity: 0;
+			transform: translateY(-8px);
+			pointer-events: none;
+			transition: opacity 0.2s ease, transform 0.2s ease;
+		}
+		.nav-links a {
+			display: block;
+			padding: 0.65em 1em;
+			border-radius: var(--radius-md);
+			text-align: center;
+			font-size: 0.95em;
+		}
+		header[data-menu-open] .nav-links {
+			opacity: 1;
+			transform: translateY(0);
+			pointer-events: auto;
+		}
 	}
 </style>
+<script>
+	const header = document.querySelector('header');
+	const hamburger = document.querySelector('[data-hamburger]');
+	const navLinks = document.querySelector('[data-nav-links]');
+
+	if (hamburger && header) {
+		hamburger.addEventListener('click', () => {
+			const open = header.getAttribute('data-menu-open') === 'true';
+			header.setAttribute('data-menu-open', open ? 'false' : 'true');
+		});
+
+		// Close menu when a nav link is clicked
+		navLinks?.addEventListener('click', (e) => {
+			if (e.target.closest('a')) {
+				header.setAttribute('data-menu-open', 'false');
+			}
+		});
+
+		// Close menu on Escape
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && header.getAttribute('data-menu-open') === 'true') {
+				header.setAttribute('data-menu-open', 'false');
+			}
+		});
+	}
+</script>
