@@ -1,0 +1,177 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+import { tools, toolCategories } from '../../data/tools';
+
+const total = tools.length;
+const defaultOn = tools.filter(t => t.defaultEnabled).length;
+const optional = total - defaultOn;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title={`Tools — ${SITE_TITLE}`} description={`Browse ${total} Hermes Agent tools across ${toolCategories.length} categories with ratings, requirements, capabilities, and pitfalls.`} />
+		<style>
+			.header-section { text-align: center; padding: 2em 0 1em; }
+			.header-section h1 { margin-bottom: 0.3em; font-size: 2.8rem; font-weight: 700; letter-spacing: -0.03em; }
+			.header-section .subtitle { color: var(--text-secondary); font-size: 1.05em; max-width: 600px; margin: 0 auto; }
+			.stats { display: flex; justify-content: center; gap: 2.5em; margin: 1.5em 0; flex-wrap: wrap; }
+			.stat { text-align: center; }
+			.stat .num { font-size: 1.8em; font-weight: 700; color: var(--accent-light); }
+			.stat .label { font-size: 0.85em; color: var(--text-muted); }
+
+			.filters { display: flex; gap: 0.5em; margin: 1.5em 0; flex-wrap: wrap; justify-content: center; }
+			.filter-btn {
+				padding: 0.35em 1em; border: 1px solid var(--border); border-radius: 999px;
+				background: transparent; color: var(--text-secondary); cursor: pointer;
+				font-size: 0.82em; transition: all 0.15s ease; font-family: inherit;
+			}
+			.filter-btn:hover { border-color: var(--accent); color: #fff; }
+			.filter-btn.active { background: #fff; color: var(--bg); border-color: #fff; }
+
+			.search-wrapper { max-width: 360px; margin: 0 auto 1.5em; }
+			.search-input {
+				width: 100%; padding: 0.5em 0.8em; border: 1px solid var(--border); border-radius: var(--radius-md);
+				background: var(--bg-secondary); color: var(--text-primary); font-size: 0.9em;
+				font-family: inherit; box-sizing: border-box; outline: none;
+			}
+			.search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+			.search-input::placeholder { color: var(--text-muted); }
+
+			.tools-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1em; margin: 1em 0 2em; }
+			.tool-card {
+				border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25em;
+				background: var(--bg-secondary); transition: all 0.15s ease;
+				display: flex; flex-direction: column;
+			}
+			.tool-card:hover { border-color: var(--border-light); background: var(--bg-tertiary); }
+			.tool-card .top-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.4em; }
+			.tool-card .name-row { display: flex; align-items: center; gap: 0.4em; flex-wrap: wrap; }
+			.tool-card h2 { margin: 0; font-size: 1em; font-weight: 600; letter-spacing: -0.01em; }
+			.tool-card .badge { font-size: 0.65em; padding: 0.15em 0.5em; border-radius: 999px; font-weight: 600; }
+			.badge-on { background: rgba(46, 125, 50, 0.2); color: #66bb6a; }
+			.badge-off { background: rgba(230, 81, 0, 0.2); color: #ffa726; }
+			.tool-card .rating { color: #f59e0b; font-size: 0.85em; white-space: nowrap; }
+			.tool-card .category-label { font-size: 0.72em; color: var(--text-muted); margin-bottom: 0.2em; }
+			.tool-card p { font-size: 0.84em; color: var(--text-secondary); margin: 0 0 0.6em; line-height: 1.5; flex-grow: 1; }
+			.tool-card .details { font-size: 0.78em; color: var(--text-muted); margin-bottom: 0.6em; line-height: 1.6; }
+			.tool-card .details strong { color: var(--text-secondary); }
+			.tool-card .caps { display: flex; flex-wrap: wrap; gap: 0.3em; margin-bottom: 0.6em; }
+			.cap-tag {
+				font-size: 0.7em; padding: 0.15em 0.5em; border-radius: 4px;
+				background: rgba(108, 92, 231, 0.1); color: var(--accent-light);
+				border: 1px solid rgba(108, 92, 231, 0.2);
+			}
+			.pitfall {
+				font-size: 0.75em; color: var(--text-muted); padding: 0.5em 0.7em;
+				border-left: 2px solid rgba(239, 83, 80, 0.4); margin-top: 0.3em;
+				background: rgba(239, 83, 80, 0.04); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+			}
+			.pitfall::before { content: '⚠️ '; }
+			.empty-state { text-align: center; padding: 3em; color: var(--text-muted); display: none; }
+			.empty-state .emoji { font-size: 2.5em; margin-bottom: 0.5em; }
+
+			@media (max-width: 720px) {
+				.tools-grid { grid-template-columns: 1fr; }
+				.stats { gap: 1em; }
+				.header-section h1 { font-size: 2rem; }
+			}
+		</style>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<div class="header-section">
+				<h1>Tools Reference</h1>
+				<p class="subtitle">Every Hermes Agent tool across {toolCategories.length} categories — {defaultOn} enabled by default, {optional} opt-in.</p>
+			</div>
+
+			<div class="stats">
+				<div class="stat"><div class="num">{total}</div><div class="label">Total Tools</div></div>
+				<div class="stat"><div class="num">{toolCategories.length}</div><div class="label">Categories</div></div>
+				<div class="stat"><div class="num">{defaultOn}</div><div class="label">Default On</div></div>
+				<div class="stat"><div class="num">{tools.filter(t => t.rating >= 4).length}</div><div class="label">Top Rated ★4+</div></div>
+			</div>
+
+			<div class="search-wrapper">
+				<input class="search-input" type="text" id="search" placeholder="Search tools..." />
+			</div>
+
+			<div class="filters" id="filters">
+				<button class="filter-btn active" data-cat="all">All</button>
+				{toolCategories.map(cat => (
+					<button class="filter-btn" data-cat={cat.id}>
+						{cat.icon} {cat.label}
+					</button>
+				))}
+			</div>
+
+			<div class="tools-grid" id="toolGrid">
+				{tools.map((t, i) => (
+					<div class="tool-card" data-category={t.category} data-name={t.name.toLowerCase()} data-desc={t.description.toLowerCase()}>
+						<div class="category-label">{toolCategories.find(c => c.id === t.category)?.icon} {toolCategories.find(c => c.id === t.category)?.label}</div>
+						<div class="top-row">
+							<div class="name-row">
+								<h2>{t.name}</h2>
+								{t.defaultEnabled
+									? <span class="badge badge-on">Default On</span>
+									: <span class="badge badge-off">Opt-in</span>
+								}
+							</div>
+							{t.rating > 0 && <div class="rating">{'★'.repeat(t.rating)}{'☆'.repeat(5 - t.rating)}</div>}
+						</div>
+						<p>{t.description}</p>
+						<div class="caps">
+							{t.capabilities.map(cap => <span class="cap-tag">{cap}</span>)}
+						</div>
+						<div class="details">
+							{t.requiresEnv.length > 0 && <><strong>Requires:</strong> {t.requiresEnv.join(', ')}<br /></>}
+						</div>
+						{t.pitfalls && <div class="pitfall">{t.pitfalls}</div>}
+					</div>
+				))}
+			</div>
+
+			<div class="empty-state" id="emptyState">
+				<div class="emoji">🔍</div>
+				<p>No tools match your search. Try a different filter or keyword.</p>
+			</div>
+		</main>
+		<Footer />
+
+		<script>
+			const search = document.getElementById('search');
+			const filterBtns = document.querySelectorAll('.filter-btn');
+			const cards = document.querySelectorAll('.tool-card');
+			const emptyState = document.getElementById('emptyState');
+			let activeCategory = 'all';
+
+			function filterTools() {
+				const query = search.value.toLowerCase();
+				let visible = 0;
+				cards.forEach(card => {
+					const cat = card.dataset.category;
+					const name = card.dataset.name;
+					const desc = card.dataset.desc;
+					const matchesCat = activeCategory === 'all' || cat === activeCategory;
+					const matchesSearch = !query || name.includes(query) || desc.includes(query);
+					card.style.display = matchesCat && matchesSearch ? '' : 'none';
+					if (matchesCat && matchesSearch) visible++;
+				});
+				emptyState.style.display = visible === 0 ? '' : 'none';
+			}
+
+			function setCategory(cat) {
+				activeCategory = cat;
+				filterBtns.forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+				filterTools();
+			}
+
+			filterBtns.forEach(btn => btn.addEventListener('click', () => setCategory(btn.dataset.cat)));
+			search.addEventListener('input', filterTools);
+		</script>
+	</body>
+</html>
