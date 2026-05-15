@@ -1,0 +1,193 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+import { hosting, hostingCategories } from '../../data/hosting';
+
+const total = hosting.length;
+const freeCount = hosting.filter(h => h.price === '$0' || h.price === 'Free tier').length;
+const vpsCount = hosting.filter(h => h.category === 'vps').length;
+const selfCount = hosting.filter(h => h.category === 'selfhosted').length;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title={`Hosting — ${SITE_TITLE}`} description={`${total} hosting options for Hermes Agent — VPS, self-hosted hardware, free tiers, and serverless. Reviews, specs, prices, and setup guides.`} />
+		<style>
+			.header-section { text-align: center; padding: 2em 0 1em; }
+			.header-section h1 { margin-bottom: 0.3em; font-size: 2.8rem; font-weight: 700; letter-spacing: -0.03em; }
+			.header-section .subtitle { color: var(--text-secondary); font-size: 1.05em; max-width: 600px; margin: 0 auto; }
+			.stats { display: flex; justify-content: center; gap: 2.5em; margin: 1.5em 0; flex-wrap: wrap; }
+			.stat { text-align: center; }
+			.stat .num { font-size: 1.8em; font-weight: 700; color: var(--accent-light); }
+			.stat .label { font-size: 0.85em; color: var(--text-muted); }
+
+			.filters { display: flex; gap: 0.5em; margin: 1.5em 0; flex-wrap: wrap; justify-content: center; }
+			.filter-btn {
+				padding: 0.35em 1em; border: 1px solid var(--border); border-radius: 999px;
+				background: transparent; color: var(--text-secondary); cursor: pointer;
+				font-size: 0.82em; transition: all 0.15s ease; font-family: inherit;
+			}
+			.filter-btn:hover { border-color: var(--accent); color: #fff; }
+			.filter-btn.active { background: #fff; color: var(--bg); border-color: #fff; }
+			.search-wrapper { max-width: 360px; margin: 0 auto 1.5em; }
+			.search-input {
+				width: 100%; padding: 0.5em 0.8em; border: 1px solid var(--border); border-radius: var(--radius-md);
+				background: var(--bg-secondary); color: var(--text-primary); font-size: 0.9em;
+				font-family: inherit; box-sizing: border-box; outline: none;
+			}
+			.search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+			.search-input::placeholder { color: var(--text-muted); }
+
+			.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 1em; margin: 1em 0 2em; }
+			.card {
+				border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25em;
+				background: var(--bg-secondary); transition: all 0.15s ease;
+				display: flex; flex-direction: column;
+			}
+			.card:hover { border-color: var(--border-light); background: var(--bg-tertiary); }
+			.card .top-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.3em; }
+			.card .name-row { display: flex; align-items: center; gap: 0.4em; flex-wrap: wrap; }
+			.card h2 { margin: 0; font-size: 1em; font-weight: 600; letter-spacing: -0.01em; }
+			.card .badge { font-size: 0.65em; padding: 0.15em 0.5em; border-radius: 999px; font-weight: 600; }
+			.badge-vps { background: rgba(108, 92, 231, 0.2); color: var(--accent-light); }
+			.badge-self { background: rgba(46, 125, 50, 0.2); color: #66bb6a; }
+			.badge-free { background: rgba(230, 81, 0, 0.2); color: #ffa726; }
+			.badge-serverless { background: rgba(33, 150, 243, 0.2); color: #42a5f5; }
+			.card .rating { color: #f59e0b; font-size: 0.85em; white-space: nowrap; }
+			.card .category-label { font-size: 0.72em; color: var(--text-muted); margin-bottom: 0.2em; }
+			.card p { font-size: 0.84em; color: var(--text-secondary); margin: 0 0 0.6em; line-height: 1.5; flex-grow: 1; }
+
+			/* Price + Specs row */
+			.card .price-row { display: flex; align-items: baseline; gap: 0.4em; margin-bottom: 0.5em; flex-wrap: wrap; }
+			.card .price { font-size: 1.3em; font-weight: 700; color: #fff; }
+			.card .price-unit { font-size: 0.75em; color: var(--text-muted); }
+			.card .specs { font-size: 0.78em; color: var(--text-muted); margin-bottom: 0.5em; line-height: 1.5; }
+
+			/* Recommended for */
+			.card .recommended { font-size: 0.82em; color: var(--text-secondary); margin-bottom: 0.6em; padding: 0.5em 0.7em; background: var(--bg-tertiary); border-radius: var(--radius-sm); border-left: 2px solid var(--accent); }
+
+			/* Pros/Cons */
+			.card .lists { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5em; margin-bottom: 0.6em; }
+			.card .list-col { font-size: 0.75em; line-height: 1.5; }
+			.card .list-col .list-title { font-size: 0.7em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2em; display: block; }
+			.card .list-col .pro-title { color: #66bb6a; }
+			.card .list-col .con-title { color: #ef5350; }
+			.card .list-col ul { margin: 0; padding-left: 1em; color: var(--text-muted); }
+			.card .list-col li { margin-bottom: 0.15em; }
+
+			/* Setup guide */
+			.card .howto { font-size: 0.78em; color: var(--text-secondary); margin-bottom: 0.5em; line-height: 1.5; }
+			.howto-label { font-size: 0.7em; font-weight: 600; color: #66bb6a; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.15em; }
+
+			.empty-state { text-align: center; padding: 3em; color: var(--text-muted); display: none; }
+			.empty-state .emoji { font-size: 2.5em; margin-bottom: 0.5em; }
+			@media (max-width: 720px) {
+				.grid { grid-template-columns: 1fr; }
+				.card .lists { grid-template-columns: 1fr; }
+				.stats { gap: 1em; }
+				.header-section h1 { font-size: 2rem; }
+			}
+		</style>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<div class="header-section">
+				<h1>Hosting Guide</h1>
+				<p class="subtitle">{total} ways to host Hermes Agent — {vpsCount} VPS providers, {selfCount} self-hosted options, {freeCount} free tiers. Reviews, specs, and setup guides for every budget.</p>
+			</div>
+
+			<div class="stats">
+				<div class="stat"><div class="num">{total}</div><div class="label">Total Options</div></div>
+				<div class="stat"><div class="num">{vpsCount}</div><div class="label">VPS</div></div>
+				<div class="stat"><div class="num">{selfCount}</div><div class="label">Self-Hosted</div></div>
+				<div class="stat"><div class="num">{freeCount}</div><div class="label">Free Options</div></div>
+			</div>
+
+			<div class="search-wrapper">
+				<input class="search-input" type="text" id="search" placeholder="Search hosting options..." />
+			</div>
+
+			<div class="filters" id="filters">
+				<button class="filter-btn active" data-cat="all">All</button>
+				{hostingCategories.map(cat => (
+					<button class="filter-btn" data-cat={cat.id}>{cat.icon} {cat.label}</button>
+				))}
+			</div>
+
+			<div class="grid" id="hostGrid">
+				{hosting.map(h => (
+					<div class="card" data-category={h.category} data-name={h.name.toLowerCase()} data-desc={h.description.toLowerCase()}>
+						<div class="category-label">{hostingCategories.find(c => c.id === h.category)?.icon} {hostingCategories.find(c => c.id === h.category)?.label}</div>
+						<div class="top-row">
+							<div class="name-row">
+								<h2>{h.name}</h2>
+								<span class={`badge badge-${h.category === 'free' ? 'free' : h.category === 'selfhosted' ? 'self' : h.category === 'serverless' ? 'serverless' : 'vps'}`}>{h.type}</span>
+							</div>
+							{h.rating > 0 && <div class="rating">{'★'.repeat(h.rating)}{'☆'.repeat(5 - h.rating)}</div>}
+						</div>
+						<div class="price-row">
+							<span class="price">{h.price}</span>
+							<span class="price-unit">{h.priceUnit}</span>
+						</div>
+						<p>{h.description}</p>
+						<div class="specs"><strong>Specs:</strong> {h.specs}</div>
+						<div class="recommended">🎯 <strong>Best for:</strong> {h.recommendedFor}</div>
+						<div class="lists">
+							<div class="list-col">
+								<span class="list-title pro-title">Pros</span>
+								<ul>{h.pros.map(p => <li>{p}</li>)}</ul>
+							</div>
+							<div class="list-col">
+								<span class="list-title con-title">Cons</span>
+								<ul>{h.cons.map(c => <li>{c}</li>)}</ul>
+							</div>
+						</div>
+						<div class="howto">
+							<div class="howto-label">Setup guide</div>
+							{h.setupGuide}
+						</div>
+					</div>
+				))}
+			</div>
+
+			<div class="empty-state" id="emptyState">
+				<div class="emoji">🔍</div>
+				<p>No hosting options match your search. Try a different filter or keyword.</p>
+			</div>
+		</main>
+		<Footer />
+
+		<script>
+			const search = document.getElementById('search');
+			const filterBtns = document.querySelectorAll('.filter-btn');
+			const cards = document.querySelectorAll('.card');
+			const emptyState = document.getElementById('emptyState');
+			let activeCategory = 'all';
+			function filterCards() {
+				const query = search.value.toLowerCase();
+				let visible = 0;
+				cards.forEach(card => {
+					const cat = card.dataset.category;
+					const name = card.dataset.name;
+					const desc = card.dataset.desc;
+					const matchesCat = activeCategory === 'all' || cat === activeCategory;
+					const matchesSearch = !query || name.includes(query) || desc.includes(query);
+					card.style.display = matchesCat && matchesSearch ? '' : 'none';
+					if (matchesCat && matchesSearch) visible++;
+				});
+				emptyState.style.display = visible === 0 ? '' : 'none';
+			}
+			function setCategory(cat) {
+				activeCategory = cat;
+				filterBtns.forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+				filterCards();
+			}
+			filterBtns.forEach(btn => btn.addEventListener('click', () => setCategory(btn.dataset.cat)));
+			search.addEventListener('input', filterCards);
+		</script>
+	</body>
+</html>
