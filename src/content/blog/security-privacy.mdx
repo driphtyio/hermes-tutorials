@@ -1,0 +1,177 @@
+---
+title: "Security & Privacy Configuration"
+description: "Configure command approval modes, secret redaction, PII protection, credential pools, website blocklists, and TIRITH guardrails for Hermes Agent."
+pubDate: "2026-05-14"
+tags: ["security", "privacy", "configuration", "advanced"]
+keywords: [hermes security, command approval, secret redaction, PII protection, credential pools, TIRITH, YOLO mode, hermes auth, safety]
+---
+
+> **TLDR:** Hermes has layered security: command approval prompts (`approvals.mode: smart` recommended), secret redaction (`hermes config set security.redact_secrets true`), and credential pools for key rotation. Most features are opt-in — you control the trade-off between convenience and safety.
+
+## Key Takeaways
+
+- Command approval modes: `manual` (default), `smart` (recommended), `off` (`--yolo`)
+- Secret redaction masks API keys in tool output (opt-in)
+- PII redaction protects user data in gateway messages
+- Credential pools auto-rotate keys on rate limits
+- TIRITH guardrails filter input/output content
+- YOLO mode disables approval for power users
+
+## Command Approval Modes
+
+When Hermes wants to run a shell command flagged as potentially destructive (`rm -rf`, `git reset --hard`, etc.), it can prompt you for approval.
+
+```bash
+# Manual: always prompt for dangerous commands (default)
+hermes config set approvals.mode manual
+
+# Smart: auto-approve low-risk, prompt for high-risk (recommended)
+hermes config set approvals.mode smart
+
+# Off: skip all prompts (equivalent to --yolo)
+hermes config set approvals.mode off
+```
+
+### Smart Mode
+
+Smart mode uses an auxiliary LLM to classify commands:
+
+- **Low risk** — `ls`, `curl`, `grep`, `cat` → auto-approved
+- **High risk** — `rm -rf`, `git reset --hard`, `chmod 777` → prompts for approval
+- **Uncertain** — falls back to prompt
+
+This is the best balance for daily use.
+
+### YOLO Mode
+
+Skip all approval prompts:
+
+```bash
+hermes --yolo              # Per-session
+export HERMES_YOLO_MODE=1  # Environment variable
+```
+
+Use with caution — Hermes can run anything in your terminal.
+
+## Secret Redaction
+
+By default, Hermes does NOT redact secrets from tool output. If you want API keys, tokens, and secrets auto-masked before they enter the conversation context:
+
+```bash
+hermes config set security.redact_secrets true
+```
+
+**Restart required.** This is deliberate — the setting is snapshotted at import time so a compromised model can't disable it mid-session.
+
+What gets redacted:
+- OpenAI/Anthropic/OpenRouter API keys
+- GitHub tokens
+- AWS keys
+- Generic `sk-*`, `pk-*` patterns
+- JWT tokens
+
+Disable with:
+
+```bash
+hermes config set security.redact_secrets false
+```
+
+This is independent of YOLO mode. You can have YOLO on and secret redaction on at the same time.
+
+## PII Redaction (Gateway)
+
+For gateway (messaging platform) users, PII redaction strips personal data from messages before they reach the model:
+
+```bash
+hermes config set privacy.redact_pii true
+```
+
+What it does:
+- Hashes user IDs
+- Strips phone numbers
+- Removes email addresses
+
+Applies to all gateway platforms (Telegram, Discord, Slack, etc.).
+
+## Credential Pools
+
+Credential pools store multiple API keys per provider and rotate automatically:
+
+```bash
+# Add credentials interactively
+hermes auth add
+
+# Show pooled keys for a provider
+hermes auth list openrouter
+
+# Remove a key
+hermes auth remove openrouter 1
+
+# Reset exhaustion status after fixing keys
+hermes auth reset openrouter
+```
+
+When one key hits a rate limit, Hermes tries the next key in the pool. This is essential for high-volume use.
+
+## TIRITH Guardrails
+
+TIRITH provides input/output content filtering:
+
+```yaml
+security:
+  tirith_enabled: true           # Enable guardrails (default: true)
+  website_blocklist: []           # Blocklisted URLs for browser tool
+```
+
+- **Input guardrails** — filter harmful or disallowed prompts
+- **Output guardrails** — filter harmful or disallowed responses
+- **Website blocklist** — prevent the browser tool from visiting specified sites
+
+## Website Blocklist
+
+Prevent the browser tool from accessing certain sites:
+
+```bash
+hermes config set security.website_blocklist '["malware-downloads.com", "phishing-site.com"]'
+```
+
+This is a hard block — the browser tool refuses to navigate to any listed URL.
+
+## Shell Hooks Allowlist
+
+Shell hooks (integrations that fire on certain events) require explicit approval:
+
+```bash
+# First use prompts interactively
+# Allowlist stored at ~/.hermes/shell-hooks-allowlist.json
+```
+
+You can edit this file directly to pre-approve hooks.
+
+## Security Best Practices
+
+| Setting | Recommendation |
+|---------|---------------|
+| Command approval | `smart` (best balance) |
+| Secret redaction | Enable if sharing logs/sessions |
+| PII redaction | Enable for gateway/multi-user setups |
+| Credential pools | Use for production deployments |
+| Website blocklist | Add if browser tool accesses untrusted sites |
+| TIRITH | Keep enabled (default) |
+
+## FAQ
+
+**Q: Does YOLO mode disable secret redaction?**
+No — they're independent. YOLO only affects command approval prompts.
+
+**Q: Can the agent disable its own security?**
+Secret redaction is snapshotted at startup — mid-session changes are ignored. Command approval mode can be toggled with `/yolo` but only for the current session.
+
+**Q: Are my API keys visible in session logs?**
+Not if secret redaction is enabled. Without it, tool output passes through unmodified.
+
+## Next Steps
+
+- **[Configuration Deep Dive](/blog/configuration-deep-dive/)** — full config reference
+- **[Memory & Profiles](/blog/memory-profiles/)** — persistence and isolation
+- **[Troubleshooting Guide](/blog/troubleshooting/)** — fix common issues

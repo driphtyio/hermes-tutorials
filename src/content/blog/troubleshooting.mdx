@@ -1,0 +1,252 @@
+---
+title: "Troubleshooting Common Issues"
+description: "A systematic guide to diagnosing and fixing common Hermes Agent problems — from API errors and tool failures to gateway crashes and Windows quirks."
+pubDate: "2026-05-14"
+updatedDate: "2026-05-14"
+tags: ["troubleshooting", "debugging", "errors", "reference"]
+keywords: [hermes troubleshooting, hermes doctor, common errors, API errors, gateway not working, voice not working, tools not available, hermes logs, diagnostic]
+---
+
+> **TLDR:** Run `hermes doctor --fix` first — it catches 80% of common issues. For gateway problems, check `~/.hermes/logs/gateway.log`. For tool availability, run `hermes tools list`. For API errors, verify your key in `~/.hermes/.env`. This guide covers every common failure and its fix.
+
+## Key Takeaways
+
+- `hermes doctor --fix` is your first step for any issue
+- Logs are in `~/.hermes/logs/gateway.log`
+- Most tool issues are fixed by enabling the toolset and running `/reset`
+- API errors usually mean a wrong key, expired key, or exhausted quota
+- Gateway needs `systemd` or `loginctl enable-linger` to survive logout
+
+## The Universal First Step
+
+```bash
+hermes doctor --fix
+```
+
+This checks:
+- Dependencies are installed
+- Config file is valid
+- API keys are reachable
+- Required tools are available
+- Python environment is intact
+
+It auto-fixes anything it can and tells you what needs manual attention.
+
+## API & Model Issues
+
+### "401 Unauthorized" or "403 Forbidden"
+
+Your API key is wrong, expired, or missing.
+
+```bash
+# Check what key Hermes is using
+cat ~/.hermes/.env | grep API_KEY
+
+# Verify it works
+curl -H "Authorization: Bearer sk-..." https://api.openai.com/v1/models
+
+# Re-authenticate OAuth providers
+hermes login --provider nous
+```
+
+**Copilot-specific:** `gh auth login` tokens do NOT work for Copilot API. You must use the Copilot OAuth device code flow via `hermes model` → select GitHub Copilot.
+
+### "429 Too Many Requests"
+
+You've hit a rate limit. Solutions:
+
+1. **Add more keys** to a credential pool: `hermes auth add`
+2. **Switch providers** with `/model`
+3. **Wait and retry** — most rate limits reset within a minute
+
+### Model not responding or timing out
+
+```bash
+# Check if the model name is correct
+hermes config set model.default "anthropic/claude-sonnet-4"
+
+# Verify provider supports the model
+hermes chat -m "anthropic/claude-sonnet-4" -q "Hello?"
+```
+
+Some models only work through specific providers. OpenRouter supports cross-provider model access.
+
+## Tool Issues
+
+### "Tool not available"
+
+```bash
+# Check tool status
+hermes tools list
+
+# Enable a toolset
+hermes tools enable web
+
+# Reset session to apply changes
+# (Type /reset or exit and relaunch)
+```
+
+Tools need `/reset` to take effect — they're loaded at session start.
+
+### Browser tool not working
+
+The browser tool needs a backend:
+
+```bash
+hermes config set browser.backend local    # Needs Chromium installed
+hermes config set browser.backend browserbase  # Needs BROWSERBASE_API_KEY
+```
+
+For local browser:
+
+```bash
+# Install Chromium
+sudo pacman -S chromium       # Arch
+sudo apt install chromium-browser  # Debian/Ubuntu
+
+# Verify
+chromium --version
+```
+
+### Voice not working
+
+```bash
+# 1. Check STT is enabled
+hermes config set stt.enabled true
+
+# 2. Install local STT
+pip install faster-whisper
+
+# 3. Or set a cloud provider
+echo 'GROQ_API_KEY="gsk-..."' >> ~/.hermes/.env
+
+# 4. In gateway: /restart. In CLI: exit and relaunch
+```
+
+## Gateway Issues
+
+### Gateway dies on SSH logout
+
+```bash
+sudo loginctl enable-linger $USER
+```
+
+This keeps user systemd services alive after you disconnect.
+
+### Gateway dies on WSL2 close
+
+WSL2 needs `systemd=true` in `/etc/wsl.conf`:
+
+```ini
+[boot]
+systemd=true
+```
+
+Without systemd, the gateway falls back to `nohup` which dies when the terminal closes.
+
+### Discord bot is silent
+
+Enable **Message Content Intent** in Discord Developer Portal → Bot → Privileged Gateway Intents. Without it, the bot only sees DMs, not channel messages.
+
+### Slack bot only works in DMs
+
+Subscribe to `message.channels` event in your Slack App configuration → Event Subscriptions. Without it, the bot ignores public channels.
+
+### Gateway crash loop
+
+```bash
+systemctl --user reset-failed hermes-gateway
+hermes gateway start
+```
+
+### Checking gateway logs
+
+```bash
+grep -i "failed to send\|error" ~/.hermes/logs/gateway.log | tail -20
+```
+
+## Changes Not Taking Effect
+
+### Config changes
+
+- Model, tool, and memory config: needs **new session** (`/reset` or relaunch)
+- Display settings: take effect immediately
+- Gateway config: needs `/restart` or `hermes gateway restart`
+
+### Skills not showing
+
+```bash
+hermes skills list              # Verify installed
+hermes skills config            # Check platform enablement
+/skill skill-name               # Load manually
+```
+
+## Windows-Specific Issues
+
+### Alt+Enter doesn't insert a newline
+
+Windows Terminal intercepts Alt+Enter for fullscreen toggle. Use **Ctrl+Enter** instead.
+
+### UTF-8 BOM in config.yaml
+
+If you get "HTTP 400 No models provided" on first run, your `config.yaml` might have a UTF-8 BOM. Re-save without BOM — `hermes config edit` writes correctly; Notepad is the usual culprit.
+
+### WinError 10106 (sandbox)
+
+The sandbox child process can't create network sockets. Caused by Hermes's env scrubber dropping `SYSTEMROOT`. Fixed in recent versions — update if you see it.
+
+## Performance Issues
+
+### Slow responses
+
+```bash
+# Switch to a faster model
+/model gemini-2.0-flash
+
+# Reduce context by starting fresh
+/new
+
+# Disable verbose mode
+/verbose off
+```
+
+### Token limits reached
+
+```bash
+# Compress the current session
+/compress
+
+# Or start fresh with essential context
+/new
+```
+
+## Diagnostic Commands Quick Reference
+
+| Command | What it checks |
+|---------|---------------|
+| `hermes doctor` | Everything — dependencies, config, API, tools |
+| `hermes config check` | Config file validity and required fields |
+| `hermes tools list` | Which toolsets are enabled/available |
+| `hermes skills list` | Installed skills |
+| `hermes status` | Session info (gateway) |
+| `grep -i error ~/.hermes/logs/gateway.log \| tail -20` | Gateway errors |
+
+## FAQ
+
+**Q: I changed my config but nothing happened. Why?**
+Most config changes need a session restart. Type `/reset` or exit and run `hermes` again.
+
+**Q: The gateway won't start. What do I check?**
+1. `hermes doctor --fix`
+2. `hermes gateway logs`
+3. `systemctl --user status hermes-gateway`
+4. Check your platform tokens are correct
+
+**Q: Hermes says a tool isn't available but I see it in the docs.**
+Tools are grouped into toolsets. Run `hermes tools list` to see what's enabled for your platform. Some tools need API keys (browser, image generation, voice).
+
+## Next Steps
+
+- **[Provider Setup Guide](/blog/provider-setup/)** — fix API issues at the source
+- **[Configuration Deep Dive](/blog/configuration-deep-dive/)** — understand every setting
+- **[Security & Privacy](/blog/security-privacy/)** — safety features

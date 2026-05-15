@@ -1,0 +1,251 @@
+---
+title: "Configuration Deep Dive"
+description: "Every config.yaml section explained — model, agent, terminal, compression, display, stt, tts, memory, security, delegation, and checkpoints."
+pubDate: "2026-05-14"
+tags: ["configuration", "reference", "advanced"]
+keywords: [hermes config, config.yaml, configuration reference, hermes settings, terminal timeout, context compression, agent max turns, hermes checkpoints]
+---
+
+> **TLDR:** Hermes configuration lives in `~/.hermes/config.yaml`. Edit with `hermes config edit`. Set individual values with `hermes config set section.key value`. This guide covers every config section: model, agent, terminal, compression, display, stt, tts, memory, security, delegation, and checkpoints.
+
+## Key Takeaways
+
+- `hermes config edit` opens the full config in your editor
+- `hermes config set section.key value` changes one thing at a time
+- Most changes need a session restart (`/reset` or relaunch) to take effect
+- `hermes doctor --fix` catches common misconfigurations
+
+## Config File Location
+
+```bash
+hermes config path    # → /home/you/.hermes/config.yaml
+hermes config edit    # Open in $EDITOR
+```
+
+Secrets go in a separate file:
+
+```bash
+hermes config env-path  # → /home/you/.hermes/.env
+```
+
+## Model Section
+
+Controls which LLM Hermes uses.
+
+```yaml
+model:
+  default: anthropic/claude-sonnet-4      # Default model
+  provider: openrouter                    # Provider name
+  base_url: ""                            # Custom endpoint URL
+  api_key: ""                             # Use .env instead!
+  context_length: 128000                  # Model's max context
+```
+
+**Tips:**
+- Never put API keys in `config.yaml` — use `.env`
+- `context_length` should match whatever the model actually supports
+- `provider` determines routing; set to `openrouter` to use any model via OpenRouter
+
+## Agent Section
+
+Controls conversation loop behavior.
+
+```yaml
+agent:
+  max_turns: 90                  # Max tool calls per turn (default: 90)
+  tool_use_enforcement: true     # Force tool use when appropriate
+```
+
+**`max_turns`** prevents runaway loops. If your agent starts doing too many things without returning, lower this. If complex tasks get cut off, raise it.
+
+## Terminal Section
+
+Controls shell access.
+
+```yaml
+terminal:
+  backend: local                 # local, docker, ssh, modal
+  cwd: /home/you/projects       # Default working directory
+  timeout: 180                   # Seconds before timeout (default: 180)
+```
+
+**Backends:**
+- `local` — runs on your machine
+- `docker` — runs inside a Docker container
+- `ssh` — runs on a remote server
+- `modal` — runs on Modal serverless infra
+
+**`timeout`** is the max seconds for any single command. Raise to 300 for long builds.
+
+## Compression Section
+
+Controls context window compression to save tokens.
+
+```yaml
+compression:
+  enabled: true                  # Auto-compress when nearing limit
+  threshold: 0.50                # Trigger at 50% context usage
+  target_ratio: 0.20             # Compress down to 20% usage
+```
+
+When enabled, Hermes automatically summarizes older conversation turns when you approach the context limit. `/compress` triggers it manually.
+
+## Display Section
+
+Controls CLI appearance.
+
+```yaml
+display:
+  skin: default                  # Color theme
+  tool_progress: true            # Show tool call progress
+  show_reasoning: false          # Show model's reasoning in output
+  show_cost: false               # Show per-turn token costs
+```
+
+- `show_reasoning` is great for debugging what the model is thinking
+- `show_cost` helps track API spending
+
+## STT (Speech-to-Text)
+
+Converts voice messages to text.
+
+```yaml
+stt:
+  enabled: true
+  provider: local                # local, groq, openai, mistral
+  local:
+    model: base                  # tiny, base, small, medium, large-v3
+```
+
+- **Local** (`faster-whisper`): free, runs on CPU, decent accuracy
+- **Groq Whisper**: free tier, much faster than local
+- **OpenAI Whisper**: paid, best accuracy
+- **Mistral Voxtral**: paid, fast
+
+Requires `pip install faster-whisper` for local or the respective API key for cloud providers.
+
+## TTS (Text-to-Speech)
+
+Converts text responses to voice.
+
+```yaml
+tts:
+  provider: edge                 # edge, elevenlabs, openai, minimax, mistral, neutts
+```
+
+| Provider | Free? | Quality |
+|----------|-------|---------|
+| Edge TTS | Yes (default) | Good |
+| ElevenLabs | Free tier | Excellent |
+| OpenAI | Paid | Very good |
+| NeuTTS (local) | Yes | Okay |
+
+Voice mode: `/voice on` for two-way voice, `/voice tts` for agent voice only.
+
+## Memory Section
+
+Controls cross-session persistence.
+
+```yaml
+memory:
+  memory_enabled: true           # Enable agent memory
+  user_profile_enabled: true     # Enable user preference memory
+  provider: built-in             # built-in, honcho, mem0
+```
+
+- `memory_enabled` — the agent's working memory (lesson learned, preferences)
+- `user_profile_enabled` — stores facts about who you are
+- `provider` — `built-in` is local SQLite; `honcho` and `mem0` are cloud backends
+
+## Security Section
+
+Controls safety features.
+
+```yaml
+security:
+  tirith_enabled: true           # Input/output guardrails
+  website_blocklist: []           # Blocklisted URLs for browser tool
+```
+
+Also set via `approvals.mode`:
+
+```bash
+hermes config set approvals.mode manual    # Prompt for dangerous commands (default)
+hermes config set approvals.mode smart     # Auto-approve low-risk, prompt for high-risk
+hermes config set approvals.mode off       # Skip all prompts (--yolo mode)
+```
+
+Covered in depth in the [Security & Privacy guide](/blog/security-privacy/).
+
+## Delegation Section
+
+Controls subagent spawning.
+
+```yaml
+delegation:
+  model: ""                      # Override model for subagents
+  provider: ""                   # Override provider
+  base_url: ""                   # Override endpoint
+  api_key: ""                    # Use .env
+  max_iterations: 50             # Max tool calls per subagent
+  reasoning_effort: medium       # low, medium, high
+```
+
+Subagents are independent agent instances. They can use different models than the parent.
+
+## Checkpoints Section
+
+Filesystem snapshots for rollback.
+
+```yaml
+checkpoints:
+  enabled: true                  # Enable /rollback command
+  max_snapshots: 50              # Keep last 50 snapshots
+```
+
+Checkpoints snapshot your working directory before destructive operations. Use `/rollback` in-session to restore.
+
+## Gateway Section
+
+For messaging platform configuration (covered in the [Gateway guide](/blog/gateway-setup/)):
+
+```yaml
+gateway:
+  platforms:
+    telegram:
+      enabled: true
+      bot_token: "..."
+
+    discord:
+      enabled: true
+      bot_token: "..."
+```
+
+## Curator Section
+
+Controls the skill lifecycle manager:
+
+```yaml
+curator:
+  enabled: true
+  interval_hours: 24
+  stale_after_days: 30
+  archive_after_days: 60
+```
+
+## FAQ
+
+**Q: Do I need to restart after every config change?**
+Most config changes need a session restart (`/reset` or exit and relaunch). A few (like display settings) take effect immediately.
+
+**Q: Where should I put secrets?**
+Always in `~/.hermes/.env`. Never in `config.yaml`. The `.env` file is auto-loaded by Hermes and is excluded from the config checksum.
+
+**Q: How do I reset a config value to default?**
+Set it to an empty string: `hermes config set section.key ""`
+
+## Next Steps
+
+- **[Provider Setup Guide](/blog/provider-setup/)** — configure your LLM
+- **[Security & Privacy](/blog/security-privacy/)** — protection features
+- **[Memory & Profiles](/blog/memory-profiles/)** — persistence and isolation

@@ -1,0 +1,196 @@
+---
+title: "LLM Provider Setup & Model Configuration"
+description: "A complete guide to configuring LLM providers — OpenRouter, Anthropic, OpenAI, DeepSeek, local models, credential pools, and model-switching strategies."
+pubDate: "2026-05-14"
+tags: ["providers", "configuration", "models", "setup"]
+keywords: [hermes provider setup, LLM provider, OpenRouter, Anthropic, local models, API keys, credential pools, model switching, hermes model]
+---
+
+> **TLDR:** Hermes works with 20+ LLM providers. Set one up with `hermes setup` or paste your API key into `~/.hermes/.env`. Switch models anytime with `hermes model` or `/model` in-session. Use credential pools to rotate multiple API keys for rate-limit resilience. Local models via Ollama/llama.cpp work too.
+
+## Key Takeaways
+
+- `hermes setup` walks through provider selection — easiest path
+- API keys go in `~/.hermes/.env`, not `config.yaml`
+- `hermes model` switches models interactively; `/model` works mid-session
+- Credential pools auto-rotate keys when you hit rate limits
+- Local models work via Ollama or llama.cpp — no internet needed
+
+## Quick Reference: Supported Providers
+
+| Provider | Auth | Env Variable |
+|----------|------|-------------|
+| OpenRouter | API key | `OPENROUTER_API_KEY` |
+| Anthropic | API key | `ANTHROPIC_API_KEY` |
+| OpenAI | API key | `OPENAI_API_KEY` |
+| DeepSeek | API key | `DEEPSEEK_API_KEY` |
+| Google Gemini | API key | `GOOGLE_API_KEY` |
+| xAI / Grok | API key | `XAI_API_KEY` |
+| GitHub Copilot | OAuth | `hermes auth` |
+| Nous Portal | OAuth | `hermes auth` |
+| Hugging Face | Token | `HF_TOKEN` |
+| Ollama (local) | None | N/A |
+| llama.cpp (local) | None | N/A |
+
+Full list: 20+ providers. See the [official docs](https://hermes-agent.nousresearch.com/docs/integrations/providers).
+
+## Recommended: OpenRouter
+
+[OpenRouter](https://openrouter.ai) is the easiest starting point — one API key gives you access to hundreds of models from every major provider.
+
+```bash
+# 1. Sign up at openrouter.ai and get an API key
+# 2. Set the key
+echo 'OPENROUTER_API_KEY="sk-or-v1-..."' >> ~/.hermes/.env
+
+# 3. Select a model
+hermes model
+```
+
+Pick a model like `anthropic/claude-sonnet-4`, `openai/gpt-4o`, or `deepseek/deepseek-chat`.
+
+## Manual Provider Setup
+
+If you prefer a specific provider, here are the common ones:
+
+### Anthropic
+
+```bash
+echo 'ANTHROPIC_API_KEY="sk-ant-..."' >> ~/.hermes/.env
+```
+
+Then set the model:
+
+```bash
+hermes config set model.default "claude-sonnet-4-20250514"
+hermes config set model.provider "anthropic"
+```
+
+### OpenAI
+
+```bash
+echo 'OPENAI_API_KEY="sk-..."' >> ~/.hermes/.env
+hermes config set model.default "gpt-4o"
+hermes config set model.provider "openai"
+```
+
+### DeepSeek
+
+```bash
+echo 'DEEPSEEK_API_KEY="sk-..."' >> ~/.hermes/.env
+hermes config set model.default "deepseek-chat"
+hermes config set model.provider "deepseek"
+```
+
+### Google Gemini
+
+```bash
+echo 'GOOGLE_API_KEY="AIza..."' >> ~/.hermes/.env
+hermes config set model.default "gemini-2.0-flash"
+hermes config set model.provider "google"
+```
+
+## Local Models (No API Key Needed)
+
+### Ollama
+
+If you have [Ollama](https://ollama.ai) installed locally:
+
+```bash
+# Pull a model
+ollama pull llama3.2
+
+# Configure Hermes to use it
+hermes config set model.default "ollama/llama3.2"
+hermes config set model.provider "ollama"
+```
+
+Ollama runs on `localhost:11434` by default. Hermes auto-detects it.
+
+### llama.cpp
+
+For GGUF models:
+
+```bash
+hermes config set model.default "llama.cpp/path/to/model.gguf"
+hermes config set model.provider "llama.cpp"
+```
+
+Local models are slower but completely free and private.
+
+## OAuth Providers
+
+Some providers use OAuth instead of API keys:
+
+```bash
+# GitHub Copilot
+hermes login --provider github-copilot
+
+# Nous Portal
+hermes login --provider nous
+
+# OpenAI Codex
+hermes login --provider openai-codex
+```
+
+These open a browser for authentication. Once done, Hermes stores the tokens securely.
+
+## Credential Pools
+
+Running into rate limits? Pool multiple API keys for the same provider:
+
+```bash
+hermes auth add          # Interactive — pick provider, paste key
+hermes auth list openrouter  # See all keys for OpenRouter
+hermes auth remove openrouter 1  # Remove a key by index
+```
+
+Hermes rotates keys automatically — if one hits a rate limit, it tries the next.
+
+## Switching Models
+
+### At startup
+
+```bash
+hermes -m "anthropic/claude-sonnet-4"
+```
+
+### Mid-session
+
+```
+/model deepseek/deepseek-chat
+```
+
+### Persist a change
+
+```bash
+hermes config set model.default "deepseek/deepseek-chat"
+```
+
+The next session uses this model by default.
+
+## Custom Endpoints
+
+For providers not in the built-in list:
+
+```bash
+hermes config set model.base_url "https://your-endpoint.com/v1"
+hermes config set model.api_key "your-key"
+hermes config set model.provider "custom"
+```
+
+## FAQ
+
+**Q: Can I use different models for different tasks?**
+Yes — delegation subagents and cron jobs can have their own model overrides. Set `model` in the job or delegation config.
+
+**Q: What happens if my API key expires mid-session?**
+Hermes retries once. If it fails again, it tells you to update the key. Run `hermes config env-path`, edit the file, then `/retry`.
+
+**Q: Do I need separate keys for vision vs text models?**
+No — the API key is per-provider, not per-capability. One OpenRouter key works for text, vision, and image generation models.
+
+## Next Steps
+
+- **[Configuration Deep Dive](/blog/configuration-deep-dive/)** — every config.yaml option explained
+- **[Security & Privacy](/blog/security-privacy/)** — approval modes, secret redaction, credential security
