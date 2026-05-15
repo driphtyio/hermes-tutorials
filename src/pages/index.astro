@@ -79,6 +79,15 @@ const posts = (await getCollection('blog'))
 				border: 1px solid rgb(var(--gray-light));
 				border-radius: 12px;
 				text-align: center;
+				text-decoration: none;
+				color: inherit;
+				display: block;
+				transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+			}
+			.feature-card:hover {
+				transform: translateY(-3px);
+				box-shadow: var(--box-shadow);
+				border-color: var(--accent-light);
 			}
 			.feature-card .emoji {
 				font-size: 2.5em;
@@ -144,26 +153,26 @@ const posts = (await getCollection('blog'))
 			</div>
 
 			<div class="features">
-				<div class="feature-card">
+				<a class="feature-card" href="/blog/getting-started/">
 					<div class="emoji">🚀</div>
 					<h3>Getting Started</h3>
 					<p>Install, configure, and run your first Hermes session in minutes.</p>
-				</div>
-				<div class="feature-card">
+				</a>
+				<a class="feature-card" href="/blog/skills-system/">
 					<div class="emoji">🧠</div>
 					<h3>Skills &amp; Memory</h3>
 					<p>Self-improving agents that learn from experience and remember across sessions.</p>
-				</div>
-				<div class="feature-card">
+				</a>
+				<a class="feature-card" href="/blog/gateway-setup/">
 					<div class="emoji">🔌</div>
 					<h3>Integrations</h3>
 					<p>Telegram, Discord, Slack, MCP servers, 15+ LLM providers, and more.</p>
-				</div>
-				<div class="feature-card">
+				</a>
+				<a class="feature-card" href="/blog/advanced-automation/">
 					<div class="emoji">⚡</div>
 					<h3>Advanced</h3>
 					<p>Cron jobs, subagent delegation, kanban orchestration, gateway setup.</p>
-				</div>
+				</a>
 			</div>
 
 			<div class="recent-posts">
