@@ -1,0 +1,181 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+import { providers, providerCategories } from '../../data/providers';
+
+const total = providers.length;
+const freeCount = providers.filter(p => p.freeTier.toLowerCase().includes('yes')).length;
+const localCount = providers.filter(p => p.category === 'local').length;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title={`Providers — ${SITE_TITLE}`} description={`${total} LLM providers for Hermes Agent — API services, local inference, and OAuth platforms. Reviews, pricing, models, and setup guides.`} />
+		<style>
+			.header-section { text-align: center; padding: 2em 0 1em; }
+			.header-section h1 { margin-bottom: 0.3em; font-size: 2.8rem; font-weight: 700; letter-spacing: -0.03em; }
+			.header-section .subtitle { color: var(--text-secondary); font-size: 1.05em; max-width: 600px; margin: 0 auto; }
+			.stats { display: flex; justify-content: center; gap: 2.5em; margin: 1.5em 0; flex-wrap: wrap; }
+			.stat { text-align: center; }
+			.stat .num { font-size: 1.8em; font-weight: 700; color: var(--accent-light); }
+			.stat .label { font-size: 0.85em; color: var(--text-muted); }
+			.filters { display: flex; gap: 0.5em; margin: 1.5em 0; flex-wrap: wrap; justify-content: center; }
+			.filter-btn {
+				padding: 0.35em 1em; border: 1px solid var(--border); border-radius: 999px;
+				background: transparent; color: var(--text-secondary); cursor: pointer;
+				font-size: 0.82em; transition: all 0.15s ease; font-family: inherit;
+			}
+			.filter-btn:hover { border-color: var(--accent); color: #fff; }
+			.filter-btn.active { background: #fff; color: var(--bg); border-color: #fff; }
+			.search-wrapper { max-width: 360px; margin: 0 auto 1.5em; }
+			.search-input {
+				width: 100%; padding: 0.5em 0.8em; border: 1px solid var(--border); border-radius: var(--radius-md);
+				background: var(--bg-secondary); color: var(--text-primary); font-size: 0.9em;
+				font-family: inherit; box-sizing: border-box; outline: none;
+			}
+			.search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+			.search-input::placeholder { color: var(--text-muted); }
+			.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 1em; margin: 1em 0 2em; }
+			.card {
+				border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25em;
+				background: var(--bg-secondary); transition: all 0.15s ease;
+				display: flex; flex-direction: column;
+			}
+			.card:hover { border-color: var(--border-light); background: var(--bg-tertiary); }
+			.card .top-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.3em; }
+			.card .name-row { display: flex; align-items: center; gap: 0.4em; flex-wrap: wrap; }
+			.card h2 { margin: 0; font-size: 1em; font-weight: 600; letter-spacing: -0.01em; }
+			.card .badge { font-size: 0.65em; padding: 0.15em 0.5em; border-radius: 999px; font-weight: 600; text-transform: uppercase; }
+			.badge-api { background: rgba(108, 92, 231, 0.2); color: var(--accent-light); }
+			.badge-local { background: rgba(46, 125, 50, 0.2); color: #66bb6a; }
+			.badge-oauth { background: rgba(33, 150, 243, 0.2); color: #42a5f5; }
+			.card .rating { color: #f59e0b; font-size: 0.85em; white-space: nowrap; }
+			.card .category-label { font-size: 0.72em; color: var(--text-muted); margin-bottom: 0.2em; }
+			.card p { font-size: 0.84em; color: var(--text-secondary); margin: 0 0 0.6em; line-height: 1.5; flex-grow: 1; }
+
+			/* Key info grid */
+			.card .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4em; margin-bottom: 0.6em; }
+			.card .info-item { font-size: 0.78em; color: var(--text-muted); line-height: 1.4; }
+			.card .info-item .info-label { font-size: 0.7em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); display: block; margin-bottom: 0.1em; }
+			.card .info-item.full { grid-column: 1 / -1; }
+			.card .free-badge { display: inline-block; font-size: 0.65em; padding: 0.1em 0.4em; border-radius: 3px; background: rgba(46, 125, 50, 0.3); color: #66bb6a; font-weight: 600; }
+
+			.card .lists { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5em; margin-bottom: 0.5em; }
+			.card .list-col { font-size: 0.75em; line-height: 1.5; }
+			.card .list-col .list-title { font-size: 0.7em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2em; display: block; }
+			.card .list-col .pro-title { color: #66bb6a; }
+			.card .list-col .con-title { color: #ef5350; }
+			.card .list-col ul { margin: 0; padding-left: 1em; color: var(--text-muted); }
+			.card .list-col li { margin-bottom: 0.15em; }
+
+			.card .howto { font-size: 0.78em; color: var(--text-secondary); line-height: 1.5; padding: 0.5em 0.7em; background: var(--bg-tertiary); border-radius: var(--radius-sm); border-left: 2px solid var(--accent); }
+			.howto-label { font-size: 0.7em; font-weight: 600; color: var(--accent-light); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.15em; }
+
+			.empty-state { text-align: center; padding: 3em; color: var(--text-muted); display: none; }
+			.empty-state .emoji { font-size: 2.5em; margin-bottom: 0.5em; }
+			@media (max-width: 720px) {
+				.grid { grid-template-columns: 1fr; }
+				.card .lists { grid-template-columns: 1fr; }
+				.card .info-grid { grid-template-columns: 1fr; }
+				.stats { gap: 1em; }
+				.header-section h1 { font-size: 2rem; }
+			}
+		</style>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<div class="header-section">
+				<h1>LLM Providers</h1>
+				<p class="subtitle">{total} providers for Hermes Agent — {freeCount} with free tiers, {localCount} local options. Reviews, pricing, models, and setup guides.</p>
+			</div>
+
+			<div class="stats">
+				<div class="stat"><div class="num">{total}</div><div class="label">Total Providers</div></div>
+				<div class="stat"><div class="num">{freeCount}</div><div class="label">Free Tier Available</div></div>
+				<div class="stat"><div class="num">{providers.filter(p => p.rating >= 4).length}</div><div class="label">Top Rated ★4+</div></div>
+				<div class="stat"><div class="num">{localCount}</div><div class="label">Local / Free</div></div>
+			</div>
+
+			<div class="search-wrapper">
+				<input class="search-input" type="text" id="search" placeholder="Search providers..." />
+			</div>
+
+			<div class="filters" id="filters">
+				<button class="filter-btn active" data-cat="all">All</button>
+				{providerCategories.map(cat => (
+					<button class="filter-btn" data-cat={cat.id}>{cat.icon} {cat.label}</button>
+				))}
+			</div>
+
+			<div class="grid" id="providerGrid">
+				{providers.map(p => (
+					<div class="card" data-category={p.category} data-name={p.name.toLowerCase()} data-desc={p.description.toLowerCase()}>
+						<div class="category-label">{providerCategories.find(c => c.id === p.category)?.icon} {providerCategories.find(c => c.id === p.category)?.label}</div>
+						<div class="top-row">
+							<div class="name-row">
+								<h2>{p.name}</h2>
+								<span class={`badge badge-${p.category}`}>{
+									p.category === 'api' ? 'API' : p.category === 'local' ? 'Local' : 'OAuth'
+								}</span>
+							</div>
+							{p.rating > 0 && <div class="rating">{'★'.repeat(p.rating)}{'☆'.repeat(5 - p.rating)}</div>}
+						</div>
+						<p>{p.description}</p>
+						<div class="info-grid">
+							<div class="info-item"><span class="info-label">Models</span>{p.models}</div>
+							<div class="info-item"><span class="info-label">Pricing</span>{p.pricing}</div>
+							<div class="info-item full"><span class="info-label">Best for</span>{p.bestFor}</div>
+							<div class="info-item full"><span class="info-label">Free tier</span>{p.freeTier.includes('Yes') ? <span class="free-badge">✅ Free tier</span> : <span>{p.freeTier}</span>}</div>
+						</div>
+						<div class="lists">
+							<div class="list-col">
+								<span class="list-title pro-title">Pros</span>
+								<ul>{p.pros.map(pr => <li>{pr}</li>)}</ul>
+							</div>
+							<div class="list-col">
+								<span class="list-title con-title">Cons</span>
+								<ul>{p.cons.map(c => <li>{c}</li>)}</ul>
+							</div>
+						</div>
+						<div class="howto">
+							<div class="howto-label">Setup guide</div>
+							{p.setupGuide}
+						</div>
+					</div>
+				))}
+			</div>
+
+			<div class="empty-state" id="emptyState">
+				<div class="emoji">🔍</div>
+				<p>No providers match your search. Try a different filter or keyword.</p>
+			</div>
+		</main>
+		<Footer />
+
+		<script>
+			const search = document.getElementById('search');
+			const filterBtns = document.querySelectorAll('.filter-btn');
+			const cards = document.querySelectorAll('.card');
+			const emptyState = document.getElementById('emptyState');
+			let activeCategory = 'all';
+			function filterCards() {
+				const query = search.value.toLowerCase(); let visible = 0;
+				cards.forEach(card => {
+					const cat = card.dataset.category; const name = card.dataset.name; const desc = card.dataset.desc;
+					const matchesCat = activeCategory === 'all' || cat === activeCategory;
+					const matchesSearch = !query || name.includes(query) || desc.includes(query);
+					card.style.display = matchesCat && matchesSearch ? '' : 'none';
+					if (matchesCat && matchesSearch) visible++;
+				});
+				emptyState.style.display = visible === 0 ? '' : 'none';
+			}
+			function setCategory(cat) { activeCategory = cat; filterBtns.forEach(b => b.classList.toggle('active', b.dataset.cat === cat)); filterCards(); }
+			filterBtns.forEach(btn => btn.addEventListener('click', () => setCategory(btn.dataset.cat)));
+			search.addEventListener('input', filterCards);
+		</script>
+	</body>
+</html>
