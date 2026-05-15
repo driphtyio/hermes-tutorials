@@ -1,0 +1,366 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+import { plugins, categories, type Plugin } from '../../data/plugins';
+
+const totalPlugins = plugins.length;
+const bundledCount = plugins.filter(p => p.status === 'bundled').length;
+const communityCount = plugins.filter(p => p.status === 'community' || p.status === 'request').length;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title={`Plugin Marketplace — ${SITE_TITLE}`} description="Browse, search, and install Hermes Agent plugins. 55+ plugins across 9 categories with ratings, requirements, and install instructions." />
+		<style>
+			.header-section {
+				text-align: center;
+				padding: 2em 0 1em;
+			}
+			.header-section h1 {
+				margin-bottom: 0.3em;
+			}
+			.header-section .subtitle {
+				color: rgb(var(--gray));
+				font-size: 1.1em;
+				max-width: 600px;
+				margin: 0 auto;
+			}
+			.stats {
+				display: flex;
+				justify-content: center;
+				gap: 2em;
+				margin: 1.5em 0;
+				flex-wrap: wrap;
+			}
+			.stat {
+				text-align: center;
+			}
+			.stat .num {
+				font-size: 1.8em;
+				font-weight: 700;
+				color: var(--accent);
+			}
+			.stat .label {
+				font-size: 0.85em;
+				color: rgb(var(--gray));
+			}
+
+			/* ── Filters ── */
+			.filters {
+				display: flex;
+				gap: 0.6em;
+				margin: 1.5em 0;
+				flex-wrap: wrap;
+				justify-content: center;
+			}
+			.filter-btn {
+				padding: 0.4em 1em;
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 20px;
+				background: white;
+				color: rgb(var(--gray-dark));
+				cursor: pointer;
+				font-size: 0.85em;
+				transition: all 0.15s ease;
+			}
+			.filter-btn:hover {
+				border-color: var(--accent-light);
+				color: var(--accent);
+			}
+			.filter-btn.active {
+				background: var(--accent);
+				color: white;
+				border-color: var(--accent);
+			}
+
+			/* ── Search ── */
+			.search-wrapper {
+				max-width: 400px;
+				margin: 0 auto 1.5em;
+			}
+			.search-input {
+				width: 100%;
+				padding: 0.6em 1em;
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 8px;
+				font-size: 1em;
+				font-family: inherit;
+				box-sizing: border-box;
+			}
+			.search-input:focus {
+				outline: none;
+				border-color: var(--accent);
+				box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.15);
+			}
+
+			/* ── Plugin Grid ── */
+			.plugins-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+				gap: 1.2em;
+				margin: 1em 0 2em;
+			}
+			.plugin-card {
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 12px;
+				padding: 1.2em;
+				transition: box-shadow 0.15s ease, transform 0.15s ease;
+				display: flex;
+				flex-direction: column;
+			}
+			.plugin-card:hover {
+				box-shadow: var(--box-shadow);
+				transform: translateY(-2px);
+			}
+			.plugin-card .top-row {
+				display: flex;
+				justify-content: space-between;
+				align-items: flex-start;
+				margin-bottom: 0.5em;
+			}
+			.plugin-card .name-row {
+				display: flex;
+				align-items: center;
+				gap: 0.5em;
+				flex-wrap: wrap;
+			}
+			.plugin-card h2 {
+				margin: 0;
+				font-size: 1.15em;
+			}
+			.plugin-card .badge {
+				font-size: 0.7em;
+				padding: 0.15em 0.5em;
+				border-radius: 4px;
+				font-weight: 600;
+				text-transform: uppercase;
+			}
+			.badge-bundled {
+				background: #e8f5e9;
+				color: #2e7d32;
+			}
+			.badge-community {
+				background: #fff3e0;
+				color: #e65100;
+			}
+			.badge-request {
+				background: #fce4ec;
+				color: #c62828;
+			}
+			.plugin-card .rating {
+				color: #f59e0b;
+				font-size: 0.9em;
+				white-space: nowrap;
+			}
+			.plugin-card .category-label {
+				font-size: 0.75em;
+				color: var(--accent);
+				margin-bottom: 0.4em;
+			}
+			.plugin-card p {
+				font-size: 0.88em;
+				color: rgb(var(--gray));
+				margin: 0 0 0.8em;
+				line-height: 1.5;
+				flex-grow: 1;
+			}
+			.plugin-card .details {
+				font-size: 0.8em;
+				color: rgb(var(--gray));
+				margin-bottom: 0.8em;
+				line-height: 1.6;
+			}
+			.plugin-card .details strong {
+				color: rgb(var(--gray-dark));
+			}
+			.plugin-card .actions {
+				display: flex;
+				gap: 0.5em;
+				flex-wrap: wrap;
+			}
+			.install-cmd {
+				background: #1e1e2e;
+				color: #cdd6f4;
+				padding: 0.4em 0.8em;
+				border-radius: 6px;
+				font-size: 0.8em;
+				font-family: monospace;
+				user-select: all;
+				flex: 1;
+				min-width: 0;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+			.copy-btn {
+				background: var(--accent);
+				color: white;
+				border: none;
+				border-radius: 6px;
+				padding: 0.4em 0.8em;
+				font-size: 0.8em;
+				cursor: pointer;
+				white-space: nowrap;
+				transition: background 0.15s;
+			}
+			.copy-btn:hover {
+				background: var(--accent-dark);
+			}
+			.copy-btn.copied {
+				background: #2e7d32;
+			}
+			.plugin-card .req-badge {
+				display: inline-block;
+				font-size: 0.7em;
+				padding: 0.15em 0.4em;
+				border-radius: 3px;
+				background: rgb(var(--gray-light));
+				color: rgb(var(--gray));
+			}
+			.plugin-card .issue-link {
+				font-size: 0.8em;
+			}
+			.plugin-card .issue-link a {
+				color: var(--accent);
+			}
+			.empty-state {
+				text-align: center;
+				padding: 3em;
+				color: rgb(var(--gray));
+			}
+			.empty-state .emoji {
+				font-size: 2.5em;
+				margin-bottom: 0.5em;
+			}
+
+			.no-results { display: none; }
+
+			@media (max-width: 720px) {
+				.plugins-grid {
+					grid-template-columns: 1fr;
+				}
+				.stats {
+					gap: 1em;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<div class="header-section">
+				<h1>Plugin Marketplace</h1>
+				<p class="subtitle">Browse, search, and install plugins for Hermes Agent. {bundledCount} bundled + {communityCount} community/requested.</p>
+			</div>
+
+			<div class="stats">
+				<div class="stat"><div class="num">{totalPlugins}</div><div class="label">Total Plugins</div></div>
+				<div class="stat"><div class="num">{bundledCount}</div><div class="label">Bundled</div></div>
+				<div class="stat"><div class="num">{categories.length}</div><div class="label">Categories</div></div>
+				<div class="stat"><div class="num">{plugins.filter(p => p.rating >= 4).length}</div><div class="label">Top Rated ★4+</div></div>
+			</div>
+
+			<div class="search-wrapper">
+				<input class="search-input" type="text" id="search" placeholder="Search plugins..." oninput="filterPlugins()" />
+			</div>
+
+			<div class="filters" id="filters">
+				<button class="filter-btn active" data-cat="all" onclick="setCategory('all')">All</button>
+				{categories.map(cat => (
+					<button class="filter-btn" data-cat={cat.id} onclick={`setCategory('${cat.id}')`}>
+						{cat.icon} {cat.label}
+					</button>
+				))}
+			</div>
+
+			<div class="plugins-grid" id="pluginGrid">
+				{plugins.map((p, i) => (
+					<div class="plugin-card" data-category={p.category} data-rating={p.rating} data-status={p.status} data-name={p.name.toLowerCase()} data-desc={p.description.toLowerCase()}>
+						<div class="category-label">
+							{categories.find(c => c.id === p.category)?.icon} {categories.find(c => c.id === p.category)?.label}
+						</div>
+						<div class="top-row">
+							<div class="name-row">
+								<h2>{p.name}</h2>
+								{p.status === 'bundled' && <span class="badge badge-bundled">Bundled</span>}
+								{p.status === 'community' && <span class="badge badge-community">Community</span>}
+								{p.status === 'request' && <span class="badge badge-request">Request</span>}
+							</div>
+							{p.rating > 0 && (
+								<div class="rating">{'★'.repeat(p.rating)}{'☆'.repeat(5 - p.rating)}</div>
+							)}
+						</div>
+						<p>{p.description}</p>
+						<div class="details">
+							{p.autoLoad ? <span>✅ Auto-loaded</span> : <span>🔌 Opt-in</span>}
+							<span> · </span>
+							<strong>Type:</strong> {p.kind}
+							<br />
+							<strong>Requires:</strong> {p.requirements}
+							{p.auth !== 'None' && <><br /><strong>Auth:</strong> {p.auth}</>}
+							{p.githubIssue && <><br /><span class="issue-link">🐛 <a href={`https://github.com/NousResearch/hermes-agent/issues/${p.githubIssue.replace('#', '')}`} target="_blank">{p.githubIssue}</a></span></>}
+						</div>
+						{p.installHint !== 'None' && p.status !== 'request' && (
+							<div class="actions">
+								<span class="install-cmd" id={`cmd-${i}`}>{p.installHint}</span>
+								<button class="copy-btn" onclick={`copyCmd(${i})`}>Copy</button>
+							</div>
+						)}
+					</div>
+				))}
+			</div>
+
+			<div class="empty-state no-results" id="emptyState">
+				<div class="emoji">🔍</div>
+				<p>No plugins match your search. Try a different filter or keyword.</p>
+			</div>
+		</main>
+		<Footer />
+
+		<script>
+			let activeCategory = 'all';
+
+			function setCategory(cat) {
+				activeCategory = cat;
+				document.querySelectorAll('.filter-btn').forEach(b => {
+					b.classList.toggle('active', b.dataset.cat === cat);
+				});
+				filterPlugins();
+			}
+
+			function filterPlugins() {
+				const query = document.getElementById('search').value.toLowerCase();
+				let visible = 0;
+
+				document.querySelectorAll('.plugin-card').forEach(card => {
+					const cat = card.dataset.category;
+					const name = card.dataset.name;
+					const desc = card.dataset.desc;
+					const matchesCat = activeCategory === 'all' || cat === activeCategory;
+					const matchesSearch = !query || name.includes(query) || desc.includes(query);
+					const show = matchesCat && matchesSearch;
+					card.style.display = show ? '' : 'none';
+					if (show) visible++;
+				});
+
+				document.getElementById('emptyState').style.display = visible === 0 ? '' : 'none';
+			}
+
+			function copyCmd(index) {
+				const cmd = document.getElementById(`cmd-${index}`);
+				const btn = cmd.nextElementSibling;
+				navigator.clipboard.writeText(cmd.textContent).then(() => {
+					btn.textContent = 'Copied!';
+					btn.classList.add('copied');
+					setTimeout(() => {
+						btn.textContent = 'Copy';
+						btn.classList.remove('copied');
+					}, 2000);
+				});
+			}
+		</script>
+	</body>
+</html>
