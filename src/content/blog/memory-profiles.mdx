@@ -5,3 +5,183 @@ pubDate: "2026-05-14"
 tags: ["memory", "profiles", "personalization", "voice"]
 keywords: [hermes memory, agent memory, cross-session memory, hermes profiles, voice mode, hermes tts, hermes stt, Honcho, Mem0]
 ---
+
+> **TLDR:** Hermes remembers you across sessions through its memory system (enable with `hermes config set memory.memory_enabled true`). Profiles create completely isolated Hermes instances (`hermes profile create "work"`). Voice mode turns on with `/voice on`. Together they make Hermes feel like a personal assistant, not a stateless chatbot.
+
+## Key Takeaways
+
+- Memory stores facts about you and your environment; skills store procedures
+- Profiles give you fully independent Hermes instances (work vs personal)
+- Voice mode: `/voice on` for two-way, `/voice tts` for agent-only
+- Memory providers: built-in (free, local SQLite), Honcho, Mem0
+- The curator (`hermes curator`) runs automatic skill lifecycle maintenance
+- `hermes profile export` backs up entire profiles as tar.gz
+
+## Memory System
+
+Memory is what makes Hermes feel intelligent between sessions. With cross-session memory enabled, it remembers who you are, your preferences, your environment, and lessons learned.
+
+### Enabling Memory
+
+```bash
+hermes config set memory.memory_enabled true
+hermes config set memory.user_profile_enabled true
+```
+
+These take effect on next session (`/reset` or restart).
+
+### What Gets Saved
+
+The agent automatically saves to memory:
+
+- **Your preferences** — "User prefers pnpm over npm"
+- **Environment facts** — "Running on Arch Linux with Intel CPU"
+- **Corrections** — "Don't use apt, use pacman"
+- **Workflow preferences** — "User likes concise responses"
+
+### Two Memory Stores
+
+| Store | What it holds | Who writes it |
+|-------|--------------|-------------|
+| `memory` | Environment facts, project conventions, lessons learned | Agent writes automatically |
+| `user` | Your name, preferences, communication style | Agent writes when corrected |
+
+### Memory Providers
+
+```bash
+# Built-in SQLite (default, free, local — data never leaves your machine)
+hermes config set memory.provider "built-in"
+
+# Honcho (cloud, syncs across devices)
+hermes config set memory.provider "honcho"
+
+# Mem0 (cloud, advanced memory management)
+hermes config set memory.provider "mem0"
+```
+
+### Memory vs Skills
+
+A common point of confusion:
+
+| **Memory** | **Skills** |
+|------------|-----------|
+| Facts about you and your environment | Reusable procedures |
+| "User uses Arch Linux" | "How to install packages on Arch" |
+| Written by the agent automatically | Created by the agent on request |
+| Loaded every session automatically | Loaded on demand |
+| Compact, one-sentence entries | Structured documents with steps |
+
+**Rule of thumb:** If it's a fact → memory. If it's a process → skill. See the [Skills System guide](/blog/skills-system/) for a deeper dive.
+
+## Profiles
+
+Profiles are fully isolated Hermes instances. Each profile has its own config, session history, skills directory, memory database, and API keys.
+
+### Creating Profiles
+
+```bash
+# List existing
+hermes profile list
+
+# Create from scratch
+hermes profile create "work"
+
+# Clone current config (recommended)
+hermes profile create "personal" --clone
+
+# Set as default
+hermes profile use "work"
+```
+
+### Using Profiles
+
+```bash
+hermes --profile work          # One-off
+hermes profile use "personal"  # Make default
+hermes                         # Uses "personal"
+```
+
+### Managing Profiles
+
+```bash
+hermes profile show work       # See details
+hermes profile rename work dev # Rename
+hermes profile delete personal # Remove (irreversible)
+hermes profile export work     # Backup as tar.gz
+hermes profile import work.tar.gz  # Restore
+```
+
+### Use Cases
+
+- **Work profile** — project configs, company API keys, professional memory
+- **Personal profile** — personal projects, different providers, casual tone
+- **Client profiles** — separate memory per client, isolated skills
+- **Testing profile** — experimental configs, different models
+
+## Voice Mode
+
+Hermes supports two-way voice interaction — speak to it, and it speaks back.
+
+### Setup
+
+Configure both STT (speech-to-text) and TTS (text-to-speech):
+
+```bash
+# STT: voice to text
+hermes config set stt.enabled true
+hermes config set stt.provider local   # or groq, openai, mistral
+
+# TTS: text to voice
+hermes config set tts.provider edge    # or elevenlabs, openai
+```
+
+For local STT:
+
+```bash
+pip install faster-whisper
+```
+
+### Voice Commands
+
+```
+/voice on      # Two-way voice (you speak, agent speaks back)
+/voice tts     # Agent always speaks, you type
+/voice off     # Text only (default)
+```
+
+Telegram and Discord voice messages are auto-transcribed when STT is enabled.
+
+## The Curator: Automatic Skill Maintenance
+
+The curator manages your skills automatically, part of the [skills lifecycle system](/blog/skills-system/):
+
+```bash
+hermes curator status             # See all skills and their state
+hermes curator pin deploy-skill   # Protect from auto-archiving
+hermes curator run                # Run maintenance now
+```
+
+It marks unused skills as stale, archives them after 60 days, but never deletes anything. Pinned skills are excluded from the lifecycle.
+
+## FAQ
+
+**Q: Does memory sync between CLI and gateway?**
+If using the built-in provider, memory is local to the machine. If using Honcho or Mem0, memory syncs across all interfaces.
+
+**Q: Can I export my memory?**
+Memory is stored in the SQLite database at `~/.hermes/`. Export an entire profile with its memory using `hermes profile export work`.
+
+**Q: Will Hermes remember me if I switch profiles?**
+No — each profile has isolated memory. That's by design. Switch profiles with `hermes --profile name`.
+
+**Q: How is memory different from a skill?**
+Memory stores facts ("user prefers pnpm"). Skills store procedures ("how to deploy the app"). See the [Skills guide](/blog/skills-system/) for details.
+
+**Q: Can I use voice on Telegram?**
+Yes — Telegram voice messages are auto-transcribed when STT is enabled. Configure it with `hermes config set stt.provider local` and install `faster-whisper`.
+
+## Next Steps
+
+- **[Security & Privacy](/blog/security-privacy/)** — protect your data with approval modes and secret redaction
+- **[Configuration Deep Dive](/blog/configuration-deep-dive/)** — fine-tune every setting in config.yaml
+- **[Troubleshooting Guide](/blog/troubleshooting/)** — fix common issues with voice, memory, and profiles

@@ -1,0 +1,694 @@
+{
+  "runs": [
+    {
+      "run_id": "20260515_032941",
+      "timestamp": "2026-05-15T03:29:41.648838+00:00",
+      "avg_score": 82.4,
+      "total_issues": 16,
+      "results": [
+        {
+          "slug": "memory-profiles",
+          "title": "Memory, Profiles & Personalization",
+          "score": 56,
+          "passed": 5,
+          "total": 9,
+          "issues": [
+            "Missing TLDR section",
+            "Missing FAQ section",
+            "Missing Key Takeaways section",
+            "No cross-links to other posts"
+          ],
+          "checks": {
+            "frontmatter": true,
+            "tldr": false,
+            "faq": false,
+            "takeaways": false,
+            "internal_links": true,
+            "cross_links": false,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "advanced-automation",
+          "title": "Advanced Automation: Cron, MCP, and Delegation",
+          "score": 78,
+          "passed": 7,
+          "total": 9,
+          "issues": [
+            "Extra H1 on line 86: '# Command-based MCP server'; Heading skip on line 90: H1 \u2192 H3",
+            "Keywords not found in body: AI automation"
+          ],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": false,
+            "seo_keywords": false
+          }
+        },
+        {
+          "slug": "gateway-setup",
+          "title": "Multi-Platform Gateway: Hermes Everywhere",
+          "score": 78,
+          "passed": 7,
+          "total": 9,
+          "issues": [
+            "Extra H1 on line 28: '# Test in foreground'; Extra H1 on line 31: '# Install as a systemd service (production)'; Extra H1 on line 35: '# Check status'; Extra H1 on line 55: '# Select Telegram, paste token'; Extra H1 on line 87: '# ~/.hermes/config.yaml'; Extra H1 on line 113: '# ~/.hermes/config.yaml'; Heading skip on line 67: H1 \u2192 H3; Heading skip on line 95: H1 \u2192 H3; Heading skip on line 121: H1 \u2192 H3",
+            "Keywords not found in body: hermes multi-platform"
+          ],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": false,
+            "seo_keywords": false
+          }
+        },
+        {
+          "slug": "getting-started",
+          "title": "Getting Started with Hermes Agent",
+          "score": 78,
+          "passed": 7,
+          "total": 9,
+          "issues": [
+            "Extra H1 on line 80: '# Or Anthropic'; Extra H1 on line 83: '# Or OpenAI'; Heading skip on line 93: H1 \u2192 H3",
+            "Keywords not found in body: hermes tutorial"
+          ],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": false,
+            "seo_keywords": false
+          }
+        },
+        {
+          "slug": "security-privacy",
+          "title": "Security & Privacy Configuration",
+          "score": 78,
+          "passed": 7,
+          "total": 9,
+          "issues": [
+            "Extra H1 on line 21: '# Smart: auto-approve low-risk, prompt for high-risk (recommended)'; Extra H1 on line 24: '# Off: skip all prompts (equivalent to --yolo)'; Extra H1 on line 94: '# Add credentials interactively'; Extra H1 on line 97: '# Show pooled keys for a provider'; Extra H1 on line 100: '# Remove a key'; Extra H1 on line 103: '# Reset exhaustion status after fixing keys'; Extra H1 on line 138: '# First use prompts interactively'; Extra H1 on line 139: '# Allowlist stored at ~/.hermes/shell-hooks-allowlist.json'; Heading skip on line 28: H1 \u2192 H3",
+            "Keywords not found in body: PII protection"
+          ],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": false,
+            "seo_keywords": false
+          }
+        },
+        {
+          "slug": "troubleshooting",
+          "title": "Troubleshooting Common Issues",
+          "score": 78,
+          "passed": 7,
+          "total": 9,
+          "issues": [
+            "Extra H1 on line 37: '# Verify it works'; Extra H1 on line 40: '# Re-authenticate OAuth providers'; Extra H1 on line 57: '# Check if the model name is correct'; Extra H1 on line 60: '# Verify provider supports the model'; Extra H1 on line 71: '# Check tool status'; Extra H1 on line 74: '# Enable a toolset'; Extra H1 on line 77: '# Reset session to apply changes'; Extra H1 on line 78: '# (Type /reset or exit and relaunch)'; Extra H1 on line 95: '# Install Chromium'; Extra H1 on line 99: '# Verify'; Extra H1 on line 106: '# 1. Check STT is enabled'; Extra H1 on line 109: '# 2. Install local STT'; Extra H1 on line 112: '# 3. Or set a cloud provider'; Extra H1 on line 115: '# 4. In gateway: /restart. In CLI: exit and relaunch'; Extra H1 on line 195: '# Switch to a faster model'; Extra H1 on line 198: '# Reduce context by starting fresh'; Extra H1 on line 201: '# Disable verbose mode'; Extra H1 on line 208: '# Compress the current session'; Extra H1 on line 211: '# Or start fresh with essential context'; Heading skip on line 46: H1 \u2192 H3; Heading skip on line 83: H1 \u2192 H3; Heading skip on line 103: H1 \u2192 H3; Heading skip on line 205: H1 \u2192 H3",
+            "Keywords not found in body: hermes troubleshooting"
+          ],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": false,
+            "seo_keywords": false
+          }
+        },
+        {
+          "slug": "provider-setup",
+          "title": "LLM Provider Setup & Model Configuration",
+          "score": 89,
+          "passed": 8,
+          "total": 9,
+          "issues": [
+            "Extra H1 on line 36: '# 2. Set the key'; Extra H1 on line 39: '# 3. Select a model'; Extra H1 on line 93: '# Pull a model'; Extra H1 on line 96: '# Configure Hermes to use it'; Extra H1 on line 119: '# GitHub Copilot'; Extra H1 on line 122: '# Nous Portal'; Extra H1 on line 125: '# OpenAI Codex'; Heading skip on line 103: H1 \u2192 H3"
+          ],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": false,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "skills-system",
+          "title": "Skills: Teaching Your Agent to Learn",
+          "score": 89,
+          "passed": 8,
+          "total": 9,
+          "issues": [
+            "Extra H1 on line 44: '# 1. Preload on startup'; Extra H1 on line 47: '# 2. Load mid-session'; Extra H1 on line 50: '# 3. Load multiple'; Extra H1 on line 53: '# 4. Search and install from the hub'; Extra H1 on line 78: '# Deploy Docker Compose'; Extra H1 on line 137: '# My First Skill'"
+          ],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": false,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "cli-mastery",
+          "title": "CLI Mastery: Commands, Sessions, and Slash Commands",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "configuration-deep-dive",
+          "title": "Configuration Deep Dive",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "20260515_033135",
+      "timestamp": "2026-05-15T03:31:35.078548+00:00",
+      "avg_score": 98.9,
+      "total_issues": 1,
+      "results": [
+        {
+          "slug": "memory-profiles",
+          "title": "Memory, Profiles & Personalization",
+          "score": 89,
+          "passed": 8,
+          "total": 9,
+          "issues": [
+            "Keywords not found in body: cross-session memory"
+          ],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": false
+          }
+        },
+        {
+          "slug": "advanced-automation",
+          "title": "Advanced Automation: Cron, MCP, and Delegation",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "cli-mastery",
+          "title": "CLI Mastery: Commands, Sessions, and Slash Commands",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "configuration-deep-dive",
+          "title": "Configuration Deep Dive",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "gateway-setup",
+          "title": "Multi-Platform Gateway: Hermes Everywhere",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "getting-started",
+          "title": "Getting Started with Hermes Agent",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "provider-setup",
+          "title": "LLM Provider Setup & Model Configuration",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "security-privacy",
+          "title": "Security & Privacy Configuration",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "skills-system",
+          "title": "Skills: Teaching Your Agent to Learn",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "troubleshooting",
+          "title": "Troubleshooting Common Issues",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "20260515_033148",
+      "timestamp": "2026-05-15T03:31:48.695004+00:00",
+      "avg_score": 100.0,
+      "total_issues": 0,
+      "results": [
+        {
+          "slug": "advanced-automation",
+          "title": "Advanced Automation: Cron, MCP, and Delegation",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "cli-mastery",
+          "title": "CLI Mastery: Commands, Sessions, and Slash Commands",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "configuration-deep-dive",
+          "title": "Configuration Deep Dive",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "gateway-setup",
+          "title": "Multi-Platform Gateway: Hermes Everywhere",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "getting-started",
+          "title": "Getting Started with Hermes Agent",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "memory-profiles",
+          "title": "Memory, Profiles & Personalization",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "provider-setup",
+          "title": "LLM Provider Setup & Model Configuration",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "security-privacy",
+          "title": "Security & Privacy Configuration",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "skills-system",
+          "title": "Skills: Teaching Your Agent to Learn",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        },
+        {
+          "slug": "troubleshooting",
+          "title": "Troubleshooting Common Issues",
+          "score": 100,
+          "passed": 9,
+          "total": 9,
+          "issues": [],
+          "checks": {
+            "frontmatter": true,
+            "tldr": true,
+            "faq": true,
+            "takeaways": true,
+            "internal_links": true,
+            "cross_links": true,
+            "markdown_links": true,
+            "headings": true,
+            "seo_keywords": true
+          }
+        }
+      ]
+    }
+  ],
+  "all_issues": {
+    "Missing TLDR section": {
+      "first_seen": "20260515_032941",
+      "count": 1
+    },
+    "Missing FAQ section": {
+      "first_seen": "20260515_032941",
+      "count": 1
+    },
+    "Missing Key Takeaways section": {
+      "first_seen": "20260515_032941",
+      "count": 1
+    },
+    "No cross-links to other posts": {
+      "first_seen": "20260515_032941",
+      "count": 1
+    },
+    "Extra H1 on line 86: '# Command-based MCP server'; Heading skip on line 90: H1 \u2192 H3": {
+      "first_seen": "20260515_032941",
+      "count": 1
+    },
+    "Keywords not found in body: AI automation": {
+      "first_seen": "20260515_032941",
+      "count": 1
+    },
+    "Extra H1 on line 28: '# Test in foreground'; Extra H1 on line 31: '# Install as a systemd service (production)'; Extra H1 on line 35: '# Check status'; Extra H1 on line 55: '# Select Telegram, paste token'; Extra H1 on line 87: '# ~/.hermes/config.yaml'; Extra H1 on line 113: '# ~/.hermes/config.yaml'; Heading skip on line 67: H1 \u2192 H3; Heading skip on line 95: H1 \u2192 H3; Heading skip on line 121: H1 \u2192 H3": {
+      "first_seen": "20260515_032941",
+      "count": 1
+    },
+    "Keywords not found in body: hermes multi-platform": {
+      "first_seen": "20260515_032941",
+      "count": 1
+    },
+    "Extra H1 on line 80: '# Or Anthropic'; Extra H1 on line 83: '# Or OpenAI'; Heading skip on line 93: H1 \u2192 H3": {
+      "first_seen": "20260515_032941",
+      "count": 1
+    },
+    "Keywords not found in body: hermes tutorial": {
+      "first_seen": "20260515_032941",
+      "count": 1
+    },
+    "Extra H1 on line 21: '# Smart: auto-approve low-risk, prompt for high-risk (recommended)'; Extra H1 on line 24: '# Off: skip all prompts (equivalent to --yolo)'; Extra H1 on line 94: '# Add credentials interactively'; Extra H1 on line 97: '# Show pooled keys for a provider'; Extra H1 on line 100: '# Remove a key'; Extra H1 on line 103: '# Reset exhaustion status after fixing keys'; Extra H1 on line 138: '# First use prompts interactively'; Extra H1 on line 139: '# Allowlist stored at ~/.hermes/shell-hooks-allowlist.json'; Heading skip on line 28: H1 \u2192 H3": {
+      "first_seen": "20260515_032941",
+      "count": 1
+    },
+    "Keywords not found in body: PII protection": {
+      "first_seen": "20260515_032941",
+      "count": 1
+    },
+    "Extra H1 on line 37: '# Verify it works'; Extra H1 on line 40: '# Re-authenticate OAuth providers'; Extra H1 on line 57: '# Check if the model name is correct'; Extra H1 on line 60: '# Verify provider supports the model'; Extra H1 on line 71: '# Check tool status'; Extra H1 on line 74: '# Enable a toolset'; Extra H1 on line 77: '# Reset session to apply changes'; Extra H1 on line 78: '# (Type /reset or exit and relaunch)'; Extra H1 on line 95: '# Install Chromium'; Extra H1 on line 99: '# Verify'; Extra H1 on line 106: '# 1. Check STT is enabled'; Extra H1 on line 109: '# 2. Install local STT'; Extra H1 on line 112: '# 3. Or set a cloud provider'; Extra H1 on line 115: '# 4. In gateway: /restart. In CLI: exit and relaunch'; Extra H1 on line 195: '# Switch to a faster model'; Extra H1 on line 198: '# Reduce context by starting fresh'; Extra H1 on line 201: '# Disable verbose mode'; Extra H1 on line 208: '# Compress the current session'; Extra H1 on line 211: '# Or start fresh with essential context'; Heading skip on line 46: H1 \u2192 H3; Heading skip on line 83: H1 \u2192 H3; Heading skip on line 103: H1 \u2192 H3; Heading skip on line 205: H1 \u2192 H3": {
+      "first_seen": "20260515_032941",
+      "count": 1
+    },
+    "Keywords not found in body: hermes troubleshooting": {
+      "first_seen": "20260515_032941",
+      "count": 1
+    },
+    "Extra H1 on line 36: '# 2. Set the key'; Extra H1 on line 39: '# 3. Select a model'; Extra H1 on line 93: '# Pull a model'; Extra H1 on line 96: '# Configure Hermes to use it'; Extra H1 on line 119: '# GitHub Copilot'; Extra H1 on line 122: '# Nous Portal'; Extra H1 on line 125: '# OpenAI Codex'; Heading skip on line 103: H1 \u2192 H3": {
+      "first_seen": "20260515_032941",
+      "count": 1
+    },
+    "Extra H1 on line 44: '# 1. Preload on startup'; Extra H1 on line 47: '# 2. Load mid-session'; Extra H1 on line 50: '# 3. Load multiple'; Extra H1 on line 53: '# 4. Search and install from the hub'; Extra H1 on line 78: '# Deploy Docker Compose'; Extra H1 on line 137: '# My First Skill'": {
+      "first_seen": "20260515_032941",
+      "count": 1
+    },
+    "Keywords not found in body: cross-session memory": {
+      "first_seen": "20260515_033135",
+      "count": 1
+    }
+  }
+}
