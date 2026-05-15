@@ -1,13 +1,26 @@
 ---
 title: "Getting Started with Hermes Agent"
-description: "Install Hermes Agent, configure your first provider, and run your first conversation — all in under 10 minutes."
+description: "Install Hermes Agent, configure your first LLM provider, and run your first conversation — all in under 10 minutes."
 pubDate: "2026-05-14"
 tags: ["getting-started", "installation", "basics"]
+keywords: [hermes agent install, hermes agent setup, AI agent framework, nous research, hermes CLI, hermes tutorial, open source AI agent]
 ---
 
-Hermes Agent is an open-source AI agent framework by Nous Research. Think of it as a self-improving, provider-agnostic AI assistant that lives in your terminal, on your messaging platforms, and in your IDE — capable of browsing the web, running commands, writing files, and remembering context across sessions.
+> **TLDR:** Hermes Agent is an open-source AI agent framework by Nous Research that runs in your terminal. Install with `curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash`, set up a provider with `hermes setup`, and start chatting with `hermes`. This guide walks through every step.
 
-This guide walks you through installing Hermes, setting up your first provider, and running your first conversation.
+## What is Hermes Agent?
+
+Hermes Agent is an open-source AI agent framework by [Nous Research](https://nousresearch.com). Think of it as a self-improving, provider-agnostic AI assistant that lives in your terminal, on your messaging platforms, and in your IDE — capable of browsing the web, running commands, writing files, and remembering context across sessions.
+
+It belongs to the same category as Claude Code (Anthropic) and Codex (OpenAI) — autonomous agents that use tool calling to interact with your system. What makes Hermes different is its **skills system** (self-improving procedures), **persistent memory** across sessions, **multi-platform gateway** (Telegram, Discord, Slack, etc.), and **provider-agnostic design** (20+ LLM providers).
+
+## Key Takeaways
+
+- One-line install via curl — no complicated setup
+- Works with 20+ LLM providers (OpenRouter, Anthropic, OpenAI, DeepSeek, local models)
+- Fully interactive CLI with tool-use capabilities (terminal, file, web, browser)
+- Sessions are saved and resumable
+- Self-diagnostic: `hermes doctor` catches most setup issues
 
 ## Installation
 
@@ -33,15 +46,15 @@ export PATH="$HOME/.local/bin:$PATH"
 
 Add that to your `~/.bashrc` or `~/.zshrc` to make it permanent.
 
-### Alternative: pip install
+### Alternative Installation Methods
 
-If you prefer pip:
+**Via pip:**
 
 ```bash
 pip install hermes-agent
 ```
 
-Or from source:
+**From source:**
 
 ```bash
 git clone https://github.com/NousResearch/hermes-agent.git
@@ -53,23 +66,19 @@ pip install -e .
 
 Hermes is **provider-agnostic** — it works with 20+ LLM providers. You need at least one API key to get started.
 
-The easiest path: use the setup wizard.
+### Recommended: Setup Wizard
 
 ```bash
 hermes setup
 ```
 
 This walks you through:
-
 1. **Model & Provider** — pick your LLM provider and model (OpenRouter, Anthropic, OpenAI, DeepSeek, etc.)
 2. **Terminal** — confirm shell backend (local, SSH, or Docker)
-3. **Gateway** — skip this for now (we'll cover it in another tutorial)
-4. **Tools** — confirm default toolset selection
-5. **Agent** — default settings work fine to start
+3. **Tools** — confirm default toolset selection
+4. **Agent** — default settings work fine to start
 
 ### Manual: Just Set an API Key
-
-If you already know which provider you want, just set the environment variable and skip the wizard:
 
 ```bash
 # OpenRouter (recommended — one key, many models)
@@ -85,22 +94,16 @@ export OPENAI_API_KEY="sk-..."
 Save it permanently:
 
 ```bash
-hermes config env-path
-# → /home/you/.hermes/.env
-
-# Edit that file and add your key
 echo 'OPENROUTER_API_KEY="sk-or-v1-..."' >> ~/.hermes/.env
 ```
 
-### Pick a Model
-
-Switch models anytime:
+### Switch Models Anytime
 
 ```bash
 hermes model
 ```
 
-This opens an interactive picker. You can also set it directly:
+This opens an interactive picker. You can also set it directly in the [CLI configuration](/blog/cli-mastery/#configuration):
 
 ```bash
 hermes config set model.default "anthropic/claude-sonnet-4"
@@ -109,53 +112,52 @@ hermes config set model.provider "openrouter"
 
 ## Your First Chat
 
-Let's run a conversation:
+Run interactive mode:
 
 ```bash
 hermes
 ```
 
-This launches interactive mode. You'll see the Hermes banner, and then a prompt. Ask it something:
-
-```
-> What can you do?
-```
-
-Hermes will reply with its capabilities. Try something more practical:
+Try asking something practical:
 
 ```
 > How large is the current directory, in human-readable format?
 ```
 
-Hermes will run a shell command (`du -sh .`), read the output, and return a clean answer. You just got a preview of the **tool-use workflow**: the agent reasons about your request, calls tools (terminal, file, web, etc.), and presents the results.
+Hermes will run a shell command (`du -sh .`), read the output, and return a clean answer. This demonstrates the **tool-use workflow**: the agent reasons about your request, calls tools (terminal, file, web, etc.), and presents the results.
 
 ### Quick Query Mode
 
-For one-off questions without entering interactive mode:
+For one-off questions — great for scripts and automation:
 
 ```bash
 hermes chat -q "What time is it in Tokyo?"
 ```
 
-This runs once and exits — great for scripts and automation.
+This runs once and exits.
 
 ## Health Check
 
-If something isn't working, run the diagnostic tool:
-
-```bash
-hermes doctor
-```
-
-This checks dependencies, config, and API connectivity. Pass `--fix` to auto-resolve common issues:
+If something isn't working:
 
 ```bash
 hermes doctor --fix
 ```
 
-## Next Steps
+This checks dependencies, config, and API connectivity, and auto-resolves common issues.
 
-You now have a working Hermes agent. Here's what to try next:
+## FAQ
+
+**Q: Do I need a powerful computer to run Hermes?**
+No — Hermes runs inference on remote providers. Your machine just needs network access and a terminal. Local models (Ollama, llama.cpp) are optional.
+
+**Q: Is Hermes free?**
+Hermes itself is free and open source (MIT license). You pay for the LLM API calls through your chosen provider. OpenRouter offers free tier models; local models cost only electricity.
+
+**Q: Can I use Hermes without API keys?**
+Yes — you can run local models via Ollama or llama.cpp. See the [CLI Mastery guide](/blog/cli-mastery/) for model configuration.
+
+## Next Steps
 
 - **[CLI Mastery](/blog/cli-mastery/)** — learn commands, flags, session management, and slash commands
 - **[Skills: Teaching Your Agent to Learn](/blog/skills-system/)** — create reusable procedures that make your agent smarter over time

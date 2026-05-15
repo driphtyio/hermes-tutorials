@@ -6,14 +6,70 @@ import Footer from '../components/Footer.astro';
 import FormattedDate from '../components/FormattedDate.astro';
 import Header from '../components/Header.astro';
 
-type Props = CollectionEntry<'blog'>['data'];
+interface Props {
+	post: CollectionEntry<'blog'>;
+	readingTime: number;
+}
 
-const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
+const { post, readingTime } = Astro.props;
+const { title, description, pubDate, updatedDate, heroImage, tags, author, keywords } = post.data;
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+
+// JSON-LD: Article schema
+const articleSchema = {
+	'@context': 'https://schema.org',
+	'@type': 'Article',
+	headline: title,
+	description: description,
+	author: {
+		'@type': 'Person',
+		name: author,
+	},
+	publisher: {
+		'@type': 'Organization',
+		name: 'Hermes Agent Tutorials',
+		logo: {
+			'@type': 'ImageObject',
+			url: new URL('/favicon.svg', Astro.site).toString(),
+		},
+	},
+	datePublished: pubDate.toISOString(),
+	...(updatedDate && { dateModified: updatedDate.toISOString() }),
+	mainEntityOfPage: {
+		'@type': 'WebPage',
+		'@id': canonicalURL.toString(),
+	},
+	...(tags.length > 0 && { keywords: tags.join(', ') }),
+	wordCount: readingTime * 200,
+	timeRequired: `PT${readingTime}M`,
+};
+
+// JSON-LD: BreadcrumbList
+const breadcrumbSchema = {
+	'@context': 'https://schema.org',
+	'@type': 'BreadcrumbList',
+	itemListElement: [
+		{ '@type': 'ListItem', position: 1, name: 'Home', item: new URL('/', Astro.site).toString() },
+		{ '@type': 'ListItem', position: 2, name: 'Tutorials', item: new URL('/blog', Astro.site).toString() },
+		{ '@type': 'ListItem', position: 3, name: title, item: canonicalURL.toString() },
+	],
+};
 ---
 
 <html lang="en">
 	<head>
-		<BaseHead title={title} description={description} />
+		<BaseHead
+			title={`${title} — Hermes Agent Tutorials`}
+			description={description}
+			image={heroImage}
+			type="article"
+			pubDate={pubDate}
+			updatedDate={updatedDate}
+			tags={tags}
+			keywords={keywords}
+		/>
+		<script type="application/ld+json" set:html={JSON.stringify(articleSchema)} />
+		<script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
 		<style>
 			main {
 				width: calc(100% - 2em);
@@ -36,14 +92,79 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 				padding: 1em;
 				color: rgb(var(--gray-dark));
 			}
-			.title {
-				margin-bottom: 1em;
+			.post-header {
+				margin-bottom: 2em;
 				padding: 1em 0;
 				text-align: center;
-				line-height: 1;
 			}
-			.title h1 {
-				margin: 0 0 0.5em 0;
+			.post-header h1 {
+				margin: 0 0 0.3em;
+				line-height: 1.15;
+			}
+			.post-meta {
+				color: rgb(var(--gray));
+				font-size: 0.9em;
+				margin-bottom: 1em;
+				line-height: 1.6;
+			}
+			.post-meta .separator {
+				margin: 0 0.4em;
+				opacity: 0.4;
+			}
+			.tags {
+				margin: 0.75em 0;
+				display: flex;
+				flex-wrap: wrap;
+				justify-content: center;
+				gap: 0.4em;
+			}
+			.tag {
+				display: inline-block;
+				padding: 0.2em 0.6em;
+				font-size: 0.75em;
+				border-radius: 4px;
+				background: var(--accent-light);
+				color: white;
+				text-decoration: none;
+				text-transform: lowercase;
+			}
+			.tag:hover {
+				background: var(--accent);
+			}
+			.last-updated-on {
+				font-style: italic;
+			}
+			.tldr {
+				background: #f0eeff;
+				border: 1px solid var(--accent-light);
+				border-radius: 8px;
+				padding: 1.2em 1.5em;
+				margin: 1.5em 0;
+				font-size: 0.95em;
+			}
+			.tldr strong:first-child {
+				color: var(--accent);
+				text-transform: uppercase;
+				font-size: 0.8em;
+				letter-spacing: 0.05em;
+			}
+			.breadcrumbs {
+				max-width: 720px;
+				margin: 0 auto 0.5em;
+				padding: 0 1em;
+				font-size: 0.85em;
+				color: rgb(var(--gray));
+			}
+			.breadcrumbs a {
+				color: var(--accent);
+				text-decoration: none;
+			}
+			.breadcrumbs a:hover {
+				text-decoration: underline;
+			}
+			.breadcrumbs .sep {
+				margin: 0 0.3em;
+				color: rgb(var(--gray-light));
 			}
 			.date {
 				margin-bottom: 0.5em;
@@ -57,24 +178,47 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 
 	<body>
 		<Header />
+		<nav class="breadcrumbs" aria-label="Breadcrumb">
+			<a href="/">Home</a><span class="sep">›</span>
+			<a href="/blog">Tutorials</a><span class="sep">›</span>
+			<span>{title}</span>
+		</nav>
 		<main>
-			<article>
-				<div class="hero-image">
-					{heroImage && <Image width={1020} height={510} src={heroImage} alt="" />}
-				</div>
+			<article itemscope itemtype="https://schema.org/Article">
+				<meta itemprop="author" content={author} />
+				<meta itemprop="datePublished" content={pubDate.toISOString()} />
+				{updatedDate && <meta itemprop="dateModified" content={updatedDate.toISOString()} />}
+				{heroImage && (
+					<div class="hero-image">
+						<Image width={1020} height={510} src={heroImage} alt={`Hero image for ${title}`} itemprop="image" />
+					</div>
+				)}
 				<div class="prose">
-					<div class="title">
-						<div class="date">
+					<div class="post-header">
+						<div class="post-meta">
+							<span>By {author}</span>
+							<span class="separator">·</span>
 							<FormattedDate date={pubDate} />
+							<span class="separator">·</span>
+							<span>{readingTime} min read</span>
 							{
 								updatedDate && (
-									<div class="last-updated-on">
-										Last updated on <FormattedDate date={updatedDate} />
-									</div>
+									<>
+										<br />
+										<span class="last-updated-on">
+											Updated <FormattedDate date={updatedDate} />
+										</span>
+									</>
 								)
 							}
 						</div>
-						<h1>{title}</h1>
+						{tags.length > 0 && (
+							<div class="tags">
+								{tags.map(tag => <a class="tag" href={`/blog/tags/${tag}`}>{tag}</a>)}
+							</div>
+						)}
+						<h1 itemprop="headline">{title}</h1>
+						<p class="description" itemprop="description">{description}</p>
 						<hr />
 					</div>
 					<slot />

@@ -1,13 +1,20 @@
 ---
 title: "Skills: Teaching Your Agent to Learn"
-description: "Hermes Agent's most powerful feature — the skills system lets your agent remember how to do things, get better over time, and build a personal playbook of expertise."
+description: "Hermes Agent's skills system lets your agent remember how to do things, get better over time, and build a personal playbook of expertise."
 pubDate: "2026-05-14"
-tags: ["skills", "memory", "intermediate"]
+tags: ["skills", "memory", "intermediate", "self-improvement"]
+keywords: [hermes skills, AI agent skills, self-improving AI, procedural memory, hermes curator, skill lifecycle, skills hub]
 ---
 
-Skills are what make Hermes Agent fundamentally different from other AI agents. They're not just instructions you load — they're **procedural memory**: reusable, versioned, self-improving workflows that your agent writes, uses, and maintains for you.
+> **TLDR:** Skills are reusable, versioned, self-improving procedures that Hermes Agent writes, uses, and maintains. They're stored as markdown files with YAML frontmatter in `~/.hermes/skills/`. Load them with `/skill name` or `hermes -s "name"`. The curator subsystem manages their lifecycle (active → stale → archived, but never deleted). Skills are what make Hermes fundamentally different from other AI agents — they give it procedural memory that compounds over time.
 
-Every time you solve a complex problem, work around an OS-specific quirk, or discover a better way to do something, that knowledge can become a skill — and next time, the agent already knows.
+## Key Takeaways
+
+- Skills are markdown documents with structured frontmatter — the agent reads them as system prompt context
+- Any procedure that takes 5+ tool calls is worth saving as a skill
+- The curator (`hermes curator`) auto-manages skill lifecycle
+- Skills compose — load multiple for complex tasks
+- Hub at `hermes skills search` for community skills
 
 ## What Is a Skill?
 
@@ -25,20 +32,20 @@ platforms: [linux, macos, windows]
 Instructions, code examples, pitfalls, and verification steps.
 ```
 
-Think of it as a README for a specific task — written by the agent, for the agent.
+Think of it as a README for a specific task — written by the agent, for the agent. Unlike [memory](/blog/cli-mastery/#configuration), which stores facts, skills store **procedures**.
 
 ## How Skills Work
 
 When you start a session with skills loaded, the agent reads each skill's content as part of its system prompt. It can then:
 
 - Follow the numbered steps in the skill
-- Reference the commands and examples
-- Apply the known pitfalls and edge cases
-- Update the skill when it discovers something new
+- Reference the exact commands and examples
+- Apply known pitfalls and edge cases
+- **Update the skill** when it discovers something new
 
 ### Loading Skills
 
-There are four ways to load a skill:
+Four ways to load a skill:
 
 ```bash
 # 1. Preload on startup
@@ -57,13 +64,13 @@ hermes skills install "systematic-debugging"
 
 ## What Makes a Good Skill
 
-A well-designed skill has:
-
-1. **Clear trigger conditions** — when should this skill be loaded?
-2. **Numbered steps** — the agent executes procedurally
-3. **Exact commands** — no guesswork, just working commands
-4. **Pitfalls section** — what goes wrong and how to fix it
-5. **Verification** — how to confirm it worked
+| Quality | Why it matters |
+|---------|----------------|
+| **Clear trigger conditions** | Tell the agent when to use this skill |
+| **Numbered steps** | Agents execute procedurally — step-by-step works best |
+| **Exact commands** | No placeholders or guesswork |
+| **Pitfalls section** | The most valuable part — captures mistakes so they never repeat |
+| **Verification steps** | How to confirm the procedure worked |
 
 ### Template
 
@@ -107,11 +114,11 @@ Trigger when: user says "deploy", "release", or "ship the stack"
 
 ## The Skill Lifecycle
 
-Skills evolve over time. The **curator** subsystem (`hermes curator`) manages the lifecycle:
+The **curator** subsystem (`hermes curator`) manages skill evolution automatically:
 
 1. **Active** — the skill is regularly used
 2. **Stale** — hasn't been used in a while, flagged for review
-3. **Archived** — removed from active set but preserved (never deleted)
+3. **Archived** — removed from active set but **preserved forever** (never deleted)
 4. **Pinned** — excluded from auto-archiving
 
 ```bash
@@ -122,94 +129,65 @@ hermes curator run            # Run maintenance cycle now
 
 ## Creating Your First Skill
 
-Let me demonstrate. The agent wrote this tutorial — that's complex enough that the approach should be saved:
-
-```
-> Save this blog scaffolding process as a skill so you can do it again
-```
-
-The agent would create `~/.hermes/skills/create-blog.md` capturing:
-
-- How to scaffold an Astro blog
-- How to write MDX posts
-- How to customize the theme
-- The deployment workflow
-
-Next time you say "make me a blog", it doesn't start from scratch.
-
-### Manual Creation
-
-You can also write skills by hand:
+Let's create one manually:
 
 ```bash
-# Create the skills directory if it doesn't exist
 mkdir -p ~/.hermes/skills/
 
-# Write your skill
-cat > ~/.hermes/skills/deploy-app.md << 'EOF'
+cat > ~/.hermes/skills/my-first-skill.md << 'EOF'
 ---
-name: deploy-app
-description: "Deploy the web app to production"
+name: my-first-skill
+description: "A template skill to get started"
 version: 1.0.0
 ---
 
-# Deploy App
+# My First Skill
 
-...
+## Steps
+1. Do something
+2. Verify it worked
 EOF
 ```
 
-Or use the skill management tool in-session:
-
-```
-/skill-create name="my-skill" description="Does X"
-```
+Or just ask the agent during a session: "Save this workflow as a skill so you can do it again."
 
 ## Skills vs Memory
 
-It's important to understand the difference:
-
 | **Memory** | **Skills** |
 |------------|-----------|
-| Facts about you, your preferences, environment | Reusable procedures and workflows |
+| Facts about you, preferences, environment | Reusable procedures and workflows |
 | "User prefers concise responses" | "How to deploy the app" |
-| Injected every session automatically | Loaded on demand or by trigger |
-| Agent writes to memory | Agent writes skills |
+| Injected every session automatically | Loaded on demand |
 | Small, factual | Structured, actionable |
+| Updated by agent | Created/patched by agent |
 
-**When to save a skill:**
+**Save to memory when:** user preference ("I use pnpm"), environment fact ("Running on Arch Linux"), correction ("Don't use apt for this").
 
-- After completing a complex task (5+ tool calls)
-- After fixing a tricky error
-- After discovering a non-trivial workflow
-- When you want to reuse an approach later
-
-**When to save to memory instead:**
-
-- User preferences ("I use pnpm, not npm")
-- Environment facts ("Running on Arch Linux")
-- Corrections ("Don't use apt for this")
+**Save as skill when:** complex workflow completed (5+ tool calls), tricky error fixed, non-trivial workflow discovered.
 
 ## The Skills Hub
 
-Hermes has a community skills hub:
+Community skills are searchable and installable:
 
 ```bash
-hermes skills search "testing"            # Find test-related skills
-hermes skills install "systematic-debugging"  # Install a skill
-hermes skills publish ~/my-skill.md       # Publish your own
-hermes skills tap add github.com/user/repo    # Add a custom repo as source
+hermes skills search "testing"              # Find test-related skills
+hermes skills install "systematic-debugging"  # Install from hub
+hermes skills publish ~/my-skill.md         # Publish your own
+hermes skills tap add github.com/user/repo  # Add a custom repo source
 ```
 
-The hub includes skills for DSPy, vLLM, GitHub PRs, code review, debugging, testing, deployment, and more.
+Available hub skills include: systematic debugging, test-driven development, code review, DSPy, vLLM, GitHub PR workflow, and many more.
 
-## Pro Tips
+## FAQ
 
-1. **Skills compose** — load multiple skills for complex tasks (`hermes -s "a" -s "b"`)
-2. **Patch skills** — when you find a broken command, tell the agent to update it
-3. **Pin important skills** — `hermes curator pin my-skill` prevents auto-archiving
-4. **Skills platform-specific** — tag with `platforms: [linux]` to auto-load on the right OS
-5. **The agent maintains its own skills** — use `/curator run` to tidy up
+**Q: How many skills is too many?**
+The curator auto-archives stale skills. Focus on quality over quantity — a well-maintained skill is worth more than 10 dusty ones. Pin your most important skills with `hermes curator pin`.
+
+**Q: Can skills reference other skills?**
+Not directly, but you can load multiple skills together: `hermes -s "skill-a" -s "skill-b"`. The agent sees all loaded skills in its system prompt.
+
+**Q: What happens to deleted skills?**
+The curator never deletes skills — maximum destructive action is archive. Archived skills remain in `~/.hermes/skills/.archive/` and can be restored with `hermes curator restore`.
 
 ## Next Steps
 

@@ -9,12 +9,31 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
 const posts = (await getCollection('blog')).sort(
 	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
 );
+
+// JSON-LD: CollectionPage schema
+const collectionSchema = {
+	'@context': 'https://schema.org',
+	'@type': 'CollectionPage',
+	name: `Tutorials — ${SITE_TITLE}`,
+	description: SITE_DESCRIPTION,
+	url: new URL('/blog', Astro.site).toString(),
+	mainEntity: {
+		'@type': 'ItemList',
+		itemListElement: posts.map((post, i) => ({
+			'@type': 'ListItem',
+			position: i + 1,
+			url: new URL(`/blog/${post.id}/`, Astro.site).toString(),
+		})),
+	},
+};
+
 ---
 
 <!doctype html>
 <html lang="en">
 	<head>
 		<BaseHead title={`Tutorials — ${SITE_TITLE}`} description={SITE_DESCRIPTION} />
+		<script type="application/ld+json" set:html={JSON.stringify(collectionSchema)} />
 		<style>
 			h1 {
 				margin-bottom: 0.5em;

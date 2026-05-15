@@ -13,8 +13,13 @@ type Props = CollectionEntry<'blog'>;
 
 const post = Astro.props;
 const { Content } = await render(post);
+
+// Calculate reading time: ~200 words per minute
+const wordsPerMinute = 200;
+const wordCount = (post.body || '').split(/\s+/).filter(Boolean).length;
+const readingTime = Math.max(1, Math.ceil(wordCount / wordsPerMinute));
 ---
 
-<BlogPost {...post.data}>
+<BlogPost post={post} readingTime={readingTime}>
 	<Content />
 </BlogPost>

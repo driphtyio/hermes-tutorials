@@ -2,20 +2,19 @@
 title: "CLI Mastery: Commands, Sessions, and Slash Commands"
 description: "A practical guide to Hermes Agent's CLI — every command, flag, session trick, and slash command you need to be productive."
 pubDate: "2026-05-14"
-tags: ["cli", "sessions", "intermediate"]
+tags: ["cli", "sessions", "intermediate", "reference"]
+keywords: [hermes CLI, hermes commands, hermes sessions, slash commands, hermes config, hermes tools, hermes profiles, terminal AI agent]
 ---
 
-The Hermes CLI is your primary interface. It's more than just `hermes chat` — there's a whole ecosystem of commands for managing config, skills, sessions, tools, and automation.
+> **TLDR:** The Hermes CLI has 30+ subcommands organized into categories: chat (interactive/one-shot), sessions (list/resume/prune), config (set/edit/check), tools/skills (list/install/enable), profiles (create/use/delete), gateway (run/install/start/stop), cron (create/list/edit), and auth (add/list/remove). Master the `/` slash commands in-session for fast iterations. This guide is your comprehensive CLI reference.
 
-This guide covers everything you need to navigate the CLI like a power user.
+## Key Takeaways
 
-## The Entry Point
-
-```bash
-hermes [flags] [command]
-```
-
-With no subcommand, `hermes` launches interactive chat — your daily driver.
+- `hermes` alone launches interactive chat; `hermes chat -q "..."` runs one-shot
+- Use `hermes --continue` to pick up where you left off
+- Slash commands like `/model`, `/compress`, `/retry` work mid-session
+- Profiles (`hermes profile create`) isolate configs for work vs personal use
+- Gateway subsystem connects to Telegram, Discord, Slack, and 10+ platforms
 
 ## Essential Commands
 
@@ -23,17 +22,17 @@ With no subcommand, `hermes` launches interactive chat — your daily driver.
 
 | Command | Purpose |
 |---------|---------|
-| `hermes` | Interactive session |
+| `hermes` | Interactive session (daily driver) |
 | `hermes chat -q "query"` | Single query, non-interactive |
 | `hermes chat -m "model"` | Start with a specific model |
 | `hermes chat -t "web,terminal"` | Start with specific toolsets |
 | `hermes chat --yolo` | Skip dangerous-command warnings |
 
-The `--yolo` flag is useful when you trust the agent and want fewer interruptions, but be careful — it skips approval prompts for destructive commands like `rm -rf`.
+The `--yolo` flag skips approval prompts for destructive commands like `rm -rf`. Use with caution.
 
 ### Session Management
 
-Sessions are the lifeblood of Hermes. Every conversation is saved and resumable.
+Every conversation is saved and resumable — this is one of Hermes's most powerful features.
 
 ```bash
 hermes sessions list           # List recent sessions
@@ -44,7 +43,7 @@ hermes sessions prune          # Clean up old sessions
 hermes sessions stats          # Storage statistics
 ```
 
-**Resuming sessions** is where the power is:
+**Resuming sessions:**
 
 ```bash
 hermes --continue              # Resume most recent session
@@ -52,7 +51,7 @@ hermes --continue "my-work"    # Resume by name
 hermes --resume SESSION_ID     # Resume by specific ID
 ```
 
-This is useful when you're working on something long-running — pick up exactly where you left off, including all context, tool results, and state.
+This is useful for long-running work — pick up exactly where you left off, including all context, tool results, and state.
 
 ### Configuration
 
@@ -63,22 +62,14 @@ hermes config set key val      # Set a specific value
 hermes config path             # Print config file path
 hermes config env-path         # Print .env path
 hermes config check            # Check for missing/outdated config
-hermes config migrate          # Update config with new options
 ```
 
-Common configs you'll want to set:
+Common configs to set early:
 
 ```bash
-# Change model
 hermes config set model.default "deepseek/deepseek-chat"
-
-# Increase terminal timeout
 hermes config set terminal.timeout 300
-
-# Enable memory
 hermes config set memory.memory_enabled true
-
-# Enable compression for long sessions
 hermes config set compression.enabled true
 ```
 
@@ -98,7 +89,7 @@ hermes skills uninstall N      # Remove a skill
 
 ### Profiles
 
-Profiles let you run completely independent Hermes instances:
+Profiles let you run completely independent Hermes instances — each with its own config, sessions, skills, and memory:
 
 ```bash
 hermes profile list            # List all profiles
@@ -107,11 +98,9 @@ hermes profile use "work"      # Set as default
 hermes profile delete "work"   # Delete a profile
 ```
 
-Each profile has its own config, sessions, skills, and memory — useful if you use Hermes for both work and personal projects.
+Useful if you use Hermes for both work and personal projects.
 
 ## Global Flags
-
-These flags work with any command:
 
 | Flag | What it does |
 |------|-------------|
@@ -127,7 +116,7 @@ These flags work with any command:
 
 ## Slash Commands (In-Session)
 
-Type these commands during an interactive chat session:
+Type these during an interactive chat session:
 
 | Command | What it does |
 |---------|-------------|
@@ -135,7 +124,7 @@ Type these commands during an interactive chat session:
 | `/retry` | Resend the last message |
 | `/undo` | Remove the last exchange |
 | `/title "name"` | Name the current session |
-| `/compress` | Manually compress context (saves tokens) |
+| `/compress` | Summarize earlier turns to save tokens |
 | `/model` | Switch model mid-session |
 | `/yolo` | Toggle approval bypass |
 | `/skills` | Browse and install skills |
@@ -143,78 +132,55 @@ Type these commands during an interactive chat session:
 | `/help` | Show all slash commands |
 | `/quit` | Exit CLI |
 
-**Pro tip:** Use `/compress` when you've been in a long session and start getting close to context limits. It summarizes earlier turns into a compact representation, freeing up tokens without losing essential context.
+**Pro tip:** Use `/compress` when you're deep in a long session and approaching context limits — it condenses earlier turns without losing essential context.
 
-## The Gateway Subsystem
+## Gateway Subsystem
 
-Hermes isn't just a CLI — it's a **gateway** that connects to messaging platforms.
+The gateway connects Hermes to messaging platforms (covered in depth in the [Multi-Platform Gateway guide](/blog/gateway-setup/)):
 
 ```bash
 hermes gateway run             # Start gateway in foreground
 hermes gateway install         # Install as systemd service
 hermes gateway start/stop      # Control the service
 hermes gateway status          # Check if running
-hermes gateway setup           # Configure platforms
 ```
-
-We cover gateway setup in depth in the [Multi-Platform Gateway guide](/blog/gateway-setup/).
 
 ## Automation
 
-Hermes has a built-in cron scheduler:
+Built-in cron scheduler:
 
 ```bash
 hermes cron list               # See all jobs
-hermes cron create "8am"       # Create: "every day at 8am"
+hermes cron create "8am"       # Create a daily job
 hermes cron edit "JOB_ID"      # Edit a job
 hermes cron remove "JOB_ID"    # Delete a job
 ```
 
-And a credential pool for managing multiple API keys:
+Credential pool for managing multiple API keys:
 
 ```bash
 hermes auth add                # Add a credential
 hermes auth list "openrouter"  # List pooled keys
-hermes auth remove "openroute" 1  # Remove by index
+hermes auth remove "openrouter" 1  # Remove by index
 ```
 
 ## Tips & Tricks
 
-**1. Alias for your most common command**
+1. **Alias your most common command:** `alias hc='hermes --continue --quiet'`
+2. **Preload skills for specialized tasks:** `hermes -s "systematic-debugging" chat -q "Debug this error..."`
+3. **Export sessions for documentation:** `hermes sessions export my-work.jsonl`
+4. **Worktree mode for parallel agents** on the same repo: `hermes -w`
 
-```bash
-alias h='hermes'
-alias hc='hermes --continue'
-alias hq='hermes chat -q'
-```
+## FAQ
 
-**2. Use `--continue` as your daily driver**
+**Q: What's the difference between `--continue` and `--resume`?**
+`--continue` resumes by session name (or the most recent session if no name given). `--resume` requires a specific session ID from `hermes sessions list`.
 
-```bash
-hermes --continue --quiet
-```
+**Q: Can I run multiple Hermes sessions at the same time?**
+Yes — use profiles (`hermes profile create`) for independent instances, or `--worktree` mode (`hermes -w`) for parallel agent work on the same git repo.
 
-This resumes your last session quietly, as if you never left.
-
-**3. Worktree mode for parallel agents**
-
-When working on multiple git branches, use `-w` to keep agents isolated:
-
-```bash
-hermes -w                      # Each session gets its own git worktree
-```
-
-**4. Preload skills for specialized tasks**
-
-```bash
-hermes -s "dspy" -s "systematic-debugging" chat -q "Debug this Python error..."
-```
-
-**5. Export sessions for documentation**
-
-```bash
-hermes sessions export my-work.jsonl
-```
+**Q: How do I change models without restarting?**
+Use `/model` in-session. It's instant — no restart needed.
 
 ## Next Steps
 

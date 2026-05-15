@@ -6,7 +6,7 @@ import { defineConfig, fontProviders } from 'astro/config';
 
 // https://astro.build/config
 export default defineConfig({
-	site: 'https://your-site.pages.dev',  // Change this to your actual domain
+	site: 'https://hermes-tutorial.dev',  // Change this to your actual domain
 	integrations: [mdx(), sitemap()],
 	fonts: [
 		{
