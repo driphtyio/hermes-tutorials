@@ -1,0 +1,217 @@
+---
+title: "Skills: Teaching Your Agent to Learn"
+description: "Hermes Agent's most powerful feature — the skills system lets your agent remember how to do things, get better over time, and build a personal playbook of expertise."
+pubDate: "2026-05-14"
+tags: ["skills", "memory", "intermediate"]
+---
+
+Skills are what make Hermes Agent fundamentally different from other AI agents. They're not just instructions you load — they're **procedural memory**: reusable, versioned, self-improving workflows that your agent writes, uses, and maintains for you.
+
+Every time you solve a complex problem, work around an OS-specific quirk, or discover a better way to do something, that knowledge can become a skill — and next time, the agent already knows.
+
+## What Is a Skill?
+
+A skill is a markdown document with YAML frontmatter. It lives in `~/.hermes/skills/` and gets loaded into the agent's system prompt when activated.
+
+```yaml
+---
+name: my-skill
+description: "What this skill does"
+version: 1.0.0
+platforms: [linux, macos, windows]
+---
+# Skill Title
+
+Instructions, code examples, pitfalls, and verification steps.
+```
+
+Think of it as a README for a specific task — written by the agent, for the agent.
+
+## How Skills Work
+
+When you start a session with skills loaded, the agent reads each skill's content as part of its system prompt. It can then:
+
+- Follow the numbered steps in the skill
+- Reference the commands and examples
+- Apply the known pitfalls and edge cases
+- Update the skill when it discovers something new
+
+### Loading Skills
+
+There are four ways to load a skill:
+
+```bash
+# 1. Preload on startup
+hermes -s "my-skill"
+
+# 2. Load mid-session
+/skill my-skill
+
+# 3. Load multiple
+hermes -s "my-skill" -s "another-skill"
+
+# 4. Search and install from the hub
+hermes skills search "debugging"
+hermes skills install "systematic-debugging"
+```
+
+## What Makes a Good Skill
+
+A well-designed skill has:
+
+1. **Clear trigger conditions** — when should this skill be loaded?
+2. **Numbered steps** — the agent executes procedurally
+3. **Exact commands** — no guesswork, just working commands
+4. **Pitfalls section** — what goes wrong and how to fix it
+5. **Verification** — how to confirm it worked
+
+### Template
+
+```markdown
+---
+name: deploy-docker
+description: "Deploy a Docker Compose stack with zero-downtime rolling updates"
+version: 1.0.0
+platforms: [linux]
+---
+
+# Deploy Docker Compose
+
+Trigger when: user says "deploy", "release", or "ship the stack"
+
+## Steps
+
+1. Pull latest images
+   ```bash
+   docker compose pull
+   ```
+2. Deploy with rolling update
+   ```bash
+   docker compose up -d --no-deps --build --scale app=2
+   ```
+3. Verify health
+   ```bash
+   curl -f http://localhost:8080/health
+   ```
+
+## Pitfalls
+
+- If port 8080 is in use, check `docker compose ps` for conflicts
+- Do NOT run `docker compose down` — that's downtime
+
+## Verification
+
+- `docker compose ps` shows all services as `Up`
+- Health endpoint returns 200
+```
+
+## The Skill Lifecycle
+
+Skills evolve over time. The **curator** subsystem (`hermes curator`) manages the lifecycle:
+
+1. **Active** — the skill is regularly used
+2. **Stale** — hasn't been used in a while, flagged for review
+3. **Archived** — removed from active set but preserved (never deleted)
+4. **Pinned** — excluded from auto-archiving
+
+```bash
+hermes curator status         # See all skills and their state
+hermes curator pin my-skill   # Protect from archiving
+hermes curator run            # Run maintenance cycle now
+```
+
+## Creating Your First Skill
+
+Let me demonstrate. The agent wrote this tutorial — that's complex enough that the approach should be saved:
+
+```
+> Save this blog scaffolding process as a skill so you can do it again
+```
+
+The agent would create `~/.hermes/skills/create-blog.md` capturing:
+
+- How to scaffold an Astro blog
+- How to write MDX posts
+- How to customize the theme
+- The deployment workflow
+
+Next time you say "make me a blog", it doesn't start from scratch.
+
+### Manual Creation
+
+You can also write skills by hand:
+
+```bash
+# Create the skills directory if it doesn't exist
+mkdir -p ~/.hermes/skills/
+
+# Write your skill
+cat > ~/.hermes/skills/deploy-app.md << 'EOF'
+---
+name: deploy-app
+description: "Deploy the web app to production"
+version: 1.0.0
+---
+
+# Deploy App
+
+...
+EOF
+```
+
+Or use the skill management tool in-session:
+
+```
+/skill-create name="my-skill" description="Does X"
+```
+
+## Skills vs Memory
+
+It's important to understand the difference:
+
+| **Memory** | **Skills** |
+|------------|-----------|
+| Facts about you, your preferences, environment | Reusable procedures and workflows |
+| "User prefers concise responses" | "How to deploy the app" |
+| Injected every session automatically | Loaded on demand or by trigger |
+| Agent writes to memory | Agent writes skills |
+| Small, factual | Structured, actionable |
+
+**When to save a skill:**
+
+- After completing a complex task (5+ tool calls)
+- After fixing a tricky error
+- After discovering a non-trivial workflow
+- When you want to reuse an approach later
+
+**When to save to memory instead:**
+
+- User preferences ("I use pnpm, not npm")
+- Environment facts ("Running on Arch Linux")
+- Corrections ("Don't use apt for this")
+
+## The Skills Hub
+
+Hermes has a community skills hub:
+
+```bash
+hermes skills search "testing"            # Find test-related skills
+hermes skills install "systematic-debugging"  # Install a skill
+hermes skills publish ~/my-skill.md       # Publish your own
+hermes skills tap add github.com/user/repo    # Add a custom repo as source
+```
+
+The hub includes skills for DSPy, vLLM, GitHub PRs, code review, debugging, testing, deployment, and more.
+
+## Pro Tips
+
+1. **Skills compose** — load multiple skills for complex tasks (`hermes -s "a" -s "b"`)
+2. **Patch skills** — when you find a broken command, tell the agent to update it
+3. **Pin important skills** — `hermes curator pin my-skill` prevents auto-archiving
+4. **Skills platform-specific** — tag with `platforms: [linux]` to auto-load on the right OS
+5. **The agent maintains its own skills** — use `/curator run` to tidy up
+
+## Next Steps
+
+- **[Multi-Platform Gateway](/blog/gateway-setup/)** — take your agent to Telegram, Discord, and Slack
+- **[Advanced Automation](/blog/advanced-automation/)** — cron jobs, MCP, and delegation

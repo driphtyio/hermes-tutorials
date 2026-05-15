@@ -1,0 +1,215 @@
+---
+title: "Advanced Automation: Cron, MCP, and Delegation"
+description: "Supercharge Hermes with scheduled jobs, MCP server connections, and parallel subagent delegation — turning your agent into an autonomous system."
+pubDate: "2026-05-14"
+tags: ["advanced", "cron", "mcp", "delegation", "automation"]
+---
+
+Once you've mastered the basics of Hermes, it's time to make it work for you while you sleep. This guide covers the three advanced systems that turn a chat agent into an autonomous assistant:
+
+- **Cron Jobs** — scheduled, recurring tasks
+- **MCP Servers** — connecting external tools
+- **Subagent Delegation** — parallel work distribution
+
+## Cron Jobs
+
+The built-in cron scheduler runs tasks on a schedule and delivers results to you. Jobs run autonomously — no user needed at execution time.
+
+### Creating a Job
+
+The simplest way is through the `/cron` slash command or the `cronjob` tool:
+
+```
+Create a cron job that searches for AI news every morning at 8 AM and delivers it to me
+```
+
+This creates a job that runs daily. You can also create them explicitly:
+
+```bash
+hermes cron create "0 8 * * *"
+```
+
+You'll be prompted for the prompt and delivery target.
+
+### Scheduling Formats
+
+| Format | Example | Meaning |
+|--------|---------|---------|
+| Duration | `30m`, `2h` | Every 30 minutes, every 2 hours |
+| Time phrase | `8am`, `every monday 9am` | Every day at 8 AM, every Monday at 9 AM |
+| Cron expression | `0 9 * * 1-5` | Weekdays at 9 AM |
+| ISO timestamp | `2026-06-01T09:00:00` | Run once at that time |
+
+### Job Configuration
+
+Each job has several knobs:
+
+- **Prompt** — what the agent should do each tick (must be self-contained — no session context carried over)
+- **Skills** — preload specific skills for the job
+- **Model** — override the model per job
+- **Script** — run a data-collection script before the agent prompt
+- **Workdir** — run in a specific project directory
+- **Delivery** — where results go (default: your current chat)
+- **Context from** — chain job A's output into job B
+
+### Example: Daily Summary
+
+```
+Create a cron job that:
+- Runs every morning at 8 AM
+- Summarizes Hacker News front page
+- Delivers to my Telegram
+```
+
+The agent creates:
+
+```json
+{
+  "schedule": "0 8 * * *",
+  "prompt": "Read the Hacker News front page at news.ycombinator.com. Summarize the top 5 stories with links.",
+  "deliver": "origin"
+}
+```
+
+### Managing Jobs
+
+```bash
+hermes cron list              # List all jobs
+hermes cron edit JOB_ID       # Edit a job
+hermes cron pause JOB_ID      # Pause a job
+hermes cron resume JOB_ID     # Resume a paused job
+hermes cron remove JOB_ID     # Delete a job
+hermes cron status            # Scheduler health
+```
+
+### The Script Pattern
+
+For data-collection workflows, you can attach a script to a job:
+
+```bash
+hermes cron create "30m" --script ~/.hermes/scripts/check_disk.sh
+```
+
+The script's stdout is injected into the job's prompt as context — the agent can then decide whether to alert you based on the data.
+
+### The No-Agent Mode
+
+For simple, repetitive checks that need zero reasoning, use `no_agent: true`:
+
+```json
+{
+  "schedule": "5m",
+  "script": "~/.hermes/scripts/disk_watchdog.sh",
+  "no_agent": true
+}
+```
+
+The script runs directly. If it produces stdout, that's the message. If it produces nothing (silent success), nobody gets notified. This is the **watchdog pattern** — perfect for threshold monitors.
+
+## MCP Servers
+
+The Model Context Protocol lets Hermes connect to external MCP servers — databases, APIs, custom services — as if they were native tools.
+
+### Adding an MCP Server
+
+```bash
+# HTTP-based MCP server
+hermes mcp add my-server --url http://localhost:8000/mcp
+
+# Command-based MCP server
+hermes mcp add my-server --command "npx @modelcontextprotocol/server-postgres"
+```
+
+### Managing MCP Servers
+
+```bash
+hermes mcp list               # Show all configured servers
+hermes mcp test my-server     # Test the connection
+hermes mcp configure my-server  # Toggle which tools to expose
+hermes mcp remove my-server   # Remove a server
+```
+
+### Running Hermes as an MCP Server
+
+You can also run Hermes as an MCP server itself:
+
+```bash
+hermes mcp serve
+```
+
+This lets another MCP client (like Claude Desktop, Cursor, or another AI agent) talk to Hermes and use its tools.
+
+### Use Cases
+
+- **Database access** — connect to PostgreSQL or SQLite via MCP
+- **External APIs** — wrap any REST API as an MCP tool
+- **Custom tooling** — expose internal scripts as MCP tools
+- **Cross-agent communication** — two Hermes instances talking via MCP
+
+## Subagent Delegation
+
+For tasks that benefit from parallel execution or isolated contexts, Hermes can spawn **subagents** — independent agent instances that work on subtasks and report back.
+
+### Basic Delegation
+
+```bash
+Spawn a subagent to research Django REST framework options while I work on the frontend
+```
+
+Or use the delegations tool directly — the agent handles this automatically when it recognizes parallelizable work.
+
+### When to Use Delegation
+
+| Use case | Why |
+|----------|-----|
+| Research + implementation | One agent researches, another builds |
+| Multi-file code review | Each agent reviews different files |
+| Parallel testing | Agents run tests on different modules |
+| Independent analysis | Both tasks need full tool access |
+
+### Limitations
+
+- Subagents run **synchronously** — the parent waits for results
+- Subagents cannot delegate further (configurable)
+- Subagents are not durable — if the parent is interrupted, children are cancelled
+- For durable background work, use **cron jobs** or **background terminal processes**
+
+### Worktree Mode
+
+When multiple agents are working on the same git repo:
+
+```bash
+hermes -w                     # Each session gets its own git worktree
+```
+
+This prevents conflicts — each agent works on an isolated checkout.
+
+## Putting It All Together
+
+Here's a real-world example: a daily research pipeline.
+
+**Step 1: MCP for database access**
+
+```bash
+hermes mcp add research-db --url http://localhost:3000/mcp
+```
+
+**Step 2: Cron job to collect data**
+
+Every 6 hours, a job reads from the MCP-connected database, runs analysis, and writes results to a shared file.
+
+**Step 3: Scheduled reporting**
+
+Another cron job runs every morning, reads the collected data, formats it, and sends a summary to Telegram.
+
+**Step 4: Delegated deep dives**
+
+When you ask "analyze this quarter's trends," Hermes spawns 3 subagents in parallel — one for user data, one for revenue, one for product metrics — then synthesizes the results.
+
+This pattern turns Hermes from a question-answering tool into an **autonomous research system**.
+
+## Next Steps
+
+- Revisit the **[Skills System](/blog/skills-system/)** guide and create a cron-job-deployment skill
+- Check the **[CLI Mastery](/blog/cli-mastery/)** guide for more session management tips
+- Review the official [Configuration docs](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)

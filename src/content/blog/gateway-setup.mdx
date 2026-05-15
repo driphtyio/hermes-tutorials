@@ -1,0 +1,220 @@
+---
+title: "Multi-Platform Gateway: Hermes Everywhere"
+description: "Run the same Hermes Agent on Telegram, Discord, Slack, WhatsApp, and more — with full tool access, not just chat."
+pubDate: "2026-05-14"
+tags: ["gateway", "telegram", "discord", "slack", "messaging"]
+---
+
+The Hermes **gateway** is what makes it more than a terminal tool. It's a daemon that connects your agent to messaging platforms — Telegram, Discord, Slack, WhatsApp, Signal, Email, Matrix, even SMS.
+
+Same agent, same tools, same memory, same skills. But you talk to it through your preferred chat app.
+
+## Architecture
+
+The gateway runs as a background service. It listens on each platform you configure, routes messages to the agent loop, and delivers responses back. One agent, many doors.
+
+```
+Telegram →  \
+Discord  →   → Gateway → Agent → Tools → Response
+Slack    →  /
+```
+
+## Quick Start
+
+```bash
+# Configure platforms interactively
+hermes gateway setup
+
+# Start the gateway (foreground — good for testing)
+hermes gateway run
+
+# Install as a systemd service (production)
+hermes gateway install
+hermes gateway start
+
+# Check status
+hermes gateway status
+```
+
+## Telegram Setup
+
+Telegram is the most popular gateway platform. Here's how to set it up:
+
+### 1. Create a Bot
+
+1. Open Telegram and message [@BotFather](https://t.me/botfather)
+2. Send `/newbot`
+3. Choose a name (e.g., `My Hermes Agent`)
+4. Choose a username (e.g., `my_hermes_bot`)
+5. BotFather gives you a **token** — save it
+
+### 2. Configure Hermes
+
+```bash
+hermes gateway setup
+```
+
+Select Telegram and paste the token when prompted. Or configure manually:
+
+```yaml
+# ~/.hermes/config.yaml
+gateway:
+  platforms:
+    telegram:
+      enabled: true
+      bot_token: "1234567890:ABCdefGHIjklmNOPqrstUVwxyz"
+```
+
+### 3. Start and Chat
+
+```bash
+hermes gateway install
+hermes gateway start
+```
+
+Now message your bot on Telegram. The agent has full tool access — you can ask it to search the web, run commands, analyze images, or manage files, all from your phone.
+
+**Telegram-specific features:**
+
+- `/sethome` — set current chat as the "home" channel
+- `/topic` — enable DM topic sessions
+- Voice messages are auto-transcribed (requires STT setup)
+- `/platforms` — check connection status
+
+### 4. Authorize Users (DM Commands)
+
+By default, anyone who knows your bot can message it. Control access:
+
+```bash
+hermes pairing list           # Show authorized users
+hermes pairing approve "@user"  # Approve a user
+hermes pairing revoke "@user"   # Revoke access
+```
+
+## Discord Setup
+
+### 1. Create a Bot Application
+
+1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
+2. New Application → name it
+3. Bot → Add Bot → copy the token
+4. **IMPORTANT:** Enable **Message Content Intent** under Privileged Gateway Intents
+5. OAuth2 → URL Generator → scopes: `bot` + `applications.commands` → permissions: `Send Messages`, `Read Message History` → open the generated URL to invite the bot
+
+### 2. Configure
+
+```yaml
+# ~/.hermes/config.yaml
+gateway:
+  platforms:
+    discord:
+      enabled: true
+      bot_token: "your_discord_bot_token"
+```
+
+### 3. Start
+
+```bash
+hermes gateway restart
+```
+
+**Discord-specific notes:**
+
+- The bot responds in DMs and any channel it has permission to read
+- Without **Message Content Intent** enabled, the bot only sees DMs, not channel messages
+- Slash commands aren't supported yet — Hermes listens to plain messages
+
+## Slack Setup
+
+### 1. Create a Slack App
+
+1. Go to [api.slack.com/apps](https://api.slack.com/apps)
+2. Create New App → From Manifest
+3. Add these **Bot Token Scopes**: `chat:write`, `im:history`, `im:read`, `channels:history`, `channels:read`
+4. Subscribe to `message.channels` and `message.im` events
+5. Install to Workspace → copy the **Bot User OAuth Token**
+
+### 2. Configure
+
+```yaml
+# ~/.hermes/config.yaml
+gateway:
+  platforms:
+    slack:
+      enabled: true
+      bot_token: "xoxb-..."
+```
+
+### 3. Start
+
+```bash
+hermes gateway restart
+```
+
+**Slack-specific note:** Without subscribing to `message.channels`, the bot only responds in DMs. Subscribe to that event to make it work in public channels too.
+
+## Other Platforms
+
+The same pattern applies for all supported platforms:
+
+| Platform | Config key | Auth |
+|----------|-----------|------|
+| WhatsApp | `whatsapp` | API token from provider |
+| Signal | `signal` | Signal CLI or API |
+| Email | `email` | IMAP/SMTP credentials |
+| Matrix | `matrix` | Access token |
+| SMS | `sms` | Twilio credentials |
+| Home Assistant | `homeassistant` | Long-lived token |
+
+Full setup docs: [hermes-agent.nousresearch.com/docs/user-guide/messaging/](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/)
+
+## Gateway Management
+
+Once the gateway is running, you can manage it with:
+
+```bash
+hermes gateway status          # Running or stopped?
+hermes gateway logs            # Show recent logs
+hermes gateway restart         # Full restart
+hermes gateway stop            # Stop the service
+```
+
+Check gateway logs for issues:
+
+```bash
+grep -i "failed to send\|error" ~/.hermes/logs/gateway.log | tail -20
+```
+
+## Common Pitfalls
+
+### Gateway dies on SSH logout
+
+```
+sudo loginctl enable-linger $USER
+```
+
+This keeps user services alive after you disconnect.
+
+### Gateway dies on WSL2 close
+
+WSL2 needs `systemd=true` in `/etc/wsl.conf` for systemd services to work. Without it, the gateway falls back to `nohup` (dies when terminal closes).
+
+### Discord bot is silent
+
+Double-check **Message Content Intent** is enabled in Discord Developer Portal → Bot → Privileged Gateway Intents.
+
+### Slack bot only works in DMs
+
+Subscribe to `message.channels` event in your Slack App configuration.
+
+### Gateway crash loop
+
+```bash
+systemctl --user reset-failed hermes-gateway
+hermes gateway start
+```
+
+## Next Steps
+
+- **[Advanced Automation](/blog/advanced-automation/)** — set up cron jobs that deliver to your Telegram
+- **[Skills System](/blog/skills-system/)** — teach your gateway-connected agent new tricks
