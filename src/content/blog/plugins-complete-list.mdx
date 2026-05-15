@@ -1,0 +1,261 @@
+---
+title: "Every Hermes Agent Plugin — Complete List With Reviews"
+description: "A comprehensive guide to all 55+ Hermes Agent plugins — standalone, memory, web search, image gen, gateway platforms, model providers, and more. With reviews."
+pubDate: "2026-05-15"
+tags: ["plugins", "reference", "extensions", "review"]
+keywords: [hermes plugins, hermes plugin list, all hermes plugins, hermes plugin reviews, hermes plugin guide, hermes spotify plugin, hermes google meet plugin, hermes disk cleanup, hermes plugins enable, hermes plugins install]
+---
+
+> **TLDR:** Hermes Agent ships with 55+ bundled plugins. The most useful: **Spotify** (playback control), **Google Meet** (transcribe meetings), **Disk Cleanup** (auto-clean temp files), **SearXNG** (free private web search), and **Honcho** (cloud memory). Enable with `hermes plugins enable name`. This guide reviews every plugin across all categories.
+
+## Key Takeaways
+
+- 55+ plugins ship with Hermes — most are auto-loaded, some need opt-in
+- Standalone plugins (Spotify, Meet, Kanban) need `hermes plugins enable name`
+- Backend plugins (web search, image gen) auto-load when you set their API keys
+- Memory plugins are exclusive — pick one provider
+- 27 model provider plugins cover every major LLM API
+- No plugin marketplace exists yet — install from Git with `hermes plugins install user/repo`
+
+## How Plugins Work
+
+Hermes has four plugin sources:
+
+| Source | Location | Override Priority |
+|--------|----------|-------------------|
+| **Bundled** | Shipped with Hermes | Lowest |
+| **User** | `~/.hermes/plugins/<name>/` | Medium |
+| **Project** | `./.hermes/plugins/<name>/` | High (requires env var) |
+| **Pip** | Python package with entry point | Same as user |
+
+**Plugin kinds:**
+
+- **Standalone** — opt-in, adds tools/commands. Enable with `hermes plugins enable`.
+- **Backend** — auto-loaded pluggable backend (web search, image gen). Set API key.
+- **Exclusive** — category with one active provider (memory). Pick one.
+- **Platform** — gateway messaging adapters. Auto-loaded.
+- **Model Provider** — LLM API integrations. Auto-discovered.
+
+### Management Commands
+
+```bash
+hermes plugins list              # Show all with status
+hermes plugins enable name       # Enable a plugin
+hermes plugins disable name      # Disable a plugin
+hermes plugins install user/repo # Install from GitHub
+hermes plugins remove name       # Remove user-installed plugin
+hermes plugins info name         # Detailed plugin info
+/plugins                         # In-session list
+```
+
+Plugins are opt-in by default. Only enabled plugins load. Changes need a session restart (`/reset`).
+
+## Standalone Plugins (Opt-In)
+
+These are the plugins you explicitly enable. They add tools and slash commands.
+
+### ⭐ Spotify — ★★★★★
+
+**Status:** Bundled, not enabled by default
+**Enable:** `hermes plugins enable spotify`
+**Auth:** `hermes auth spotify` (PKCE OAuth)
+
+Adds 7 tools for full Spotify control:
+- `spotify_playback` — play, pause, skip, seek
+- `spotify_devices` — list and select output devices
+- `spotify_queue` — add songs to queue
+- `spotify_search` — search tracks, albums, artists
+- `spotify_playlists` — list and manage playlists
+- `spotify_albums` — browse albums
+- `spotify_library` — manage saved tracks
+
+**Review:** Excellent. The tool set is comprehensive — you can ask Hermes to play a specific song on a specific device. Authentication is one-time via OAuth. The tools are well-named and the agent uses them intuitively. Best used on a desktop where Spotify is already running.
+
+**Requirements:** Spotify Premium account, one-time OAuth setup.
+
+### ⭐ Google Meet — ★★★★★
+
+**Status:** Bundled, not enabled by default
+**Enable:** `hermes plugins enable google_meet`
+
+Hermes can join Google Meet calls, transcribe live captions, and speak in realtime. Three modes:
+- **v1:** Transcribe-only (default)
+- **v2:** Realtime duplex audio via OpenAI Realtime + BlackHole/PulseAudio
+- **v3:** Remote node — bot runs on a different machine than the gateway
+
+Tools: `meet_join`, `meet_leave`, `meet_status`, `meet_transcript`, `meet_say`
+
+**Review:** Transformative for async meeting participation. Hermes joins, transcribes, and you can ask "what did they say about X?" afterwards. The design is explicitly safe — it only joins URLs you pass, no calendar scanning or auto-dial. v2 realtime mode is impressive but needs extra audio setup.
+
+**Requirements:** Chrome with a signed-in Google profile, audio backend for speech.
+
+### ⭐ Disk Cleanup — ★★★★☆
+
+**Status:** Bundled, not enabled by default
+**Enable:** `hermes plugins enable disk-cleanup`
+
+Auto-tracks and cleans up ephemeral files created during sessions — test scripts, temp outputs, cron logs. Runs via plugin hooks (post_tool_call, on_session_end). No agent action required — it's fully automatic.
+
+**Review:** Set-and-forget. Once enabled, it silently tracks what Hermes creates and cleans up when sessions end. Particularly useful if your agent generates lots of temp scripts. The only reason it's 4 stars instead of 5: you don't notice it working (which is the point), and aggressive cleanup might delete something you wanted to keep. The `disk-cleanup` command lets you inspect before deletion.
+
+**Requirements:** None. Works out of the box once enabled.
+
+### ⭐ Teams Pipeline — ★★★☆☆
+
+**Status:** Bundled, not enabled by default
+**Enable:** `hermes plugins enable teams_pipeline`
+
+Microsoft Teams meeting pipeline with durable runtime state. Operator CLI flows for Graph-backed transcript-first meeting summaries.
+
+**Review:** Niche but well-executed. If you're a heavy Teams user, this is valuable — it pulls transcripts, generates summaries, and manages the pipeline state. The CLI flows are well-designed. Limited appeal outside Microsoft shops.
+
+**Requirements:** Microsoft Graph API access, Teams admin permissions.
+
+## Web Search Backends (Auto-Loaded)
+
+These plugins auto-load when you set the corresponding API key. They provide web search and content extraction to the `web` toolset.
+
+| Plugin | API Key | Cost | Quality |
+|--------|---------|------|---------|
+| **Firecrawl** (default) | `FIRECRAWL_API_KEY` | Freemium | ★★★★★ — best balance of speed and quality |
+| **Tavily** | `TAVILY_API_KEY` | Freemium | ★★★★☆ — good, AI-optimized |
+| **SearXNG** | `SEARXNG_URL` | Free (self-host) | ★★★★★ — best for privacy, no rate limits |
+| **DuckDuckGo** | None | Free | ★★★☆☆ — works, limited depth |
+| **Brave Free** | `BRAVE_SEARCH_API_KEY` | Free (2k/mo) | ★★★★☆ — independent search index |
+| **Exa** | `EXA_API_KEY` | Paid | ★★★★☆ — excellent for technical content |
+| **Parallel** | `PARALLEL_API_KEY` | Paid | ★★★☆☆ — newer, less tested |
+
+**Review summary:** Firecrawl is the best default — works well, free tier is generous. **SearXNG is the hidden gem** — self-host via Docker (`docker run -d --name searxng -p 8080:8080 searxng/searxng`), set `SEARXNG_URL=http://localhost:8080`, and you get unlimited, private, no-API-key web search.
+
+## Memory Provider Plugins (Exclusive — Pick One)
+
+Memory plugins are exclusive — you can only use one at a time. Set with `hermes config set memory.provider name`.
+
+| Plugin | Type | Quality |
+|--------|------|---------|
+| **Holographic** (default) | Local SQLite | ★★★★☆ — solid, private, zero setup |
+| **Honcho** | Cloud AI-native | ★★★★☆ — best for cross-device sync |
+| **Mem0** | Cloud semantic | ★★★☆☆ — powerful search, hit performance issues |
+| **OpenViking** | Cloud | ★★★☆☆ — only 30% API utilized per community |
+| **Supermemory** | Cloud | ★★☆☆☆ — limited documentation |
+| **RetainDB** | Cloud | ★★☆☆☆ — limited documentation |
+| **Byterover** | Cloud | ★★☆☆☆ — limited documentation |
+| **Hindsight** | Cloud | ★★☆☆☆ — limited documentation |
+
+**Review:** Stick with **Holographic** (default) unless you need cross-device sync. It's local, fast, and zero-config. Upgrade to **Honcho** if you run Hermes on multiple machines and want consistent memory. **Mem0** has the best semantic search but a known perf issue (#25971) where per-turn retrieval invalidates prompt caching.
+
+## Image Generation Backends (Auto-Loaded)
+
+| Plugin | API Key | Cost | Quality |
+|--------|---------|------|---------|
+| **OpenAI** | `OPENAI_API_KEY` | Paid | ★★★★★ — gpt-image-2, best quality |
+| **OpenAI Codex** | Codex OAuth | Via Codex | ★★★★★ — same quality, different billing |
+| **xAI** | `XAI_API_KEY` | Paid | ★★★☆☆ — newer, less refined |
+
+Enabled automatically when the corresponding API key is set. Images save to `~/.hermes/cache/images/`.
+
+## Video Generation Backends (Auto-Loaded)
+
+| Plugin | API Key | Models | Quality |
+|--------|---------|--------|---------|
+| **FAL** | `FAL_KEY` | Veo 3.1, Kling, Pixverse | ★★★★☆ — multi-model, versatile |
+| **xAI Grok-Imagine** | `XAI_API_KEY` | Grok-Imagine | ★★★☆☆ — text-to-video, edit, extend |
+
+FAL is the better choice — supports multiple video models and both text-to-video and image-to-video.
+
+## Gateway Platform Plugins (Auto-Loaded)
+
+Beyond the 15+ built-in platforms, these are shipped as plugins:
+
+| Plugin | What it adds | Requirements |
+|--------|-------------|-------------|
+| **Teams** | Microsoft Teams gateway | Azure Bot Service credentials |
+| **IRC** | Internet Relay Chat gateway | IRC server, channel, nickname |
+| **Google Chat** | Google Chat via Pub/Sub | GCP project, service account |
+| **LINE** | LINE Messaging API | Channel access token + secret |
+
+These auto-load when configured in the gateway section of `config.yaml`.
+
+## Model Provider Plugins (27 Bundled)
+
+Hermes ships with 27 model provider plugins covering every major LLM API. Each registers a ProviderProfile that lets you use that provider's models.
+
+**Complete list:** AI Gateway, Alibaba, Alibaba Coding Plan, Anthropic, Arcee, Azure Foundry, Bedrock, Copilot, Copilot ACP, Custom, DeepSeek, Gemini, GMI, Hugging Face, KiloCode, Kimi Coding, MiniMax, Nous, Novita, NVIDIA, Ollama Cloud, OpenAI Codex, OpenCode Zen, OpenRouter, Qwen OAuth, StepFun, xAI, Xiaomi, Z.AI
+
+**Review:** Comprehensive coverage. The notable gaps are minimal compared to other agents. OpenRouter is the recommended entry point since it routes to 200+ models from all providers. Local models via Ollama are supported through the Ollama Cloud provider config.
+
+## Observability & Utilities
+
+| Plugin | What it does | Quality |
+|--------|-------------|---------|
+| **Langfuse** | Traces conversations, LLM calls, and tool usage | ★★★★☆ — essential for debugging |
+| **Context Engine** | Replaces built-in context compression | ★★★☆☆ — advanced, niche use |
+
+**Langfuse** is the standout here. It hooks into pre/post API requests, LLM calls, and tool calls to provide full observability. Set `HERMES_LANGFUSE_PUBLIC_KEY` and `HERMES_LANGFUSE_SECRET_KEY` to enable. Useful for debugging token usage and understanding agent behavior.
+
+## Community & Third-Party Plugins
+
+The plugin ecosystem is young but growing. Known community developments:
+
+| Plugin | Status | Description |
+|--------|--------|-------------|
+| **mempalace** | Feature request (#6323, 26 👍) | Most-wanted new memory provider |
+| **hermes-achievements** | Brought in-tree | Originally external by @PCinkusz |
+| **Canon** | Feature request (#25671) | Gateway platform plugin |
+
+**Installing community plugins:**
+
+```bash
+# From a GitHub repo
+hermes plugins install username/plugin-name
+
+# From a pip package
+pip install hermes-plugin-name
+# Then enable it
+hermes plugins enable plugin-name
+```
+
+There's no central plugin registry (like npm or PyPI for plugins). Community plugins are discovered through GitHub and word of mouth. The `hermes plugins install` command accepts any public GitHub repo in `user/repo` format.
+
+## How to Review Your Plugins
+
+```bash
+# List all discovered plugins
+hermes plugins list
+
+# See what's enabled
+grep -A 20 'plugins:' ~/.hermes/config.yaml
+
+# Enable a plugin
+hermes plugins enable spotify
+hermes plugins enable google_meet
+
+# Check plugin details
+hermes plugins info disk-cleanup
+
+# Refresh after changes
+# Type /reset or restart Hermes
+```
+
+## FAQ
+
+**Q: Are bundled plugins automatically enabled?**
+No — all standalone plugins are opt-in. Backend, platform, memory, and model provider plugins auto-load when their requirements are met (API key set, config configured).
+
+**Q: Can I have multiple memory plugins enabled?**
+No — memory is an exclusive category. Only one provider at a time. Switch with `hermes config set memory.provider name` followed by a restart.
+
+**Q: How do I find community plugins?**
+Search GitHub for `hermes-agent plugin` or check the Hermes issues labeled "plugin". There's no central registry yet — distribution is ad-hoc.
+
+**Q: Are plugins safe?**
+Bundled plugins are vetted by Nous Research. User-installed plugins from GitHub run with the same permissions as the core agent — review the code before installing. The `plugins.enabled` allow-list gates all third-party plugins.
+
+**Q: Will my plugins survive a Hermes update?**
+Yes. Bundled plugins are updated with Hermes. User-installed plugins in `~/.hermes/plugins/` persist across updates.
+
+## Next Steps
+
+- **[Plugins Quick Start](/blog/hermes-plugins/)** — the basics of managing plugins
+- **[Web Search Backends](/blog/web-search-backends/)** — deep dive on search providers
+- **[Commands Reference](/blog/commands-reference/)** — complete CLI reference
