@@ -1,0 +1,120 @@
+---
+title: "Hermes Agent vs OpenClaw: Which One Should You Use?"
+description: "Use this AI agent comparison to decide. Find the best AI agent framework for your needs."
+pubDate: "2026-05-15"
+tags: ["comparison", "openclaw", "migration", "opinion"]
+keywords: [hermes vs openclaw, hermes agent vs openclaw, AI agent comparison, migrate from openclaw, open source AI agent, hermes claw migrate, best AI agent framework]
+---
+
+> **TLDR:** Hermes Agent and OpenClaw are the two leading open-source AI agent frameworks. This AI agent comparison covers both frameworks in detail. Find the best AI agent framework for your needs. Hermes excels at multi-platform gateways (Telegram, Discord, Slack), self-improving skills, and provider flexibility. OpenClaw is strong at IDE integration and has a longer track record. Both are free and open source. If you're on OpenClaw, `hermes claw migrate` handles the transition.
+
+## Key Takeaways
+
+- Hermes passed OpenClaw as the top app on OpenRouter's leaderboard (2026)
+- Hermes has built-in skills system — agents that learn and improve
+- Hermes supports 20+ providers vs OpenClaw's smaller set
+- Hermes has a multi-platform gateway (Telegram, Discord, Slack)
+- OpenClaw has stronger IDE/editor integration history
+- `hermes claw migrate` converts OpenClaw configs automatically
+
+## At a Glance
+
+| Feature | Hermes Agent | OpenClaw |
+|---------|-------------|----------|
+| Open source | ✅ MIT | ✅ Open source |
+| Skills system | ✅ Built-in, self-improving | ❌ No equivalent |
+| Memory persistence | ✅ Built-in + plugins | ✅ Has memory |
+| LLM providers | 20+ | Fewer |
+| Multi-platform gateway | ✅ 15+ platforms | ❌ CLI-focused |
+| IDE integration | ✅ ACP server | ✅ Strong (Cursor, etc.) |
+| Subagent delegation | ✅ Built-in | Limited |
+| Cron scheduler | ✅ Built-in | ❌ |
+| MCP support | ✅ Server + client | Partial |
+| Profiles | ✅ Full isolation | Limited |
+| Kanban orchestration | ✅ | ❌ |
+| Migration tool | ✅ `hermes claw migrate` | ❌ |
+| Community | Growing fast | Established |
+
+## Where Hermes Wins
+
+### 1. Skills System
+
+Hermes's most distinctive feature. The agent writes, maintains, and improves its own skills — reusable procedure documents that load into future sessions. This means Hermes gets better at *your specific tasks* over time. OpenClaw has no equivalent.
+
+### 2. Multi-Platform Gateway
+
+Hermes runs on 15+ messaging platforms — Telegram, Discord, Slack, WhatsApp, Signal, Email, SMS, Matrix, and more. The same agent with full tool access, accessible from your phone. OpenClaw is primarily CLI-only.
+
+### 3. Provider Flexibility
+
+20+ LLM providers vs OpenClaw's smaller set. Hermes works with OpenRouter, Anthropic, OpenAI, DeepSeek, Google, xAI, Hugging Face, local models via Ollama/llama.cpp, and custom endpoints. Credential pools auto-rotate keys when you hit rate limits.
+
+### 4. Cron & Automation
+
+Built-in cron scheduler for recurring tasks. No external cron daemon needed. Jobs have their own model overrides, skills preloading, and delivery targets. OpenClaw requires external scheduling.
+
+### 5. Profiles
+
+Fully isolated profiles — separate configs, sessions, skills, memory, and API keys. Run work and personal agents side by side. Each profile is independently exportable.
+
+## Where OpenClaw Wins
+
+### 1. IDE Integration
+
+OpenClaw has deeper IDE integrations, particularly with Cursor and VS Code. Hermes supports ACP (Agent Communication Protocol) which enables IDE integration, but OpenClaw's ecosystem here is more mature.
+
+### 2. Track Record
+
+OpenClaw has been around longer and has a more established community. More blog posts, more Stack Overflow answers, more third-party tutorials exist for OpenClaw.
+
+## Should You Switch from OpenClaw?
+
+If you primarily use an AI agent in your terminal for coding tasks, OpenClaw is fine — switching isn't urgent.
+
+Switch to Hermes if you want:
+- An agent that learns and improves (skills system)
+- Access from Telegram/Discord/Slack (gateway)
+- More provider choices (20+)
+- Scheduled automation (cron)
+- Profile isolation (work vs personal)
+
+### Migration Tool
+
+Hermes includes a migration command:
+
+```bash
+hermes claw migrate
+```
+
+This converts your OpenClaw configuration to Hermes format, preserving your settings and preferences. The migration is one-way — make a backup first.
+
+## Community & Momentum
+
+Hermes has been trending upward:
+
+- **2026:** Passed OpenClaw as top app on OpenRouter leaderboard
+- **v0.6.0:** "Solves its biggest weakness against OpenClaw" per HN coverage
+- **Active development:** Frequent releases, responsive maintainers
+- **Open Core:** MIT-licensed, community contributions welcome
+
+OpenClaw remains a strong project with a loyal user base, but the momentum is clearly with Hermes.
+
+## FAQ
+
+**Q: Can I run both Hermes and OpenClaw?**
+Yes — they're independent tools. Use different config directories and API keys.
+
+**Q: Is the migration tool reliable?**
+`hermes claw migrate` handles the common cases. For complex configurations, review the output and adjust manually.
+
+**Q: Does Hermes support Cursor or VS Code?**
+Yes — via the ACP server (`hermes acp`). Integration is available but OpenClaw's IDE experience is more polished.
+
+**Q: Which one is cheaper?**
+Both use your API keys, so the cost is identical for the same models. Hermes's credential pools and free-tier rotation might save you more.
+
+## Next Steps
+
+- **[Getting Started](/blog/getting-started/)** — install and try Hermes
+- **[Plugins Guide](/blog/hermes-plugins/)** — extend your agent
+- **[Commands Reference](/blog/commands-reference/)** — every CLI command

@@ -1,0 +1,178 @@
+---
+title: "Token Usage & Cost Optimization"
+description: "Strategies to manage and reduce API costs — provider failover, credential pools, context compression, model selection, and cost tracking for Hermes Agent."
+pubDate: "2026-05-15"
+tags: ["cost", "tokens", "optimization", "providers"]
+keywords: [hermes cost optimization, reduce API costs, token usage, provider failover, context compression, cheap model, hermes cost tracking, save money ai agent]
+---
+
+> **TLDR:** Control API costs with these hermes cost optimization strategies. Use hermes cost tracking to monitor spending and save money ai agent costs.
+
+## Key Takeaways
+
+- Context compression cuts token usage by 50-80% on long sessions
+- Cheap models (Gemini Flash, DeepSeek, Haiku, Llama) cost 10-100x less than premium
+- Credential pools auto-rotate keys to stay within free tiers
+- Local models via Ollama cost zero API dollars
+- Enable `show_cost` to see per-turn spending
+- OpenRouter's free tier models cost nothing
+
+## Track Your Spending
+
+First, know what you're spending:
+
+```bash
+# Show per-turn cost in the CLI
+hermes config set display.show_cost true
+
+# View usage analytics
+hermes insights --days 7
+hermes insights --days 30
+```
+
+## Strategy 1: Context Compression
+
+The biggest cost driver is long context windows. Compress aggressively:
+
+```bash
+# Enable auto-compression
+hermes config set compression.enabled true
+hermes config set compression.threshold 0.50   # Trigger at 50% context
+hermes config set compression.target_ratio 0.20 # Compress to 20%
+
+# Manual compression mid-session
+/compress
+```
+
+Auto-compression summarizes earlier turns when you approach the context limit, reducing tokens by 50-80% on long sessions.
+
+## Strategy 2: Smart Model Selection
+
+Not every task needs a premium model:
+
+| Task | Recommended model | Cost per 1M tokens |
+|------|------------------|-------------------|
+| Complex coding, deep reasoning | Claude Sonnet 4 | ~$15 |
+| General chat, research | GPT-4o mini | ~$0.60 |
+| Web search, summaries | Gemini 2.0 Flash | ~$0.10 |
+| Simple Q&A, data extraction | DeepSeek Chat | ~$0.27 |
+| Local, no API cost | Llama 3.2 via Ollama | $0.00 |
+
+Switch models mid-session:
+
+```
+/model gemini-2.0-flash     # Cheap for simple tasks
+/model deepseek/deepseek-chat  # Cheap for research
+```
+
+For cron jobs and subagents, set per-job models:
+
+```bash
+hermes cron create "30m" --model "gemini-2.0-flash"
+```
+
+## Strategy 3: Credential Pools
+
+Avoid hitting expensive overage tiers by pooling multiple free-tier keys:
+
+```bash
+# Add multiple keys
+hermes auth add              # Pick provider, paste key
+hermes auth add              # Add another key for same provider
+
+# When one hits its limit, Hermes auto-switches
+hermes auth list openrouter
+```
+
+This is especially useful for OpenRouter's free tier — each key gets a daily allowance, and rotating between them extends it.
+
+## Strategy 4: Use the Free Tier
+
+OpenRouter offers free models with rate limits:
+
+```bash
+hermes model
+# Pick: openrouter/free or any model tagged "free"
+```
+
+Models often included in free tier:
+- Meta Llama 3.2 (3B, 8B, 70B)
+- Mistral 7B
+- Google Gemma 2
+- Microsoft Phi-3
+
+These are slower and less capable than paid models, but cost zero.
+
+## Strategy 5: Local Models
+
+For zero API cost, run models locally via Ollama:
+
+```bash
+# Install Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Pull a model
+ollama pull llama3.2
+
+# Configure Hermes
+hermes config set model.default "ollama/llama3.2"
+hermes config set model.provider "ollama"
+```
+
+Local models use your own hardware (CPU/GPU) — no API calls, no token costs, no rate limits. The trade-off is speed: expect 10-50 tokens/second on CPU vs 100+ from an API.
+
+## Strategy 6: Reduce Output Tokens
+
+```bash
+# Suppress verbose output
+/verbose off
+
+# Use --quiet for one-shot queries
+hermes chat -Q -q "Quick question"
+
+# Short, direct prompts save tokens
+# "What's the capital of France?" vs "Can you please tell me...?"
+```
+
+## Strategy 7: Provider Failover
+
+Set up automatic failover to cheaper providers when expensive ones are down:
+
+```bash
+# Configure multiple providers
+hermes config set model.default "anthropic/claude-sonnet-4"
+hermes config set model.fallback "deepseek/deepseek-chat"
+```
+
+If Sonnet is rate-limited or unavailable, Hermes falls back to DeepSeek automatically.
+
+## Cost Comparison Table
+
+| Setup | Estimated monthly cost (moderate use) |
+|-------|--------------------------------------|
+| All Claude Sonnet 4 | $50-200 |
+| Mix of Sonnet + DeepSeek | $20-80 |
+| Mix of Gemini Flash + DeepSeek | $5-20 |
+| OpenRouter free tier only | $0-5 |
+| Local Ollama only | $0 (electricity only) |
+| All of the above with failover | Minimal |
+
+## FAQ
+
+**Q: How do I see how many tokens I've used?**
+Use `hermes insights --days N` for overall stats, or enable `display.show_cost` for per-turn costs.
+
+**Q: Is context compression lossy?**
+Yes — it summarizes earlier turns. Essential context is preserved, but specific details from 50 messages ago may be condensed. Use `/compress` only when approaching the limit.
+
+**Q: Can I set different models for different tools?**
+Not per-tool, but you can per-job (cron) and per-subagent (delegation). Within a session, `/model` switches everything.
+
+**Q: Are free models good enough for daily use?**
+For simple tasks (web search, file operations, Q&A), yes. For complex reasoning and code generation, paid models are noticeably better. Use the hybrid approach — cheap model for routine, premium model for hard tasks.
+
+## Next Steps
+
+- **[Web Search Backends](/blog/web-search-backends/)** — configure search providers
+- **[Commands Reference](/blog/commands-reference/)** — more CLI commands
+- **[Multiple Agents](/blog/multi-agent-setup/)** — cost implications of parallel agents

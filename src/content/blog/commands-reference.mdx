@@ -1,0 +1,215 @@
+---
+title: "Hermes Commands Quick Reference"
+description: "This Hermes CLI reference covers every command, subcommand, flag, and slash command — searchable, organized by category."
+pubDate: "2026-05-15"
+tags: ["cli", "reference", "commands", "cheatsheet"]
+keywords: [hermes commands list, hermes CLI reference, hermes cheat sheet, hermes chat commands, hermes gateway commands, hermes session commands, hermes config commands, hermes slash commands]
+---
+
+> **TLDR:** Hermes has 50+ CLI commands organized into 11 categories — this hermes CLI reference and hermes cheat sheet covers them all.
+
+## Key Takeaways
+
+- `hermes` alone = interactive chat (your daily driver)
+- `hermes chat -q "query"` = one-shot queries for scripts
+- `hermes --continue` = resume your last session
+- `/model`, `/compress`, `/retry` = essential in-session slash commands
+- `hermes gateway` = messaging platform subsystem
+- Use `hermes --help` or `/help` in-session for the live list
+
+## Chat Commands
+
+| Command | What it does |
+|---------|-------------|
+| `hermes` | Launch interactive chat (default) |
+| `hermes chat -q "text"` | One-shot query, non-interactive |
+| `hermes chat -m "model"` | Start with a specific model |
+| `hermes chat -t "web,terminal"` | Start with specific toolsets |
+| `hermes chat --yolo` | Skip command approval prompts |
+| `hermes chat -Q` | Quiet mode (no banner, no spinner) |
+| `hermes --continue` | Resume most recent session |
+| `hermes --continue "name"` | Resume a named session |
+| `hermes --resume SESSION_ID` | Resume a specific session by ID |
+
+## Configuration
+
+```bash
+hermes config                  # View current config
+hermes config edit             # Open config.yaml in $EDITOR
+hermes config set key val      # Set a value (e.g., model.default "claude")
+hermes config path             # Print config file path
+hermes config env-path         # Print .env path
+hermes config check            # Validate config
+hermes config migrate          # Update config with new options
+hermes setup                   # Interactive setup wizard
+hermes setup model             # Just the model section
+hermes setup gateway           # Just the gateway section
+```
+
+## Model & Provider
+
+```bash
+hermes model                   # Interactive model picker
+hermes login --provider nous   # OAuth login for a provider
+hermes logout                  # Clear stored auth
+```
+
+## Sessions
+
+```bash
+hermes sessions list           # Recent sessions
+hermes sessions browse         # Interactive picker
+hermes sessions rename ID T    # Rename a session
+hermes sessions delete ID      # Delete a session
+hermes sessions prune          # Clean up old sessions
+hermes sessions export FILE    # Export to JSONL
+hermes sessions stats          # Storage statistics
+```
+
+## Tools & Skills
+
+```bash
+hermes tools                   # Interactive tool toggling
+hermes tools list              # Show all tools and their status
+hermes tools enable web        # Enable a toolset
+hermes tools disable browser   # Disable a toolset
+
+hermes skills list             # Installed skills
+hermes skills search QUERY     # Search the skills hub
+hermes skills install NAME     # Install a skill from the hub
+hermes skills uninstall N      # Remove a hub skill
+hermes skills inspect ID       # Preview without installing
+hermes skills publish PATH     # Publish to registry
+hermes skills browse           # Browse all available skills
+hermes skills check            # Check for updates
+hermes skills update           # Update outdated skills
+hermes skills config           # Enable/disable per platform
+```
+
+## Gateway (Messaging)
+
+```bash
+hermes gateway run             # Start gateway foreground
+hermes gateway install         # Install as systemd service
+hermes gateway start           # Start the service
+hermes gateway stop            # Stop the service
+hermes gateway restart         # Restart the service
+hermes gateway status          # Check if running
+hermes gateway setup           # Configure platforms
+hermes gateway logs            # Show recent logs
+```
+
+## Cron & Automation
+
+```bash
+hermes cron list               # List scheduled jobs
+hermes cron create SCHEDULE    # Create a job
+hermes cron edit JOB_ID        # Edit a job
+hermes cron pause JOB_ID       # Pause a job
+hermes cron resume JOB_ID      # Resume a job
+hermes cron run JOB_ID         # Trigger manually
+hermes cron remove JOB_ID      # Delete a job
+hermes cron status             # Scheduler health
+```
+
+## Profiles
+
+```bash
+hermes profile list            # List all profiles
+hermes profile create NAME     # Create a new profile
+hermes profile use NAME        # Set as default
+hermes profile show NAME       # Show details
+hermes profile delete NAME     # Delete a profile
+hermes profile rename A B      # Rename a profile
+hermes profile export NAME     # Export as tar.gz
+hermes profile import FILE     # Import from archive
+hermes profile alias NAME      # Create wrapper scripts
+```
+
+## MCP Servers
+
+```bash
+hermes mcp list                # Configured servers
+hermes mcp add NAME            # Add server (--url or --command)
+hermes mcp remove NAME         # Remove a server
+hermes mcp test NAME           # Test connection
+hermes mcp configure NAME      # Toggle tool selection
+hermes mcp serve               # Run Hermes as an MCP server
+```
+
+## Auth & Credentials
+
+```bash
+hermes auth add                # Add API key to credential pool
+hermes auth list PROVIDER      # List pooled keys
+hermes auth remove P INDEX     # Remove a key
+hermes auth reset PROVIDER     # Clear exhaustion status
+```
+
+## Webhooks
+
+```bash
+hermes webhook subscribe N     # Create route at /webhooks/<name>
+hermes webhook list            # List subscriptions
+hermes webhook remove NAME     # Remove a subscription
+hermes webhook test NAME       # Send test POST
+```
+
+## Maintenance
+
+```bash
+hermes doctor                  # Check dependencies and config
+hermes doctor --fix            # Auto-fix common issues
+hermes update                  # Update Hermes to latest
+hermes uninstall               # Uninstall Hermes
+hermes version                 # Show version
+hermes insights                # Usage analytics
+```
+
+## In-Session Slash Commands
+
+Type these during an interactive chat session:
+
+| Command | What it does |
+|---------|-------------|
+| `/new` or `/reset` | Fresh session |
+| `/retry` | Resend last message |
+| `/undo` | Remove last exchange |
+| `/title name` | Name the session |
+| `/compress` | Summarize earlier turns to save tokens |
+| `/model name` | Switch model mid-session |
+| `/yolo` | Toggle approval bypass |
+| `/voice on/off/tts` | Toggle voice mode |
+| `/skills` | Browse and install skills |
+| `/tools` | Manage tools |
+| `/help` | Show all slash commands |
+| `/quit` | Exit CLI |
+| `/config` | Show current config |
+| `/verbose` | Cycle verbosity levels |
+| `/cron` | Manage cron jobs |
+| `/plugins` | List plugins |
+| `/stop` | Kill background processes |
+| `/background prompt` | Run a prompt in the background |
+| `/queue prompt` | Queue for next turn |
+| `/rollback [N]` | Restore filesystem from checkpoint |
+| `/agents` | Show active subagents |
+| `/goal text` | Set a standing goal |
+| `/status` | Session info |
+| `/usage` | Token usage |
+| `/platforms` | Gateway connection status |
+
+## FAQ
+
+**Q: What's the most common command people use?**
+`hermes` (interactive chat) by far. Followed by `hermes --continue` to resume sessions and `hermes chat -q` for one-off queries.
+
+**Q: How do I see all available commands?**
+Run `hermes --help` for CLI commands or `/help` in-session for slash commands.
+
+**Q: Can I create custom aliases?**
+Yes — use `hermes profile alias NAME` to create wrapper scripts for common invocations.
+
+## Next Steps
+
+- **[Plugins Guide](/blog/hermes-plugins/)** — extend Hermes with plugins
+- **[Running Multiple Agents](/blog/multi-agent-setup/)** — parallel agents and worktree mode

@@ -1,0 +1,155 @@
+---
+title: "Web Search Backends for Hermes Agent"
+description: "This web search configuration guide covers Firecrawl, Tavily, SearXNG, Brave Search, and custom endpoints."
+pubDate: "2026-05-15"
+tags: ["web-search", "providers", "configuration", "toolsets"]
+keywords: [hermes web search, search provider, Firecrawl, Tavily, SearXNG, Brave Search, web toolset, hermes search backend, web search configuration]
+---
+
+> **TLDR:** This web search configuration guide covers every search backend Hermes supports. Use the `web` toolset for internet search. Default providers are Firecrawl and Tavily.
+
+## Key Takeaways
+
+- The `web` toolset enables internet search — enable with `hermes tools enable web`
+- Firecrawl and Tavily are the default search backends
+- SearXNG is the most-requested provider (self-hosted, free, private)
+- Brave Search is available via API key
+- `/reset` after enabling the web toolset for changes to take effect
+
+## Enabling Web Search
+
+The web toolset is not enabled by default on all platforms:
+
+```bash
+# Enable
+hermes tools enable web
+
+# Verify
+hermes tools list
+
+# Reset session to apply
+# (Type /reset or exit and relaunch)
+```
+
+Once enabled, the agent can search the internet, extract content from URLs, and fetch data from APIs.
+
+## Default Search Providers
+
+### Firecrawl
+
+Firecrawl is the default web search backend. It's great for general web search and content extraction.
+
+```bash
+# Firecrawl works out of the box for basic search
+# For higher rate limits, set:
+export FIRECRAWL_API_KEY="fcp-..."
+```
+
+### Tavily
+
+Tavily is an alternative search API optimized for AI agents.
+
+```bash
+export TAVILY_API_KEY="tvly-..."
+```
+
+## Self-Hosted: SearXNG
+
+SearXNG is the most requested web search provider. It's a free, self-hosted, privacy-respecting metasearch engine. No API keys, no rate limits, no tracking.
+
+### Setup
+
+```bash
+# Deploy SearXNG via Docker
+docker run -d --name searxng -p 8080:8080 searxng/searxng
+```
+
+Then configure Hermes to use it:
+
+```bash
+hermes config set web.search_provider "searxng"
+hermes config set web.searxng_base_url "http://localhost:8080"
+```
+
+### Why SearXNG?
+
+| Feature | SearXNG | Firecrawl | Tavily |
+|---------|---------|-----------|--------|
+| Self-hosted | ✅ | ❌ | ❌ |
+| Free | ✅ | Freemium | Freemium |
+| Private (no tracking) | ✅ | ❌ | ❌ |
+| No API key needed | ✅ | ❌ | ❌ |
+| Multiple search sources | ✅ (aggregates) | ❌ | ❌ |
+| Easy to deploy | ✅ (Docker) | SaaS | SaaS |
+
+If you run Hermes on a server or local machine, SearXNG is the best option for unlimited, private web search.
+
+## Brave Search
+
+Brave Search is another popular option — it has its own search index (not Bing/Google dependent).
+
+```bash
+export BRAVE_SEARCH_API_KEY="BSA-..."
+```
+
+Then configure:
+
+```bash
+hermes config set web.search_provider "brave"
+```
+
+## Custom Search Endpoints
+
+For custom search backends:
+
+```bash
+hermes config set web.search_provider "custom"
+hermes config set web.custom_search_url "https://your-search-api.com/search"
+hermes config set web.custom_search_api_key "your-key"
+```
+
+## Comparison Table
+
+| Provider | Cost | Privacy | Setup | Quality |
+|----------|------|---------|-------|---------|
+| Firecrawl (default) | Freemium | Moderate | None (default) | Good |
+| Tavily | Freemium | Moderate | Set API key | Good |
+| SearXNG | Free (self-host) | Excellent | Docker run | Very good (aggregates) |
+| Brave Search | Freemium | Good | Set API key | Good (independent index) |
+| Custom | Varies | Varies | Config setup | Varies |
+
+## Troubleshooting
+
+**Web search not working after enabling:**
+
+```bash
+# 1. Verify toolset is enabled
+hermes tools list | grep web
+
+# 2. Check if API keys are set
+hermes config env-path
+cat ~/.hermes/.env | grep -i SEARCH
+
+# 3. Test manually
+curl -s "https://api.firecrawl.dev/v0/search?query=test"
+
+# 4. Reset session
+/reset
+```
+
+## FAQ
+
+**Q: Which search provider should I use?**
+For most users: Firecrawl (default, works out of the box). For heavy users: SearXNG (free, self-hosted, no rate limits). For privacy-focused: SearXNG or Brave Search.
+
+**Q: Can I use multiple search providers at once?**
+Not simultaneously — Hermes uses one provider at a time. Switch with `hermes config set web.search_provider`.
+
+**Q: Does the browser tool also search the web?**
+Yes — the browser tool navigates to URLs directly. Web search finds URLs; the browser tool visits them. They're complementary.
+
+## Next Steps
+
+- **[Plugins Guide](/blog/hermes-plugins/)** — extend Hermes further
+- **[Token Usage & Cost Optimization](/blog/token-cost-optimization/)** — manage API costs
+- **[Commands Reference](/blog/commands-reference/)** — more CLI commands

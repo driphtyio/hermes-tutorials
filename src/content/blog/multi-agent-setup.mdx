@@ -1,0 +1,159 @@
+---
+title: "Running Multiple Agents"
+description: "How to run multiple Hermes Agent instances for parallel work — worktree mode, profiles, subagent delegation, and multi-agent coordination."
+pubDate: "2026-05-15"
+tags: ["multi-agent", "delegation", "parallel", "advanced"]
+keywords: [hermes multi-agent, parallel agents, worktree mode, multiple hermes instances, subagent delegation, coordinate agents, parallel ai agents]
+---
+
+> **TLDR:** Run multiple Hermes instances with `hermes -w` (worktree mode) for isolated git checkouts, or `hermes --profile work` for separate configs. Delegate parallel tasks with the delegate_task tool. For multi-agent coordination, use the kanban board to track work across instances.
+
+## Key Takeaways
+
+- `hermes -w` (worktree mode) gives each agent an isolated git checkout — no conflicts
+- Profiles create fully independent Hermes instances with separate configs and memory
+- `delegate_task` spawns subagents for parallel work within a session
+- Kanban board coordinates multi-agent workflows across profiles
+- Use tmux for persistent, independent Hermes sessions
+
+## Why Multiple Agents?
+
+One agent is great. Multiple agents working in parallel are transformative for:
+
+- **Code reviews** — one agent reviews frontend, another reviews backend
+- **Research** — one researches approach A, another researches approach B
+- **Parallel builds** — each agent works on a different module
+- **Long-running tasks** — one agent handles your chat, another runs a background job
+
+## Method 1: Worktree Mode
+
+The simplest way to run parallel agents on the same git repo:
+
+```bash
+# Start agent A on feature branch
+hermes -w chat -q "Implement user authentication"
+
+# Start agent B on a different feature
+hermes -w chat -q "Add rate limiting middleware"
+```
+
+The `-w` flag gives each Hermes session its own git worktree — an isolated checkout directory. One agent can modify files without stepping on the other's changes.
+
+```bash
+# List worktrees
+git worktree list
+
+# Clean up when done
+git worktree remove .hermes/worktrees/<name>
+```
+
+## Method 2: Profiles
+
+Profiles give each agent its own config, sessions, skills, and memory:
+
+```bash
+# Create profiles
+hermes profile create "frontend-work" --clone
+hermes profile create "backend-work" --clone
+
+# Run agents with different profiles
+hermes --profile frontend-work
+hermes --profile backend-work
+```
+
+Each profile is fully isolated — different API keys, different models, different session histories. This is ideal for running agents with different personalities or access levels.
+
+## Method 3: Subagent Delegation
+
+Within a single session, Hermes can spawn subagents for parallel tasks:
+
+```bash
+Spawn subagents to research Django REST framework options
+while I work on the frontend
+```
+
+This uses the `delegate_task` tool under the hood. Subagents get their own isolated context and terminal sessions. They report back with summaries when done.
+
+### When to Delegate
+
+| Task type | Why parallel helps |
+|-----------|-------------------|
+| Research + implementation | One researches, another builds |
+| Multi-file code review | Each agent reviews different files |
+| Parallel testing | Agents test different modules |
+| Independent analysis | Both tasks need full tool access |
+
+### Limitations
+
+- Subagents run synchronously — parent waits for results
+- They cannot delegate further by default (configurable)
+- Not durable — parent interruption cancels children
+- For durable work, use cron jobs or background terminal processes
+
+## Method 4: Tmux Multiplexing
+
+For fully independent, persistent agents that run for hours:
+
+```bash
+# Start agent in tmux
+tmux new-session -d -s agent1 -x 120 -y 40 'hermes'
+
+# Wait for startup, send a task
+sleep 8 && tmux send-keys -t agent1 'Build the auth module' Enter
+
+# Start a second agent
+tmux new-session -d -s agent2 -x 120 -y 40 'hermes'
+sleep 8 && tmux send-keys -t agent2 'Build the dashboard' Enter
+
+# Check progress
+tmux capture-pane -t agent1 -p | tail -20
+tmux capture-pane -t agent2 -p | tail -20
+
+# Relay context between them
+tmux send-keys -t agent2 'Auth API is at /api/v1/auth — use that' Enter
+```
+
+This is the most flexible approach but requires tmux familiarity.
+
+## Method 5: Kanban Board
+
+For structured multi-agent coordination, use the built-in kanban board:
+
+```bash
+hermes kanban init              # Create a board
+hermes kanban create "Task"     # Add a task
+hermes kanban assign TASK agent  # Assign to specific profile/instance
+hermes kanban list              # See all tasks and who owns them
+```
+
+The kanban system is designed for dispatching work across multiple profiles. Each worker agent sees only its assigned tasks. When it completes one, the dispatcher assigns the next.
+
+## Comparison
+
+| Method | Isolation | Persistence | Ease of use |
+|--------|-----------|-------------|-------------|
+| Worktree Mode | Git isolation only | Same session store | Easy |
+| Profiles | Full (config, memory, sessions) | Each profile persists | Easy |
+| Subagent Delegation | Context + terminal | Not durable (cancelled with parent) | Trivial |
+| Tmux | Full process isolation | Durable (hours/days) | Moderate |
+| Kanban | Full (profile-based workers) | Durable + tracked | Moderate setup |
+
+## FAQ
+
+**Q: How many agents can I run at once?**
+There's no hard limit — it depends on your hardware and API rate limits. Each agent consumes its own context window and makes its own API calls. Start with 2-3 and scale up.
+
+**Q: Do multiple agents share memory?**
+No — each profile has isolated memory. Worktree and tmux agents also have separate histories unless you explicitly sync them.
+
+**Q: Can agents talk to each other?**
+Not directly, but you can relay context manually (tmux send-keys) or set up an MCP server for cross-agent communication.
+
+**Q: Will they conflict on file changes?**
+Worktree mode prevents git conflicts. Without it, multiple agents editing the same files can conflict — use worktree mode when working on the same repo.
+
+## Next Steps
+
+- **[Plugins Guide](/blog/hermes-plugins/)** — extend what your agents can do
+- **[Web Search Backends](/blog/web-search-backends/)** — configure search providers
+- **[Token Usage & Cost Optimization](/blog/token-cost-optimization/)** — manage API spending across multiple agents

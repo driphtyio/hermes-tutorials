@@ -1,0 +1,152 @@
+---
+title: "Hermes Plugins: Extending Your Agent"
+description: "A complete guide to Hermes Agent's plugin system — listing, installing, removing plugins, and understanding what plugins can add to your agent."
+pubDate: "2026-05-15"
+tags: ["plugins", "extensions", "advanced"]
+keywords: [hermes plugins, hermes plugin system, extend hermes agent, hermes plugin list, hermes plugin install, custom plugins, hermes extensibility]
+---
+
+> **TLDR:** Hermes supports plugins (hermes extensibility) for adding new commands, tools, memory backends, and integrations. Manage them with `hermes plugins list`, `hermes plugins install NAME`, and `hermes plugins remove NAME`. Plugins are community-contributed packages that extend what your agent can do without modifying core code.
+
+## Key Takeaways
+
+- Plugins add new functionality without touching core code
+- Manage with `hermes plugins list/install/remove`
+- Use `/plugins` in-session to see what's loaded
+- Plugins can add: tools, slash commands, platform adapters, memory backends
+- Community plugins are installable by name
+- Custom plugins can be developed locally
+
+## What Are Plugins?
+
+Plugins are self-contained packages that extend Hermes Agent. Unlike skills (which are procedural knowledge documents), plugins are actual code that add new capabilities — new tools, new slash commands, new platform integrations, even new memory backends.
+
+The plugin system is how Hermes stays extensible without bloating the core. If there's something Hermes can't do out of the box, there's probably a plugin for it — or you can write one.
+
+## Managing Plugins
+
+### Listing Plugins
+
+```bash
+hermes plugins list
+```
+
+Shows all installed plugins and their status (enabled/disabled).
+
+In-session:
+
+```
+/plugins
+```
+
+### Installing Plugins
+
+```bash
+hermes plugins install NAME
+```
+
+Replace `NAME` with the plugin's identifier. Plugins are fetched from the official registry.
+
+### Removing Plugins
+
+```bash
+hermes plugins remove NAME
+```
+
+This uninstalls the plugin cleanly — no leftover config or dependencies.
+
+## What Plugins Can Do
+
+Plugins extend Hermes in four main categories:
+
+### 1. New Tools
+
+Plugins can register new tool calls that the agent can use. Examples:
+- A `weather` tool that checks weather forecasts
+- A `jira` tool that queries Jira tickets
+- A `docker` tool that manages containers
+
+Tools added by plugins appear alongside built-in tools in the agent's toolset.
+
+### 2. New Slash Commands
+
+Plugins can add custom `/commands`. Examples:
+- `/deploy` — trigger a deployment
+- `/jira-search` — search Jira from within a session
+
+### 3. Platform Adapters
+
+Plugins can add new messaging platforms to the gateway. While Hermes supports 15+ platforms natively, plugins can add niche ones.
+
+### 4. Memory Backends
+
+Plugins can add custom memory storage backends, like the Honcho plugin for external memory.
+
+## Built-in / Official Plugins
+
+Some notable plugins shipped with Hermes:
+
+| Plugin | What it adds |
+|--------|-------------|
+| Honcho | External memory backend with dialectic user modeling |
+| Kanban | Multi-agent work queue and orchestration board |
+
+## Creating Custom Plugins
+
+For developers who want to build their own plugins:
+
+1. Create a Python package following the Hermes plugin API
+2. Register new tools, commands, or adapters using the plugin decorators
+3. Place it in `~/.hermes/plugins/` or publish to the registry
+
+The plugin API is documented in the [developer guide](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins).
+
+## Plugins vs Skills vs MCP
+
+These three extension mechanisms serve different purposes:
+
+| Mechanism | What it is | When to use |
+|-----------|-----------|-------------|
+| **Skills** | Markdown procedure documents | Teaching the agent how to do something |
+| **Plugins** | Python code packages | Adding new capabilities (tools, commands) |
+| **MCP Servers** | External services via protocol | Connecting to external APIs and databases |
+
+Skills change *what the agent knows*. Plugins change *what the agent can do*. MCP servers change *what the agent can reach*.
+
+## Example: Installing the Honcho Plugin
+
+```bash
+# Install
+hermes plugins install honcho
+
+# Configure
+hermes config set memory.provider "honcho"
+
+# Verify
+hermes plugins list
+# → honcho (enabled)
+```
+
+This replaces the built-in SQLite memory with Honcho's cloud-based memory, giving you cross-device memory sync and advanced user modeling.
+
+## FAQ
+
+**Q: Are plugins safe to install?**
+Plugins from the official registry are vetted. Custom plugins run with the same permissions as the agent — review any plugin code before installing from untrusted sources.
+
+**Q: Do plugins persist across Hermes updates?**
+Yes — plugins are stored separately from the core code and survive updates.
+
+**Q: Can I disable a plugin without removing it?**
+Plugin management is all-or-nothing per plugin. To temporarily disable, remove and reinstall later.
+
+**Q: What's the difference between a plugin and a skill?**
+Skills are markdown files the agent reads as instructions. Plugins are code that add new tools and commands. Skills change what the agent knows; plugins change what it can do.
+
+**Q: How do I find available plugins?**
+Run `hermes plugins list` to see installed ones. For discoverable plugins, check the Hermes documentation and community channels.
+
+## Next Steps
+
+- **[Running Multiple Agents](/blog/multi-agent-setup/)** — coordinate multiple Hermes instances
+- **[Web Search Backends](/blog/web-search-backends/)** — configure search providers
