@@ -1,0 +1,208 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+import { skills, skillCategories } from '../../data/skills';
+
+const totalSkills = skills.length;
+const totalCategories = skillCategories.length;
+const topRated = skills.filter(s => s.rating >= 5).length;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title={`Skill Library — ${SITE_TITLE}`} description="Browse, search, and load Hermes Agent skills. 120+ skills across 19 categories with descriptions, guides, how-to instructions, and pitfalls." />
+		<style>
+			.header-section { text-align: center; padding: 2em 0 1em; }
+			.header-section h1 { margin-bottom: 0.3em; font-size: 2.8rem; font-weight: 700; letter-spacing: -0.03em; }
+			.header-section .subtitle { color: var(--text-secondary); font-size: 1.05em; max-width: 600px; margin: 0 auto; }
+			.stats { display: flex; justify-content: center; gap: 2.5em; margin: 1.5em 0; flex-wrap: wrap; }
+			.stat { text-align: center; }
+			.stat .num { font-size: 1.8em; font-weight: 700; color: var(--accent-light); }
+			.stat .label { font-size: 0.85em; color: var(--text-muted); }
+			.filters { display: flex; gap: 0.5em; margin: 1.5em 0; flex-wrap: wrap; justify-content: center; }
+			.filter-btn {
+				padding: 0.35em 1em; border: 1px solid var(--border); border-radius: 999px;
+				background: transparent; color: var(--text-secondary); cursor: pointer;
+				font-size: 0.82em; transition: all 0.15s ease; font-family: inherit;
+			}
+			.filter-btn:hover { border-color: var(--accent); color: #fff; }
+			.filter-btn.active { background: #fff; color: var(--bg); border-color: #fff; }
+			.search-wrapper { max-width: 360px; margin: 0 auto 1.5em; }
+			.search-input {
+				width: 100%; padding: 0.5em 0.8em; border: 1px solid var(--border); border-radius: var(--radius-md);
+				background: var(--bg-secondary); color: var(--text-primary); font-size: 0.9em;
+				font-family: inherit; box-sizing: border-box; outline: none;
+			}
+			.search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+			.search-input::placeholder { color: var(--text-muted); }
+			.skills-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 1em; margin: 1em 0 2em; }
+			.skill-card {
+				border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25em;
+				background: var(--bg-secondary); transition: all 0.15s ease;
+				display: flex; flex-direction: column;
+			}
+			.skill-card:hover { border-color: var(--border-light); background: var(--bg-tertiary); }
+			.skill-card .top-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.4em; }
+			.skill-card .name-row { display: flex; align-items: center; gap: 0.4em; flex-wrap: wrap; }
+			.skill-card h2 { margin: 0; font-size: 1em; font-weight: 600; letter-spacing: -0.01em; }
+			.skill-card .rating { color: #f59e0b; font-size: 0.85em; white-space: nowrap; }
+			.skill-card .category-label { font-size: 0.72em; color: var(--text-muted); margin-bottom: 0.2em; }
+			.skill-card p { font-size: 0.84em; color: var(--text-secondary); margin: 0 0 0.6em; line-height: 1.5; }
+			.skill-card .section-title { font-size: 0.78em; font-weight: 600; color: var(--text-primary); margin: 0.6em 0 0.2em; }
+			.skill-card .load-hint {
+				background: var(--bg); color: var(--accent-light); padding: 0.35em 0.7em;
+				border-radius: var(--radius-sm); font-size: 0.78em; font-family: var(--font-mono);
+				user-select: all; border: 1px solid var(--border); display: inline-block; margin-bottom: 0.5em;
+			}
+			.skill-card .guide-text {
+				font-size: 0.78em; color: var(--text-secondary); line-height: 1.6;
+				border-left: 2px solid var(--accent); padding-left: 0.7em; margin: 0.2em 0;
+			}
+			.skill-card .howto-text {
+				font-size: 0.78em; color: var(--text-secondary); line-height: 1.6;
+				border-left: 2px solid #4fc3f7; padding-left: 0.7em; margin: 0.2em 0;
+			}
+			.skill-card .pitfalls-text {
+				font-size: 0.78em; color: #ef9a9a; line-height: 1.6;
+				border-left: 2px solid #e53935; padding-left: 0.7em; margin: 0.2em 0;
+			}
+			.skill-card .collapsible-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+			.skill-card .collapsible-content.open { max-height: 1000px; }
+			.expand-btn {
+				background: transparent; border: 1px solid var(--border); color: var(--text-muted);
+				border-radius: var(--radius-sm); font-size: 0.75em; padding: 0.25em 0.6em;
+				cursor: pointer; margin-top: 0.4em; transition: all 0.15s ease; font-family: inherit;
+				align-self: flex-start;
+			}
+			.expand-btn:hover { border-color: var(--accent); color: #fff; }
+			.skill-card .extra-tip {
+				font-size: 0.75em; color: var(--text-muted); margin-top: 0.4em;
+				font-family: var(--font-mono);
+			}
+			.empty-state { text-align: center; padding: 3em; color: var(--text-muted); display: none; }
+			.empty-state .emoji { font-size: 2.5em; margin-bottom: 0.5em; }
+			@media (max-width: 720px) {
+				.skills-grid { grid-template-columns: 1fr; }
+				.stats { gap: 1em; }
+				.header-section h1 { font-size: 2rem; }
+			}
+		</style>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<div class="header-section">
+				<h1>Skill Library</h1>
+				<p class="subtitle">Browse, search, and load reusable skills for Hermes Agent. {topRated} top-rated ★5 skills across {skillCategories.length} categories. Each skill includes a guide, how-to, and pitfalls.</p>
+			</div>
+
+			<div class="stats">
+				<div class="stat"><div class="num">{totalSkills}</div><div class="label">Total Skills</div></div>
+				<div class="stat"><div class="num">{skillCategories.length}</div><div class="label">Categories</div></div>
+				<div class="stat"><div class="num">{topRated}</div><div class="label">Top Rated ★5</div></div>
+				<div class="stat"><div class="num">{skills.filter(s => s.rating >= 4).length}</div><div class="label">★4+ Skills</div></div>
+			</div>
+
+			<div class="search-wrapper">
+				<input class="search-input" type="text" id="search" placeholder="Search skills..." />
+			</div>
+
+			<div class="filters" id="filters">
+				<button class="filter-btn active" data-cat="all">All</button>
+				{skillCategories.map(cat => (
+					<button class="filter-btn" data-cat={cat.id}>
+						{cat.icon} {cat.label}
+					</button>
+				))}
+			</div>
+
+			<div class="skills-grid" id="skillGrid">
+				{skills.map((s, i) => (
+					<div class="skill-card" data-category={s.category} data-rating={s.rating} data-name={s.name.toLowerCase()} data-desc={s.description.toLowerCase()}>
+						<div class="category-label">{skillCategories.find(c => c.id === s.category)?.icon} {skillCategories.find(c => c.id === s.category)?.label}</div>
+						<div class="top-row">
+							<div class="name-row">
+								<h2>{s.name}</h2>
+							</div>
+							{s.rating > 0 && <div class="rating">{'★'.repeat(s.rating)}{'☆'.repeat(5 - s.rating)}</div>}
+						</div>
+						<p>{s.description}</p>
+
+						<div class="load-hint">skill_view("{s.id}")</div>
+
+						<div class="collapsible-content" id={`details-${i}`}>
+							<div class="section-title">📖 Guide</div>
+							<div class="guide-text">{s.guide}</div>
+
+							<div class="section-title">🔧 How To</div>
+							<div class="howto-text">{s.howto}</div>
+
+							<div class="section-title">⚠️ Pitfalls</div>
+							<div class="pitfalls-text">{s.pitfalls}</div>
+						</div>
+
+						<button class="expand-btn" data-index={i}>▼ Show Details</button>
+						<div class="extra-tip">{s.id}</div>
+					</div>
+				))}
+			</div>
+
+			<div class="empty-state" id="emptyState">
+				<div class="emoji">🔍</div>
+				<p>No skills match your search. Try a different filter or keyword.</p>
+			</div>
+		</main>
+		<Footer />
+
+		<script>
+			const search = document.getElementById('search');
+			const filterBtns = document.querySelectorAll('.filter-btn');
+			const cards = document.querySelectorAll('.skill-card');
+			const emptyState = document.getElementById('emptyState');
+			const expandBtns = document.querySelectorAll('.expand-btn');
+
+			let activeCategory = 'all';
+
+			function filterSkills() {
+				const query = search.value.toLowerCase();
+				let visible = 0;
+				cards.forEach(card => {
+					const cat = card.dataset.category;
+					const name = card.dataset.name;
+					const desc = card.dataset.desc;
+					const matchesCat = activeCategory === 'all' || cat === activeCategory;
+					const matchesSearch = !query || name.includes(query) || desc.includes(query);
+					card.style.display = matchesCat && matchesSearch ? '' : 'none';
+					if (matchesCat && matchesSearch) visible++;
+				});
+				emptyState.style.display = visible === 0 ? '' : 'none';
+			}
+
+			function setCategory(cat) {
+				activeCategory = cat;
+				filterBtns.forEach(b => {
+					b.classList.toggle('active', b.dataset.cat === cat);
+				});
+				filterSkills();
+			}
+
+			filterBtns.forEach(btn => {
+				btn.addEventListener('click', () => setCategory(btn.dataset.cat));
+			});
+
+			search.addEventListener('input', filterSkills);
+
+			expandBtns.forEach(btn => {
+				btn.addEventListener('click', () => {
+					const index = btn.dataset.index;
+					const content = document.getElementById(`details-${index}`);
+					const isOpen = content.classList.toggle('open');
+					btn.textContent = isOpen ? '▲ Hide Details' : '▼ Show Details';
+				});
+			});
+		</script>
+	</body>
+</html>
