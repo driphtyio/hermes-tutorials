@@ -98,13 +98,13 @@ const communityCount = plugins.filter(p => p.status === 'community' || p.status 
 			</div>
 
 			<div class="search-wrapper">
-				<input class="search-input" type="text" id="search" placeholder="Search plugins..." oninput="filterPlugins()" />
+				<input class="search-input" type="text" id="search" placeholder="Search plugins..." />
 			</div>
 
 			<div class="filters" id="filters">
-				<button class="filter-btn active" data-cat="all" onclick="setCategory('all')">All</button>
+				<button class="filter-btn active" data-cat="all">All</button>
 				{categories.map(cat => (
-					<button class="filter-btn" data-cat={cat.id} onclick={`setCategory('${cat.id}')`}>
+					<button class="filter-btn" data-cat={cat.id}>
 						{cat.icon} {cat.label}
 					</button>
 				))}
@@ -134,7 +134,7 @@ const communityCount = plugins.filter(p => p.status === 'community' || p.status 
 						{p.installHint !== 'None' && p.status !== 'request' && (
 							<div class="actions">
 								<span class="install-cmd" id={`cmd-${i}`}>{p.installHint}</span>
-								<button class="copy-btn" onclick={`copyCmd(${i})`}>Copy</button>
+								<button class="copy-btn" data-cmd-index={i}>Copy</button>
 							</div>
 						)}
 					</div>
@@ -149,18 +149,17 @@ const communityCount = plugins.filter(p => p.status === 'community' || p.status 
 		<Footer />
 
 		<script>
+			const search = document.getElementById('search');
+			const filterBtns = document.querySelectorAll('.filter-btn');
+			const cards = document.querySelectorAll('.plugin-card');
+			const emptyState = document.getElementById('emptyState');
+
 			let activeCategory = 'all';
-			function setCategory(cat) {
-				activeCategory = cat;
-				document.querySelectorAll('.filter-btn').forEach(b => {
-					b.classList.toggle('active', b.dataset.cat === cat);
-				});
-				filterPlugins();
-			}
+
 			function filterPlugins() {
-				const query = document.getElementById('search').value.toLowerCase();
+				const query = search.value.toLowerCase();
 				let visible = 0;
-				document.querySelectorAll('.plugin-card').forEach(card => {
+				cards.forEach(card => {
 					const cat = card.dataset.category;
 					const name = card.dataset.name;
 					const desc = card.dataset.desc;
@@ -169,17 +168,37 @@ const communityCount = plugins.filter(p => p.status === 'community' || p.status 
 					card.style.display = matchesCat && matchesSearch ? '' : 'none';
 					if (matchesCat && matchesSearch) visible++;
 				});
-				document.getElementById('emptyState').style.display = visible === 0 ? '' : 'none';
+				emptyState.style.display = visible === 0 ? '' : 'none';
 			}
-			function copyCmd(index) {
-				const cmd = document.getElementById(`cmd-${index}`);
-				const btn = cmd.nextElementSibling;
-				navigator.clipboard.writeText(cmd.textContent).then(() => {
-					btn.textContent = 'Copied!';
-					btn.classList.add('copied');
-					setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+
+			function setCategory(cat) {
+				activeCategory = cat;
+				filterBtns.forEach(b => {
+					b.classList.toggle('active', b.dataset.cat === cat);
 				});
+				filterPlugins();
 			}
+
+			filterBtns.forEach(btn => {
+				btn.addEventListener('click', () => setCategory(btn.dataset.cat));
+			});
+
+			search.addEventListener('input', filterPlugins);
+
+			document.querySelectorAll('.copy-btn').forEach(btn => {
+				btn.addEventListener('click', () => {
+					const index = btn.dataset.cmdIndex;
+					const cmd = document.getElementById(`cmd-${index}`);
+					navigator.clipboard.writeText(cmd.textContent).then(() => {
+						btn.textContent = 'Copied!';
+						btn.classList.add('copied');
+						setTimeout(() => {
+							btn.textContent = 'Copy';
+							btn.classList.remove('copied');
+						}, 2000);
+					});
+				});
+			});
 		</script>
 	</body>
 </html>
