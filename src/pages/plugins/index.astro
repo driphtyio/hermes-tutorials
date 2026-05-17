@@ -79,6 +79,26 @@ const communityCount = plugins.filter(p => p.status === 'community' || p.status 
 				.plugins-grid { grid-template-columns: 1fr; }
 				.stats { gap: 1em; }
 				.header-section h1 { font-size: 2rem; }
+				/* Compact filter buttons on mobile */
+				.filter-btn {
+					font-size: 0.72em;
+					padding: 0.25em 0.7em;
+				}
+				/* Let install commands wrap instead of truncating on mobile */
+				.install-cmd {
+					white-space: normal;
+					overflow: visible;
+					word-break: break-all;
+					font-size: 0.72em;
+					padding: 0.35em 0.6em;
+				}
+				/* Compact card details on mobile */
+				.plugin-card .details {
+					font-size: 0.72em;
+				}
+				.plugin-card p {
+					font-size: 0.8em;
+				}
 			}
 		</style>
 	</head>
