@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://your-site.pages.dev/sitemap-index.xml
+Sitemap: https://hermes-tutorials.dev/sitemap-index.xml
 
 # Disallow admin/internal paths
 Disallow: /admin/
