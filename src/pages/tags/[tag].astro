@@ -48,18 +48,6 @@ const taggedPosts = allPosts
 			.back-link:hover { color: var(--accent-light); }
 			h1 { margin-bottom: 0.1em; text-transform: capitalize; font-size: 2.5rem; }
 			.post-count { color: var(--text-muted); font-size: 0.9em; margin-bottom: 2em; }
-			.post-list { list-style: none; margin: 0; padding: 0; }
-			.post-item {
-				padding: 1.5em 0;
-				border-bottom: 1px solid var(--border);
-			}
-			.post-item:first-child { padding-top: 0; }
-			.post-item:last-child { border-bottom: none; }
-			.post-item h2 { margin: 0 0 0.25em; font-size: 1.25em; font-weight: 600; letter-spacing: -0.01em; }
-			.post-item h2 a { color: #fff; text-decoration: none; transition: color 0.15s; }
-			.post-item h2 a:hover { color: var(--accent-light); }
-			.post-meta { font-size: 0.82em; color: var(--text-muted); margin-bottom: 0.4em; }
-			.post-item p { margin: 0; font-size: 0.88em; color: var(--text-secondary); line-height: 1.5; }
 		</style>
 	</head>
 	<body>
@@ -68,17 +56,19 @@ const taggedPosts = allPosts
 			<a class="back-link" href="/blog">&larr; Back to all tutorials</a>
 			<h1>#{tag}</h1>
 			<p class="post-count">{taggedPosts.length} tutorial{taggedPosts.length !== 1 ? 's' : ''}</p>
-			<ul class="post-list">
+			<div class="card-grid">
 				{taggedPosts.map((post) => (
-					<li class="post-item">
-						<h2><a href={`/blog/${post.id}/`}>{post.data.title}</a></h2>
-						<div class="post-meta">
+					<a class="card" href={`/blog/${post.id}/`} style="text-decoration:none;color:inherit;cursor:pointer;">
+						<div class="top-row" style="margin-bottom:0.5em;">
+							<h2>{post.data.title}</h2>
+						</div>
+						<div class="category-label">
 							<FormattedDate date={post.data.pubDate} />
 						</div>
 						<p>{post.data.description}</p>
-					</li>
+					</a>
 				))}
-			</ul>
+			</div>
 		</main>
 		<Footer />
 	</body>

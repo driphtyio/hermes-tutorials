@@ -23,7 +23,7 @@ const websiteSchema = {
 
 const posts = (await getCollection('blog'))
 	.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
-	.slice(0, 5);
+	.slice(0, 8);
 ---
 
 <!doctype html>
@@ -32,7 +32,6 @@ const posts = (await getCollection('blog'))
 		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
 		<script type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
 		<style>
-			/* ── Hero ── */
 			.hero {
 				text-align: center;
 				padding: 5em 0 3em;
@@ -91,7 +90,6 @@ const posts = (await getCollection('blog'))
 				color: #fff;
 			}
 
-			/* ── Features Grid ── */
 			.features {
 				display: grid;
 				grid-template-columns: repeat(3, 1fr);
@@ -133,49 +131,12 @@ const posts = (await getCollection('blog'))
 				line-height: 1.5;
 			}
 
-			/* ── Recent Posts ── */
 			.section-title {
 				font-size: 1.1em;
 				font-weight: 600;
 				color: var(--text-secondary);
 				margin-bottom: 1.25em;
 				letter-spacing: 0;
-			}
-			.posts-list {
-				display: flex;
-				flex-direction: column;
-			}
-			.post-item {
-				padding: 1.25em 0;
-				border-bottom: 1px solid var(--border);
-				text-decoration: none;
-				color: inherit;
-				display: block;
-				transition: all 0.15s ease;
-			}
-			.post-item:first-child { padding-top: 0; }
-			.post-item:last-child { border-bottom: none; }
-			.post-item:hover .post-title {
-				color: var(--accent-light);
-			}
-			.post-title {
-				font-size: 1.1em;
-				font-weight: 600;
-				color: #fff;
-				margin: 0 0 0.3em;
-				transition: color 0.15s ease;
-				letter-spacing: -0.01em;
-			}
-			.post-meta {
-				font-size: 0.82em;
-				color: var(--text-muted);
-				margin-bottom: 0.4em;
-			}
-			.post-item p {
-				margin: 0;
-				font-size: 0.88em;
-				color: var(--text-secondary);
-				line-height: 1.5;
 			}
 			.view-all {
 				text-align: center;
@@ -270,11 +231,13 @@ const posts = (await getCollection('blog'))
 
 			<div>
 				<h2 class="section-title">Latest Tutorials</h2>
-				<div class="posts-list">
+				<div class="card-grid">
 					{posts.map((post) => (
-						<a class="post-item" href={`/blog/${post.id}/`}>
-							<h3 class="post-title">{post.data.title}</h3>
-							<div class="post-meta">
+						<a class="card" href={`/blog/${post.id}/`} style="text-decoration:none;color:inherit;cursor:pointer;">
+							<div class="top-row" style="margin-bottom:0.4em;">
+								<h3>{post.data.title}</h3>
+							</div>
+							<div class="category-label">
 								<FormattedDate date={post.data.pubDate} />
 								{post.data.tags.length > 0 && <span> &middot; {post.data.tags.slice(0, 3).join(', ')}</span>}
 							</div>

@@ -220,6 +220,74 @@ img {
 	white-space: nowrap;
 }
 
+/* ── Shared Card Component ── */
+
+.card-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+	gap: 1em;
+	margin: 1em 0 2em;
+}
+
+.card {
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	padding: 1.25em;
+	background: var(--bg-secondary);
+	transition: all 0.15s ease;
+	display: flex;
+	flex-direction: column;
+}
+.card:hover { border-color: var(--border-light); background: var(--bg-tertiary); }
+.card .top-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.3em; }
+.card .name-row { display: flex; align-items: center; gap: 0.4em; flex-wrap: wrap; }
+.card h2 { margin: 0; font-size: 1em; font-weight: 600; letter-spacing: -0.01em; }
+.card h3 { margin: 0; font-size: 1em; font-weight: 600; letter-spacing: -0.01em; }
+.card .badge { font-size: 0.65em; padding: 0.15em 0.5em; border-radius: 999px; font-weight: 600; }
+.card .rating { color: #f59e0b; font-size: 0.85em; white-space: nowrap; }
+.card .category-label { font-size: 0.72em; color: var(--text-muted); margin-bottom: 0.2em; }
+.card p { font-size: 0.84em; color: var(--text-secondary); margin: 0 0 0.6em; line-height: 1.5; flex-grow: 1; }
+.card .card-description { font-size: 0.84em; color: var(--text-secondary); line-height: 1.5; }
+
+/* ── Shared Page Layout ── */
+
+.page-header { text-align: center; padding: 2em 0 1em; }
+.page-header h1 { margin-bottom: 0.3em; font-size: 2.8rem; font-weight: 700; letter-spacing: -0.03em; }
+.page-header .subtitle { color: var(--text-secondary); font-size: 1.05em; max-width: 600px; margin: 0 auto; }
+
+.stats-bar { display: flex; justify-content: center; gap: 2.5em; margin: 1.5em 0; flex-wrap: wrap; }
+.stat-item { text-align: center; }
+.stat-number { font-size: 1.8em; font-weight: 700; color: var(--accent-light); }
+.stat-label { font-size: 0.85em; color: var(--text-muted); }
+
+.filter-bar { display: flex; gap: 0.5em; margin: 1.5em 0; flex-wrap: wrap; justify-content: center; }
+.filter-btn {
+	padding: 0.35em 1em; border: 1px solid var(--border); border-radius: 999px;
+	background: transparent; color: var(--text-secondary); cursor: pointer;
+	font-size: 0.82em; transition: all 0.15s ease; font-family: inherit;
+}
+.filter-btn:hover { border-color: var(--accent); color: #fff; }
+.filter-btn.active { background: #fff; color: var(--bg); border-color: #fff; }
+
+.search-box { max-width: 360px; margin: 0 auto 1.5em; }
+.search-input {
+	width: 100%; padding: 0.5em 0.8em; border: 1px solid var(--border); border-radius: var(--radius-md);
+	background: var(--bg-secondary); color: var(--text-primary); font-size: 0.9em;
+	font-family: inherit; box-sizing: border-box; outline: none;
+}
+.search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+.search-input::placeholder { color: var(--text-muted); }
+
+.empty-state { text-align: center; padding: 3em; color: var(--text-muted); display: none; }
+.empty-state .emoji { font-size: 2.5em; margin-bottom: 0.5em; }
+
+@media (max-width: 720px) {
+	.card-grid { grid-template-columns: 1fr; }
+	.stats-bar { gap: 1em; }
+	.page-header h1 { font-size: 2rem; }
+	.filter-btn { font-size: 0.72em; padding: 0.25em 0.7em; }
+}
+
 /* ── TLDR / Callout ── */
 
 .tldr {
