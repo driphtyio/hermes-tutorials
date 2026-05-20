@@ -1,7 +1,7 @@
 export interface Skill {
 	id: string;
 	name: string;
-	category: 'autonomous-agents' | 'creative' | 'data-science' | 'devops' | 'dogfood' | 'email' | 'gaming' | 'github' | 'mcp' | 'media' | 'mlops' | 'note-taking' | 'productivity' | 'red-teaming' | 'research' | 'smart-home' | 'social-media' | 'software-dev' | 'yuanbao' | 'cloud';
+	category: 'autonomous-agents' | 'creative' | 'data-science' | 'devops' | 'dogfood' | 'email' | 'gaming' | 'github' | 'mcp' | 'media' | 'mlops' | 'note-taking' | 'productivity' | 'red-teaming' | 'research' | 'smart-home' | 'social-media' | 'software-dev' | 'yuanbao';
 	description: string;
 	rating: number;
 	guide: string;
@@ -906,78 +906,6 @@ export const skills: Skill[] = [
 		guide: 'Load with skill_view("yuanbao"). Requires Yuanbao API credentials. Supports group member queries and @mention operations.',
 		howto: 'Query group info: get group member list and details. @mention users: format messages with proper @ syntax for specific group members.',
 		pitfalls: 'China-specific platform. Requires Yuanbao account and API setup. Documentation is primarily in Chinese.',
-	},
-	// ── Cloud ──
-	{
-		id: 'aws',
-		name: 'AWS Cloud',
-		category: 'cloud',
-		description: 'AWS services integration – S3, Lambda, EC2, IAM. Enables cloud‑native tool calls via AWS SDK.',
-		rating: 4,
-		guide: 'Load with skill_view("aws"). Requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables.',
-		howto: 'Use /aws s3 cp, /aws lambda invoke, /aws ec2 start‑instances, etc.',
-		pitfalls: 'Credentials must be scoped with least‑privilege. Region mismatches cause silent failures.',
-	},
-	{
-		id: 'gcp',
-		name: 'Google Cloud Platform',
-		category: 'cloud',
-		description: 'GCP services integration – Cloud Storage, Cloud Functions, BigQuery, IAM.',
-		rating: 4,
-		guide: 'Load with skill_view("gcp"). Requires GOOGLE_APPLICATION_CREDENTIALS JSON key file.',
-		howto: 'Use /gcp storage cp, /gcp functions call, /gcp bq query, etc.',
-		pitfalls: 'Service‑account permissions need to match the requested API; missing scopes cause permission errors.',
-	},
-
-	{
-		id: 'self-critique-loop',
-		name: 'Self-Critique Loop',
-		category: 'software-dev',
-		description: 'Analyzes past sessions and encodes mistakes into memory.',
-		rating: 5,
-		guide: 'Load with skill_view("self-critique-loop"). Automatically runs after complex sessions to turn failures into skills or memory entries.',
-		howto: 'Trigger with /self-critique analyze --depth 3. Results are patched into skills or added to memory.',
-		pitfalls: 'Large sessions may exceed timeout. Use --limit to cap output. Stale patches may become invalid.',
-	},
-	{
-		id: 'subagent-driven-development',
-		name: 'Subagent-Driven Development',
-		category: 'software-dev',
-		description: 'Orchestrates multi-step plans using isolated subagents with 2-stage review.',
-		rating: 5,
-		guide: 'Load with skill_view("subagent-driven-development"). Spawns leaf subagents for parallel task execution with review.',
-		howto: '/subagent plan --goal "<task>", then spawn and review subagents.',
-		pitfalls: 'Default max concurrent children is 3. Subagents cannot share env vars unless passed explicitly.',
-	},
-	{
-		id: 'systematic-debugging',
-		name: 'Systematic Debugging',
-		category: 'software-dev',
-		description: '4-phase root-cause analysis for complex errors.',
-		rating: 4,
-		guide: 'Load with skill_view("systematic-debugging"). Walks through detection, analysis, technical correlation, and resolution.',
-		howto: 'Use /log grep, /stacktrace view, /skill run systematic-debugging, then apply patches.',
-		pitfalls: 'Over-analysis can lead to wrong fixes. Check tests after applying patches.',
-	},
-	{
-		id: 'test-driven-development',
-		name: 'Test-Driven Development',
-		category: 'software-dev',
-		description: 'Enforces RED-GREEN-REFACTOR workflow for code projects.',
-		rating: 5,
-		guide: 'Load with skill_view("test-driven-development"). Creates tests first, then implements minimal code.',
-		howto: '/test create --name <test> --expect-failure, implement code, /test run, refactor.',
-		pitfalls: 'Over-engineering before test pass leads to issues. Keep tests focused on single behavior.',
-	},
-	{
-		id: 'writing-plans',
-		name: 'Writing Implementation Plans',
-		category: 'software-dev',
-		description: 'Converts high-level goals into bite-sized steps with tool suggestions.',
-		rating: 4,
-		guide: 'Load with skill_view("writing-plans"). Generates structured markdown plans with tool calls.',
-		howto: '/plan write "<goal>", then view and execute steps.',
-		pitfalls: 'Missing prerequisites may cause failures. Tool versions may drift. Not idempotent by default.',
 	},
 ];
 
