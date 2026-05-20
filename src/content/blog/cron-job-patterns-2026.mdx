@@ -1,0 +1,297 @@
+---
+title: "Cron Job Patterns & Best Practices"
+description: "Everything you need to set up automated Hermes cron jobs — from basic reminders to no-agent script-only monitors, with delivery to Telegram, Discord, and Slack."
+pubDate: "2026-05-20"
+tags: ["cron", "automation", "advanced", "monitoring", "scheduler"]
+keywords: [hermes cron jobs, scheduled tasks, cron automation, script-only cron, no-agent mode, cron delivery targets, hermes scheduler, automated monitoring]
+---
+
+> **TLDR:** Hermes cron jobs run your agent on a schedule — from simple reminders (`"every 30m"`) to multi-skill workflows and script-only monitors that cost nothing per tick. Create them via chat (`/cron add`), CLI (`hermes cron create`), or natural language. Script-only mode (`--no-agent`) runs bash/Python without an LLM — ideal for watchdogs and health checks.
+
+## Key Takeaways
+
+- Cron jobs run in **fresh agent sessions** — prompts must be fully self-contained
+- **Script-only mode** (`--no-agent`) runs bash/Python scripts with zero LLM cost per tick
+- Use `[SILENT]` to suppress delivery when nothing noteworthy happens
+- The **gateway** must be running for automatic scheduled execution
+- Delivery targets include Telegram, Discord, Slack, Signal, and local files
+
+## Understanding Cron Jobs
+
+Every cron job has four parts: a schedule, a prompt, optional skills/scripts, and a delivery target. When the scheduler fires, Hermes spawns a fresh agent session, injects any loaded skills or script output as context, runs the prompt, and routes the response to the delivery target.
+
+```python
+# The cronjob tool under the hood
+cronjob(
+    action="create",
+    schedule="every 2h",
+    prompt="Check server status and report any issues.",
+    name="Server health check",
+    deliver="telegram",
+)
+```
+
+### Schedule Formats
+
+| Format | Example | What it means |
+|--------|---------|---------------|
+| Interval | `every 30m` | Every 30 minutes |
+| Interval | `every 2h` | Every 2 hours |
+| Standard cron | `0 9 * * *` | 9:00 AM daily |
+| Standard cron | `0 9 * * 1` | 9:00 AM every Monday |
+| One-shot | `30m` | Run once, 30 minutes from now |
+| One-shot (ISO) | `2026-06-15T09:00:00` | Run once at that datetime |
+
+Note: natural language like `"daily at 9am"` is not supported — use `0 9 * * *` for standard cron expressions.
+
+## Creating Cron Jobs
+
+### From Chat (the easiest way)
+
+```bash
+# Simple reminder
+/cron add 30m "Remind me to deploy the staging build"
+
+# Recurring check
+/cron add "every 2h" "Check if https://example.com/health returns 200"
+
+# With a skill loaded
+/cron add "every 1h" "Check configured feeds and summarize new items" --skill blogwatcher
+
+# Multiple skills
+/cron add "every 6h" "Find local events and combine into a brief" --skill events --skill maps
+```
+
+### From the CLI
+
+```bash
+hermes cron create "every 2h" "Check server status"
+hermes cron create "0 9 * * 1" "Generate weekly report" --name "Weekly digest"
+hermes cron create "every 1h" "Summarize new items" --skill blogwatcher --deliver telegram
+```
+
+### Through Natural Language
+
+Just tell Hermes what you want during a session:
+
+> "Every morning at 9am, check Hacker News for AI news and send me a summary on Telegram."
+
+The agent translates this into the correct `cronjob` tool call automatically.
+
+## Pattern 1: The [SILENT] Guard
+
+The single most important cron pattern: **use `[SILENT]` to suppress delivery when nothing is wrong.**
+
+```bash
+/cron add "every 1h" "
+  Check if https://api.example.com/health returns HTTP 200.
+  If it does, respond with exactly [SILENT].
+  If it doesn't, explain what went wrong.
+" --name "Health monitor" --deliver telegram
+```
+
+Without this, every tick delivers a message — even when everything is fine. With `[SILENT]`, you only hear from the job when something actually needs your attention.
+
+## Pattern 2: GitHub Repository Watcher
+
+Monitor issues, PRs, and releases without leaving your messaging platform:
+
+```bash
+/cron add "every 6h" "
+  Check the GitHub repository NousResearch/hermes-agent for:
+  1. New issues in the last 6 hours — list titles, labels, and priority signal
+  2. Recently merged PRs — notable changes worth knowing about
+  3. New releases or tags
+
+  Use: gh issue list --repo NousResearch/hermes-agent --state open
+  Use: gh pr list --repo NousResearch/hermes-agent --state merged
+
+  If nothing new, respond with [SILENT].
+" --name "Repo watcher" --deliver discord
+```
+
+## Pattern 3: Script-Backed Cron (The Secret Weapon)
+
+The `--script` parameter runs a Python or bash script before each execution. The script's stdout becomes context for the agent. This is the most powerful pattern because the **script handles mechanical work** (fetching, parsing, diffing) and the **agent handles reasoning** (is this important?).
+
+```bash
+# Script: ~/.hermes/scripts/check-pricing.py
+import json, os, urllib.request
+
+URL = "https://api.example.com/pricing"
+STATE_FILE = os.path.expanduser("~/.hermes/scripts/.pricing-state.json")
+
+data = json.loads(urllib.request.urlopen(URL).read())
+current_hash = hash(json.dumps(data, sort_keys=True))
+
+prev = {}
+if os.path.exists(STATE_FILE):
+    prev = json.load(open(STATE_FILE))
+
+if prev.get("hash") == current_hash:
+    print("NO_CHANGE")
+else:
+    print("CHANGE_DETECTED")
+    print(f"Previous: {prev.get('data')}")
+    print(f"Current:  {data}")
+    json.dump({"hash": current_hash, "data": data}, open(STATE_FILE, "w"))
+```
+
+Hook it up:
+
+```bash
+/cron add "every 1h" "
+  If the script output says CHANGE_DETECTED, summarize what changed
+  and whether it matters. If NO_CHANGE, respond with [SILENT].
+" --script ~/.hermes/scripts/check-pricing.py \
+  --name "Pricing monitor" \
+  --deliver telegram
+```
+
+Now the script does the costly fetch every hour; the agent only runs when there's actually something to analyze.
+
+## Pattern 4: No-Agent Script-Only Cron
+
+For cases where the script's stdout **is** the message — no LLM reasoning needed. This is **zero cost per tick**.
+
+```bash
+# 1. Write a watchdog script
+cat > ~/.hermes/scripts/disk-watchdog.sh << 'EOF'
+#!/usr/bin/env bash
+DISK_PCT=$(df / | awk 'NR==2 {print $5}' | tr -d '%')
+if [ "$DISK_PCT" -ge 85 ]; then
+  echo "⚠ Disk ${DISK_PCT}% full on $(hostname)"
+fi
+EOF
+
+# 2. Schedule with --no-agent — no LLM involved
+hermes cron create "every 10m" \
+  --no-agent \
+  --script disk-watchdog.sh \
+  --deliver telegram \
+  --name "Disk watchdog"
+```
+
+| Script behavior | Result |
+|----------------|--------|
+| Exit 0, non-empty stdout | stdout delivered verbatim |
+| Exit 0, empty stdout | Silent tick — no message sent |
+| Non-zero exit code | Error alert delivered |
+
+This is ideal for: disk/memory/CPU monitors, SSL expiry checks, cron job heartbeat pings, and any "only speak when something is wrong" pattern.
+
+## Pattern 5: Weekly Report with Skills
+
+Chain multiple skills for a recurring report:
+
+```bash
+hermes cron create "0 9 * * 1" "
+  Search arXiv for 3 most interesting papers on 'reasoning in LLMs'.
+  Summarize each with: title, authors, key finding, and why it matters.
+  Save each summary as an Obsidian note.
+" --skill arxiv --skill obsidian \
+  --name "Monday paper digest" \
+  --deliver slack:#research
+```
+
+Skills are loaded in the order specified. Each skill's instructions are injected into the agent's system prompt before execution.
+
+## Delivery Targets
+
+Use `--deliver` to route output to different platforms:
+
+| Target | Example | Where it goes |
+|--------|---------|---------------|
+| `origin` | `--deliver origin` | Same chat (default) |
+| `local` | `--deliver local` | Save to file only |
+| `telegram` | `--deliver telegram` | Telegram home channel |
+| `discord` | `--deliver discord` | Discord home channel |
+| `slack` | `--deliver slack` | Slack home channel |
+| `signal` | `--deliver signal` | Signal via gateway |
+| Specific chat | `--deliver telegram:-1001234567890` | Specific group |
+| Threaded | `--deliver telegram:-1001234567890:17585` | Specific topic thread |
+
+## Running Jobs in a Project Directory
+
+By default, cron jobs run detached from any repo — no `AGENTS.md` or project config is loaded. Use `--workdir` to pin a job to a project directory:
+
+```bash
+hermes cron create "0 10 * * 1-5" "
+  Check CI status, list open PRs needing review, and flag any failing tests.
+" --workdir /home/me/projects/acme \
+  --name "Morning standup prep" \
+  --deliver slack:#eng
+```
+
+**Caveat:** Jobs with `workdir` set run sequentially (not in parallel) because `TERMINAL_CWD` is process-global.
+
+## Managing Jobs
+
+| Command | Purpose |
+|---------|---------|
+| `/cron list` | List all jobs |
+| `/cron run <id>` | Execute immediately (test) |
+| `/cron pause <id>` | Pause without deleting |
+| `/cron resume <id>` | Re-enable paused job |
+| `/cron edit <id> --schedule "every 4h"` | Change schedule |
+| `/cron edit <id> --prompt "..."` | Update prompt |
+| `/cron edit <id> --skill arxiv --skill obsidian` | Replace skills |
+| `/cron edit <id> --add-skill maps` | Append a skill |
+| `/cron edit <id> --remove-skill arxiv` | Remove a skill |
+| `/cron edit <id> --clear-skills` | Remove all skills |
+| `/cron remove <id>` | Delete job permanently |
+
+All lifecycle commands are also available via CLI with `hermes cron ...` and through natural language ("pause the disk watchdog for tonight").
+
+## Best Practices Summary
+
+1. **Make prompts self-contained** — cron sessions have no memory of your chat. Include every URL, command, and format instruction.
+
+2. **Use `[SILENT]` aggressively** — monitoring jobs should only speak when needed. Every non-silent tick is a message cluttering your feed.
+
+3. **Scripts for data collection** — `--script` is cheaper and more reliable than having the agent `curl` and parse. Let the script fetch; let the agent analyze.
+
+4. **Test with `/cron run <id>`** — never wait for the schedule to see if a job works. Run it immediately after creation.
+
+5. **No-agent for simple alerts** — if the script output IS the message, add `--no-agent`. Zero LLM cost, instant delivery.
+
+6. **Gateway must be running** — for automatic scheduled execution, keep `hermes gateway` running in the background or as a systemd service.
+
+## Troubleshooting
+
+**Job exists but never fires:**
+```bash
+hermes cron list        # Is state [active]?
+hermes cron run <id>     # Does it work manually?
+```
+If manual run works but scheduled doesn't, check that the gateway is running. Cron jobs only fire automatically when the gateway scheduler is active.
+
+**Job fires but no delivery:**
+Check if the agent responded with `[SILENT]`. If so, it's working correctly — nothing worth reporting. If you expected output, check your delivery target configuration.
+
+**`/cron list` shows `[completed]`:**
+One-shot jobs show completed after firing. For recurring jobs, check if the repeat count was exhausted. Use `/cron edit <id> --schedule "every 2h"` to reset.
+
+## FAQ
+
+**Q: How do multiple cron jobs work together?**
+Each job runs in its own isolated session. They don't share memory or state. Use skills (loaded via `--skill`) to inject shared procedures.
+
+**Q: Can a cron job create another cron job?**
+No — cron-run sessions cannot recursively create cron jobs. This prevents runaway scheduling loops.
+
+**Q: What's the maximum frequency?**
+The gateway scheduler ticks every 60 seconds. Minimum practical interval is `every 2m`. Sub-minute scheduling is not supported.
+
+**Q: Do cron jobs count toward API usage?**
+Yes — each LLM cron tick consumes tokens and costs money. Use `--no-agent` for cost-free ticks, and add `[SILENT]` to avoid wasted output tokens.
+
+**Q: Can I run the same job in different profiles?**
+Yes — use `--profile <name>` (CLI) or set `profile=` in the tool call. The scheduler resolves that profile's config, API keys, and environment.
+
+## Next Steps
+
+- **[Script-Only Cron Guide](https://hermes-agent.nousresearch.com/docs/guides/cron-script-only)** — deeper dive into no-agent mode
+- **[Scheduled Tasks Reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron)** — full CLI and tool documentation
+- **[Automation Templates](https://hermes-agent.nousresearch.com/docs/guides/automation-templates)** — pre-built cron + webhook workflows
+- **[Webhook Subscriptions](/blog/gateway-setup/)** — event-driven automation as an alternative to scheduled tasks
