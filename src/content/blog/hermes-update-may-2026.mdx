@@ -1,0 +1,190 @@
+---
+title: "Hermes Agent v0.14.0: PyPI, Proxy, Grok, and the Foundation Release"
+description: "Hermes Agent v0.14.0 ships on PyPI, debloats with lazy installs, adds a local OpenAI-compatible proxy, xAI Grok OAuth, native Windows beta, and Microsoft Teams support."
+pubDate: "2026-05-21"
+tags: ["release", "v0.14.0", "update", "migration", "new-features"]
+keywords: [hermes v0.14.0, hermes pypi install, hermes proxy, xai grok oauth, hermes foundation release, hermes update guide, hermes windows beta, hermes teams integration, hermes lazy install, hermes debloating]
+---
+
+> **TLDR:** Hermes Agent v0.14.0 (The Foundation Release) is the biggest update yet — 808 commits, 633 merged PRs, 545 issues closed. Now on PyPI (`pip install hermes-agent`), heavy backends lazy-install on first use, xAI Grok works via SuperGrok OAuth, `hermes proxy` exposes a local OpenAI-compatible endpoint, and Microsoft Teams joins the 22-platform fleet. Cold-start is 19 s faster, `browser_console` is 180x faster, and per-write semantic diagnostics catch errors instantly. Here's everything you need to know to upgrade.
+
+## Key Takeaways
+
+- **PyPI package:** `pip install hermes-agent` — no more cloning, no shell installers
+- **Debloating wave:** Heavy backends lazy-install on first use; `[all]` extras dropped
+- **xAI Grok:** Free via SuperGrok OAuth — no API key needed for grok-4.3 (1M context)
+- **`hermes proxy`:** Local OpenAI-compatible endpoint backed by any OAuth provider
+- **`x_search`:** First-class X/Twitter search tool — direct from chat
+- **Microsoft Teams:** Full Graph stack — auth, webhook listener, pipeline, outbound delivery
+- **Native Windows beta:** First official Windows support
+- **`/handoff`:** Live session transfer — move context to another model mid-conversation
+- **LSP diagnostics:** Every `write_file`/`patch` surfaces syntax errors immediately
+
+## PyPI Is Here — No More Cloning
+
+The single biggest quality-of-life change: Hermes is now a proper PyPI package.
+
+```bash
+pip install hermes-agent
+hermes
+```
+
+That's it. No cloning the repo. No shell installers. No `make setup`. The package ships the Ink TUI bundle and the shell launcher. Update with:
+
+```bash
+pip install --upgrade hermes-agent
+```
+
+If you're upgrading from a git clone, you can migrate configs from the old location:
+
+```bash
+hermes doctor
+```
+
+The doctor command checks for legacy paths and repairs them automatically.
+
+## The Debloating Wave
+
+Heavy dependencies — vision models, audio processors, document parsers — no longer install by default. They install **lazily** on first use. This means:
+
+- `pip install hermes-agent` is fast and small
+- The first time you use `vision_analyze`, Hermes installs the vision backend
+- The first time you use `tts`, it pulls the TTS pipeline
+- No more massive dependency chains for features you never use
+
+**Migration note:** If you were using `pip install hermes-agent[all]`, this extra is deprecated. It still works but will be removed in v0.15.0. Switch to the base package — Hermes handles the rest lazily.
+
+The release also ships a supply-chain advisory checker that warns about known-vulnerable transitive dependencies on install.
+
+## xAI Grok via SuperGrok OAuth
+
+Hermes now supports xAI Grok through SuperGrok OAuth — meaning **you don't need an API key** for grok-4.3. Just authenticate with your SuperGrok account:
+
+```bash
+hermes auth add xai-oauth
+```
+
+Follow the OAuth flow (supports SSH-to-tunnel for headless servers). Once authorized, grok-4.3 is available with its full **1 million token context window**.
+
+## `hermes proxy` — Local OpenAI-Compatible Endpoint
+
+This is a game-changer for tool interoperability:
+
+```bash
+hermes proxy
+```
+
+Starts a local OpenAI-compatible HTTP endpoint backed by any of Hermes's OAuth providers (Claude Pro, ChatGPT Pro, SuperGrok). This works with:
+
+- **Codex CLI** — point it at `http://localhost:8080/v1`
+- **Aider** — use `--openai-api-base http://localhost:8080`
+- **Cline, Continue, and any OpenAI-compatible client**
+
+No API keys needed. Your existing OAuth subscription is reused.
+
+## `x_search` — First-Class X/Twitter Search
+
+Search X/Twitter directly from chat without custom skills. Configure via:
+
+```bash
+hermes auth add x-api-key
+```
+
+Or use OAuth for full access. Then in chat:
+
+```
+Search X for recent news about open source AI agents
+```
+
+The tool returns structured results with engagement metrics and date validation. Results gracefully degrade when the API is rate-limited — you always get something useful back.
+
+## Microsoft Teams Integration
+
+Full end-to-end Microsoft Teams support joins the gateway family (now 22 platforms):
+
+1. **Auth:** Microsoft Graph OAuth via `hermes auth add teams`
+2. **Listener:** Webhook subscription to Teams channels
+3. **Pipeline:** Hermes processes messages with full tool access
+4. **Outbound:** Deliver responses back to any Teams channel
+
+Setup is a single guided flow:
+
+```bash
+hermes gateway setup --platform teams
+```
+
+## What Else Changed
+
+### Performance
+
+- **180x faster `browser_console`** — persistent Chrome connection replaces per-call DevTools sessions. Page interactions feel instantaneous.
+- **Cold-start:** ~19 seconds shaved off `hermes` launch. The `hermes tools` All-Platforms screen dropped from 14 s to under 1.5 s.
+- **Cross-session prompt caching:** System prompt, skills, and memory cache for 1 hour across sessions. First response after `/new` is faster and cheaper (Claude).
+
+### New Platforms
+
+- **LINE** — Japan/Korea/Taiwan's dominant messaging app
+- **SimpleX Chat** — privacy-focused, no user IDs, no phone number required
+
+### `/handoff` — Live Session Transfer
+
+Move an active session — including tool calls, context, and state — to another model or profile mid-conversation:
+
+```
+/handoff claude-sonnet-5
+```
+
+The current model's context is serialized and loaded into the new model. Useful when you hit a reasoning wall and want to try a different approach.
+
+### Native Button UI for `clarify`
+
+On Telegram and Discord, clarification prompts now render as native platform buttons instead of typed option numbers. Tap to answer — no typing required.
+
+### Security Hardening
+
+Recent commits hardened several attack surfaces:
+
+- **API key leakage protection:** Custom endpoints can no longer impersonate official provider hosts to steal credentials. Vendor-specific API keys are only sent to their authoritative domains.
+- **`.env` write-protection:** Hermes now denies write_file operations to `<root>/.env` when running under a profile, preventing accidental credential exposure.
+- **Vision routing:** The `supports_vision` override is now respected in auto-mode routing, so you can declaratively tell Hermes which models can handle images.
+
+### LSP Semantic Diagnostics
+
+Every `write_file` and `patch` call now runs a delta-lint check. Instead of waiting for a build to catch mistakes, syntax errors surface immediately with line numbers. Supported for Python, JSON, YAML, TOML, and JavaScript/TypeScript.
+
+## How to Upgrade
+
+If you installed via git:
+
+```bash
+# Clean upgrade path
+git pull origin main
+pip install -e .
+```
+
+If you're on the new PyPI package:
+
+```bash
+pip install --upgrade hermes-agent
+```
+
+Verify the install:
+
+```bash
+hermes --version
+# Should show: v0.14.0 (v2026.5.16)
+```
+
+## Deprecations
+
+| Feature | Status | Replacement |
+|---------|--------|-------------|
+| `pip install hermes-agent[all]` | Deprecated, removed in v0.15.0 | Use base `hermes-agent` — lazy installs handle deps |
+| Git-clone-based install | Soft-deprecated | Use PyPI package for cleaner updates |
+| Legacy `.hermes-memory` path | Auto-migrated | `hermes doctor` handles migration |
+
+## What's Next
+
+The Foundation Release is exactly what it sounds like — the base Hermes will build on for the next major cycle. Expect skills-hub deduplication improvements, deeper Windows support, expanded OAuth providers, and the kanban video orchestrator moving toward stable.
+
+Join the community on [GitHub](https://github.com/NousResearch/hermes-agent) to track progress on v0.15.0.
