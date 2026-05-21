@@ -289,6 +289,67 @@ Yes — each LLM cron tick consumes tokens and costs money. Use `--no-agent` for
 **Q: Can I run the same job in different profiles?**
 Yes — use `--profile <name>` (CLI) or set `profile=` in the tool call. The scheduler resolves that profile's config, API keys, and environment.
 
+## Real-World Use Cases (Expanded for Actionability)
+
+### 1. Daily AI News Digest (Telegram Delivery)
+```bash
+/cron add "0 8 * * *" "
+  Search for 'AI agent releases' and 'LLM benchmarks' from the last 24h.
+  Pick top 3 most impactful stories.
+  For each: title, source, 2-sentence summary, why it matters.
+  Format as a clean Telegram message with emojis.
+  If nothing new, respond [SILENT].
+" --name "AI News Digest" --deliver telegram
+```
+
+### 2. Blog Empire Cron Health Check (Multi-Job Monitor)
+```bash
+# Runs hourly, checks all 4 empire crons
+/cron add "0 * * * *" "
+  Check status of these cron jobs via `hermes cron list`:
+  - Weekly Free Research Tools (affb31177f4e)
+  - Auto-Fetch (b1c29a50dee2)
+  - Session Cleanup (08525158c267)
+  If any job is paused or has recent errors, summarize the issue.
+  If all healthy, respond [SILENT].
+" --name "Empire Cron Health" --deliver telegram
+```
+
+### 3. Tool Price Drop Monitor (Script-Backed, No-Agent)
+```bash
+# Script: ~/.hermes/scripts/price-monitor.py
+import json, os, urllib.request
+TOOLS = ["ChatGPT Plus", "Claude Pro", "Midjourney"]
+URL = "https://api.toolbrain.net/pricing"
+STATE = os.path.expanduser("~/.hermes/scripts/.price-state.json")
+
+data = json.loads(urllib.request.urlopen(URL).read())
+current = {t: data.get(t, 0) for t in TOOLS}
+prev = json.load(open(STATE)) if os.path.exists(STATE) else {}
+
+changes = []
+for t in TOOLS:
+    if t in prev and prev[t] != current[t]:
+        changes.append(f"{t}: ${prev[t]} → ${current[t]}")
+json.dump(current, open(STATE, "w"))
+
+if changes:
+    print("🔔 Price changes: " + "; ".join(changes))
+else:
+    print("")  # empty = silent
+```
+
+Hook it up:
+```bash
+hermes cron create "0 9 * * *" \
+  --no-agent \
+  --script ~/.hermes/scripts/price-monitor.py \
+  --name "Tool Price Monitor" \
+  --deliver telegram
+```
+
+---
+
 ## Next Steps
 
 - **[Script-Only Cron Guide](https://hermes-agent.nousresearch.com/docs/guides/cron-script-only)** — deeper dive into no-agent mode

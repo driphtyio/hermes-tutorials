@@ -75,4 +75,14 @@ const ogImage = image
 {tags.map(tag => <meta property="article:tag" content={tag} />)}
 
 <!-- Analytics -->
-<script data-goatcounter="https://hermes-tutorials.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script is:inline>
+  window.goatcounter = {
+    referrer: function() {
+      return goatcounter.get_query('ref') ||
+        goatcounter.get_query('utm_campaign') ||
+        goatcounter.get_query('utm_source') ||
+        document.referrer
+    },
+  }
+</script>
+<script data-goatcounter="https://hermes-tutorials.goatcounter.com/count" src="//gc.zgo.at/count.js"></script>
