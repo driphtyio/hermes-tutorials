@@ -1,0 +1,1 @@
+/home/techgeek/crypto-nite-blog/.env.r2
