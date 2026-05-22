@@ -1,0 +1,354 @@
+---
+title: "Building a Custom Plugin for Hermes Agent"
+description: "Hermes plugins add custom tools, hooks, slash commands, and CLI subcommands without modifying core code. A time-tracker plugin built in ~150 Python lines demonstrates this: it includes a timezone_convert tool, pomodoro timer, /focus slash command, and post_tool_call hook for logging. The plugin lives in `~/.hermes/plugins/time-tracker/` with four files: manifest `plugin.yaml`, `__init__.py` (with `register(ctx)` entry point), `schemas.py`, and `tools.py`. Tool handlers return JSON strings, al..."
+pubDate: "2026-05-22"
+tags: ["plugins", "build-log", "hermes"]
+keywords: [hermes custom plugin, hermes plugin tutorial, hermes tool development, hermes register_tool, hermes plugin system, build hermes plugin]
+---
+
+> **TLDR:** Hermes plugins add custom tools, hooks, slash commands, and CLI subcommands without touching core code. This post walks through building a **time-tracker plugin** with a timezone converter tool, a pomodoro timer, a `/focus` slash command, and a call-logging hook — all in ~150 lines of Python. Drop it into `~/.hermes/plugins/` and restart.
+
+## Key Takeaways
+
+- Plugins live in `~/.hermes/plugins/<name>/` with a manifest, schemas, handler code, and a `register()` entry point
+- Each tool returns a JSON string — always catch exceptions and return error JSON
+- Hooks like `post_tool_call` fire after every tool invocation for logging, metrics, or guardrails
+- Slash commands work in both CLI and gateway (Telegram/Discord/Slack) sessions
+- Use `hermes plugins list` to verify your plugin loaded; no build step required
+
+## What We're Building
+
+The **time-tracker** plugin registers three capabilities:
+
+1. **`timezone_convert`** — convert a time between timezones using the `zoneinfo` stdlib
+2. **`pomodoro`** — calculate a pomodoro session end time and format a nice status message
+3. **`/focus`** — a slash command that starts a quick focus timer
+
+Plus a `post_tool_call` hook that logs every tool invocation to Hermes' internal logger.
+
+## Step 1: Directory Structure
+
+Plugins require four files inside `~/.hermes/plugins/time-tracker/`:
+
+```
+~/.hermes/plugins/time-tracker/
+├── plugin.yaml      # Manifest
+├── __init__.py      # register() — wires schemas, handlers, hooks
+├── schemas.py       # Tool schemas (what the LLM reads)
+└── tools.py         # Tool handlers (what actually runs)
+```
+
+Hermes v1.x discovers plugins from `~/.hermes/plugins/` on startup. Every directory with a `plugin.yaml` is scanned. No registration, no config — just create the files and restart.
+
+Create the directory:
+
+```bash
+mkdir -p ~/.hermes/plugins/time-tracker
+```
+
+## Step 2: The Plugin Manifest
+
+```yaml
+# ~/.hermes/plugins/time-tracker/plugin.yaml
+name: time-tracker
+version: 1.0.0
+description: Timezone conversion and pomodoro timer tools
+provides_tools:
+  - timezone_convert
+  - pomodoro
+provides_hooks:
+  - post_tool_call
+```
+
+The `provides_tools` and `provides_hooks` fields are informational — they show up in `hermes plugins list`. The actual wiring happens in `register()`.
+
+## Step 3: Tool Schemas
+
+The schema is what the LLM reads to decide when to call each tool. Write detailed descriptions.
+
+```python
+# ~/.hermes/plugins/time-tracker/schemas.py
+
+TIMEZONE_CONVERT = {
+    "name": "timezone_convert",
+    "description": (
+        "Convert a time from one timezone to another. "
+        "Uses IANA timezone names like 'US/Eastern', 'Europe/London', "
+        "'Asia/Tokyo', 'UTC'. Returns the converted time in both zones."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "time_str": {
+                "type": "string",
+                "description": "Time to convert, e.g. '3:30 PM' or '15:30'",
+            },
+            "from_tz": {
+                "type": "string",
+                "description": "Source IANA timezone, e.g. 'US/Eastern'",
+            },
+            "to_tz": {
+                "type": "string",
+                "description": "Target IANA timezone, e.g. 'Europe/London'",
+            },
+        },
+        "required": ["time_str", "from_tz", "to_tz"],
+    },
+}
+
+POMODORO = {
+    "name": "pomodoro",
+    "description": (
+        "Start a pomodoro focus session. Calculates the end time "
+        "based on a standard 25-minute work interval, or a custom duration. "
+        "Returns a motivational message with the end time."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "duration_minutes": {
+                "type": "integer",
+                "description": "Focus duration in minutes (default: 25)",
+                "default": 25,
+            },
+            "label": {
+                "type": "string",
+                "description": "Optional label for what you're working on",
+            },
+        },
+        "required": [],
+    },
+}
+```
+
+## Step 4: Tool Handlers
+
+Handler signatures must be `def handler(args: dict, **kwargs) -> str`. Always return a JSON string — both on success and on error. Never raise exceptions.
+
+```python
+# ~/.hermes/plugins/time-tracker/tools.py
+
+import json
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+
+
+def timezone_convert(args: dict, **kwargs) -> str:
+    time_str = args.get("time_str", "").strip()
+    from_tz = args.get("from_tz", "").strip()
+    to_tz = args.get("to_tz", "").strip()
+
+    if not all([time_str, from_tz, to_tz]):
+        return json.dumps({
+            "error": "Missing required parameters: time_str, from_tz, to_tz"
+        })
+
+    try:
+        # Parse the input time string
+        formats_to_try = [
+            "%I:%M %p",   # 3:30 PM
+            "%H:%M",      # 15:30
+            "%I %p",      # 3 PM
+            "%H",         # 15
+        ]
+
+        parsed = None
+        for fmt in formats_to_try:
+            try:
+                parsed = datetime.strptime(time_str.upper(), fmt)
+                break
+            except ValueError:
+                continue
+
+        if parsed is None:
+            return json.dumps({
+                "error": f"Could not parse time '{time_str}'. Try formats like '3:30 PM' or '15:30'."
+            })
+
+        try:
+            src_tz = ZoneInfo(from_tz)
+            dst_tz = ZoneInfo(to_tz)
+        except KeyError as e:
+            return json.dumps({
+                "error": f"Unknown timezone: {e}. Use IANA names like 'US/Eastern', 'UTC'."
+            })
+
+        # Attach source timezone and convert
+        now = datetime.now(tz=timezone.utc)
+        source_dt = parsed.replace(tzinfo=src_tz)
+
+        # Handle DST ambiguity by adjusting if needed
+        source_dt = src_tz.localize(parsed) if hasattr(src_tz, 'localize') else source_dt
+
+        converted = source_dt.astimezone(dst_tz)
+
+        return json.dumps({
+            "input": {"time": time_str, "timezone": from_tz},
+            "converted": {"time": converted.strftime("%I:%M %p").lstrip("0"), "timezone": to_tz},
+            "utc": converted.astimezone(timezone.utc).strftime("%H:%M UTC"),
+        })
+
+    except Exception as e:
+        return json.dumps({"error": f"Conversion failed: {str(e)}"})
+
+
+def pomodoro(args: dict, **kwargs) -> str:
+    duration = args.get("duration_minutes", 25)
+    label = args.get("label", "Focus session")
+
+    if not isinstance(duration, int) or duration < 1 or duration > 180:
+        return json.dumps({"error": "Duration must be between 1 and 180 minutes"})
+
+    try:
+        now = datetime.now(timezone.utc)
+        end_time = now + timedelta(minutes=duration)
+
+        local_tz = datetime.now().astimezone().tzinfo
+        end_local = end_time.astimezone(local_tz)
+
+        return json.dumps({
+            "session": label,
+            "duration_minutes": duration,
+            "started_at": now.strftime("%H:%M UTC"),
+            "ends_at": end_local.strftime("%I:%M %p %Z").lstrip("0"),
+            "status": f"🧘 Focus on **{label}** for {duration} minutes until {end_local.strftime('%I:%M %p').lstrip('0')}",
+            "recommendation": "After the timer ends, take a 5-minute break before the next session.",
+        })
+
+    except Exception as e:
+        return json.dumps({"error": f"Timer error: {str(e)}"})
+```
+
+## Step 5: Wiring It All Together
+
+The `register(ctx)` function is the plugin's entry point. Hermes calls it once during startup.
+
+```python
+# ~/.hermes/plugins/time-tracker/__init__.py
+
+import logging
+from . import schemas, tools
+
+logger = logging.getLogger(__name__)
+_call_log = []
+
+
+def _on_post_tool_call(tool_name, args, result, task_id, duration_ms, **kwargs):
+    """Log every tool call with its duration."""
+    entry = {
+        "tool": tool_name,
+        "session": task_id,
+        "duration_ms": duration_ms,
+    }
+    _call_log.append(entry)
+    if len(_call_log) > 200:
+        _call_log.pop(0)
+    logger.info("Tool %s called (session=%s, %dms)", tool_name, task_id, duration_ms)
+
+
+async def _handle_focus(ctx, args: str, **kwargs):
+    """Slash command handler for /focus <minutes> [label]"""
+    parts = args.strip().split(None, 1) if args else []
+    duration = int(parts[0]) if parts and parts[0].isdigit() else 25
+    label = parts[1] if len(parts) > 1 else "Focus session"
+
+    # Use the plugin's own tool via dispatch
+    result = await ctx.dispatch_tool("pomodoro", {
+        "duration_minutes": duration,
+        "label": label,
+    })
+    return result
+
+
+def register(ctx):
+    # Register the timezone_convert tool
+    ctx.register_tool(
+        name="timezone_convert",
+        toolset="time_tracker",
+        schema=schemas.TIMEZONE_CONVERT,
+        handler=tools.timezone_convert,
+        description="Convert times between timezones",
+    )
+
+    # Register the pomodoro tool
+    ctx.register_tool(
+        name="pomodoro",
+        toolset="time_tracker",
+        schema=schemas.POMODORO,
+        handler=tools.pomodoro,
+        description="Start a pomodoro focus timer",
+    )
+
+    # Register a post_tool_call hook for logging
+    ctx.register_hook("post_tool_call", _on_post_tool_call)
+
+    # Register a slash command
+    ctx.register_command(
+        name="focus",
+        handler=_handle_focus,
+        description="/focus <minutes> [label] — Start a pomodoro focus timer",
+    )
+```
+
+### What Each `ctx` Method Does
+
+| Method | Purpose |
+|--------|---------|
+| `ctx.register_tool()` | Adds a tool the LLM can call. The model sees the schema and decides when to invoke it. |
+| `ctx.register_hook()` | Subscribes to lifecycle events. `post_tool_call` fires after every tool returns. |
+| `ctx.register_command()` | Adds a slash command (`/focus`) available in CLI and gateway sessions. |
+| `ctx.dispatch_tool()` | Calls any registered tool programmatically — useful from slash commands. |
+
+All callbacks should accept `**kwargs` for forward compatibility.
+
+## Step 6: Enable and Test
+
+By default, user-installed plugins are discovered but **not enabled**. You need to add the plugin name to your config:
+
+```bash
+# Enable the plugin
+hermes plugins enable time-tracker
+
+# Verify it loaded
+hermes plugins list
+# Look for: time-tracker | enabled | 1.0.0 | User
+```
+
+Now start Hermes:
+
+```bash
+hermes
+```
+
+The model can immediately call both tools. Try asking:
+
+> *"What time is 3:30 PM Eastern in London?"*
+> *"Start a 25-minute pomodoro for writing this blog post"*
+
+You can also use the slash command directly:
+
+```
+/focus 25 Building Hermes plugin
+```
+
+## What I Learned
+
+**Plugins are simpler than they look.** Four files, ~150 lines of Python, zero build tooling. Drop them in, enable, restart. The hard part isn't the code — it's writing good schemas that the LLM actually understands.
+
+**Descriptions are everything.** The first version of `timezone_convert` had a terse description. The model rarely called it. I expanded the description to list example timezone names and formats explicitly, and suddenly the model started using it correctly. The schema's `description` field is prompt engineering for tool selection.
+
+**`ctx.dispatch_tool` from slash commands is a great pattern.** Instead of duplicating business logic between a tool handler and a slash command handler, you register the tool normally and then call it from the command via `dispatch_tool()`. One implementation, two surfaces.
+
+**Hooks are passive by design.** The `post_tool_call` hook receives a `result` (the JSON string) — it shouldn't modify or wrap it. Hooks are for observability, metrics, and guardrails, not middleware.
+
+**Error JSON beats exceptions.** Every unhandled exception in a tool handler crashes the tool-calling loop. Returning `{"error": "message"}` lets the model see the failure, apologize, and try a different approach.
+
+The plugin system is Hermes' strongest extensibility point. For 50 lines of Python you get first-class tools that the model self-selects. If your agent needs something that isn't built in — time math, API calls, file transformations, database queries — a plugin is the right answer.
+
+<!-- crosslinks -->
+
+## 📖 Related Reads
+
+- **[ToolBrain](https://toolbrain.net/)** — tool reviews, LLM comparisons, and AI workflow guides
+
+*Cross-links automatically generated from Hermes Tutorials.*
