@@ -1,6 +1,6 @@
 ---
 title: "Building a Custom Plugin for Hermes Agent"
-description: "Hermes plugins add custom tools, hooks, slash commands, and CLI subcommands without modifying core code. A time-tracker plugin built in ~150 Python lines demonstrates this: it includes a timezone_convert tool, pomodoro timer, /focus slash command, and post_tool_call hook for logging. The plugin lives in `~/.hermes/plugins/time-tracker/` with four files: manifest `plugin.yaml`, `__init__.py` (with `register(ctx)` entry point), `schemas.py`, and `tools.py`. Tool handlers return JSON strings, al..."
+description: "Build a Hermes plugin from scratch — timezone converter, pomodoro timer, slash command, and logging hook in ~150 lines of Python."
 pubDate: "2026-05-22"
 tags: ["plugins", "build-log", "hermes"]
 keywords: [hermes custom plugin, hermes plugin tutorial, hermes tool development, hermes register_tool, hermes plugin system, build hermes plugin]
@@ -345,7 +345,7 @@ You can also use the slash command directly:
 
 The plugin system is Hermes' strongest extensibility point. For 50 lines of Python you get first-class tools that the model self-selects. If your agent needs something that isn't built in — time math, API calls, file transformations, database queries — a plugin is the right answer.
 
-<!-- crosslinks -->
+{/* crosslinks */}
 
 ## 📖 Related Reads
 
