@@ -1,0 +1,79 @@
+---
+title: "Hermes Agent Community Ecosystem: Skills Hub, Third-Party Tools, and What the Community Is Building"
+description: "310+ community skills, VS Code integration, Go framework, merchant tools — the ecosystem around Hermes Agent is exploding. What the community is building."
+pubDate: 2026-05-23
+tags: ["hermes", "update"]
+keywords: [hermes agent community, hermes skills hub, awesome hermes skills, hermes agent tools, hermes vscode, hermes-go, hermes merchant, community hermes agent, hermes agent ecosystem, hermes agent skills may 2026]
+---
+
+> **TLDR:** While the Foundation Release (v0.14.0) focused on debloating, PyPI, and OAuth providers, the community has been building a parallel ecosystem. In the last two weeks: a Skills Hub with 310+ installable workflows, a VS Code extension, a Go port of Hermes agent architecture, merchant skills for auto-applying to jobs, and a curated awesome-list with 78 community skills. Here's what you need to know about the Hermes Agent ecosystem this month.
+
+## The Skills Hub Has Gone Viral
+
+The most significant community development this month is the explosion of the Hermes skills ecosystem. Three repos have emerged as distribution channels:
+
+**awesome-hermes-skills** (ZeroPointRepo) curates 85 built-in skills plus **78 community-contributed** skills across categories from coding to marketing to MLOps. Each skill is categorized with install commands, descriptions, and author info. If you're looking for a pre-built workflow, this is the first stop.
+
+**hermes-skills** (itgoyo) pushes further — **310+ reusable AI agent workflows** organized by domain: coding, marketing, design, finance, and MLOps. The scale here is notable: it's now larger than the bundled Hermes skills catalog itself.
+
+Both repos use Hermes's standard SKILL.md format, so installation is always the same:
+
+```bash
+hermes skills install official/security/1password
+hermes skills install well-known:https://example.com/docs/.well-known/skills/toolname
+```
+
+If you're new to how skills work, the [skills system guide](/blog/skills-system/) on this site explains the anatomy of a SKILL.md and how to write your own.
+
+## Third-Party Integrations
+
+### hermes-vscode (14 stars)
+
+Developed by joaompfp, this VS Code extension streams Hermes Agent chat directly into your editor, runs tools, manages sessions, and switches models — all without leaving VS Code. It connects to a running Hermes instance over its JSON-RPC backend, making it a lightweight alternative to the Ink TUI for developers who live in their editor.
+
+### hermes-go (25 stars)
+
+Harsh-2909's `hermes-go` reimplements the Hermes agent architecture in Go, with built-in RAG, knowledge graphs, memory persistence, and a tool system. Notable because it means you can embed Hermes-style agent capabilities into Go services without needing a Python runtime. The memory and skills design patterns are ported directly from the Python agent.
+
+### awesome-hermes-usecases (31 stars)
+
+aliaihub's curated list of real-world Hermes Agent use cases, backed by primary sources. Structured by domain — automation, research, content, DevOps — with step-by-step explanations of how each use case works in practice. A good starting point if you're wondering *what do people actually do with this thing?*
+
+## Real-World Applications
+
+**hermes-merchant** (28 stars) is the most practical community skill to emerge this month. It scrapes ML/AI job listings, scores them against your profile, and auto-fills Greenhouse applications — a full autonomous job-hunting pipeline. The creator built it as a portable skill set that works across multiple agent platforms, not just Hermes.
+
+**hermes_stack** (kongaharsha) combines Hermes Agent with gbrain (a local knowledge graph engine) to create a personal AI setup that grows with daily use. The stack demonstrates how Hermes's memory system can be augmented with external knowledge stores for domain-specific recall.
+
+## Community Momentum
+
+The Reddit community at [/r/hermesagent](https://reddit.com/r/hermesagent) has been active with use-case megathreads, skill recommendations, and configuration tips. The tone is notably practical — members share what they've actually built, not just what's theoretically possible.
+
+A common migration pattern: people switching from OpenClaw to Hermes for its persistent memory and multi-platform gateway support. If you're considering that switch, the [Hermes vs OpenClaw comparison](/blog/hermes-vs-openclaw/) on this site breaks down the tradeoffs.
+
+## Getting Started With Community Skills
+
+The skills ecosystem introduces a new installation method worth knowing about:
+
+```bash
+# Install from the Skills Hub with security scan
+hermes skills install skills-sh/vercel-labs/json-render/json-render-react --force
+
+# Install from any HTTP URL (single SKILL.md file)
+hermes skills install https://sharethis.chat/SKILL.md
+
+# Add a new skills hub tap
+hermes skills tap add my-hub https://my-hub.example.com/skills
+```
+
+Community skills are not security-scanned by Nous Research — use the built-in security scanner that runs during `hermes skills install` to review file access and network permissions before accepting a new skill. The v0.14.0 security hardening (API key leakage protection, `.env` write-protection) applies here too.
+
+## What This Means
+
+Three signals from this month's ecosystem activity:
+
+1. **Skills are the distribution mechanism** — The community has standardized on SKILL.md. Both major awesome-lists and the Skills Hub use the same format, meaning a skill written for one works across all.
+2. **Portability is happening** — hermes-go proves the Hermes agent architecture can be lifted into other languages. hermes-merchant runs across multiple agent platforms. The concepts are portable even when the runtime isn't.
+3. **Practicality beats speculation** — The highest-starred community projects (merchant, use-cases, awesome-list) are the ones that solve real problems, not the ones with the flashiest demos.
+
+The Foundation Release gave Hermes a solid base. The community ecosystem shows what people actually want to build on top of it. If you haven't explored the [skills hub](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills) yet, this is the week to try — there's probably already a skill for whatever you're trying to automate.
