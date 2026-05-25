@@ -1,6 +1,6 @@
 ---
 title: "How to Set Up MCP Servers with Hermes Agent"
-description: "MCP uses stdio or HTTP. Add servers via CLI (--command/--args e.g., filesystem npx) or YAML. Presets built-in. Filtering: whitelist, blacklist, filter_utilities, disable server. Hermes serves MCP server exposing 10 tools: conversations_list, messages_read, messages_send, channels_list, events_poll, events_wait, attachments_fetch, conversation_get, permissions_list_open, permissions_respond. Client config JSON (Claude Code) uses venv path. Test with hermes mcp test. Resource/prompt utilities c..."
+description: "Hermes Agent connects to external tool servers via MCP (stdio/HTTP) added via CLI or YAML. Built-in presets (github, filesystem, playwright, stripe, brave-search, memory) simplify setup. Per-server filtering (whitelist/blacklist) controls tools; utility filtering requires full MCP compliance. Servers disable with `enabled: false`. Auto-discovery registers tools; `hermes mcp test` and `list` verify. Environment variables inject secrets. Stdio servers use command/args. Hermes serves as an MCP s..."
 pubDate: "2026-05-25"
 tags: ["mcp", "tutorial", "extensibility", "integrations"]
 heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/mcp-servers-guide-1779721938.png"
