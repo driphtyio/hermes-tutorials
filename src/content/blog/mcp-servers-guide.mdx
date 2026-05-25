@@ -1,0 +1,298 @@
+---
+title: "How to Set Up MCP Servers with Hermes Agent"
+description: "MCP connects Hermes Agent to external tools via CLI (`hermes mcp add`) or `config.yaml` (env, headers). Stdio and HTTP servers. Per-server filtering: whitelist/blacklist with `mcp_server_filter`; disable servers. Built-in presets: GitHub, filesystem, Playwright, Stripe, Brave Search, Memory. Utility wrappers for resources/prompts; filter with `filter_utilities`. Hermes serves as MCP server (`hermes mcp serve`) exposing 10 messaging tools. Test via `hermes mcp test`; changes on `/reload-mcp`; ..."
+pubDate: "2026-05-25"
+tags: ["mcp", "tutorial", "extensibility", "integrations"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/mcp-servers-guide-1779721938.png"
+keywords: [hermes mcp servers, model context protocol hermes, add mcp server hermes, hermes mcp serve, mcp tool filtering, stdio mcp hermes, hermes mcp presets, hermes mcp cli]
+---
+
+> **TLDR:** MCP (Model Context Protocol) lets Hermes Agent connect to external tool servers so it can use tools that live outside Hermes itself — GitHub APIs, databases, browser stacks, internal services. Add them via `hermes mcp add NAME --url URL` or `--command CMD`. Filter individual tools with `mcp_server_filter`. Hermes can also _be_ an MCP server for other agents via `hermes mcp serve`.
+
+## Key Takeaways
+
+- Two connection types: **stdio** (local processes) and **HTTP** (remote servers)
+- Add servers via CLI: `hermes mcp add github --url https://mcp.github.com/sse`
+- Per-server tool filtering — whitelist or blacklist individual tools
+- Built-in presets for common servers (GitHub, filesystem, Playwright, Stripe, Brave Search, Memory)
+- Hermes itself can serve as an MCP server for other agents via `hermes mcp serve`
+- Changes take effect on `/reload-mcp` or fresh session — no restart needed
+
+## What MCP Gives You
+
+MCP lets Hermes tap into the growing ecosystem of external tool servers. Instead of writing a native Hermes tool for every service, you connect an existing MCP server and Hermes discovers its tools automatically.
+
+**What it provides:**
+
+- Access to external tool ecosystems without writing a native Hermes tool first
+- Local stdio servers and remote HTTP MCP servers in the same config
+- Automatic tool discovery and registration at startup
+- Utility wrappers for MCP resources and prompts when the server supports them
+- Per-server filtering so you expose only the tools you want Hermes to see
+
+## Adding Your First MCP Server
+
+MCP support is included in any standard Hermes install. You can add servers through the CLI or by editing config directly.
+
+### Via CLI (Recommended)
+
+```bash
+# Add a stdio server (local process)
+hermes mcp add filesystem \
+  --command "npx" \
+  --args "-y" "@anthropic/mcp-server-filesystem" "/home/user/projects"
+
+# Add an HTTP server (remote)
+hermes mcp add github \
+  --url "https://mcp.github.com/sse"
+
+# Verify it connected
+hermes mcp list
+```
+
+Output:
+
+```
+Connected MCP Servers
+────────────────────
+  filesystem   stdio   3 tools     Running
+  github       http    12 tools    Running
+```
+
+### Via Config YAML
+
+Add servers directly to your `~/.hermes/config.yaml` under the `mcp_servers` section:
+
+```yaml
+mcp_servers:
+  filesystem:
+    command: npx
+    args:
+      - -y
+      - "@anthropic/mcp-server-filesystem"
+      - "/home/user/projects"
+    env:
+      NODE_ENV: production
+
+  github:
+    url: "https://mcp.github.com/sse"
+    headers:
+      Authorization: "Bearer ${GITHUB_TOKEN}"
+```
+
+### Testing a Server Connection
+
+```bash
+# Quick connection test
+hermes mcp test github
+
+# Should return "✅ Server github responded successfully"
+```
+
+## Two Kinds of MCP Servers
+
+Hermes supports both stdio and HTTP MCP servers, and you can mix them in the same config.
+
+### Stdio Servers
+
+Stdio servers run as child processes. Hermes launches the command, communicates over stdin/stdout, and manages the lifecycle.
+
+```bash
+hermes mcp add playwright \
+  --command "npx" \
+  --args "-y" "@playwright/mcp"
+
+hermes mcp add brave-search \
+  --command "npx" \
+  --args "-y" "@anthropic/mcp-server-brave-search"
+```
+
+**Best for:** Local-only tools, private data sources, tools that need filesystem access.
+
+### HTTP Servers
+
+HTTP servers connect over SSE (Server-Sent Events) or streamable HTTP. No local process to manage — just a URL and optional auth headers.
+
+```yaml
+mcp_servers:
+  stripe:
+    url: "https://mcp.stripe.com/sse"
+    headers:
+      Authorization: "Bearer ${STRIPE_MCP_KEY}"
+
+  internal-db:
+    url: "http://localhost:8080/mcp"
+    headers:
+      X-API-Key: "${INTERNAL_API_KEY}"
+```
+
+**Best for:** Remote APIs, shared team services, SaaS tools.
+
+## Built-in Presets
+
+Hermes ships with several built-in presets so you don't need to remember the command strings. Use the preset name instead of raw command/url:
+
+```bash
+hermes mcp add github --preset github  # GitHub MCP (npm + preset path)
+hermes mcp add memory --preset memory   # Hermes Memory MCP server
+```
+
+**Available presets:** `github`, `filesystem`, `playwright`, `stripe`, `brave-search`, `memory`
+
+## Per-Server Tool Filtering
+
+Once a server is connected, you can control exactly which tools Hermes sees from it. This is done through `mcp_server_filter` in `config.yaml`.
+
+### Disable a Server Entirely
+
+```yaml
+mcp_servers:
+  stripe:
+    url: "https://mcp.stripe.com/sse"
+    enabled: false
+```
+
+### Whitelist Specific Tools
+
+```yaml
+mcp_server_filter:
+  github:
+    mode: whitelist
+    tools:
+      - list_issues
+      - get_issue
+      - create_issue
+      - search_issues
+```
+
+### Blacklist Dangerous Tools
+
+```yaml
+mcp_server_filter:
+  stripe:
+    mode: blacklist
+    tools:
+      - create_payment_intent
+      - cancel_subscription
+      - delete_customer
+```
+
+### Filter Utility Tools Too
+
+By default, resource/prompt utility wrappers bypass tool filtering. To include them:
+
+```yaml
+mcp_server_filter:
+  filesystem:
+    mode: whitelist
+    tools:
+      - read_file
+      - search_files
+      - get_file_info
+    filter_utilities: true
+  resources:
+    - file:///projects/myapp
+  prompts:
+    - review_code
+```
+
+## Running Hermes as an MCP Server
+
+In addition to connecting _to_ MCP servers, Hermes can _be_ an MCP server. This lets other MCP-capable agents — Claude Code, Cursor, Codex, or any MCP client — use Hermes's messaging capabilities.
+
+```bash
+# Start the MCP server
+hermes mcp serve
+
+# With debug logging
+hermes mcp serve --verbose
+```
+
+This starts a stdio MCP server. The MCP client (not you) manages the process lifecycle.
+
+### Client Configuration
+
+Add Hermes to your MCP client's config. For example, in Claude Code's `~/.claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "hermes": {
+      "command": "hermes",
+      "args": ["mcp", "serve"]
+    }
+  }
+}
+```
+
+If Hermes is installed in a venv, specify the full path:
+
+```json
+{
+  "mcpServers": {
+    "hermes": {
+      "command": "/home/user/.hermes/hermes-agent/venv/bin/hermes",
+      "args": ["mcp", "serve"]
+    }
+  }
+}
+```
+
+### Tools Exposed
+
+The Hermes MCP server exposes 10 tools for cross-agent messaging:
+
+| Tool | Description |
+|------|-------------|
+| `conversations_list` | List active messaging conversations across platforms |
+| `messages_read` | Read recent message history for a conversation |
+| `messages_send` | Send a message through a platform (Telegram, Discord, etc.) |
+| `channels_list` | List all available messaging targets |
+| `events_poll` | Poll for new conversation events since a cursor |
+| `events_wait` | Long-poll / block until the next event arrives |
+| `attachments_fetch` | Extract non-text attachments from a specific message |
+| `conversation_get` | Get detailed info about one conversation |
+| `permissions_list_open` | List pending approval requests |
+| `permissions_respond` | Allow or deny a pending approval request |
+
+## Troubleshooting
+
+### Server Not Connecting
+
+```bash
+# Check server status
+hermes mcp list
+
+# Test specific server
+hermes mcp test github
+
+# Check gateway logs
+grep -i "mcp\|failed to connect" ~/.hermes/logs/gateway.log | tail -20
+```
+
+### Tools Not Appearing
+
+1. Verify the server is listed in `hermes mcp list`
+2. Check `mcp_server_filter` isn't blocking everything
+3. Run `/reload-mcp` in the session or start a fresh one
+
+### Why Didn't Resource/Prompt Utilities Appear?
+
+Some MCP servers advertise resources and prompts but Hermes only exposes them when the server fully implements the MCP protocol for those capabilities. If the server partially implements them, Hermes skips the utility wrappers. Check the server's MCP specification compliance.
+
+## Related Docs
+
+- [MCP Configuration Reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp)
+- [Use MCP with Hermes](https://hermes-agent.nousresearch.com/docs/guides/use-mcp-with-hermes)
+- [Advanced Automation](/blog/advanced-automation/) — cron jobs, delegation, and integrations
+- [Multiple Agents](/blog/multi-agent-setup/) — parallel agents and coordination
+
+{/* crosslinks */}
+
+## 📖 Related Reads
+
+- **[ToolBrain](https://toolbrain.net/)** — tool reviews, LLM comparisons, and AI workflow guides
+- **[NiteAgent](https://niteagent.com/)** — AI agent development, frameworks, and production patterns
+- **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools, agents, and APIs
+
+*Cross-links automatically generated from Hermes Tutorials.*
