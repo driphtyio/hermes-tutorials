@@ -1,0 +1,178 @@
+---
+title: "Hermes Curator: An Autonomous Skill-Maintenance Agent"
+description: "The Hermes Curator runs in the background on a 7-day cycle, grading, consolidating, and pruning your skill library without any manual effort."
+pubDate: "2026-05-26"
+tags: ["hermes", "build-log", "curator", "skills", "self-improvement"]
+keywords: [hermes curator, autonomous agent, skill maintenance, procedural memory, self-improvement, hermes skills]
+---
+
+> **Build Log — v0.12.0 (2026.4.30):** The "Curator" release introduced an autonomous background agent that maintains your skill library. 1,096 commits, 550 merged PRs, and 213 community contributors went into this release [1]. This post walks through what the Curator is, how to configure it, and what happens during a curation cycle.
+
+## Why a Curator?
+
+Skills are procedural memory — markdown documents in `~/.hermes/skills/` that the agent reads as part of its system prompt. Over time, your skill library accumulates:
+
+- **Drafts** — one-off workflows that should probably be merged
+- **Stale skills** — procedures for tools or APIs you no longer use
+- **Duplicates** — two skills covering the same task with slightly different approaches
+- **Dead references** — scripts or templates that were deleted but still linked in a skill's frontmatter
+
+Manually cleaning this up is tedious. The Curator automates it.
+
+## Architecture
+
+The Curator runs as a background agent on the gateway's cron ticker:
+
+```
+Gateway cron ticker (7-day default)
+  └─ auxiliary.curator process
+       ├─ Scans ~/.hermes/skills/ (excluding bundled/hub skills)
+       ├─ Grades each skill: usage stats, content quality, freshness
+       ├─ Classifies: keep / consolidate / prune
+       ├─ If consolidate → merges related skills, updates references
+       ├─ If prune → archives dead skills (never deletes)
+       └─ Writes report to logs/curator/run.json + REPORT.md
+```
+
+It inherits the parent gateway's config — same provider, model, and credentials. Pinned skills and hub-installed skills are protected.
+
+## Setting It Up
+
+The Curator is unified under `auxiliary.curator`. Enable it in your config:
+
+```yaml
+# ~/.config/hermes/config.yaml
+auxiliary:
+  curator:
+    enabled: true
+    cycle_days: 7  # default; change to 14 for less frequent runs
+    model: auto    # inherit from primary, or pin a specific model
+```
+
+Or set it via CLI:
+
+```bash
+hermes config set auxiliary.curator.enabled true
+hermes config set auxiliary.curator.cycle_days 14
+```
+
+Pick which model it uses:
+
+```bash
+hermes model          # select main model
+# or pin a specific model just for the curator:
+hermes config set auxiliary.curator.model gpt-4o
+```
+
+## Checking Status
+
+See how the curator ranks your skills:
+
+```bash
+hermes curator status
+```
+
+Output (example):
+
+```
+Most-used skills (last 30 days):
+  ↔ github-pr-workflow         — 24 uses
+  ↔ static-blog                — 19 uses
+  ↔ content-pipeline           — 15 uses
+
+Least-used skills (last 30 days):
+  ↔ legacy-deploy-script       — 0 uses
+  ↔ old-mcp-setup              — 0 uses
+```
+
+## What a Curation Run Looks Like
+
+When the Curator fires, it writes two outputs to `logs/curator/`:
+
+**`run.json`** — machine-readable summary:
+
+```json
+{
+  "run_id": "cur-20260526-001",
+  "started_at": "2026-05-26T03:00:00Z",
+  "skills_scanned": 47,
+  "skills_pinned": 5,
+  "consolidated": 3,
+  "pruned": 2,
+  "duration_seconds": 142
+}
+```
+
+**`REPORT.md`** — human-readable decisions:
+
+```markdown
+# Curator Run — 2026-05-26
+
+## Consolidated
+- `deploy-guide-v1` + `deploy-guide-v2` → `deploy-guide`
+- `troubleshooting-docker` + `docker-common-issues` → `docker-troubleshooting`
+
+## Pruned (archived → ~/.hermes/trash/)
+- `obsolete-model-config` — provider no longer supported
+- `v0.8-migration` — migration was one-time, 3 months stale
+
+## Protected
+- 5 pinned skills (not evaluated)
+- 12 hub-installed skills (not evaluated)
+```
+
+## Consolidation Logic
+
+The consolidation step is surprisingly sophisticated:
+
+1. **Content overlap scoring** — the agent compares skill bodies for structural similarity (steps, commands, pitfalls)
+2. **Usage check** — two low-usage skills covering the same domain get merged; high-usage skills with overlapping content get suggestions instead
+3. **Reference reconciliation** — merged skills get unified reference paths; old paths are forwarded via `absorbed_into` metadata
+4. **Version bump** — the merged skill gets `version: 2.0.0`
+
+## Guardrails
+
+The Curator has safety boundaries:
+
+| Guardrail | What it prevents |
+|-----------|------------------|
+| Pinned skills | `skill_manage(action='delete')` refused on pinned skills (protected) |
+| Hub skills | Skills installed via `hermes skills install <hub-url>` are never modified |
+| `absorbed_into` tracking | When consolidating, sets metadata so downstream consumers update references |
+| Trash directory | Pruned skills go to `~/.hermes/trash/` not `/dev/null` — recoverable with `mv` |
+| Run report always written | Even if no actions taken, report documents the scan for audit trail |
+
+## What This Means for Your Workflow
+
+Before the Curator, skills were write-once, maybe-update-never. After a few months, you'd have 80+ skill files, half of which were drafts, dead ends, or superseded by better approaches.
+
+Now the library stays lean:
+
+- Skills that prove their value get used more → higher ranking → survive curation
+- Merged skills collapse surface area → faster `skill_view` loads
+- Archived junk is out of sight → `skills_list` output stays scannable
+- Each run produces a report → you know exactly what changed
+
+## Gotchas
+
+A few things I hit setting this up:
+
+**Cycle timing.** The 7-day cycle starts from gateway boot, not from when you enable it. If you `hermes config set` at noon, the first run happens at noon 7 days later (assuming the gateway stays up). To force an immediate run, restart the gateway.
+
+**Model choice matters.** If you pin a weak model for the curator to save tokens, you'll get worse consolidation decisions. `gpt-4o` or equivalent is recommended. The curator's runtime is cheap — in practice, a single scan costs about the same as 2-3 normal prompts.
+
+**Standalone mode.** You can also run the curator ad-hoc with `hermes curator run` (v0.12.1+). This bypasses the cron cycle and runs immediately in the foreground with streaming output.
+
+## Summary
+
+The autonomous Curator takes skill maintenance from a manual chore to a hands-off background service. Combined with the upgraded self-improvement loop (rubric-based review forks that handle `references/` and `templates/` sub-files), Hermes Agent now maintains its own knowledge base without intervention.
+
+If you're running Hermes Agent v0.12.0 or later, the Curator is already enabled by default — just run `hermes curator status` to see what it's been up to.
+
+## References
+
+[1] [Hermes Agent v0.12.0 Release — GitHub](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.4.30)
+[2] [Official release notes for v0.12.0 — RELEASE_v0.12.0.md](https://github.com/NousResearch/hermes-agent/blob/main/RELEASE_v0.12.0.md)
+[3] [Hermes Agent Changelog — hermes-ai.net](https://hermes-ai.net/changelog/)
+[4] [Skills documentation — Hermes Agent docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills)
+[5] [Hermes Agent GitHub — NousResearch](https://github.com/NousResearch/hermes-agent)
