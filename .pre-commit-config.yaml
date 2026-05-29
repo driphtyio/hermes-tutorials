@@ -1,0 +1,30 @@
+# Pre-commit hooks for automated quality enforcement
+# See https://pre-commit.com for docs
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-json
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-added-large-files
+        args: [--maxkb=500]
+
+  - repo: local
+    hooks:
+      - id: enforce-sources
+        name: Enforce sourced statistics in blog posts
+        description: Detects unsourced statistical claims in markdown blog posts
+        entry: python3 /home/techgeek/.local/bin/enforce-sources.py --check --blog hermes-tuts
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: quality-ratchet
+        name: Blog quality ratchet
+        description: Verifies content quality meets minimum thresholds before commit
+        entry: python3 /home/techgeek/.local/bin/quality-ratchet.py --check hermes-tuts
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]

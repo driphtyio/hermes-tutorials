@@ -97,7 +97,7 @@ from crewai.tools import BaseTool
 class WeatherCheckTool(BaseTool):
     name: str = "Weather Check"
     description: str = "Get current weather for a city"
-    
+
     def _run(self, city: str) -> str:
         import requests
         return requests.get(f"https://api.weather.com/{city}").text
