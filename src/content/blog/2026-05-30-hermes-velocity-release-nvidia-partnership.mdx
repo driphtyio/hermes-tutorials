@@ -1,0 +1,106 @@
+---
+title: "Hermes Agent's Velocity Release: v0.15.0, NVIDIA Partnership, and 140K GitHub Stars"
+description: "Hermes Agent v0.15.0 slashes core 76%, makes session search 4,500× faster, adds Kanban Swarm. NVIDIA features Hermes on RTX and DGX Spark."
+pubDate: "2026-05-30"
+tags: ["hermes", "update"]
+keywords: [hermes v0.15.0, hermes velocity release, hermes nvidia rtx, hermes dgx spark, hermes session_search fts5, hermes kanban swarm, hermes 140k stars, hermes openrouter most used, hermes may 2026 update, hermes self-evolving skills]
+---
+
+> **TLDR:** Hermes Agent shipped three releases this week — v0.15.0 "The Velocity Release," v0.15.1, and v0.15.2. The core agent loop was slashed 76% (16K → 3.8K lines), `session_search` is now 4,500× faster at zero cost, Kanban gains a full Swarm orchestrator, and NVIDIA officially featured Hermes for self-improving local agents on RTX PCs and DGX Spark. The project crossed **140,000 GitHub stars** in under 3 months and is now the most-used agent on OpenRouter.
+
+## Three Releases in Three Days
+
+The last week of May saw an unprecedented burst of shipping. Here's what landed:
+
+### v0.15.0 (May 28) — The Velocity Release
+
+1,302 commits, 747 merged PRs, 560+ issues closed, and 321 community contributors. The theme is speed — startup, search, and agent loop.
+
+**Big Refactor.** `run_agent.py` was the single file that drove the entire conversation loop — it had grown to **16,083 lines** over months of feature additions. It's now **3,821 lines** across 14 cohesive modules under `agent/`. That's a 76% reduction. The change is invisible to users — every existing feature, skill, and config should work identically — but it unlocks faster iteration and clearer contribution pathways.
+
+**Cold-start Performance.** Another second shaved off startup time alongside a 47% reduction in per-turn function calls (399K → 213K over 31 turns). On Termux (Android), cold start dropped from 2.9s to 0.8s. Even `hermes --version` is 63% faster (701ms → 258ms), beating Codex CLI head-to-head.
+
+**session_search Rebuilt.** The old `session_search` loaded transcripts into context and asked the LLM to summarize — ~90 seconds per query with real token cost. The new version is pure SQLite FTS5: ~20ms for discovery, ~1ms for scroll navigation. Three clean calling shapes — Discovery, Scroll, Browse — each optimized for a different retrieval pattern. Completely free to use.
+
+**Kanban Multi-Agent Platform (104 PRs).** The Kanban system graduates from a simple board to a full orchestrator:
+
+- `hermes kanban swarm` creates Swarm v1 dependency graphs for multi-agent workflows
+- Triage channels auto-decompose complex tasks into Kanban items
+- Per-task model overrides — route vision work to vision-capable models and cheap summarization to economy models
+- Scheduled tasks with cron integration
+- Worker introspection endpoints (`/workers/active`, `/runs/{id}`, `/inspect`)
+- Worktree-per-task isolation prevents git conflicts between parallel agents
+
+**Session Orchestrator in TUI.** Multiple live sessions are now manageable from a single TUI window with an overlay session switcher. Switch between agent instances working on different tasks without leaving the terminal.
+
+**Bitwarden Secrets Manager.** One bootstrap token replaces all per-provider API keys. Configure once, rotate centrally, and every Hermes provider authenticates through Bitwarden.
+
+**ntfy — 23rd Platform.** Self-hostable push notifications with zero account requirements. Send alerts from cron jobs, monitors, or any Hermes task to any device via the ntfy protocol.
+
+**Skill Bundles.** `/<name>` now loads multiple skills at once. New additions include `code-wiki`, `openhands`, and `web-pentest` skill bundles.
+
+**Promptware Defense.** Brainworm-class prompt injection attacks are blocked at three chokepoints: threat pattern matching in tools, recalled memory scanning, and delimiter marker detection. A new `security-guidance` plugin provides audit trails.
+
+### v0.15.1 (May 29) — The Patch Release
+
+28 commits, 21 merged PRs. The headline fix: the Dashboard infinite-reload loop that affected Docker and fresh installs (the identity probe returned 401 by design, causing a stale-token reload loop). Fixed by adding `allowUnauthorized` to `fetchJSON`.
+
+Other notable fixes:
+- Docker `--insecure` is now an explicit env opt-in (`HERMES_DASHBOARD_INSECURE=1`)
+- MCP bare command resolution (`npx`, `npm`, `node`) in Docker now resolves against `/usr/local/bin`
+- Skills page sidebar and source pills restored (stale `useMemo` dep)
+- Kanban workers properly handle SIGTERM and receive images in task bodies
+- `.md` files delivered correctly again (media delivery switched to denylist-only)
+- `/yolo` works mid-session for per-session bypass
+- Web URLs pass through redaction unchanged
+
+### v0.15.2 (May 29) — Packaging Fix
+
+A quick follow-up: `plugin.yaml` manifests are now bundled in wheel and sdist releases. The fix ensures plugin-based installations work out of the box.
+
+## NVIDIA Features Hermes for Local AI Agents
+
+On May 13, NVIDIA published a blog post showcasing **Hermes Agent on RTX PCs, RTX PRO workstations, and DGX Spark** — marking a major milestone for local-first AI agents.
+
+The post highlights four standout capabilities:
+
+1. **Self-Evolving Skills** — Hermes writes and refines its own skills, saving learnings from complex tasks and user feedback into persistent skill documents.
+2. **Contained Sub-Agents** — Short-lived, isolated workers for sub-tasks keep context small and manageable, ideal for local models with limited memory.
+3. **Reliability by Design** — Every skill, tool, and plugin is curated and stress-tested. "Hermes just works — even with 30 billion-parameter-class local models — without constant debugging."
+4. **Same Model, Better Results** — Hermes is an active orchestration layer, not a thin wrapper. The agentic fabric enables persistent on-device agents rather than task-by-task execution.
+
+The post also highlights **Qwen 3.6 models** running locally on NVIDIA hardware — the 35B variant fits in ~20GB memory while surpassing 120B-parameter models, and the 27B dense model matches the accuracy of Qwen 3.5 397B at 1/16 the size.
+
+DGX Spark, with its 128GB unified memory and 1 petaflop AI performance, runs Hermes + local models all day. The recommended playbook is available at [build.nvidia.com/spark](http://www.build.nvidia.com/spark).
+
+## 140K Stars and Counting
+
+Hermes Agent is now the fastest-growing agent framework on GitHub — **140,000+ stars** in under 3 months. It's the most-used agent on OpenRouter, and the community growth is accelerating: v0.15.0 alone saw 321 community contributors.
+
+## How to Update
+
+```bash
+pip install --upgrade hermes-agent
+```
+
+Verify:
+```bash
+hermes --version
+# Should show: v0.15.2 (v2026.5.29.2)
+```
+
+If you're running from a git clone, switch to the PyPI package:
+```bash
+pip install hermes-agent
+hermes doctor
+```
+
+## What's Next
+
+With the core refactor landed, the team is focused on deeper Windows support, expanded OAuth providers, and pushing the Kanban Swarm platform toward stable. The `session_search` rebuild and `run_agent.py` decomposition open the door for plugin-based agent loop customization — expect that pattern to mature in v0.16.0.
+
+Track development on [GitHub](https://github.com/NousResearch/hermes-agent) and join the community.
+
+---
+
+*Hermes Tutorials is an independent community resource. Not affiliated with Nous Research.*
