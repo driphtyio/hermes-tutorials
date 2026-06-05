@@ -1,0 +1,185 @@
+---
+title: "Building the Nous Portal Tool Gateway — Integration Log"
+description: "How Hermes Agents Tool Gateway collapsed 5+ API subs into one OAuth login — web search, image gen, TTS, and browser through a single Nous Portal sub."
+pubDate: "2026-06-05"
+tags: ["hermes", "build-log"]
+heroImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200"
+keywords: [hermes portal, hermes tool gateway, nous portal integration, hermes oauth, hermes firecrawl, hermes cloud browser, hermes build log, hermes agent tools, hermes subscription proxy]
+---
+
+> **TLDR:** Hermes Agent's Tool Gateway (shipped in v0.15.0) routes web search, image generation, TTS, and browser automation through a single Nous Portal subscription [—official Tool Gateway docs](https://hermes-agent.nousresearch.com/docs/guides/tool-gateway). No Firecrawl, FAL, OpenAI audio, or Browserbase accounts needed. One OAuth login. One bill. Behind the scenes: a proxy layer that translates Hermes tool schemas into upstream API calls, with per-tool opt-in routing and credential-less fallback so the gateway tools are always visible in `hermes tools` even before login.
+
+## The Integration Problem
+
+Before the Tool Gateway, every Hermes agent needed its own stack of API keys:
+
+| Tool | Required Account | Typical Cost |
+|------|-----------------|-------------|
+| Web search & extract | Firecrawl | $19–$99/mo |
+| Image generation | FAL, Replicate, or Stability | $10–$50/mo |
+| Text-to-speech | OpenAI TTS or ElevenLabs | $5–$20/mo |
+| Cloud browser | Browserbase or Browserless | $19–$59/mo |
+| **Total** | **5 accounts** | **$53–$228/mo** |
+
+Each came with its own signup flow, rate limits, billing cycle, and auth mechanism. For someone just trying Hermes for the first time, that's a wall — not an invitation.
+
+The goal: collapse this into one subscription with zero configuration. The Portal setup flow is documented at [hermes-agent.nousresearch.com/docs/guides/portal-setup](https://hermes-agent.nousresearch.com/docs/guides/portal-setup).
+
+## Architecture
+
+The Tool Gateway isn't a new backend. It's a **routing proxy** that sits between Hermes's existing tool handlers and the upstream APIs:
+
+```
+Hermes Tool Call
+      │
+      ▼
+┌─────────────────────────┐
+│   Tool Handler          │
+│   (web_search, etc.)    │
+└──────┬──────────────────┘
+       │ Per-tool config check
+       │ `provider: nous` ?
+       ▼
+┌─────────────────────────┐
+│   Tool Gateway Proxy    │
+│   (gateway/provider.py) │
+│                         │
+│   1. Check OAuth token  │
+│   2. Route to upstream  │
+│   3. Return response    │
+└──────┬──────────────────┘
+       │
+       ▼
+┌─────────────────────────┐
+│   Nous Portal Backend   │
+│   (Firecrawl, FAL, ...) │
+└─────────────────────────┘
+```
+
+Key design decisions:
+
+**Per-tool routing, not all-or-nothing.** Each tool's provider is independently configurable. The gateway stores routing in `config.yaml` under `tool_gateway.providers` — one key per tool [—config reference](https://hermes-agent.nousresearch.com/docs/guides/portal-setup#tool-gateway-config). A user who already pays for Browserbase can leave that tool on direct routing while using the gateway for everything else.
+
+**Credential-less discovery.** The gateway tools always show up in `hermes tools` even without a Portal login. When you select one, Hermes runs the OAuth flow inline — no separate `hermes setup --portal` required. The check function looks for a valid Portal OAuth token in `~/.hermes/auth.json`, not an env var, so it's the only Hermes tool that's "available" before credentials exist [—Portal auth docs](https://hermes-agent.nousresearch.com/docs/guides/portal-setup#authentication-flow).
+
+**Same backends.** The gateway doesn't reimplement Firecrawl or FAL — it proxies to them using Nous's existing infrastructure agreements. The prompts, parameters, and outputs are identical to the direct-key route. This means `web_extract` returns the same markdown quality whether routed through the gateway or through a raw Firecrawl API key.
+
+## The Three Entry Points
+
+The team shipped three ways to enable the gateway, each targeting a different user context:
+
+### 1. Fresh Install: `hermes setup --portal`
+
+```bash
+hermes setup --portal
+```
+
+This single command does five things atomically:
+
+1. Opens browser for OAuth login at `portal.nousresearch.com`
+2. Writes the refresh token to `~/.hermes/auth.json`
+3. Sets `model.provider: nous` in config.yaml
+4. Picks a default agentic model (e.g. `anthropic/claude-sonnet-4.6`)
+5. Flips all four tool providers to `nous`
+
+The atomicity matters — if OAuth fails at step 1, steps 3–5 never run. No partial configuration.
+
+### 2. Provider Switch: `hermes model`
+
+When you already have Hermes running on another provider (OpenRouter, Anthropic, etc.) and want to switch to Portal for inference, `hermes model` offers to enable the gateway for all tools. This is the migration path, not the first-run path.
+
+### 3. À La Carte: `hermes tools`
+
+The per-tool picker. Select any tool category (Web, Image, TTS, Browser) and pick **Nous Subscription** as the provider. If not already authenticated, Hermes runs Portal login inline. This path **does not** switch your inference provider — I could run DeepSeek V4 Flash for model calls and route only web search through the gateway.
+
+```bash
+hermes tools
+# → Web search       → "Nous Subscription"
+# → Image generation → "Nous Subscription"
+# → Browser          → "Browserbase"         (keep existing key)
+# → TTS              → "Nous Subscription"
+```
+
+## Verification Flow
+
+After setup, `hermes portal info` shows the routing state — see the [Portal info reference](https://hermes-agent.nousresearch.com/docs/guides/portal-setup#portal-info):
+
+```text
+◆ Nous Portal
+  Auth:    ✓ logged in
+  Portal:  https://portal.nousresearch.com
+  Model:   ✓ using Nous as inference provider
+
+◆ Tool Gateway
+  Web search & extract  ✓ via Nous Portal
+  Image generation      ✓ via Nous Portal
+  Text-to-speech        ✓ via Nous Portal
+  Browser automation    ○ via Browser Use key
+```
+
+The checkmark vs circle pattern is deliberate — green checkmark for gateway-routed, unobtrusive circle for direct-key. No false warnings about "missing credentials" for tools intentionally left on direct routing.
+
+A quick end-to-end test verifies everything:
+
+```bash
+hermes chat -q "Search the web for Hermes Agent Tool Gateway docs and summarize"
+```
+
+If `web_search` returns results, the gateway is live.
+
+## What About Remote Hosts?
+
+OAuth needs a browser, which is a problem when Hermes runs on a headless VPS. The team solved this two ways:
+
+**SSH port forwarding** — tunnel the OAuth callback port to your local machine:
+
+```bash
+ssh -N -L 8642:127.0.0.1:8642 user@remote-host
+hermes setup --portal
+# Open the printed URL in your local browser
+```
+
+**Manual paste** — for Cloud Shell, Codespaces, or environments without SSH forwarding:
+
+```bash
+hermes auth add nous --type oauth --manual-paste
+# Then re-run:
+hermes setup --portal
+```
+
+The manual paste flow prints a URL, you authenticate in any browser (even a phone), copy the resulting token, and paste it back. The guide is documented under [OAuth over SSH](https://hermes-agent.nousresearch.com/docs/guides/oauth-over-ssh).
+
+## Edge Cases That Shaped the Design
+
+**What if the OAuth token expires mid-session?** The gateway proxy checks the token before every proxied call. If it's stale, it attempts a refresh using the stored refresh token. If that fails, it returns a clear error: "Tool Gateway: authentication expired. Run `hermes portal login` to re-authenticate." The session continues — only the gateway tools stop working.
+
+**What if someone selects "Nous Subscription" without a Portal account?** The inline OAuth flow handles this: the browser opens to portal.nousresearch.com, where the user can either log in or sign up. The CLI prints "Opening browser for Nous Portal login..." before redirecting, so there's no silent hang.
+
+**What about free-tier Portal users?** The Tool Gateway is a paid-subscription feature. Free accounts can use Portal for model inference but the gateway tools are gated server-side. `hermes portal info` shows a clear message if the account tier doesn't include managed tools.
+
+## Migration Patterns
+
+The most common migration I've seen is someone with a Browserbase key who doesn't want a Firecrawl account:
+
+```bash
+hermes tools
+# Web search     → Nous Subscription
+# Image gen      → Nous Subscription
+# Browser        → Browserbase (unchanged)
+# TTS            → OpenAI key (unchanged)
+```
+
+That's a single interactive session. No config file edits, no env var management.
+
+For the opposite direction — someone who starts with Portal and later adds their own keys:
+
+```bash
+hermes tools
+# Web search     → Firecrawl key (bring your own)
+```
+
+The gateway routes per tool; switching one doesn't affect the others.
+
+---
+
+*Want to try it? Install Hermes Agent, run `hermes setup --portal`, and your agent has web search, image generation, TTS, and cloud browser automation under one subscription.*
