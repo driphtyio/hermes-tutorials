@@ -46,6 +46,42 @@ const topRated = skills.filter(s => s.rating >= 5).length;
 				font-size: 0.75em; color: var(--text-muted); margin-top: 0.4em;
 				font-family: var(--font-mono);
 			}
+
+			/* Badges */
+			.badge-group { display: flex; gap: 0.35em; flex-wrap: wrap; margin: 0.4em 0; }
+			.badge {
+				display: inline-flex; align-items: center; gap: 0.2em;
+				padding: 0.15em 0.45em; border-radius: var(--radius-sm);
+				font-size: 0.7em; font-weight: 500; line-height: 1.4;
+			}
+			.badge-featured {
+				background: rgba(255, 215, 0, 0.12); color: #ffd700;
+				border: 1px solid rgba(255, 215, 0, 0.3);
+			}
+			.badge-version {
+				background: rgba(129, 199, 132, 0.12); color: #81c784;
+				border: 1px solid rgba(129, 199, 132, 0.25);
+			}
+			.badge-requires {
+				background: rgba(79, 195, 247, 0.1); color: #4fc3f7;
+				border: 1px solid rgba(79, 195, 247, 0.2);
+			}
+
+			/* Controls row */
+			.controls-row { display: flex; gap: 1em; align-items: flex-start; flex-wrap: wrap; margin: 1em 0; }
+			.search-box { flex: 1; min-width: 200px; }
+			.sort-box { display: flex; align-items: center; gap: 0.5em; }
+			.sort-box label { font-size: 0.85em; color: var(--text-muted); white-space: nowrap; }
+			.sort-select {
+				background: var(--bg); color: var(--text-primary); border: 1px solid var(--border);
+				border-radius: var(--radius-sm); padding: 0.4em 0.6em; font-size: 0.85em;
+				font-family: inherit; cursor: pointer;
+			}
+			.sort-select:hover { border-color: var(--accent); }
+
+			/* Skill name link */
+			.skill-name { text-decoration: none; color: inherit; transition: color 0.15s; }
+			.skill-name:hover { color: var(--accent-light); }
 		</style>
 	</head>
 	<body>
@@ -63,8 +99,18 @@ const topRated = skills.filter(s => s.rating >= 5).length;
 				<div class="stat-item"><div class="stat-number">{skills.filter(s => s.rating >= 4).length}</div><div class="stat-label">★4+ Skills</div></div>
 			</div>
 
-			<div class="search-box">
-				<input class="search-input" type="text" id="search" placeholder="Search skills..." />
+			<div class="controls-row">
+				<div class="search-box">
+					<input class="search-input" type="text" id="search" placeholder="Search skills..." />
+				</div>
+				<div class="sort-box">
+					<label for="sort">Sort:</label>
+					<select class="sort-select" id="sort">
+						<option value="rating-desc">⭐ Rating (High→Low)</option>
+						<option value="name-asc">🔤 Name (A→Z)</option>
+						<option value="name-desc">🔤 Name (Z→A)</option>
+					</select>
+				</div>
 			</div>
 
 			<div class="filter-bar" id="filters">
@@ -77,16 +123,26 @@ const topRated = skills.filter(s => s.rating >= 5).length;
 			</div>
 
 			<div class="card-grid" id="skillGrid">
-				{skills.map((s, i) => (
+				{skills.map((s, i) => {
+					const cat = skillCategories.find(c => c.id === s.category);
+					return (
 					<div class="card" data-category={s.category} data-rating={s.rating} data-name={s.name.toLowerCase()} data-desc={s.description.toLowerCase()}>
-						<div class="category-label">{skillCategories.find(c => c.id === s.category)?.icon} {skillCategories.find(c => c.id === s.category)?.label}</div>
+						<div class="category-label">{cat?.icon} {cat?.label}</div>
 						<div class="top-row">
 							<div class="name-row">
-								<h2>{s.name}</h2>
+								<a href={`/skills/${s.id}/`} class="skill-name"><h2>{s.name}</h2></a>
 							</div>
 							{s.rating > 0 && <div class="rating">{'★'.repeat(s.rating)}{'☆'.repeat(5 - s.rating)}</div>}
 						</div>
 						<p>{s.description}</p>
+
+						{(s.isFeatured || s.version || s.requires) && (
+						<div class="badge-group">
+							{s.isFeatured && <span class="badge badge-featured">★ Featured</span>}
+							{s.version && <span class="badge badge-version">v{s.version}</span>}
+							{s.requires?.bins && <span class="badge badge-requires">🔧 {s.requires.bins.join(', ')}</span>}
+						</div>
+						)}
 
 						<div class="load-hint">skill_view("{s.id}")</div>
 
@@ -104,7 +160,8 @@ const topRated = skills.filter(s => s.rating >= 5).length;
 						<button class="expand-btn" data-index={i}>▼ Show Details</button>
 						<div class="extra-tip">{s.id}</div>
 					</div>
-				))}
+					);
+				})}
 			</div>
 
 			<div class="empty-state" id="emptyState">
@@ -120,22 +177,53 @@ const topRated = skills.filter(s => s.rating >= 5).length;
 			const cards = document.querySelectorAll('.card');
 			const emptyState = document.getElementById('emptyState');
 			const expandBtns = document.querySelectorAll('.expand-btn');
+			const sortSelect = document.getElementById('sort');
 
 			let activeCategory = 'all';
 
+			function getUrlParams() {
+				const p = new URLSearchParams(window.location.search);
+				return { q: p.get('q') || '', cat: p.get('cat') || 'all', sort: p.get('sort') || 'rating-desc' };
+			}
+
+			function setUrlParams(q, cat, sort) {
+				const p = new URLSearchParams();
+				if (q) p.set('q', q);
+				if (cat && cat !== 'all') p.set('cat', cat);
+				if (sort && sort !== 'rating-desc') p.set('sort', sort);
+				const qs = p.toString();
+				const url = qs ? window.location.pathname + '?' + qs : window.location.pathname;
+				window.history.replaceState({}, '', url);
+			}
+
+			function sortCards(cardsArray, method) {
+				const grid = document.getElementById('skillGrid');
+				const sorted = [...cardsArray];
+				switch (method) {
+					case 'rating-desc': sorted.sort((a, b) => parseFloat(b.dataset.rating) - parseFloat(a.dataset.rating)); break;
+					case 'name-asc': sorted.sort((a, b) => a.dataset.name.localeCompare(b.dataset.name)); break;
+					case 'name-desc': sorted.sort((a, b) => b.dataset.name.localeCompare(a.dataset.name)); break;
+				}
+				sorted.forEach(c => grid.appendChild(c));
+			}
+
 			function filterSkills() {
 				const query = search.value.toLowerCase();
+				const sortMethod = sortSelect.value;
 				let visible = 0;
+				const visibleCards = [];
 				cards.forEach(card => {
 					const cat = card.dataset.category;
 					const name = card.dataset.name;
 					const desc = card.dataset.desc;
 					const matchesCat = activeCategory === 'all' || cat === activeCategory;
 					const matchesSearch = !query || name.includes(query) || desc.includes(query);
-					card.style.display = matchesCat && matchesSearch ? '' : 'none';
-					if (matchesCat && matchesSearch) visible++;
+					const show = matchesCat && matchesSearch;
+					card.style.display = show ? '' : 'none';
+					if (show) { visible++; visibleCards.push(card); }
 				});
 				emptyState.style.display = visible === 0 ? '' : 'none';
+				sortCards(visibleCards, sortMethod);
 			}
 
 			function setCategory(cat) {
@@ -144,13 +232,30 @@ const topRated = skills.filter(s => s.rating >= 5).length;
 					b.classList.toggle('active', b.dataset.cat === cat);
 				});
 				filterSkills();
+				setUrlParams(search.value, activeCategory, sortSelect.value);
+			}
+
+			// Init from URL params
+			const params = getUrlParams();
+			if (params.q) { search.value = params.q; }
+			if (params.sort) { sortSelect.value = params.sort; }
+			if (params.cat && params.cat !== 'all') {
+				setCategory(params.cat);
 			}
 
 			filterBtns.forEach(btn => {
 				btn.addEventListener('click', () => setCategory(btn.dataset.cat));
 			});
 
-			search.addEventListener('input', filterSkills);
+			search.addEventListener('input', () => {
+				filterSkills();
+				setUrlParams(search.value, activeCategory, sortSelect.value);
+			});
+
+			sortSelect.addEventListener('change', () => {
+				filterSkills();
+				setUrlParams(search.value, activeCategory, sortSelect.value);
+			});
 
 			expandBtns.forEach(btn => {
 				btn.addEventListener('click', () => {

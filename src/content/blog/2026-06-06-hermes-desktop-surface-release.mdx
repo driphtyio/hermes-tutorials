@@ -1,0 +1,117 @@
+---
+title: "Hermes Desktop Is Here: v0.16.0 'Surface Release' Ships Native App, Admin Panel, and 简体中文"
+description: "Hermes Agent v0.16.0 ships Hermes Desktop — a native macOS/Windows/Linux app — plus web admin panel, Simplified Chinese UI, and NVIDIA skills tap."
+pubDate: "2026-06-06"
+tags: ["hermes", "update"]
+keywords: [hermes v0.16.0, hermes desktop, hermes native app, hermes surface release, hermes electron, hermes web dashboard admin, hermes simplified chinese, hermes nvidia skills, hermes session undo, hermes june 2026 update]
+---
+
+> **TLDR:** Hermes Agent shipped **v0.16.0 "The Surface Release"** on June 5 — a native desktop app (Electron), full web admin panel, Simplified Chinese UI, leaner skills, and NVIDIA/skills as a built-in trusted tap. This caps a sprint that spanned four releases in nine days, from the v0.15.0 refactor to Hermes Desktop going public.
+
+## Hermes Desktop: Native App Goes Public
+
+First teased during Jensen Huang's GTC 2026 keynote and covered by MarkTechPost, **Hermes Desktop** is now in public preview with v0.16.0. It's a native Electron application for macOS, Windows, and Linux that wraps the Hermes Agent core in a full graphical interface.
+
+**What's in the box:**
+
+- **One-click installers** — macOS and Windows get direct downloads; Linux uses `--include-desktop` during terminal install
+- **In-app self-update** — no manual pip upgrades needed
+- **Drag-and-drop files + clipboard image paste** — attach content without terminal wrangling
+- **Cmd+K command palette** — quick access to any feature
+- **Inline model picker** in the status bar — swap models mid-conversation
+- **Concurrent multi-profile sessions** — run separate agent instances side by side
+- **Streaming tool output** with live activity indicators and a side-by-side preview pane
+
+The critical insight: **sessions are shared across surfaces.** Start a task in the desktop app, resume it in the CLI or TUI, switch back to desktop — same context, same memory, same skills. It's one agent with multiple frontends, not a fork.
+
+The desktop can also connect to a **remote Hermes gateway** over secure WebSocket with OAuth or username/password authentication, and cross-profile `@session` links let you jump between agent instances.
+
+## The Web Dashboard Becomes an Admin Panel
+
+What was a basic web dashboard is now a full **administrative control panel**:
+
+- **Channels page** — manage all connected messaging platforms from one view
+- **MCP catalog** — browse, enable, and disable Model Context Protocol servers
+- **Credential management** — rotate API keys and OAuth tokens through a GUI
+- **Webhooks** — create, test, and monitor webhook subscriptions
+- **Memory configuration** — tune recall settings, curation intervals, and storage backends
+- **One-click Debug Share** — generate a shareable debug snapshot for troubleshooting
+
+## Simplified Chinese (简体中文) is In
+
+v0.16.0 ships **full i18n** for Simplified Chinese across all desktop UI surfaces — chat, sidebar, settings, profiles, and skills. The implementation uses a typed i18n layer designed for extensibility, so additional languages can follow the same pattern without code changes.
+
+## Leaner Skills, NVIDIA Trusted Tap
+
+The skill system got two significant upgrades:
+
+1. **Leaner default set** — Redundant and dead skills (`spotify`, `linear`, `kanban-codex-lane`) are removed. Heavier and niche skills moved to optional installs. A new `environments:` relevance gate limits skills to context-appropriate scenarios.
+
+2. **NVIDIA/skills trusted tap** — NVIDIA's skill catalog is now a built-in trusted tap alongside OpenAI, Anthropic, and HuggingFace. Skills are discoverable, searchable, and auto-updating from NVIDIA's registry.
+
+## Quick Setup via Nous Portal
+
+Two new setup paths eliminate the configuration barrier:
+
+- **Quick Setup** — sign in with Nous Portal, immediately start chatting
+- **Full Setup wizard** — guided walkthrough for self-hosters
+
+A new `hermes portal` alias streamlines authentication for existing users.
+
+## Fuzzy Model Picker Everywhere
+
+The model picker — available in desktop, web, TUI, and CLI — now supports **fuzzy matching**: type `v4fl` to find `deepseek-v4-flash`. Multi-endpoint providers are grouped, and the catalog refreshes hourly. New models added: `deepseek-v4-flash`, `MiniMax-M3` (1M context), and `qwen3.7-plus`.
+
+## `/undo [N]` — Rollback Last N Turns
+
+A long-standing request ([#21910](https://github.com/NouResearch/hermes-agent/issues/21910)) is finally closed. `/undo [N]` rolls back the last N conversation turns across CLI, TUI, Telegram, and Discord. Works on both user messages and agent responses.
+
+## Quick Bites from the Release
+
+- **874 commits**, 542 merged PRs, 399 issues closed since v0.15.2
+- **170 community contributors** across the v0.16.0 cycle
+- **Default interface choice** — configure `cli` or `tui` as default, with `--cli` override
+- **CVE-2026-48710 patched** — Starlette pin, SSRF off-loop hardening, subprocess credential stripping
+- **NVIDIA's skills tap** joins OpenAI, Anthropic, and HuggingFace as trusted skill sources
+
+## The Full May-June Sprint
+
+This caps nine days of shipping that started with v0.15.0 "The Velocity Release" on May 28 — the 76% core refactor (16K → 3.8K lines) and 4,500× faster session search — through v0.15.1 (dashboard infinite-reload fix), v0.15.2 (plugin manifest packaging), and now v0.16.0 (desktop + admin panel).
+
+## How to Update
+
+```bash
+pip install --upgrade hermes-agent
+```
+
+For Hermes Desktop:
+```bash
+# macOS/Windows: download from hermes-agent.nousresearch.com/desktop
+# Linux:
+pip install hermes-agent --include-desktop
+```
+
+Verify:
+```bash
+hermes --version
+# Should show: v0.16.0 (v2026.6.5)
+```
+
+## What's Next
+
+With the desktop surface and admin panel live, the team is expected to focus on deeper multi-profile workflows, plugin-based agent loop customization, and maturing the Kanban Swarm platform. The i18n layer opens the door for more languages, and the web admin panel provides the foundation for team-managed Hermes deployments.
+
+Track development on [GitHub](https://github.com/NousResearch/hermes-agent) and join the community.
+
+---
+
+*Hermes Tutorials is an independent community resource. Not affiliated with Nous Research.*
+
+{/* crosslinks */}
+
+## 📖 Related Reads
+
+- **[ToolBrain](https://toolbrain.net/)** — tool reviews, LLM comparisons, and AI workflow guides
+- **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools, agents, and APIs
+
+*Cross-links automatically generated from Hermes Tutorials.*
