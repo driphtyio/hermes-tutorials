@@ -1,0 +1,175 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import { SITE_TITLE } from '../../consts';
+import { skills, skillCategories } from '../../data/skills';
+
+export async function getStaticPaths() {
+	return skills.map(s => ({
+		params: { id: s.id },
+		props: { skill: s },
+	}));
+}
+
+const { skill } = Astro.props;
+const category = skillCategories.find(c => c.id === skill.category);
+const relatedSkills = skills
+	.filter(s => s.category === skill.category && s.id !== skill.id)
+	.sort((a, b) => b.rating - a.rating)
+	.slice(0, 5);
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead
+			title={`${skill.name} — Skill Library — ${SITE_TITLE}`}
+			description={skill.description.slice(0, 160)}
+		/>
+		<style>
+			.skill-header { display: flex; align-items: flex-start; gap: 1em; flex-wrap: wrap; margin-bottom: 2em; }
+			.skill-meta { display: flex; gap: 0.6em; flex-wrap: wrap; align-items: center; margin-bottom: 1.5em; }
+			.meta-badge {
+				display: inline-flex; align-items: center; gap: 0.3em;
+				padding: 0.25em 0.6em; border-radius: var(--radius-sm);
+				font-size: 0.78em; font-weight: 500;
+			}
+			.badge-requires {
+				background: rgba(79, 195, 247, 0.12); color: #4fc3f7;
+				border: 1px solid rgba(79, 195, 247, 0.25);
+			}
+			.badge-featured {
+				background: rgba(255, 215, 0, 0.12); color: #ffd700;
+				border: 1px solid rgba(255, 215, 0, 0.3);
+			}
+			.badge-version {
+				background: rgba(129, 199, 132, 0.12); color: #81c784;
+				border: 1px solid rgba(129, 199, 132, 0.25);
+			}
+			.badge-rating {
+				background: rgba(255, 183, 77, 0.12); color: #ffb74d;
+				border: 1px solid rgba(255, 183, 77, 0.25);
+			}
+			.skill-description { font-size: 1.1em; color: var(--text-secondary); line-height: 1.7; margin-bottom: 2em; }
+			.section-grid { display: grid; gap: 1.5em; margin-bottom: 2.5em; }
+			.info-card {
+				background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+				padding: 1.2em 1.5em;
+			}
+			.info-card h3 { margin: 0 0 0.5em; font-size: 1em; }
+			.info-card p { margin: 0; font-size: 0.9em; color: var(--text-secondary); line-height: 1.6; white-space: pre-line; }
+			.info-card.pitfalls h3 { color: #ef9a9a; }
+			.info-card.pitfalls { border-left: 2px solid #e53935; }
+			.info-card.guide { border-left: 2px solid var(--accent); }
+			.info-card.howto { border-left: 2px solid #4fc3f7; }
+
+			.requires-list { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.5em; }
+			.requires-list li {
+				padding: 0.25em 0.6em; border-radius: var(--radius-sm);
+				font-size: 0.82em; font-family: var(--font-mono);
+				background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border);
+			}
+			.requires-list .cat-label { font-weight: 600; margin-right: 0.3em; color: var(--text-primary); }
+
+			.load-hint {
+				background: var(--bg); color: var(--accent-light); padding: 0.8em 1em;
+				border-radius: var(--radius-sm); font-size: 0.85em; font-family: var(--font-mono);
+				user-select: all; border: 1px solid var(--border); display: inline-block;
+				margin-bottom: 1.5em;
+			}
+
+			.related-grid { display: grid; gap: 1em; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); margin-top: 1em; }
+			.related-card {
+				background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+				padding: 1em; text-decoration: none; transition: border-color 0.15s;
+			}
+			.related-card:hover { border-color: var(--accent); }
+			.related-card h4 { margin: 0 0 0.3em; font-size: 0.95em; color: var(--accent-light); }
+			.related-card p { margin: 0; font-size: 0.8em; color: var(--text-muted); }
+			.related-card .rating-small { font-size: 0.8em; color: #ffb74d; margin-top: 0.3em; }
+
+			.breadcrumb { display: flex; gap: 0.5em; align-items: center; margin-bottom: 1.5em; font-size: 0.85em; }
+			.breadcrumb a { color: var(--text-muted); text-decoration: none; }
+			.breadcrumb a:hover { color: var(--accent-light); }
+			.breadcrumb .sep { color: var(--text-muted); }
+
+			.back-link { display: inline-flex; align-items: center; gap: 0.4em; margin-bottom: 1.5em; color: var(--text-muted); text-decoration: none; font-size: 0.9em; }
+			.back-link:hover { color: var(--accent-light); }
+		</style>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<a href="/skills/" class="back-link">← Back to Skill Library</a>
+
+			<div class="breadcrumb">
+				<a href="/">Home</a>
+				<span class="sep">/</span>
+				<a href="/skills/">Skill Library</a>
+				<span class="sep">/</span>
+				<span>{skill.name}</span>
+			</div>
+
+			<div class="skill-header">
+				<div>
+					<div class="category-label">{category?.icon} {category?.label}</div>
+					<h1>{skill.name}</h1>
+				</div>
+			</div>
+
+			<div class="skill-meta">
+				<span class="meta-badge badge-rating">{'★'.repeat(skill.rating)}{'☆'.repeat(5 - skill.rating)}</span>
+				{skill.version && <span class="meta-badge badge-version">v{skill.version}</span>}
+				{skill.isFeatured && <span class="meta-badge badge-featured">★ Featured</span>}
+			</div>
+
+			<p class="skill-description">{skill.description}</p>
+
+			<div class="load-hint">skill_view("{skill.id}")</div>
+
+			{skill.requires && (
+			<div class="info-card" style="margin-bottom:1.5em">
+				<h3>🔧 Requirements</h3>
+				<ul class="requires-list">
+					{skill.requires.bins && <li><span class="cat-label">Bins:</span>{skill.requires.bins.join(', ')}</li>}
+					{skill.requires.env && <li><span class="cat-label">Env:</span>{skill.requires.env.join(', ')}</li>}
+					{skill.requires.config && <li><span class="cat-label">Config:</span>{skill.requires.config.join(', ')}</li>}
+				</ul>
+			</div>
+			)}
+
+			<div class="section-grid">
+				<div class="info-card guide">
+					<h3>📖 Guide</h3>
+					<p>{skill.guide}</p>
+				</div>
+				<div class="info-card howto">
+					<h3>🔧 How To</h3>
+					<p>{skill.howto}</p>
+				</div>
+				<div class="info-card pitfalls">
+					<h3>⚠️ Pitfalls</h3>
+					<p>{skill.pitfalls}</p>
+				</div>
+			</div>
+
+			{relatedSkills.length > 0 && (
+			<section style="margin-top:2em">
+				<h2>Related Skills</h2>
+				<p style="color:var(--text-muted);font-size:0.9em;margin-top:0">More skills in <strong>{category?.label}</strong></p>
+				<div class="related-grid">
+					{relatedSkills.map(rs => (
+						<a href={`/skills/${rs.id}/`} class="related-card">
+							<h4>{rs.name}</h4>
+							<p>{rs.description.slice(0, 100)}...</p>
+							<div class="rating-small">{'★'.repeat(rs.rating)}{'☆'.repeat(5 - rs.rating)}</div>
+						</a>
+					))}
+				</div>
+			</section>
+			)}
+		</main>
+		<Footer />
+	</body>
+</html>
