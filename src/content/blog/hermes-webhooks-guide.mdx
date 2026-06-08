@@ -1,0 +1,188 @@
+---
+title: "How to Set Up Webhook Integrations with Hermes Agent"
+description: "External services trigger Hermes Agent automatically via webhooks. Subscribe, test, and manage routes with the hermes webhook CLI — no gateway required."
+pubDate: "2026-06-08"
+tags: ["webhooks", "tutorial", "automation", "integrations"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-webhooks-guide-1780931446.png"
+keywords: [hermes webhook, webhook integration hermes, external trigger hermes, hermes webhook subscribe, hermes webhook test, automate hermes, CI/CD hermes webhook]
+---
+
+> **TLDR:** Hermes Agent can receive incoming HTTP POST requests via webhooks — any service that sends JSON to a URL can trigger an autonomous agent session. Subscribe with `hermes webhook subscribe "github"`, test with `hermes webhook test github`, and manage with `hermes webhook list` / `hermes webhook remove`. Each webhook creates a route at `/webhooks/<name>` on Hermes's built-in HTTP server.
+
+## Key Takeaways
+
+- Subscribe to any named webhook route: `hermes webhook subscribe "github" --prompt "Standard GitHub payload handler"`
+- Each route gets a unique URL: `/webhooks/<name>` on Hermes's API server
+- Test immediately: `hermes webhook test NAME` sends a sample POST
+- List and remove subscriptions: `hermes webhook list` / `hermes webhook remove NAME`
+- Routes persist across restarts — stored in `config.yaml` under `webhooks`
+- No gateway needed — the API server handles incoming webhooks directly
+
+## How Webhooks Work in Hermes
+
+Webhooks turn Hermes into an event-driven agent. Instead of you starting every conversation, external services can POST JSON payloads to a Hermes endpoint and trigger an autonomous session. The agent receives the payload, processes it according to the prompt you configured, and can execute tools, send messages, or perform any action.
+
+The flow looks like this:
+
+```
+External Service  ──POST JSON──►  Hermes HTTP Server
+                                       │
+                                   /webhooks/<name>
+                                       │
+                          spawns autonomous agent session
+                                       │
+                              process payload, run tools,
+                              deliver results
+```
+
+## Subscribing to a Webhook Route
+
+To create a webhook endpoint, use `hermes webhook subscribe` with a name and optional prompt. The name becomes part of the URL path.
+
+```bash
+# Basic subscription — name only
+hermes webhook subscribe "github-push"
+
+# With a custom prompt (recommended)
+hermes webhook subscribe "github-push" \
+  --prompt "You received a GitHub push event. Analyze the payload and summarize what changed."
+```
+
+The CLI walks you through the setup interactively, or you can pass all options inline. After subscribing, Hermes prints the full webhook URL:
+
+```
+✅ Subscribed: github-push → http://localhost:9091/webhooks/github-push
+```
+
+Output shows the local API server URL. If you're running behind a Cloudflare Tunnel or ngrok, the external URL will differ — use that public URL as the webhook destination in your external service.
+
+## Listing and Testing Webhooks
+
+Once you have subscriptions, manage them via the CLI:
+
+```bash
+# List all subscriptions
+hermes webhook list
+```
+
+Example output:
+```
+Webhook Subscriptions
+────────────────────
+  github-push    Active    http://localhost:9091/webhooks/github-push
+  deploy-hook    Active    http://localhost:9091/webhooks/deploy-hook
+  monitor        Active    http://localhost:9091/webhooks/monitor
+```
+
+To verify a webhook works without waiting for an external service:
+
+```bash
+# Send a test POST to the named route
+hermes webhook test github-push
+```
+
+This sends a sample JSON payload to the webhook handler and triggers the configured prompt, letting you verify the agent processes it correctly. The test runs synchronously so you can see the response immediately.
+
+## Removing a Webhook Subscription
+
+To stop receiving webhooks from a service:
+
+```bash
+hermes webhook remove github-push
+```
+
+This removes the subscription from config and stops the route from accepting requests. No restart needed — changes take effect immediately.
+
+## Example: GitHub Push Webhook
+
+Here's a complete workflow for setting up a GitHub webhook that triggers Hermes every time you push to a repository.
+
+**Step 1 — Subscribe to the route:**
+
+```bash
+hermes webhook subscribe "github-push" \
+  --prompt "You received a GitHub webhook payload. Summarize the commits, who pushed, and the affected files. Format as a clean bullet list."
+```
+
+**Step 2 — Get the webhook URL:**
+
+```bash
+hermes webhook list
+# → github-push    Active    http://localhost:9091/webhooks/github-push
+```
+
+If you're using a public tunnel (e.g., Cloudflare Tunnel), the URL would be something like `https://hermes.example.com/webhooks/github-push`.
+
+**Step 3 — Configure GitHub to send webhooks:**
+
+Send a POST to the GitHub API to create the webhook on your repository:
+
+```bash
+curl -s -X POST "https://api.github.com/repos/your-org/your-repo/hooks" \
+  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "web",
+    "active": true,
+    "events": ["push"],
+    "config": {
+      "url": "https://hermes.example.com/webhooks/github-push",
+      "content_type": "json",
+      "insecure_ssl": "0"
+    }
+  }'
+```
+
+**Step 4 — Test it:**
+
+```bash
+# Quick test from Hermes
+hermes webhook test github-push
+```
+
+Or push to your GitHub repo and watch Hermes process the event. The agent receives the full GitHub webhook payload and acts on it autonomously.
+
+## Configuration Details
+
+Webhook subscriptions persist in your Hermes configuration. They're stored in `config.yaml` and survive restarts:
+
+```yaml
+webhooks:
+  subscriptions:
+    github-push:
+      prompt: "You received a GitHub webhook payload..."
+      created_at: "2026-06-08T10:00:00Z"
+    deploy-hook:
+      prompt: "A deployment completed. Verify the service health..."
+      created_at: "2026-06-08T11:00:00Z"
+```
+
+The webhook server runs as part of the Hermes API server — no separate gateway process required. Routes are live as long as the Hermes process is running. For production, pair webhooks with a Cloudflare Tunnel or reverse proxy so external services can reach Hermes from the internet.
+
+## Use Cases
+
+| Use Case | Webhook Name | Typical Payload |
+|----------|-------------|-----------------|
+| GitHub push events | `github-push` | Commits, author, branch, files changed |
+| CI/CD pipeline status | `deploy-hook` | Build status, test results, artifact URLs |
+| Monitoring alerts | `monitor` | Alert severity, metric values, host info |
+| Form submissions | `contact-form` | Form fields, timestamps, source page |
+| RSS/feed updates | `feed-watcher` | New entries, feed metadata |
+
+Each webhook runs Hermes in a fresh agent session — tools, skills, and memory all work normally. The prompt you configure determines how the agent interprets and acts on the payload.
+
+## Resources
+
+- [Webhook docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/webhooks) — official Hermes webhook documentation
+- [Configuration reference](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) — full config.yaml options
+- [Cloudflare Tunnel guide](/blog/gateway-setup/) — expose Hermes webhooks to the internet
+- [CLI commands reference](/blog/commands-reference/#webhooks) — all webhook CLI commands
+
+{/* crosslinks */}
+
+## 📖 Related Reads
+
+- **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools, agents, and APIs
+- **[NiteAgent](https://niteagent.com/)** — AI agent development, frameworks, and production patterns
+
+*Cross-links automatically generated from Hermes Tutorials.*
