@@ -1,0 +1,221 @@
+---
+title: "Build Log: Writing a Custom System Info MCP Server for Hermes"
+description: "Build a stdio MCP server from scratch in Python, register it with Hermes Agent, and call it from a live session — real code, real output."
+pubDate: "2026-06-12"
+tags: ["hermes", "build-log"]
+heroImage: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=1200"
+keywords: [hermes mcp server, custom mcp server python, build mcp server, hermes mcp add, hermes mcp test, hermes system info, mcp protocol implementation, stdio mcp hermes, model context protocol custom, hermes build log, hermes agent mcp tool]
+---
+
+> **TLDR:** If you need a tool Hermes doesn't ship with, the fastest path isn't writing a native Hermes plugin — it's building a small MCP server. In ~120 lines of Python you get a full stdio MCP server that Hermes discovers, connects to, and uses in its conversation loop. This build log walks the entire process: protocol implementation, registration with `hermes mcp add`, and a live tool call from the agent.
+
+## Why Build a Custom MCP Server?
+
+Hermes ships with ~35 built-in tools across 20+ toolsets — web search, file I/O, code execution, terminal, image gen, and more. But no toolset covers every possible need. When you want to expose a new capability to the agent, you have three options:
+
+| Approach | Lines of Code | Lifecycle | Effort |
+|----------|--------------|-----------|--------|
+| Native Hermes plugin | 200-500 | Need to add to `tools/` + `toolsets.py` | Moderate |
+| MCP server (stdio) | ~120 | Self-contained process, no Hermes source changes | Low |
+| MCP server (HTTP) | ~150 | Separate service, needs a port/URL | Low |
+
+The MCP route wins for one-off or domain-specific tools. No Hermes source changes, no reinstall, no PR. The server is a standalone process that communicates over stdin/stdout using a well-defined JSON-RPC protocol.
+
+## Architecture
+
+The MCP protocol uses JSON-RPC 2.0 over stdio, as specified in the [Model Context Protocol specification](https://modelcontextprotocol.io/). Here's the flow:
+
+```
+Hermes Agent                Custom MCP Server
+    │                              │
+    │── initialize (JSON-RPC) ────→│
+    │←──── capabilities ───────────│
+    │                              │
+    │── tools/list ───────────────→│
+    │←──── tool schemas ───────────│
+    │                              │
+    │── tools/call (get_system) ──→│
+    │←──── tool result ────────────│
+```
+
+The Hermes MCP client handles discovery, lifecycle, and message framing — documented in the [Hermes MCP guide](https://hermes-agent.nousresearch.com/docs/guides/use-mcp-with-hermes). Your server just needs to respond to three JSON-RPC methods: `initialize`, `tools/list`, and `tools/call`.
+
+## Implementation
+
+The server I built exposes a single tool — `get_system_info` — that returns CPU model, load averages, memory usage, disk usage, and uptime. Here's the core protocol handler:
+
+```python
+import json, os, platform, shutil, sys, time
+
+def handle_request(request):
+    method = request.get("method")
+
+    if method == "initialize":
+        return {
+            "jsonrpc": "2.0",
+            "id": request["id"],
+            "result": {
+                "protocolVersion": "2025-03-26",
+                "capabilities": {"tools": {}},
+                "serverInfo": {"name": "system-info", "version": "1.0.0"}
+            }
+        }
+    elif method == "tools/list":
+        return {
+            "jsonrpc": "2.0",
+            "id": request["id"],
+            "result": {
+                "tools": [{
+                    "name": "get_system_info",
+                    "description": "Get system info: CPU, memory, disk usage, uptime, and OS",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "paths": {
+                                "type": "string",
+                                "description": "Comma-separated mount points"
+                            }
+                        }
+                    }
+                }]
+            }
+        }
+    elif method == "tools/call":
+        tool_name = request["params"]["name"]
+        if tool_name == "get_system_info":
+            result = get_system_info()  # returns JSON string
+            return {
+                "jsonrpc": "2.0",
+                "id": request["id"],
+                "result": {
+                    "content": [{"type": "text", "text": result}]
+                }
+            }
+```
+
+The protocol layer is ~50 lines. The actual tool logic (parsing `/proc/cpuinfo`, `/proc/meminfo`, calling `shutil.disk_usage`, `os.getloadavg`) is another ~70 lines of straightforward Python.
+
+Three methods is the minimum viable surface. You only need `initialize` (handshake), `tools/list` (schema discovery per the [MCP tool specification](https://modelcontextprotocol.io/docs/concepts/tools)), and `tools/call` (execution). The `notifications/initialized` method can be silently ignored since it's a fire-and-forget signal from the client.
+
+Full source: [`mcp-servers/system-info/server.py`](https://github.com/technext/hermes-tutorials/blob/main/mcp-servers/system-info/server.py)
+
+## Registration and Verification
+
+Testing the server directly against the JSON-RPC protocol:
+
+```bash
+$ cd ~/hermes-tutorials/mcp-servers/system-info
+$ python3 test_server.py
+
+=== INITIALIZE ===
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2025-03-26",
+    "capabilities": { "tools": {} },
+    "serverInfo": { "name": "system-info", "version": "1.0.0" }
+  }
+}
+
+=== TOOLS LIST ===
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "tools": [{ "name": "get_system_info", ... }]
+  }
+}
+
+=== TOOL CALL ===
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "content": [{
+      "type": "text",
+      "text": "{\n  \"hostname\": \"cachyos-x8664\",\n  \"os\": \"Linux 6.18.28-1-cachyos-lts\",\n  \"uptime\": \"28d 10h 21m\",\n  \"cpu\": { \"model\": \"Intel(R) N100\", \"cores\": 5, ... },\n  \"memory\": { \"total\": \"11734.7 MB\", \"used\": \"6474.9 MB\", ... },\n  \"disk\": { \"/\": { \"total_gb\": 234.5, \"used_gb\": 50.3, ... } }\n}"
+    }]
+  }
+}
+```
+
+With the server verified, I registered it with Hermes:
+
+```bash
+$ echo "y" | hermes mcp add system-info \
+  --command python3 \
+  --args /home/techgeek/hermes-tutorials/mcp-servers/system-info/server.py
+
+  ✓ Connected! Found 1 tool(s) from 'system-info':
+    get_system_info    Get system info: CPU, memory, disk usage, uptime, and OS
+  ✓ Saved 'system-info' to ~/.hermes/config.yaml (1/1 tools enabled)
+```
+
+The `hermes mcp add` command connected, discovered the tool schema, and asked to enable it — matching the registration flow documented in the [Hermes MCP setup guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp). The `echo "y"` pipes the confirmation. After registration, it showed up in the MCP server list:
+
+```bash
+$ hermes mcp list
+
+MCP Servers:
+
+  Name             Transport                      Tools        Status
+  ──────────────── ────────────────────────────── ──────────── ──────────
+  system-info      python3 /home/techgeek/he...   all          ✓ enabled
+  ...
+```
+
+## Live Tool Call
+
+The moment of truth — asking Hermes to use the custom tool in a live session:
+
+```bash
+$ hermes chat -q "Call get_system_info from the system-info MCP server \
+  and show me the CPU model and memory usage"
+```
+
+Response from the agent:
+
+```
+CPU: Intel(R) N100 (5 cores) — load 1.93 / 0.67 / 0.38 (1m/5m/15m)
+Memory: 7,042 MB used of 11,735 MB total (60%) — 4,693 MB available
+```
+
+The agent discovered the MCP tool automatically, called it, and incorporated the result into its response. The tool was treated exactly like a native Hermes tool — no special flags, no extra config.
+
+## Config Persistence
+
+What gets written to `~/.hermes/config.yaml`:
+
+```yaml
+mcp_servers:
+  system-info:
+    command: python3
+    args:
+      - /home/techgeek/hermes-tutorials/mcp-servers/system-info/server.py
+    enabled: true
+```
+
+The server will load on every Hermes session until removed with `hermes mcp remove system-info`. The `args` field is an array — each element is passed as a separate argument to the command, unlike shell-quoted strings.
+
+## What I Learned
+
+**The MCP spec is refreshingly minimal.** Three JSON-RPC methods is all you need for a working tool server. The `inputSchema` follows [JSON Schema](https://json-schema.org/), which Hermes uses to generate tool-call arguments automatically. My initial implementation passed arguments as a single quoted string; switching to `inputSchema` with typed properties was a one-line change that made the tool discoverable without looking at source.
+
+**Stdio lifecycle is cleaner than expected.** Hermes launches the process on demand, reads JSON lines from stdout, and sends requests via stdin — the [MCP transport specification](https://modelcontextprotocol.io/docs/concepts/transports) defines this contract. No port management, no health checks, no restart logic. If the process crashes, Hermes restarts it on the next tool call.
+
+**`hermes mcp add` validates before saving.** If the server doesn't respond to `initialize`, the command fails immediately — no config pollution. I hit this once when I had a syntax error in the JSON-RPC response handler.
+
+**The tool shows up in `hermes mcp list` immediately** after registration. No session restart needed, though the current session won't see new tools until `/reload-mcp` is issued.
+
+## When to Build vs. When to Extend
+
+- **Build an MCP server** when the capability is self-contained (data lookup, system info, calculation, API wrapper) — ~120 lines of Python, zero coupling to Hermes internals.
+- **Write a native Hermes plugin** when the tool needs deep integration (accessing Hermes session state, modifying memory, intercepting tool calls).
+- **Use an existing MCP server** when someone already built it — a growing ecosystem of MCP servers covers GitHub, filesystem, databases, browsers, Stripe, and dozens more.
+
+## Resources
+
+- [MCP Spec](https://modelcontextprotocol.io/) — protocol specification and examples
+- [Hermes MCP docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp) — Hermes-specific config and presets
+- [Full server source](https://github.com/technext/hermes-tutorials/blob/main/mcp-servers/system-info/server.py) — complete implementation with all tool logic
