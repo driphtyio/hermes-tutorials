@@ -1,0 +1,17 @@
+# Hermes Tutorials
+> Step-by-step guides, tutorials, and deep dives for Hermes Agent — the AI agent framework.
+
+## Pages
+- [About](https://hermes-tutorials.dev/about/) — What Hermes Tutorials covers
+- [Skills](https://hermes-tutorials.dev/skills/) — Skill reference directory
+- [Tools](https://hermes-tutorials.dev/tools/) — Tool reference directory
+- [Plugins](https://hermes-tutorials.dev/plugins/) — Plugin reference directory
+- [Providers](https://hermes-tutorials.dev/providers/) — LLM provider configuration guide
+- [Hosting](https://hermes-tutorials.dev/hosting/) — Self-hosting guides
+- [Projects](https://hermes-tutorials.dev/projects/) — Project-based tutorials
+- [Gateway](https://hermes-tutorials.dev/gateway/) — Hermes Gateway setup and API
+- [Tags](https://hermes-tutorials.dev/tags/) — Browse posts by tag
+
+## Blog
+- [Blog Home](https://hermes-tutorials.dev/blog/) — All tutorials and guides
+- [RSS Feed](https://hermes-tutorials.dev/rss.xml) — Full-text RSS feed
