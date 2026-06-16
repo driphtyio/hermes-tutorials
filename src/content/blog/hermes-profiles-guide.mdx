@@ -1,0 +1,307 @@
+---
+title: "How to Run Multiple Hermes Agents on One Machine with Profiles"
+description: "Set up independent Hermes Agent profiles — each with its own config, API keys, memory, skills, cron jobs, and gateway — all on the same machine."
+pubDate: "2026-06-15"
+tags: ["hermes", "tutorial", "profiles", "multi-agent"]
+keywords: [hermes profiles, multiple hermes agents, hermes profile create, multi-profile gateway, profile isolation, hermes agent setup, hermes profile commands]
+---
+
+> **TLDR:** Hermes Agent profiles let you run multiple independent agents on one machine — each with its own config, API keys, memory, skills, cron jobs, and gateway. Create one with `hermes profile create coder`, then immediately use `coder chat`, `coder setup`, and `coder gateway start`. Each profile is isolated by `HERMES_HOME`.
+
+## What Are Profiles?
+
+A profile is a separate Hermes home directory. Each profile gets its own directory containing:
+
+- `config.yaml` — model, provider, toolsets, terminal settings
+- `.env` — API keys and bot tokens
+- `SOUL.md` — personality and instructions
+- Dedicated memories, sessions, skills, cron jobs, plugins, and state database
+
+Profiles let you run separate agents for different purposes — a coding assistant, a personal Telegram bot, a research agent — without any state leaking between them.
+
+When you create a profile, it **automatically becomes its own command**. Create a profile called `coder` and you immediately have `coder chat`, `coder setup`, `coder gateway start`, `coder doctor`, and every other subcommand.
+
+## Creating Your First Profile
+
+Start with a blank profile:
+
+```bash
+hermes profile create mybot
+```
+
+This creates `~/.hermes/profiles/mybot/` with bundled skills seeded. Run setup to configure API keys and model:
+
+```bash
+mybot setup
+```
+
+**Quickest setup** — use Nous Portal for automatic OAuth and model wiring:
+
+```bash
+mybot setup --portal
+```
+
+Need the same config and API keys in a new profile? Use `--clone` to copy config, `.env`, `SOUL.md`, and skills:
+
+```bash
+hermes profile create work --clone
+```
+
+Want a full snapshot including memories, cron jobs, and plugins? Use `--clone-all`:
+
+```bash
+hermes profile create backup --clone-all
+```
+
+Cloning excludes session history and state databases (which can reach tens of GB). For a complete backup including history, use `hermes profile export` or `hermes backup` instead.
+
+You can also clone from a specific profile rather than the current one:
+
+```bash
+hermes profile create work-backup --clone-from coder --clone-all
+```
+
+## Using Profiles
+
+### Command Aliases
+
+Every profile gets a command alias at `~/.local/bin/<name>`. Use the alias like a standalone CLI:
+
+```bash
+coder chat                    # chat with the coder agent
+coder setup                   # configure coder's settings
+coder gateway start           # start coder's gateway
+coder doctor                  # check coder's health
+coder skills list             # list coder's skills
+coder config set model.default anthropic/claude-sonnet-4
+```
+
+The alias works with every `hermes` subcommand — it's just `hermes -p <name>` under the hood.
+
+### The `-p` Flag
+
+Target any profile explicitly without switching defaults:
+
+```bash
+hermes -p coder chat
+hermes --profile=coder doctor
+hermes chat -p coder -q "hello"
+```
+
+### Sticky Default
+
+Set a profile as the default so plain `hermes` commands target it:
+
+```bash
+hermes profile use coder
+hermes chat                   # now targets coder
+hermes tools                  # configures coder's tools
+hermes profile use default    # switch back
+```
+
+This is like `kubectl config use-context` — all subsequent commands route to that profile until you switch again.
+
+### Knowing Where You Are
+
+The CLI always shows the active profile:
+
+- **Prompt**: `coder ❯` instead of `❯`
+- **Banner**: Shows `Profile: coder` on startup
+- **Status**: `hermes profile` shows current name, path, model, and gateway status
+
+## Running Separate Gateways
+
+Each profile runs its own gateway as an independent process with its own bot token:
+
+```bash
+coder gateway start           # starts coder's gateway
+assistant gateway start       # starts assistant's gateway (separate process)
+```
+
+### Different Bot Tokens per Profile
+
+Each profile has its own `.env` file, so you configure different Telegram, Discord, or Slack bots per profile:
+
+```bash
+# Edit coder's tokens
+nano ~/.hermes/profiles/coder/.env
+
+# Edit assistant's tokens
+nano ~/.hermes/profiles/assistant/.env
+```
+
+### Safety: Token Locks
+
+If two profiles accidentally use the same bot token, the second gateway is **blocked with a clear error** naming the conflicting profile. This is supported for Telegram, Discord, Slack, WhatsApp, and Signal — so you never accidentally steal another profile's connection.
+
+### Persistent Services
+
+For always-on gateways, install them as system services:
+
+```bash
+coder gateway install              # creates hermes-gateway-coder systemd service
+assistant gateway install          # creates hermes-gateway-assistant service
+```
+
+Each profile gets its own unique service name. They run completely independently.
+
+## Configuring Profiles Individually
+
+Each profile has its own model, personality, and working directory:
+
+```bash
+# Different model per profile
+coder config set model.default anthropic/claude-sonnet-4
+mybot config set model.default openai/gpt-4o
+
+# Different personality via SOUL.md
+echo "You are a focused coding assistant." > ~/.hermes/profiles/coder/SOUL.md
+echo "You are a creative writing partner." > ~/.hermes/profiles/mybot/SOUL.md
+
+# Different default working directory
+coder config set terminal.cwd /home/me/projects/my-app
+```
+
+### Profiles vs Workspaces vs Sandboxes
+
+It's easy to confuse profiles with workspaces. Here's the difference:
+
+| Concept | What it isolates | Example |
+|---------|-----------------|---------|
+| **Profile** | Hermes state (config, memory, sessions, skills, cron, gateway) | `~/.hermes/profiles/coder/` |
+| **Workspace** | Terminal working directory | `terminal.cwd: /path/to/project` |
+| **Sandbox** | Filesystem access limits | Docker container boundaries |
+
+A profile does **not** sandbox the agent's filesystem access. If you need a profile to start in a specific project folder, set an explicit `terminal.cwd`:
+
+```yaml
+# ~/.hermes/profiles/coder/config.yaml
+terminal:
+  backend: local
+  cwd: /absolute/path/to/project
+```
+
+> **Note:** Using `cwd: "."` on the local backend means "the directory Hermes was launched from", not "the profile directory". Always use absolute paths for predictable behavior.
+
+## Managing Profiles
+
+### List and Inspect
+
+```bash
+hermes profile list              # show all profiles with status
+hermes profile show coder        # detailed info for one profile
+```
+
+### Rename
+
+```bash
+hermes profile rename coder dev-bot    # updates alias + service name
+```
+
+### Export and Import
+
+Share a profile between machines:
+
+```bash
+hermes profile export coder       # creates coder.tar.gz
+hermes profile import coder.tar.gz   # import on another machine
+```
+
+### Delete
+
+```bash
+hermes profile delete coder
+```
+
+This stops the gateway, removes the systemd service and command alias, and **deletes all profile data**. You'll be asked to type the profile name to confirm. Use `--yes` to skip the confirmation.
+
+> You **cannot** delete the `default` profile (`~/.hermes`). To remove everything, use `hermes uninstall`.
+
+### Tab Completion
+
+Enable tab completion for profile names:
+
+```bash
+# Bash
+eval "$(hermes completion bash)"
+
+# Zsh
+eval "$(hermes completion zsh)"
+```
+
+Add the appropriate line to your `~/.bashrc` or `~/.zshrc` for persistence. Completion covers profile names after `-p`, profile subcommands, and top-level commands.
+
+## How It Works Under the Hood
+
+Profiles use the `HERMES_HOME` environment variable. When you run `coder chat`, the wrapper script sets `HERMES_HOME=~/.hermes/profiles/coder` before launching Hermes. Every part of Hermes — config, sessions, memory, skills, state database, gateway PID, logs, and cron jobs — resolves paths via `get_hermes_home()`, so state is automatically scoped to the profile's directory.
+
+**Two key environment variables to understand:**
+
+- **`HERMES_HOME`** — the profile boundary. Controls Hermes config, `.env`, memory, sessions, skills, logs, cron jobs, and gateway state.
+- **`HOME`** — the OS-level user home that external CLIs (git, ssh, gh, npm) expect. On host installs, Hermes keeps this as the real user home by default, so your normal CLI credentials work across profiles.
+
+This means by default, profiles share normal user-level CLI state (git config, SSH keys, cloud auth). If you need completely separate CLI identities per profile, set:
+
+```yaml
+# ~/.hermes/profiles/work/config.yaml
+terminal:
+  home_mode: profile
+```
+
+With `home_mode: profile`, Hermes launches tool subprocesses with `HOME={HERMES_HOME}/home`. You then need to set up profile-specific `~/.ssh`, `~/.gitconfig`, cloud CLI auth, etc., inside that directory. Hermes also exposes `HERMES_REAL_HOME` to subprocesses so scripts can still find the actual account home.
+
+## Real-World Use Cases
+
+### Developer + Personal Bot
+
+```bash
+hermes profile create dev              # coding assistant
+dev config set model.default anthropic/claude-sonnet-4
+dev config set terminal.cwd /home/me/projects
+
+hermes profile create personal         # personal Telegram bot
+personal config set model.default openai/gpt-4o
+echo "You are a friendly personal assistant." > ~/.hermes/profiles/personal/SOUL.md
+personal setup --portal                 # wire up Telegram
+```
+
+### Cron Worker + Kanban Worker
+
+Create a profile for unattended tasks:
+
+```bash
+hermes profile create cron-worker --description "Handles scheduled tasks and monitoring"
+cron-worker setup --portal
+cron-worker cron create "every 1h" "Check server health" --deliver telegram
+cron-worker gateway install
+```
+
+### Profile Distribution
+
+Export a profile to share with teammates or install on another machine:
+
+```bash
+hermes profile export research-bot
+# Share research-bot.tar.gz
+hermes profile install github.com/you/research-bot --alias
+```
+
+## Summary
+
+| Task | Command |
+|------|---------|
+| Create a blank profile | `hermes profile create <name>` |
+| Clone current config | `hermes profile create <name> --clone` |
+| Clone everything | `hermes profile create <name> --clone-all` |
+| Switch sticky default | `hermes profile use <name>` |
+| List profiles | `hermes profile list` |
+| Show profile details | `hermes profile show <name>` |
+| Rename a profile | `hermes profile rename <old> <new>` |
+| Delete a profile | `hermes profile delete <name>` |
+| Export a profile | `hermes profile export <name>` |
+| Import a profile | `hermes profile import <file.tar.gz>` |
+| Set profile model | `<name> config set model.default <provider/model>` |
+| Start profile gateway | `<name> gateway start` |
+| Install profile gateway | `<name> gateway install` |
+
+Profiles are one of Hermes Agent's most powerful features for power users. They let you run a full multi-agent ecosystem from a single machine — separate agents for work, personal, monitoring, and research, each with their own identity, tools, and connections.
