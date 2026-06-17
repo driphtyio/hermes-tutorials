@@ -1,0 +1,88 @@
+---
+import { getCollection } from 'astro:content';
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import { SITE_TITLE } from '../../consts';
+
+const posts = await getCollection('blog');
+
+// Build tag count map
+const tagCounts = new Map<string, number>();
+for (const post of posts) {
+	for (const tag of post.data.tags) {
+		tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+	}
+}
+
+const sortedTags = Array.from(tagCounts.entries()).sort((a, b) => b[1] - a[1]);
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead
+			title={`Tags — ${SITE_TITLE}`}
+			description={`Browse ${sortedTags.length} topic tags across ${posts.length} Hermes Agent tutorials.`}
+		/>
+		<style>
+			.tag-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+				gap: 1em;
+				margin: 2em 0;
+			}
+			.tag-card {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				padding: 1em 1.25em;
+				border: 1px solid var(--border);
+				border-radius: var(--radius-lg);
+				background: var(--bg-secondary);
+				text-decoration: none;
+				color: inherit;
+				transition: all 0.15s ease;
+			}
+			.tag-card:hover {
+				border-color: var(--accent);
+				background: var(--bg-tertiary);
+			}
+			.tag-name {
+				font-size: 0.95em;
+				font-weight: 600;
+				color: var(--accent-light);
+				text-transform: capitalize;
+			}
+			.tag-count {
+				font-size: 0.8em;
+				color: var(--text-muted);
+				background: var(--bg-tertiary);
+				padding: 0.15em 0.6em;
+				border-radius: 999px;
+				font-weight: 600;
+			}
+			@media (max-width: 480px) {
+				.tag-grid { grid-template-columns: 1fr 1fr; }
+			}
+		</style>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<div class="page-header">
+				<h1>Tags</h1>
+				<p class="subtitle">{sortedTags.length} topics across {posts.length} tutorials</p>
+			</div>
+			<div class="tag-grid">
+				{sortedTags.map(([tag, count]) => (
+					<a class="tag-card" href={`/tags/${tag}/`}>
+						<span class="tag-name">{tag}</span>
+						<span class="tag-count">{count}</span>
+					</a>
+				))}
+			</div>
+		</main>
+		<Footer />
+	</body>
+</html>
