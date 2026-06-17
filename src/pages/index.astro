@@ -34,10 +34,10 @@ const posts = (await getCollection('blog'))
 		<style>
 			.hero {
 				text-align: center;
-				padding: 5em 0 3em;
+				padding: 6em 0 4em;
 			}
 			.hero h1 {
-				font-size: 4rem;
+				font-size: clamp(2.8rem, 5vw, 5rem);
 				font-weight: 700;
 				letter-spacing: -0.04em;
 				line-height: 1.05;
@@ -48,9 +48,9 @@ const posts = (await getCollection('blog'))
 				background-clip: text;
 			}
 			.hero .subtitle {
-				font-size: 1.15em;
+				font-size: clamp(1.05em, 1.5vw, 1.25em);
 				color: var(--text-secondary);
-				max-width: 540px;
+				max-width: 600px;
 				margin: 0 auto 2em;
 				line-height: 1.6;
 			}
@@ -161,6 +161,12 @@ const posts = (await getCollection('blog'))
 			}
 			@media (max-width: 480px) {
 				.features { grid-template-columns: 1fr; }
+			}
+			@media (min-width: 1200px) {
+				.features { grid-template-columns: repeat(4, 1fr); }
+			}
+			@media (min-width: 1800px) {
+				.feature-card { padding: 2em; }
 			}
 		</style>
 	</head>
