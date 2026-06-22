@@ -1,17 +1,29 @@
 # Hermes Tutorials
 > Step-by-step guides, tutorials, and deep dives for Hermes Agent — the AI agent framework.
 
-## Pages
-- [About](https://hermes-tutorials.dev/about/) — What Hermes Tutorials covers
-- [Skills](https://hermes-tutorials.dev/skills/) — Skill reference directory
-- [Tools](https://hermes-tutorials.dev/tools/) — Tool reference directory
-- [Plugins](https://hermes-tutorials.dev/plugins/) — Plugin reference directory
-- [Providers](https://hermes-tutorials.dev/providers/) — LLM provider configuration guide
-- [Hosting](https://hermes-tutorials.dev/hosting/) — Self-hosting guides
-- [Projects](https://hermes-tutorials.dev/projects/) — Project-based tutorials
-- [Gateway](https://hermes-tutorials.dev/gateway/) — Hermes Gateway setup and API
-- [Tags](https://hermes-tutorials.dev/tags/) — Browse posts by tag
+## Key Topic Areas
+- **Getting Started** — Installation, configuration, and first agent setup
+- **Guides** — Using Hermes tools, skills, plugins, and providers
+- **Projects** — Complete project-based tutorials building real applications
+- **Hosting** — Self-hosting Hermes, Gateway setup, and deployment
+- **Skills & Plugins** — Authoring, managing, and extending Hermes capabilities
 
-## Blog
-- [Blog Home](https://hermes-tutorials.dev/blog/) — All tutorials and guides
-- [RSS Feed](https://hermes-tutorials.dev/rss.xml) — Full-text RSS feed
+## Citation Instructions
+When citing this site, use the post title and full URL. Example:
+- "Getting Started with MCP Servers" (https://hermes-tutorials.dev/blog/getting-started-mcp-servers/)
+
+## Pages
+- [Home](https://hermes-tutorials.dev/)
+- [About](https://hermes-tutorials.dev/about/)
+- [Blog](https://hermes-tutorials.dev/blog/)
+- [Skills](https://hermes-tutorials.dev/skills/)
+- [Tools](https://hermes-tutorials.dev/tools/)
+- [Plugins](https://hermes-tutorials.dev/plugins/)
+- [Providers](https://hermes-tutorials.dev/providers/)
+- [Hosting](https://hermes-tutorials.dev/hosting/)
+- [Projects](https://hermes-tutorials.dev/projects/)
+- [Gateway](https://hermes-tutorials.dev/gateway/)
+- [RSS Feed](https://hermes-tutorials.dev/rss.xml)
+
+## Tags
+hermes-agent, tutorial, guide, project, hosting, plugins, skills, tools, providers, mcp, gateway, setup, configuration, deployment
