@@ -1,0 +1,27 @@
+---
+// Pagefind search UI component
+// Requires pagefind to be installed and postbuild configured
+// Files are generated at build time by postbuild script, not available during build
+---
+
+<link href="/pagefind/pagefind-ui.css" rel="stylesheet" is:inline />
+<script src="/pagefind/pagefind-ui.js" is:inline></script>
+<div id="search"></div>
+<script is:inline>
+  window.addEventListener('DOMContentLoaded', () => {
+    if (typeof PagefindUI !== 'undefined') {
+      new PagefindUI({ element: '#search', showImages: false, showSubResults: true });
+    }
+  });
+</script>
+
+<style is:inline>
+  #search {
+    margin: 0.5rem 0;
+    max-width: 100%;
+  }
+  .pagefind-ui__drawer {
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+</style>
