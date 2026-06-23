@@ -1,24 +1,128 @@
 ---
-// Pagefind search UI component
+// Pagefind search UI component — auto-hidden, toggle via button or Ctrl+K
 // Requires pagefind to be installed and postbuild configured
 // Files are generated at build time by postbuild script, not available during build
 ---
 
 <link href="/pagefind/pagefind-ui.css" rel="stylesheet" is:inline />
 <script src="/pagefind/pagefind-ui.js" is:inline></script>
-<div id="search"></div>
+<div class="search-wrapper" data-search-wrapper>
+  <button class="search-toggle" data-search-toggle aria-label="Toggle search" title="Search (Ctrl+K)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+  </button>
+  <div class="search-panel" data-search-panel>
+    <div id="search"></div>
+  </div>
+</div>
 <script is:inline>
   window.addEventListener('DOMContentLoaded', () => {
-    if (typeof PagefindUI !== 'undefined') {
-      new PagefindUI({ element: '#search', showImages: false, showSubResults: true });
+    const wrapper = document.querySelector('[data-search-wrapper]');
+    const toggle = wrapper?.querySelector('[data-search-toggle]');
+    const panel = wrapper?.querySelector('[data-search-panel]');
+    let pagefindInstance = null;
+
+    function initPagefind() {
+      if (typeof PagefindUI !== 'undefined' && !pagefindInstance) {
+        pagefindInstance = new PagefindUI({ element: '#search', showImages: false, showSubResults: true });
+      }
     }
+
+    function openSearch() {
+      if (!panel || panel.classList.contains('open')) return;
+      panel.classList.add('open');
+      initPagefind();
+      // Focus input after a tick so Pagefind has rendered
+      setTimeout(() => {
+        panel.querySelector('input')?.focus();
+      }, 150);
+    }
+
+    function closeSearch() {
+      if (!panel) return;
+      panel.classList.remove('open');
+    }
+
+    function toggleSearch() {
+      if (panel?.classList.contains('open')) {
+        closeSearch();
+      } else {
+        openSearch();
+      }
+    }
+
+    // Toggle button
+    toggle?.addEventListener('click', toggleSearch);
+
+    // Escape to close
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeSearch();
+    });
+
+    // Ctrl+K / Cmd+K to open
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        openSearch();
+      }
+    });
+
+    // Click outside to close
+    document.addEventListener('click', (e) => {
+      if (panel?.classList.contains('open') && wrapper && !wrapper.contains(e.target)) {
+        closeSearch();
+      }
+    });
   });
 </script>
 
 <style is:inline>
+  .search-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 1.5em 0.5em;
+    max-width: var(--grid-width);
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .search-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+  }
+  .search-toggle:hover {
+    color: #fff;
+    background: var(--accent);
+  }
+
+  .search-panel {
+    flex: 1;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.25s ease, opacity 0.2s ease, margin 0.25s ease;
+    margin-left: 0;
+  }
+  .search-panel.open {
+    max-height: 80vh;
+    opacity: 1;
+    margin-left: 0.75em;
+  }
+
   #search {
-    margin: 0.5rem 0;
-    max-width: 100%;
+    width: 100%;
   }
   .pagefind-ui__drawer {
     max-height: 70vh;

@@ -1,0 +1,255 @@
+---
+title: "How to Build Self-Improving Skills with Hermes Agent"
+description: "Create, manage, and maintain procedural skills that make your Hermes Agent smarter over time — with real commands from the curator and skills system."
+pubDate: 2026-06-22
+tags: ["hermes", "tutorial", "skills", "curator", "automation"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/build-self-improving-skills-1782140850.jpg"
+keywords: [hermes skills, skill_view, skills_list, hermes curator, procedural memory, hermes skills commands, hermes agent skills tutorial]
+---
+
+> **TLDR:** Skills are versioned, self-improving procedures stored as markdown files in `~/.hermes/skills/`. Load them with `hermes -s "skill-name"` or `/skill skill-name`. The curator manages their lifecycle automatically. This guide walks through creating, testing, and maintaining skills with real Hermes commands.
+
+## Key Takeaways
+
+- Skills are markdown documents with structured YAML frontmatter stored in `~/.hermes/skills/`
+- Load skills at startup with `hermes -s "name"` or during a session with `/skill name`
+- The curator (`hermes curator`) auto-manages skill lifecycle: active → stale → archived
+- Use `skill_view(name)` and `skills_list` within sessions to inspect available procedures
+- Skills compose — load multiple skills for complex multi-step workflows
+
+## What Is a Hermes Skill?
+
+A skill is a reusable procedure that Hermes Agent reads as part of its system prompt context. Unlike memory — which stores facts — skills store **procedures**: step-by-step instructions, commands, pitfalls, and verification steps that the agent follows to complete a specific task reliably.
+
+Every skill lives in a structured directory under `~/.hermes/skills/`:
+
+```
+~/.hermes/skills/
+├── my-category/
+│   └── my-skill/
+│       └── SKILL.md
+└── another-category/
+    └── another-skill/
+        └── SKILL.md
+```
+
+The `SKILL.md` file contains YAML frontmatter with metadata — name, description, version, supported platforms — followed by the procedural instructions in markdown.
+
+When you start a session with skills loaded, Hermes reads each skill's content as part of its system prompt. The agent can then follow the numbered steps, reference the exact commands, and update the skill when it discovers something new.
+
+## Creating Your First Skill
+
+Let's build a skill that standardizes how you deploy a static site to Cloudflare Pages. Create the skill directory and file:
+
+```bash
+# Create the skill directory structure
+mkdir -p ~/.hermes/skills/deploy/cloudflare-pages
+
+# Create the SKILL.md file
+cat > ~/.hermes/skills/deploy/cloudflare-pages/SKILL.md << 'SKILL'
+---
+name: cloudflare-pages
+description: "Deploy an Astro static site to Cloudflare Pages with zero-downtime deployments"
+version: 1.0.0
+platforms: [linux]
+---
+
+# Deploy to Cloudflare Pages
+
+Trigger when: user says "deploy", "ship", "publish", or "release the site"
+
+## Steps
+
+1. Run the production build
+   ```bash
+   npm run build
+   ```
+
+2. Verify the dist/ directory exists and has content
+   ```bash
+   test -d dist && echo "dist exists" || echo "missing dist"
+   ls dist/ | head -20
+   ```
+
+3. Deploy using Wrangler
+   ```bash
+   npx wrangler pages deploy dist/ --project-name=my-site --branch=main
+   ```
+
+4. Verify the deployment
+   ```bash
+   curl -sI https://my-site.pages.dev/ | head -5
+   ```
+
+## Pitfalls
+
+- If the build fails, check for MDX parse errors — HTML comments (`<!-- -->`) in `.mdx` files break the parser
+- Missing `dist/` means the build step failed silently — check the build log
+- Wrangler auth tokens expire — run `npx wrangler login` if you see auth errors
+
+## Verification
+
+- `npm run build` exits with code 0
+- `dist/` directory is non-empty
+- Production URL returns HTTP 200
+SKILL
+```
+
+The frontmatter defines the skill's identity, and the body provides step-by-step instructions. The **Pitfalls** section is the most valuable part — it captures edge cases so the agent never repeats the same mistake.
+
+## Loading and Using Skills
+
+Hermes Agent offers several ways to load skills into a session:
+
+```bash
+# Load a skill at startup
+hermes -s "cloudflare-pages"
+
+# Load multiple skills at once
+hermes -s "cloudflare-pages" -s "git-workflow"
+
+# Load mid-session with a slash command
+/skill cloudflare-pages
+```
+
+Once loaded, the agent can inspect the skill using the built-in tools:
+
+```yaml
+# Inside a session, the agent calls these tools:
+# skill_view(name="cloudflare-pages")
+#   — Returns the full SKILL.md content for one skill
+# skills_list()
+#   — Lists all available skills with descriptions and versions
+```
+
+Skills loaded via `-s` or `/skill` appear in the system prompt alongside any built-in skills. The agent follows the numbered steps sequentially, checking off each step before proceeding to the next.
+
+For skills that compose multiple procedures, load them all at session start:
+
+```bash
+hermes -s "cloudflare-pages" -s "git-workflow" -s "code-review"
+```
+
+The agent reads all loaded skills as context and can orchestrate between them — for example, running a code review skill after finishing a deployment.
+
+## The Curator: Automatic Skill Lifecycle Management
+
+Skills aren't static documents. Hermes Agent includes a **curator** subsystem that manages skill evolution automatically. Run it with:
+
+```bash
+# Check curator status
+hermes curator status
+
+# Run a maintenance pass
+hermes curator run
+
+# Pause curator auto-maintenance
+hermes curator pause
+
+# Resume curator
+hermes curator resume
+
+# Pin a skill so it never gets archived
+hermes curator pin deploy/cloudflare-pages
+
+# Restore an archived skill back to active
+hermes curator restore deploy/cloudflare-pages
+```
+
+The curator tracks three metrics for every skill:
+
+| Metric | What it measures |
+|--------|-----------------|
+| `view_count` | How often the agent calls `skill_view()` on the skill |
+| `use_count` | How often the skill is actually used in responses |
+| `patch_count` | How often the skill gets updated with new knowledge |
+
+Based on these metrics, the curator moves skills through a lifecycle:
+
+1. **Active** — regularly viewed and used, stays in the system prompt
+2. **Stale** — untouched for a configurable period (default varies), relegated to secondary context
+3. **Archived** — long-unused skills are compressed into a `tar.gz` backup — never deleted, always restorable
+
+This means your agent automatically prunes rarely-used procedures while keeping frequently-used ones front and center. The `hermes curator pin` command lets you protect critical skills from ever being archived.
+
+You can configure which model the curator uses in `~/.hermes/config.yaml`:
+
+```yaml
+# config.yaml snippet
+curator:
+  model: openai/gpt-4o-mini
+  interval: 7d
+  auto_run: true
+```
+
+The curator is designed to run on a cheaper aux model (like `gpt-4o-mini`) since the maintenance pass doesn't need reasoning-heavy inference — just usage-tracking and lifecycle decisions.
+
+## Installing Skills from the Hub and Searching GitHub
+
+Hermes Agent ships with a large built-in skill library, installed in `~/.hermes/skills/` during setup. Beyond the built-in set, you can discover and install community skills:
+
+```bash
+# Search for skills by keyword
+hermes skills search "deployment"
+
+# Browse available skills interactively
+hermes skills browse
+
+# Install a skill from the hub
+hermes skills install "systematic-debugging"
+
+# List all installed skills with versions
+hermes skills list
+```
+
+Community skills are pulled from known repositories and validated for safety before installation. The `skills_list` tool inside a session shows all available skills (both built-in and installed) with their descriptions and versions.
+
+## Advanced: Composing Skills for Complex Workflows
+
+The real power of skills comes from composition. Create a meta-skill that orchestrates multiple sub-skills:
+
+```bash
+mkdir -p ~/.hermes/skills/workflows/ship-feature
+```
+
+```markdown
+---
+name: ship-feature
+description: "End-to-end workflow: code review, test, build, deploy for a new feature"
+version: 1.0.0
+platforms: [linux]
+depends_on:
+  - code-review
+  - test-runner
+  - cloudflare-pages
+---
+
+# Ship a Feature
+
+Trigger when: user says "ship this feature", "release", or after merge
+
+## Dependencies
+
+This skill loads three sub-skills automatically:
+- `code-review` — multi-perspective code review
+- `test-runner` — run test suite and report results
+- `cloudflare-pages` — deploy to production
+
+## Steps
+
+1. Load the `code-review` skill and follow its steps
+2. Load the `test-runner` skill and run the full test suite
+3. If tests pass, load the `cloudflare-pages` skill to deploy
+4. Report the deployment URL and test results
+```
+
+The agent automatically loads the dependency skills listed in `depends_on`. This creates a modular, reusable workflow library — each sub-skill can be used independently or as part of larger orchestrations.
+
+## Next Steps
+
+- **Curate automatically** — set `curator.auto_run: true` in config.yaml and the curator runs on the configured interval
+- **Write skills as you work** — any procedure that takes 5+ tool calls is worth saving as a skill
+- **Search the hub** — run `hermes skills search` to find community skills before writing your own
+- **Version your skills** — bump the version in frontmatter when you add new steps or edge cases
+
+For the full skills reference, see the [Hermes Skills documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills). For curator configuration, visit the [Curator docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/curator).
