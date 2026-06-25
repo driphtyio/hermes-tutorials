@@ -5,7 +5,10 @@ import HeaderLink from './HeaderLink.astro';
 
 <header>
 	<nav>
-		<a href="/" class="logo">{SITE_TITLE}</a>
+		<a href="/" class="logo">
+			<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+			{SITE_TITLE}
+		</a>
 		<button class="hamburger" aria-label="Toggle menu" data-hamburger>
 			<span class="hamburger-line"></span>
 			<span class="hamburger-line"></span>
@@ -64,12 +67,19 @@ import HeaderLink from './HeaderLink.astro';
 		gap: 2em;
 	}
 	.logo {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5em;
 		font-size: 1rem;
 		font-weight: 600;
 		color: #fff;
 		text-decoration: none;
 		letter-spacing: -0.01em;
 		white-space: nowrap;
+	}
+	.logo svg {
+		color: var(--accent-light);
+		flex-shrink: 0;
 	}
 	.logo:hover {
 		color: var(--accent-light);
