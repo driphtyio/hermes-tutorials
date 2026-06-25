@@ -106,10 +106,16 @@ const breadcrumbSchema = {
 			}
 
 			/* ── Hero Image ── */
-			.hero-image { margin-bottom: 2.5em; }
+			.hero-image {
+				width: 100%;
+				margin-bottom: 2.5em;
+			}
 			.hero-image img {
 				display: block;
 				width: 100%;
+				height: auto;
+				aspect-ratio: 16 / 9;
+				object-fit: cover;
 				border-radius: var(--radius-lg);
 				box-shadow: var(--shadow-md);
 			}
