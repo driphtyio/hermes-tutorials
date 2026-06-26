@@ -6,7 +6,7 @@ tags: ["release", "v0.14.0", "update", "migration", "new-features"]
 keywords: [hermes v0.14.0, hermes pypi install, hermes proxy, xai grok oauth, hermes foundation release, hermes update guide, hermes windows beta, hermes teams integration, hermes lazy install, hermes debloating]
 ---
 
-> **TLDR:** Hermes Agent v0.14.0 (The Foundation Release) is the biggest update yet — 808 commits, 633 merged PRs, 545 issues closed. Now on PyPI (`pip install hermes-agent`), heavy backends lazy-install on first use, xAI Grok works via SuperGrok OAuth, `hermes proxy` exposes a local OpenAI-compatible endpoint, and Microsoft Teams joins the 22-platform fleet. Cold-start is 19 s faster, `browser_console` is 180x faster, and per-write semantic diagnostics catch errors instantly. Here's everything you need to know to upgrade.
+> **TLDR:** Hermes Agent v0.14.0 (The Foundation Release) is the biggest update yet — 808 commits, 633 merged PRs, 545 issues closed. Now on PyPI (`pip install hermes-agent`), heavy backends lazy-install on first use, xAI Grok works via SuperGrok OAuth, `hermes proxy` exposes a local OpenAI-compatible endpoint, and Microsoft Teams joins the 22-platform fleet. Cold-start is 19 s faster, `browser_console` is 180x faster, and per-write semantic diagnostics catch errors instantly. Here's everything you need to know to upgrade.
 
 ## Key Takeaways
 
@@ -118,7 +118,7 @@ hermes gateway setup --platform teams
 ### Performance
 
 - **180x faster `browser_console`** — persistent Chrome connection replaces per-call DevTools sessions. Page interactions feel instantaneous.
-- **Cold-start:** ~19 seconds shaved off `hermes` launch. The `hermes tools` All-Platforms screen dropped from 14 s to under 1.5 s.
+- **Cold-start:** ~19 seconds shaved off `hermes` launch. The `hermes tools` All-Platforms screen dropped from 14 s to under 1.5 s.
 - **Cross-session prompt caching:** System prompt, skills, and memory cache for 1 hour across sessions. First response after `/new` is faster and cheaper (Claude).
 
 ### New Platforms
