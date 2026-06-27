@@ -1,0 +1,68 @@
+---
+title: "Hermes Agent v0.17.0 'Reach Release' Lands — iMessage, Raft Network, and 200K GitHub Stars"
+description: "Hermes Agent crosses 200,000 GitHub stars, ships iMessage integration without a Mac relay, joins the Raft agent network, and deepens the desktop app with background subagents, rebindable keyboard shortcuts, and VS Code theme support."
+pubDate: "2026-06-27"
+tags: ["hermes", "update"]
+heroImage: "/images/hermes-news-default.webp"
+---
+
+{/* This post covers the v0.17.0 Reach Release and the 200K stars milestone */}
+
+Nous Research has delivered **Hermes Agent v0.17.0** — dubbed "The Reach Release" — just two weeks after v0.16.0 put the agent on your desktop. The new release extends Hermes across new messaging channels, deeper into the desktop experience, and out to teams running multi-agent infrastructure. It arrives alongside a stunning milestone: **200,000 GitHub stars**, making Hermes one of the fastest-growing open source projects of 2026.
+
+## v0.17.0: The Reach Release
+
+Released June 19, v0.17.0 represents ~1,475 commits, ~800 merged pull requests from 245 community contributors, and over 300 closed issues. The release notes describe it as "about how far that reach extends — across new places to talk to it, deeper into the tools you already use, and out to the people running Hermes for a team."
+
+### iMessage Without a Mac Relay
+
+The headline feature is a native **iMessage platform plugin** built on [Photon's](https://photon.app) managed line pool. Run `hermes photon login`, authenticate with a device code, and Hermes can send and receive iMessage — no Mac sitting in a closet running a relay, no BlueBubbles bridge to babysit. Photon positions this as the successor to BlueBubbles: free to start with nothing to self-host.
+
+This is a big deal for the Apple ecosystem. iMessage has historically been one of the hardest platforms to automate — Apple's walled garden kept it out of reach for agent tooling. Photon Spectrum changes that by leasing managed phone numbers that can register with iMessage.
+
+### Raft Agent Network
+
+Hermes now joins the [Raft](https://raft.build) agent network as a gateway channel. A new bundled Raft platform adapter lets Raft wake Hermes to handle messages through a privacy-by-contract bridge where wake payloads carry only metadata (event IDs, timestamps), never message bodies. This opens Hermes to a whole new class of multi-agent orchestration workflows.
+
+### Desktop Goes from Preview to Daily Driver
+
+v0.16.0 shipped the first native desktop app across macOS, Linux, and Windows. v0.17.0 deepens it substantially with:
+
+- **Rebindable keyboard shortcuts** — customize every keybinding
+- **Native OS notifications** with per-type toggles
+- **Subagent watch-windows** — live panes streaming delegated agent activity
+- **Composer model selector** with per-model presets
+- **Automatic RTL/bidi text direction** for international users
+- **VS Code Marketplace theme support** — install any theme directly into the app
+- **Resizable terminal pane** with VS Code-inspired styling
+- **Per-thread composer drafts** that persist across sessions
+
+### Image Generation Gains Editing
+
+The `image_gen` tool learned to edit existing images, not just generate from scratch. Combined with new Krea 2 Medium + Large providers and the FAL provider ported to a plugin, Hermes now offers a competitive image editing pipeline.
+
+### Memory Tool Upgrade
+
+The `memory` tool received a major upgrade — the curator no longer spends auxiliary model budget on every routine run, making memory management dramatically cheaper for long-running sessions.
+
+### Subagents Go Background
+
+Subagent processes can now run in the background, enabling persistent delegated tasks that outlive the parent conversation. This unlocks workflows where a research agent keeps gathering data while you switch to a different thread.
+
+## 200,000 GitHub Stars
+
+The star count alone tells the story. Hermes Agent went from its first public release in March 2026 to **200,000 stars** by late June — crossing the mark just days before v0.17.0 shipped. With 36,700+ forks and nearly 800 watchers, it's the #1 trending AI agent project on GitHub and one of the top 25 most-starred repositories overall.
+
+Nous Research celebrated the milestone on X: *"Hermes Agent has reached 200,000 GitHub stars. Thank you to our contributors, supporters, users, and agents!"*
+
+## The Bigger Picture
+
+Hermes has shipped **18 tagged releases** since March 2026 — roughly one every six days. Each release has a theme: the Foundation Release (v0.14.0, May 16) made Hermes installable anywhere; the Velocity Release (v0.15.0, May 28) dramatically improved performance; the Surface Release (v0.16.0, June 5) brought the desktop app; and now the Reach Release (v0.17.0, June 19) extends Hermes into new channels and deeper capability.
+
+The pace is remarkable. Over 235,000 lines of code have been added since v0.16.0 alone. The community now spans 245+ contributors per major release, covering everything from security hardening to Simplified Chinese translations to ARM64 build support.
+
+## What's Next
+
+With iMessage and Raft onboard, the "reach" narrative suggests more channels and platforms are coming. The desktop app is now a genuine daily driver, and the subagent backgrounding opens the door to persistent, autonomous workflows. If the current cadence holds, v0.18.0 could arrive within two weeks — and with 200K stars and counting, the community's appetite shows no signs of slowing.
+
+{/* Keep an eye on the [Hermes Agent GitHub](https://github.com/NousResearch/hermes-agent) and the [official docs](https://hermes-agent.nousresearch.com/) for the latest. */}
