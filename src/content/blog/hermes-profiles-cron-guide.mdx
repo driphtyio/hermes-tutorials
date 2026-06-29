@@ -1,0 +1,335 @@
+---
+title: "How to Manage Multiple Profiles and Cron Jobs in Hermes Agent"
+description: "A step-by-step guide to creating isolated Hermes profiles and scheduling automated tasks with cron jobs — from setup to production workflows."
+pubDate: 2026-06-29
+tags: [hermes, tutorial, profiles, cron, automation]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-profiles-cron-guide-1782745527.jpg"
+lastVerified: 2026-06-29
+---
+
+Hermes Agent isn't a single-purpose tool — it can wear many hats. One session you're a Rust debugger, the next a markdown blogger, and the one after that a Telegram bot that delivers a daily AI news digest.
+
+This guide walks you through two features that make all of this practical: **profiles** (isolated agent configurations that each have their own model, skills, and memory) and **cron jobs** (scheduled tasks that run on their own schedule with zero manual intervention).
+
+By the end, you'll have a multi-profile Hermes setup with automated tasks that deliver results to your chat platforms — all driven by real commands from the Hermes CLI.
+
+## What Are Hermes Profiles?
+
+Every profile is a fully isolated Hermes instance under `~/.hermes/profiles/<name>/`. Each has its own `config.yaml`, `.env`, `SOUL.md`, skills directory, memory store, cron jobs, and session history. Switching profiles is like swapping the entire agent personality while keeping every other profile untouched.
+
+You can list what you have right now with:
+
+```bash
+hermes profile list
+```
+
+The active profile is marked with `*`. A fresh install shows only the `default` profile, but you can spin up dedicated profiles for different roles — a coding profile, a writing profile, an ops/monitoring profile, each with its own model and skill set.
+
+Profiles are the foundation for cron jobs too: each cron task runs under a specific profile, so a job scheduled on your `ops` profile uses that profile's config and skills while leaving your `default` profile alone.
+
+## Creating and Configuring Profiles
+
+Let's create two profiles: one for development work and one for writing tutorials. You'll clone settings from the current profile as a starting point.
+
+```bash
+# Create a development profile with cloned config and skills
+hermes profile create dev --clone
+
+# Create a writing profile — empty, no bundled skills
+hermes profile create writer --no-skills
+```
+
+The `--clone` flag copies `config.yaml`, `.env`, `SOUL.md`, and skills from the currently active profile into the new one. The `--no-skills` flag creates a bare profile with zero bundled skills — useful for narrow-purpose agents that should not inherit the full skill catalog.
+
+You can see the result with:
+
+```bash
+hermes profile show dev
+```
+
+That prints the profile's home directory, configured model, gateway status, skills count, and whether `.env` and `SOUL.md` exist.
+
+Switch between profiles at any time:
+
+```bash
+hermes profile use writer     # All subsequent commands use 'writer'
+hermes profile use default    # Back to base
+```
+
+Or use the `-p` flag for a one-off invocation:
+
+```bash
+hermes chat -p writer -q "Draft a blog post outline about MCP servers"
+```
+
+The `-p` flag overrides the sticky profile for a single command without changing the default.
+
+You can also create a profile by cloning from a specific existing profile — not just the current one — using `--clone-from`:
+
+```bash
+hermes profile create dev-backup --clone-from dev --clone-all
+```
+
+`--clone-all` copies everything including config, memories, skills, cron, and plugins. It excludes per-profile history (sessions, `state.db`, backups, and checkpoints).
+
+## Adding a SOUL and Configuring Skills Per Profile
+
+Each profile can have a completely different identity. The `SOUL.md` file in the profile directory defines the agent's personality and behavior in slot #1 of the system prompt.
+
+Create a `SOUL.md` for your writer profile:
+
+```markdown
+You are a technical writing assistant. You produce clear, well-structured
+documentation and tutorials. Your tone is friendly but precise. You always
+include real code examples and avoid vague statements. When asked to edit,
+you respect the user's voice while improving clarity.
+```
+
+Now add a skill — the built-in `plan` skill is available on any profile that hasn't opted out of bundled skills:
+
+```bash
+# On the dev profile, install a skill from the hub
+hermes profile use dev
+hermes skills install github-pr-workflow
+```
+
+Skills live in `~/.hermes/skills/` and are loaded on demand via slash commands:
+
+```bash
+/github-pr-workflow create a PR for the auth refactor
+/plan design a rollout for migrating our auth provider
+```
+
+If you created a profile with `--no-skills`, you can toggle bundled skills on and off after the fact:
+
+```bash
+hermes skills opt-in --sync    # Re-enable bundled skills and re-seed now
+hermes skills opt-out          # Stop future seeding, keep what's on disk
+```
+
+Each profile's skill catalog is independent — skills you install on `dev` don't appear on `writer`.
+
+## Scheduling Automated Tasks with Cron
+
+Cron jobs let you run automated tasks on a schedule without being at the terminal. Each job runs in a fresh agent session, can load one or more skills, and delivers results to a chat platform or local files.
+
+The cron system is managed through the `hermes cron` command family:
+
+```bash
+hermes cron create <schedule> <prompt> [options]
+hermes cron list
+hermes cron pause <job_id>
+hermes cron resume <job_id>
+hermes cron remove <job_id>
+hermes cron status
+```
+
+### Create your first job
+
+The schedule accepts natural language or standard cron expressions:
+
+```bash
+hermes cron create \
+  "every 2h" \
+  "Check the CI pipeline status and report any failures" \
+  --name "CI watch"
+```
+
+Natural language schedules work too: `"every 1h"`, `"0 9 * * 1"` for every Monday at 9am, `"every 30m"`.
+
+```bash
+hermes cron list
+```
+
+Your new job appears in the list with its hex ID, schedule, name, and next run time.
+
+### Schedule a skill-backed job
+
+Cron jobs can load one or more skills before running the prompt. This is useful when you want the scheduled agent to inherit reusable workflows without cramming the full skill text into the cron prompt.
+
+```bash
+hermes cron create \
+  "every 1h" \
+  "Summarize new feed items from the configured sources" \
+  --skill blogwatcher \
+  --name "Feed summary"
+```
+
+Multiple skills load in order:
+
+```bash
+hermes cron create \
+  "0 8 * * *" \
+  "Look for new local events and interesting nearby places, then combine them into one short brief" \
+  --skill blogwatcher \
+  --skill maps \
+  --name "Morning local brief"
+```
+
+### Set delivery targets
+
+By default, CLI-created jobs deliver to local files under `~/.hermes/cron/output/`. You can route the output anywhere the gateway is configured:
+
+```bash
+hermes cron create \
+  "every 24h" \
+  "Summarize yesterday's git activity across all repos" \
+  --name "Daily git summary" \
+  --deliver telegram
+```
+
+Delivery targets include `telegram`, `discord`, `slack`, `signal`, `whatsapp`, `email`, and `sms`. Use `--deliver all` to fan out to every connected home channel, or `--deliver "telegram,discord"` for a specific set:
+
+```bash
+hermes cron create \
+  "0 9 * * 1" \
+  "Generate a weekly report covering the top AI news and my repo activity" \
+  --skill blogwatcher \
+  --skill git-summary \
+  --name "Weekly AI digest" \
+  --deliver telegram
+```
+
+## Running Jobs Inside a Project Directory
+
+Cron jobs default to running detached from any repo. If you need a job to read a project's `AGENTS.md`, `CLAUDE.md`, or `.cursorrules`, pass `--workdir`:
+
+```bash
+hermes cron create \
+  "every 1d at 09:00" \
+  "Audit open PRs, summarize CI health, and post to #eng" \
+  --workdir /home/me/projects/acme \
+  --deliver "discord:#eng"
+```
+
+When `workdir` is set, the job loads the project's `AGENTS.md` and `.cursorrules` into the system prompt, and all file tools (`terminal`, `read_file`, `write_file`, `patch`, `search_files`) use that directory as their working directory.
+
+:::note
+Jobs with a `workdir` run sequentially on the scheduler tick to avoid cwd corruption. Workdir-less jobs still run in parallel.
+:::
+
+## Managing the Cron Lifecycle
+
+You can pause, resume, edit, and trigger jobs without deleting them.
+
+### Pause and resume
+
+```bash
+hermes cron pause "Feed summary"            # By name (case-insensitive)
+hermes cron resume "Feed summary"           # Re-enable and compute next run
+```
+
+### Edit an existing job
+
+No need to delete and recreate — change any field in place:
+
+```bash
+hermes cron edit "CI watch" --schedule "every 4h"
+hermes cron edit "Feed summary" --prompt "Use the revised task description"
+hermes cron edit "Morning local brief" --add-skill weather
+hermes cron edit "Morning local brief" --remove-skill maps
+hermes cron edit "Morning local brief" --clear-skills
+```
+
+### Trigger on demand
+
+```bash
+hermes cron run "CI watch"      # Runs on the next scheduler tick
+```
+
+### Check scheduler status
+
+```bash
+hermes cron status
+```
+
+The cron scheduler runs inside the gateway daemon. If the gateway isn't running, jobs won't execute:
+
+```bash
+hermes gateway run              # Foreground
+hermes gateway start            # As a systemd service
+```
+
+The gateway ticks every 60 seconds, loading jobs from `~/.hermes/cron/jobs.json`, checking `next_run_at` against the current time, and starting a fresh agent session for each due job.
+
+## Real-World Workflow: Profile + Cron Combined
+
+Let's put it all together — a three-profile setup with automated tasks that cover a real day's work.
+
+**Step 1: Create the profiles**
+
+```bash
+hermes profile create dev --clone
+hermes profile create writer --no-skills
+hermes profile create ops --clone
+```
+
+**Step 2: Configure each profile's identity**
+
+Write distinct `SOUL.md` files for each profile under `~/.hermes/profiles/<name>/SOUL.md`.
+
+**Step 3: Schedule profile-specific cron jobs**
+
+Jobs respect the active profile at creation time. Each job snapshots the profile's configured provider and model, so a change to the global default won't silently swap billing.
+
+```bash
+# On the dev profile: daily PR review
+hermes --profile dev cron create \
+  "0 10 * * 1-5" \
+  "Review all open PRs assigned to me and suggest merge timelines" \
+  --name "PR triage" \
+  --deliver "discord:#pr-reviews"
+
+# On the ops profile: hourly health check
+hermes --profile ops cron create \
+  "every 1h" \
+  "Run the server health checks and alert on any non-200 responses" \
+  --skill server-health \
+  --name "Health monitor" \
+  --deliver telegram
+```
+
+**Step 4: Verify everything**
+
+```bash
+hermes profile list
+hermes cron list
+hermes cron status
+```
+
+Your multi-profile, multi-job setup is now running autonomously. The `dev` profile handles code review reminders during workdays; the `ops` profile monitors server health around the clock. Each job runs with the right skills, delivers to the right channel, and stays isolated from every other profile.
+
+## Configuration Reference
+
+For reference, here is how the cron delivery settings look in a profile's `config.yaml`:
+
+```yaml
+# ~/.hermes/config.yaml (relevant sections)
+cron:
+  wrap_response: false    # Set to false to remove cronjob headers from output
+
+terminal:
+  backend: local
+  cwd: "."                # Gateway/cron working directory
+  timeout: 180            # Per-command timeout in seconds
+```
+
+And an example of `.env` entries for delivery channels:
+
+```bash
+# ~/.hermes/.env (secrets only — never commit this)
+TELEGRAM_BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz
+TELEGRAM_HOME_CHANNEL=-1001234567890
+DISCORD_BOT_TOKEN=discord_token_here
+DISCORD_HOME_CHANNEL=123456789012345678
+```
+
+Secrets always go in `.env`; everything else stays in `config.yaml`. The `hermes config set` command automatically routes values to the correct file.
+
+## Summary
+
+- **Profiles** give you fully isolated Hermes instances — each with its own model, skills, memory, and SOUL identity.
+- **Cron jobs** run scheduled tasks autonomously, with or without attached skills, and deliver results to any configured chat platform.
+- **Combined**, profiles and cron let you run a multi-role agent infrastructure from a single installation: one machine, many specialised assistants, all on their own schedules.
+
+The commands in this guide all come from the official Hermes CLI and work as documented. Start with a single profile and one cron job, then expand as you find more tasks worth automating.

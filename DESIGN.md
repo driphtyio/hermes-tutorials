@@ -1,5 +1,6 @@
 ---
 version: alpha
+lastUpdated: 2026-06-29
 name: hermestuts-design
 description: "A dark-theme Hermes Agent tutorial blog anchored on deep charcoal canvas (#0a0a0b) with purple accent (#6c5ce7) as the single chromatic signature. The system reads as developer tool documentation: educational, terminal-focused, and CLI-oriented. Purple accent drives links, CTAs, code syntax highlighting, and callout borders. Page rhythm uses terminal screenshots, MCP architecture diagrams, and tool-configuration examples. Typography uses Atkinson Hyperlegible (bundled) for reading comfort, JetBrains Mono for code. Content-width is tight (860px) for focused reading."
 

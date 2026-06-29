@@ -34,6 +34,7 @@ If deploy is blocked:
 | Build error | MDX files don't accept raw HTML — comments (`<!-- -->`) or injection output breaks the parser silently, or frontmatter field mismatch | Missing import, broken frontmatter, HTML comments in MDX | Check `npm run build` output — use `{/* */}` not `<!-- -->` |
 | Deploy blocked (no changes) | CI requires staged changes — new files need `git add -A` before `git diff` catches them | `git add -A` not run before diff | Run `git add -A && git diff --cached --quiet` |
 | Feature image 404 | R2 upload raced with deploy, or slug doesn't match uploaded filename | heroImage URL not uploaded | Generate via `gen-image-verified.sh`, verify HTTP 200 |
+6. **Content freshness** — Add `lastVerified: YYYY-MM-DD` to post frontmatter when you verify the post content is still accurate. The quality ratchet can flag posts without recent `lastVerified` dates for review.
 | Quality gate blocked | New post below blog floor for word count or citations | Content metrics dropped below floor | Improve post (add citations, word count) |
 | Cross-link injection failed | `inject-crosslinks.py` writes HTML `<!-- -->` syntax into `.mdx` files, which MDX parser rejects | HTML comments from injection in MDX | Ensure inject-crosslinks.py uses `{/* */}` syntax for MDX blogs |
 
