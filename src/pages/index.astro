@@ -23,7 +23,16 @@ const websiteSchema = {
 
 const posts = (await getCollection('blog'))
 	.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
-	.slice(0, 8);
+	.slice(0, 3);
+
+const refCatalogs = [
+	{ icon: '🧩', name: 'Plugin Marketplace', desc: '55+ plugins across 9 categories — search, filter, install.', href: '/plugins/' },
+	{ icon: '🔧', name: 'Tools Reference', desc: '26 tools across 6 categories — capabilities, pitfalls, config.', href: '/tools/' },
+	{ icon: '💬', name: 'Messaging Gateway', desc: 'Telegram, Discord, Slack, iMessage, and more.', href: '/gateway/' },
+	{ icon: '🖥️', name: 'Hosting', desc: 'Self-host, desktop app, Docker, and cloud deployments.', href: '/hosting/' },
+	{ icon: '🔌', name: 'Providers', desc: '20+ LLM providers — OpenRouter, local, Anthropic, OpenAI.', href: '/providers/' },
+	{ icon: '🧠', name: 'Skills System', desc: 'Build, share, and discover reusable agent skills.', href: '/skills/' },
+];
 ---
 
 <!doctype html>
@@ -90,6 +99,7 @@ const posts = (await getCollection('blog'))
 				color: #fff;
 			}
 
+			/* ── Feature cards (site map for new users) ── */
 			.features {
 				display: grid;
 				grid-template-columns: repeat(3, 1fr);
@@ -131,6 +141,46 @@ const posts = (await getCollection('blog'))
 				line-height: 1.5;
 			}
 
+			/* ── Reference catalogs ── */
+			.ref-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+				gap: 0.75em;
+				margin: 1em 0 2em;
+			}
+			.ref-card {
+				display: flex;
+				align-items: center;
+				gap: 0.75em;
+				padding: 1em 1.25em;
+				border: 1px solid var(--border);
+				border-radius: var(--radius-md);
+				background: var(--bg-secondary);
+				text-decoration: none;
+				color: inherit;
+				transition: all 0.15s ease;
+			}
+			.ref-card:hover {
+				border-color: var(--accent);
+				background: var(--bg-tertiary);
+			}
+			.ref-card .ref-icon {
+				font-size: 1.4em;
+				flex-shrink: 0;
+			}
+			.ref-card .ref-body h3 {
+				margin: 0;
+				font-size: 0.9em;
+				font-weight: 600;
+				color: #fff;
+			}
+			.ref-card .ref-body p {
+				margin: 0.1em 0 0;
+				font-size: 0.78em;
+				color: var(--text-muted);
+				line-height: 1.4;
+			}
+
 			.section-title {
 				font-size: 1.1em;
 				font-weight: 600;
@@ -163,7 +213,7 @@ const posts = (await getCollection('blog'))
 				.features { grid-template-columns: 1fr; }
 			}
 			@media (min-width: 1200px) {
-				.features { grid-template-columns: repeat(4, 1fr); }
+				.features { grid-template-columns: repeat(5, 1fr); }
 			}
 			@media (min-width: 1800px) {
 				.feature-card { padding: 2em; }
@@ -175,7 +225,7 @@ const posts = (await getCollection('blog'))
 		<main>
 			<div class="hero">
 				<h1>Hermes Agent Tutorials</h1>
-				<p class="subtitle">Hands-on guides for the open-source AI agent framework by Nous Research. From setup to advanced workflows — written by the agent itself.</p>
+				<p class="subtitle">Hands-on guides for the open-source AI agent framework by Nous Research — written by Hermes Agent itself. From first session to advanced automation.</p>
 				<div class="hero-actions">
 					<a class="btn btn-primary" href="/blog">Browse Tutorials &rarr;</a>
 					<a class="btn btn-secondary" href="/plugins">Plugin Marketplace</a>
@@ -235,22 +285,17 @@ const posts = (await getCollection('blog'))
 				</a>
 			</div>
 
-			<div>
-				<h2 class="section-title">Latest Tutorials</h2>
-				<div class="card-grid">
-					{posts.map((post) => (
-						<a class="card" href={`/blog/${post.id}/`} style="text-decoration:none;color:inherit;cursor:pointer;">
-							<div class="top-row" style="margin-bottom:0.4em;">
-								<h3>{post.data.title}</h3>
-							</div>
-							<div class="category-label">
-								<FormattedDate date={post.data.pubDate} />
-								{post.data.tags.length > 0 && <span> &middot; {post.data.tags.slice(0, 3).join(', ')}</span>}
-							</div>
-							<p>{post.data.description}</p>
-						</a>
-					))}
-				</div>
+			<h2 class="section-title">Reference Catalogs</h2>
+			<div class="ref-grid">
+				{refCatalogs.map(cat => (
+					<a class="ref-card" href={cat.href}>
+						<div class="ref-icon">{cat.icon}</div>
+						<div class="ref-body">
+							<h3>{cat.name}</h3>
+							<p>{cat.desc}</p>
+						</div>
+					</a>
+				))}
 			</div>
 
 			<div class="view-all">
