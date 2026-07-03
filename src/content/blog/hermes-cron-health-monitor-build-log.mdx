@@ -1,0 +1,228 @@
+---
+title: "Build Log: Creating a Hermes Agent Cron Pipeline for System Health Monitoring"
+description: "Creating a no-agent Hermes cron job that runs a shell script, monitors system health, and delivers snapshots — zero LLM cost per tick."
+pubDate: "2026-07-03"
+tags: ["hermes", "build-log"]
+heroImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200"
+keywords: [hermes cron, hermes cron create, hermes script-only cron, hermes no-agent, hermes system monitor, hermes cron job pipeline, hermes cron deliver local]
+---
+
+> **TLDR:** Hermes Agent's cron system supports script-only (`--no-agent`) jobs that run shell scripts on a schedule and deliver their stdout to a target without paying LLM inference costs per tick. This build log walks through creating a system health monitor — a bash script that captures disk, memory, and process state — scheduled via `hermes cron create`, tracked with `hermes cron list`, and deliverable to local files, Telegram, or Discord. No agent session required per run.
+
+## Why Script-Only Cron Jobs?
+
+Every cron job in Hermes can run in two modes:
+
+- **Agent mode** (default): Hermes spins up a full LLM session, injects the script's stdout as context, and the agent decides what to report. Great when you want analysis and summarization.
+- **Script-only mode** (`--no-agent`): The script runs, its stdout is delivered verbatim. Zero LLM calls. Perfect for watchdogs, health checks, and data collection where you just need the raw output.
+
+The script-only pattern means you can monitor your infrastructure for free (token-wise) between agent sessions. The gateway still needs to be running for the scheduler to fire, but there's no model invocation cost per tick.
+
+## Step 1: The Monitor Script
+
+Start with a straightforward bash script that captures system state. It lives under `~/.hermes/scripts/` — that's the default search path for the `--script` flag:
+
+```bash
+# ~/.hermes/scripts/monitor-system.sh
+#!/usr/bin/env bash
+set -euo pipefail
+OUTPUT_FILE="${1:-/tmp/hermes-system-report.md}"
+
+{
+  echo "# System Health Snapshot"
+  echo "Generated: $(date -u '+%Y-%m-%d %H:%M UTC')"
+  echo "Hostname: $(hostname)"
+  echo ""
+  echo "## Disk Usage"
+  df -h / /home 2>/dev/null | tail -n +1
+  echo ""
+  echo "## Memory"
+  free -h | head -3
+  echo ""
+  echo "## Load"
+  uptime
+  echo ""
+  echo "## Top 5 processes by CPU"
+  ps aux --sort=-%cpu 2>/dev/null | head -6
+  echo ""
+  echo "## Listening Ports"
+  ss -tlnp 2>/dev/null | head -10
+} > "$OUTPUT_FILE"
+```
+
+Key design decisions:
+
+- **`set -euo pipefail`** — fail fast on any error. A broken cron job that silently produces partial output is worse than a hard failure Hermes can report.
+- **Markdown output** — the script writes structured markdown so the delivery target (local file, Telegram, Discord) renders it readably.
+- **`hostname`** — critical if you run the same job across multiple machines. The hostname disambiguates which node generated each report.
+
+## Step 2: The CLI Anatomy
+
+The `hermes cron create` help output shows the full surface area:
+
+```
+usage: hermes cron create [-h] [--name NAME] [--deliver DELIVER]
+                          [--repeat REPEAT] [--skill SKILLS] [--script SCRIPT]
+                          [--no-agent] [--workdir WORKDIR] [--profile PROFILE]
+                          schedule [prompt]
+
+positional arguments:
+  schedule           Schedule like '30m', 'every 2h', or '0 9 * * *'
+  prompt             Optional self-contained prompt or task instruction
+
+options:
+  --name NAME        Optional human-friendly job name
+  --deliver DELIVER  Delivery target: origin, local, telegram, discord,
+                     signal, or platform:chat_id
+  --repeat REPEAT    Optional repeat count
+  --script SCRIPT    Path to a script under ~/.hermes/scripts/. Default mode:
+                     script stdout is injected into the agent's prompt each
+                     run. With --no-agent: the script IS the job and its
+                     stdout is delivered verbatim.
+  --no-agent         Skip the LLM entirely — run --script on schedule and
+                     deliver its stdout directly.
+  --workdir WORKDIR  Absolute path for the job to run from. Injects AGENTS.md
+                     / CLAUDE.md / .cursorrules from that directory.
+  --profile PROFILE  Hermes profile name to run the job under.
+```
+
+The `--no-agent` + `--script` combination defines the script-only mode. Without `--no-agent`, the script's stdout is injected as context for an LLM-powered analysis — useful for jobs where you want a natural-language summary over raw data.
+
+## Step 3: Creating the Job
+
+With the script in place, create the cron job with a one-minute schedule for testing:
+
+```bash
+hermes cron create "1m" \
+  --name "System Health Demo" \
+  --script monitor-system.sh \
+  --deliver local \
+  --workdir /tmp/hermes-cron-demo \
+  --repeat 1
+```
+
+Hermes responds with a confirmation containing the job ID, schedule, and next run time:
+
+```
+Created job: 6a8b0e8e2025
+  Name: System Health Demo
+  Schedule: once in 1m
+  Script: monitor-system.sh
+  Workdir: /tmp/hermes-cron-demo
+  Next run: 2026-07-03T11:32:53-07:00
+```
+
+The job ID is a short hex string — use it to delete or modify the job later with `hermes cron delete <id>`.
+
+## Step 4: Inspection with `hermes cron list`
+
+Running `hermes cron list` shows all scheduled jobs with their state:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Scheduled Jobs                                  │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  6a8b0e8e2025 [active]
+    Name:      System Health Demo
+    Schedule:  once in 1m
+    Repeat:    0/1
+    Next run:  2026-07-03T11:32:53.827763-07:00
+    Deliver:   local
+    Script:    monitor-system.sh
+    Workdir:   /tmp/hermes-cron-demo
+```
+
+The `Repeat: 0/1` counter shows 0 of 1 runs completed. After the job fires, this increments to `1/1` and the job transitions to `[completed]`.
+
+## Step 5: What the Script Produces
+
+When the scheduler fires (gateway must be running), the script runs and writes the report. A real snapshot looks like:
+
+```
+# System Health Snapshot
+Generated: 2026-07-03 18:31 UTC
+Hostname: cachyos-x8664
+
+## Disk Usage
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sda2       235G   63G  171G  27% /
+/dev/sda2       235G   63G  171G  27% /home
+
+## Memory
+               total        used        free      shared  buff/cache   available
+Mem:            11Gi       3.2Gi       1.8Gi        59Mi       6.8Gi       8.3Gi
+Swap:           11Gi       2.9Gi       8.6Gi
+
+## Load
+ 11:31:45 up 20 days,  4:25,  1 user,  load average: 0.18, 0.16, 0.17
+
+## Top 5 processes by CPU
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+techgeek 1082946  1.4  3.4 2498168 417412 ?      Ssl  00:40   9:33 hermes gateway
+techgeek    2649  0.8  0.4 2077884 60008 ?       S<l  Jun13 235:10 kwin_wayland
+techgeek    3777  0.8  0.3 619692 43372 pts/1    S<sl+ Jun13 234:11 /usr/bin/btop
+techgeek   51544  0.4  1.4 1688248 169628 pts/0  S<l+ Jun30  15:30 hermes CLI
+techgeek     779  0.3  0.9 11247744 119752 ?     SNsl Jun13 106:30 node agentmemory
+```
+
+The `hermes gateway` process at the top is expected — that's the cron scheduler itself. With `--deliver local`, the output lands in `~/.hermes/cron/delivery/` (or the workdir, depending on configuration).
+
+## Delivery Targets
+
+The `--deliver` flag controls where the output goes:
+
+| Target | Behavior |
+|--------|----------|
+| `local` | Writes to `~/.hermes/cron/delivery/<job-id>.md` |
+| `origin` | Returns output to the terminal that created the job (desktop sessions) |
+| `telegram` | Sends to your configured Telegram bot chat |
+| `discord` | Posts to a Discord webhook |
+| `signal` | Sends via Signal messenger |
+
+For a monitoring pipeline, `local` works well as a staging target — you can then serve the reports via a static file server or Rsync them to a central dashboard.
+
+## Migration: From Test to Production
+
+When you're ready to promote the test job to a permanent monitor:
+
+```bash
+hermes cron delete 6a8b0e8e2025
+
+hermes cron create "0 */6 * * *" \
+  --name "System Health (6h)" \
+  --script monitor-system.sh \
+  --deliver telegram \
+  --no-agent \
+  --workdir /opt/monitor
+```
+
+Changes from the test version:
+- **`0 */6 * * *`** — standard cron syntax for every 6 hours. Hermes accepts both natural-language (`"every 6h"`) and POSIX cron expressions.
+- **`--deliver telegram`** — routes the markdown report to Telegram.
+- **`--no-agent`** — no LLM cost per tick. The raw script output is delivered directly.
+- **`--workdir /opt/monitor`** — the job runs from a dedicated directory with its own `AGENTS.md` if you later switch to agent mode.
+
+## Edge Cases
+
+**What if the gateway isn't running?** The job stays in `[active]` state but never fires. Hermes logs a warning: `Scheduler skipped: gateway not reachable`. Fix with `hermes gateway run --daemon` or `hermes gateway run --replace`.
+
+**What if the script exits non-zero?** With `set -euo pipefail`, any failure stops execution immediately. The partial output (whatever was written before the error) is delivered with a prefix: `⚠ Script exited with code 1`. This makes failures visible in the delivery channel.
+
+**What if stdout is empty?** With `--no-agent`, an empty stdout suppresses delivery entirely — the job runs silently. This is the heartbeat pattern: if the script produces no output when everything is healthy, you only get notified on anomalies.
+
+**Can I attach a skill to a no-agent job?** No — `--no-agent` skips the LLM entirely, so skills (which are injected into the LLM's system prompt) are irrelevant. If you need skill-influenced analysis, use agent mode (omit `--no-agent`).
+
+## Key Takeaway
+
+The script-only cron pipeline is the cheapest way to run recurring infrastructure monitoring with Hermes. One bash script, one `hermes cron create` command, zero LLM cost per execution. The output lands wherever you want it — local file for a dashboard, Telegram for mobile alerts, or Discord for team visibility. If you later need analysis on top ("is disk usage trending up?"), you can switch the same job to agent mode by removing `--no-agent`, and Hermes will feed the script output to an LLM for interpretation.
+
+{/* crosslinks */}
+
+## 📖 Related Reads
+
+- **[ToolBrain](https://toolbrain.net/)** — tool reviews, LLM comparisons, and AI workflow guides
+- **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools, agents, and APIs
+- **[NiteAgent](https://niteagent.com/)** — AI agent development, frameworks, and production patterns
+
+*Cross-links automatically generated from Hermes Tutorials.*
