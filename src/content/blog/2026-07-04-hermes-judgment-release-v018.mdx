@@ -1,0 +1,59 @@
+---
+title: "Hermes Agent v0.18.0 'Judgment Release' Clears Zero P0/P1 Issues — MoA Becomes First-Class, Agent Verifies Its Own Work"
+description: "Hermes Agent v0.18.0 closes 100% of P0 and P1 issues, graduates Mixture-of-Agents to a first-class model provider, adds work verification, /learn and /journey for self-improvement, background subagent fan-out, and a full desktop coding cockpit."
+pubDate: "2026-07-04"
+tags: ["hermes", "update"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-judgment-release-v018-1783047688.jpg"
+---
+
+{/* This post covers the Hermes Agent v0.18.0 Judgment Release — July 1, 2026 */}
+
+Nous Research has shipped **Hermes Agent v0.18.0** — "The Judgment Release" — arriving just twelve days after v0.17.0. The headline is unprecedented: **100% of P0 and P1 issues across the entire repository are closed**, with the team vowing to keep them at zero going forward. But the release also delivers some of the biggest quality-of-life improvements in Hermes history — Mixture-of-Agents as a first-class model, verification-driven completion contracts, and a `/learn` command that turns any workflow into a reusable skill.
+
+## The P0/P1 Clean Sweep
+
+This release's defining achievement is the priority backlog purge. Over twelve days, the team — led by @teknium1 and @kshitijk4poor — closed **496 P0/P1 issues** and merged **196 P0/P1 pull requests**. Every single critical and high-priority item in the repo is now resolved. The final cluster to fall was the interrupt-protected-compression sibling-fork bug (issue #56391), closed on an all-nighter right before the release cut.
+
+With **~1,720 commits**, **998 merged PRs**, **949 issues closed**, and **381 contributors**, v0.18.0 is the largest Hermes release by every measure.
+
+## Mixture-of-Agents: Now a First-Class Provider
+
+The biggest feature change is MoA graduating from a toggle-able mode to a proper selectable model. Every named MoA preset now appears under a `moa` provider alongside Claude, GPT, and Grok in every model picker — CLI, TUI, desktop, and gateway. Pick "my-council" the same way you'd pick any model, and Hermes routes your prompt through that ensemble.
+
+Even better, you can now see what each model in the ensemble thinks before the final answer arrives. Each reference model's full output renders as its own labelled block — you can read GPT-5's reasoning, Claude's take, and Grok's perspective side by side. Then the aggregator's synthesized answer **streams in live** instead of appearing all at once after a long silence. The committee deliberates in public.
+
+## The Agent Verifies Its Own Work
+
+One of the most philosophically significant changes in v0.18.0 is **completion contracts** for `/goal`. Instead of deciding it's done when the model "feels like it," Hermes now records verification evidence for coding work — it runs your project's actual checks and judges completion against that evidence. There's a `pre_verify` hook for wiring in custom checks, and a one-time migration to tune the defaults sensibly.
+
+The difference between "I think I fixed it" and "the tests pass, here's proof" is now baked into the agent's core loop.
+
+## /learn and /journey
+
+Self-improvement becomes visible and steerable. **`/learn <anything>`** distills a reusable skill from a directory, a URL, or just the workflow you walked Hermes through five minutes ago — it writes the skill to your CONTRIBUTING.md standards automatically. Teaching Hermes a new trick is now a single command.
+
+**`/journey`** adds a learning timeline to the CLI and TUI, showing every memory and skill Hermes has accumulated, with in-place edit and delete. The desktop app pairs this with a **memory graph** — a playable radial timeline that lets you watch your agent's knowledge grow over time. Your agent's memory stops being a black box.
+
+## Background Fan-Out Subagents
+
+`delegate_task` can now fan out multiple subagents that all run in the **background** — your chat is never blocked. Kick off "research these five competitors in parallel" or "audit these three modules," then carry on with something else while a small fleet works. When every subagent finishes, their results come back as a single consolidated turn.
+
+## Desktop Coding Cockpit
+
+The desktop app evolved from a chat surface into a real development environment. **Projects** bring a sidebar of your codebases, a coding rail, a review pane, git worktree management, and agent-facing project tools — all backed by a `project → repo → lane` model. The app also gained a multi-terminal panel with read-only agent terminals that persist across relaunch, PR-style file diffs in chat, and an in-app spot editor.
+
+## Scaling and Security
+
+The gateway can now go **dormant when idle** (scale-to-zero) and quiesce cleanly before restart or migration — without dropping in-flight conversations. Running Hermes for a team just got production-grade.
+
+On the security front, MCP-config persistence attack surface was locked down, cron `base_url` credential exfiltration was blocked, a non-reusable sentinel for prefix secrets in file reads was added, and an `aiohttp` CVE floor was enforced across all messaging paths. A credential-exfil hardening wave by @kshitijk4poor closed several long-standing concerns.
+
+## Google Vertex AI Support
+
+Vertex AI is now a first-class provider for Gemini models over Google Cloud's OpenAI-compatible endpoint. Since Vertex has no static API key, Hermes now automatically mints and refreshes short-lived OAuth2 access tokens from a service-account JSON or Application Default Credentials. If your org runs Gemini through GCP, point Hermes at your service account and it just works.
+
+## What's Next
+
+With the P0/P1 backlog at zero and a commitment to keep it there, the team's attention turns to shipping more surface-level improvements and ecosystem integrations. The blank-slate setup mode (minimal agent, opt-in to everything), further desktop polish, and deeper MCP integration are all on the horizon.
+
+Check the [full release notes on GitHub](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.7.1) for the complete changelog — and run `pip install --upgrade hermes-agent` to get v0.18.0 today.
