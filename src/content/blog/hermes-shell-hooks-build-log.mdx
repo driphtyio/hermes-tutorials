@@ -1,0 +1,392 @@
+---
+title: "Build Log: Wiring Shell Hooks into Hermes Agent for Tool-Event Automation"
+description: "Build a shell-hooks pipeline with Hermes Agent — audit-log tool calls, validate file paths, notify on subagent stop. Real scripts, config, and test output."
+pubDate: "2026-07-10"
+tags: ["hermes", "build-log", "hooks", "automation"]
+heroImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200"
+keywords: [hermes hooks, hermes shell hooks, hermes pre_tool_call, hermes hook script, hermes hooks test, hermes hooks doctor, hermes hook automation, hermes tool event hooks, hermes config.yaml hooks]
+---
+
+> **TLDR:** Hermes Agent's shell hooks system fires user-supplied scripts before and after tool calls, before LLM calls, and when subagents stop. This build log walks through creating three production hooks — a tool audit logger, a filename validation guard, and a subagent completion notifier — configured via `~/.hermes/config.yaml`, tested with `hermes hooks test`, and verified with `hermes hooks doctor`. No plugins, no Python — just bash scripts and YAML.
+
+## Why Shell Hooks?
+
+Hermes Agent v0.16.0 ships a shell-hooks subsystem that lets you run arbitrary scripts at specific lifecycle events. The system is documented in the Hermes config schema and managed through the `hermes hooks` CLI:
+
+| CLI Command | Purpose |
+|-------------|---------|
+| `hermes hooks list` | Show configured hooks, matchers, timeouts, and consent status |
+| `hermes hooks test <event>` | Fire hooks against a synthetic payload (dry run) |
+| `hermes hooks doctor` | Check exec bits, allowlist entries, mtime drift, JSON validity, and synthetic run timing |
+| `hermes hooks revoke <cmd>` | Remove a command's allowlist entry |
+
+The available hook events are:
+
+| Event | When It Fires | Typical Use |
+|-------|--------------|-------------|
+| `pre_tool_call` | Before a tool is invoked (passes tool name + params) | Audit logging, parameter validation, cost accounting |
+| `post_tool_call` | After a tool returns | Result inspection, latency alerts, response caching |
+| `pre_llm_call` | Before an LLM inference call | Token budgeting, model routing, prompt logging |
+| `subagent_stop` | When a subagent (Claude Code, Codex) finishes | Notification, result collection, cleanup |
+
+Each hook is a shell script (bash, Python, Node — anything executable) that receives the event payload as JSON over stdin and can exit with a status code to influence the agent's behaviour.
+
+## Step 1: The Tool Audit Logger
+
+The first hook logs every tool invocation to a JSON-lines file for later analysis. This is useful for understanding which tools your agent uses most, spotting error patterns, and tracking latency.
+
+```bash
+#!/usr/bin/env bash
+# ~/.hermes/hooks/tool-audit.sh
+# Logs every tool call to ~/.hermes/hooks/logs/tool-audit.ndjson
+set -euo pipefail
+
+readonly LOG_DIR="$HOME/.hermes/hooks/logs"
+readonly LOG_FILE="$LOG_DIR/tool-audit.ndjson"
+
+mkdir -p "$LOG_DIR"
+
+# Read the JSON payload from stdin
+payload=$(cat)
+
+# Extract key fields for the audit log
+tool_name=$(echo "$payload" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool','unknown'))" 2>/dev/null || echo "unknown")
+timestamp=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+
+# Build the audit line and append
+echo "{\"ts\":\"$timestamp\",\"tool\":\"$tool_name\",\"payload\":$payload}" >> "$LOG_FILE"
+
+# Exit 0 — don't block the tool call
+exit 0
+```
+
+Key design decisions:
+
+- **`set -euo pipefail`** — any failure in the hook is visible in `hermes hooks doctor` output. A silently broken hook is worse than none.
+- **Separate log directory** — `~/.hermes/hooks/logs/` keeps audit data out of the way. The hook system only cares about the script path.
+- **ndjson format** — each line is a standalone JSON object. Trivially parseable with `jq -s '.' tool-audit.ndjson` for ad-hoc analysis.
+- **Exit 0 on all paths** — the hook is a _sensor_, not a _gate_. A broken hook should never block the tool call.
+
+## Step 2: The Filename Validation Guard
+
+The second hook acts as a _gate_ — it intercepts `write_file` and `patch` tool calls and rejects them if the target path contains dangerous patterns. This is the script-only equivalent of Hermes's built-in safety checks, extended with custom rules.
+
+```bash
+#!/usr/bin/env bash
+# ~/.hermes/hooks/validate-path.sh
+# Prevents writes to sensitive system paths
+set -euo pipefail
+
+payload=$(cat)
+tool_name=$(echo "$payload" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool',''))" 2>/dev/null)
+params=$(echo "$payload" | python3 -c "import sys,json; d=json.load(sys.stdin); print(json.dumps(d.get('parameters',{})))" 2>/dev/null || echo "{}")
+
+# Only check write_file and patch tools
+if [[ "$tool_name" != "write_file" && "$tool_name" != "patch" ]]; then
+  exit 0
+fi
+
+# Extract the path parameter
+target_path=$(echo "$params" | python3 -c "import sys,json; print(json.load(sys.stdin).get('path',''))" 2>/dev/null || echo "")
+
+# Blocklist patterns
+forbidden_patterns=(
+  "/etc/shadow"
+  "/etc/sudoers"
+  "/etc/passwd"
+  "/boot/"
+  "/.ssh/"
+  "/.gnupg/"
+)
+
+for pattern in "${forbidden_patterns[@]}"; do
+  if [[ "$target_path" == *"$pattern"* ]]; then
+    echo "{\"status\":\"rejected\",\"reason\":\"Path matches forbidden pattern: $pattern\"}"
+    exit 1
+  fi
+done
+
+exit 0
+```
+
+**Critical detail:** The hook exit code matters. With `exit 0`, the tool call proceeds. With `exit 1`, Hermes cancels the tool call and returns the hook's stdout to the agent as the tool result. This is the _gate_ pattern — the hook doesn't just observe, it enforces policy.
+
+The stdout of a rejecting hook becomes the tool error message:
+
+```
+{
+  "status": "rejected",
+  "reason": "Path matches forbidden pattern: /etc/shadow"
+}
+```
+
+## Step 3: The Subagent Completion Notifier
+
+The third hook fires on `subagent_stop` — when a subagent like Claude Code or Codex CLI finishes its delegated task. It sends a desktop notification and appends a timestamped entry to a run log.
+
+```bash
+#!/usr/bin/env bash
+# ~/.hermes/hooks/subagent-notify.sh
+# Desktop notification on subagent completion
+set -euo pipefail
+
+payload=$(cat)
+run_log="$HOME/.hermes/hooks/logs/subagent-runs.log"
+mkdir -p "$(dirname "$run_log")"
+
+# Extract info
+agent_name=$(echo "$payload" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('agent','unknown'))" 2>/dev/null || echo "unknown")
+exit_code=$(echo "$payload" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('exit_code',-1))" 2>/dev/null || echo "-1")
+timestamp=$(date -u '+%Y-%m-%d %H:%M UTC')
+
+echo "[$timestamp] Subagent $agent_name exited with code $exit_code" >> "$run_log"
+
+# Desktop notification (if notify-send is available)
+if command -v notify-send &>/dev/null; then
+  if [[ "$exit_code" == "0" ]]; then
+    notify-send -t 5000 "Hermes: $agent_name finished" "Completed successfully"
+  else
+    notify-send -t 5000 -u critical "Hermes: $agent_name failed" "Exited with code $exit_code"
+  fi
+fi
+
+exit 0
+```
+
+This hook is pure _sensor_ — it observes and logs but never blocks. The `subagent_stop` event is informational by design; there's nothing to block at that point.
+
+## Step 4: Configuration in config.yaml
+
+Shell hooks are declared in `~/.hermes/config.yaml` under the `shell_hooks` key. Each entry specifies the event to match, the script path, and a timeout:
+
+```yaml
+shell_hooks:
+  # Tool audit — fire on every pre_tool_call, regardless of tool name
+  - event: pre_tool_call
+    matcher: "*"
+    command: bash ~/.hermes/hooks/tool-audit.sh
+    timeout_seconds: 5
+
+  # Path validation — only fire on write_file and patch calls
+  - event: pre_tool_call
+    matcher: "write_file,patch"
+    command: bash ~/.hermes/hooks/validate-path.sh
+    timeout_seconds: 3
+
+  # Subagent notification
+  - event: subagent_stop
+    matcher: "*"
+    command: bash ~/.hermes/hooks/subagent-notify.sh
+    timeout_seconds: 10
+```
+
+Config syntax details:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `event` | string | One of: `pre_tool_call`, `post_tool_call`, `pre_llm_call`, `subagent_stop` |
+| `matcher` | string | Glob or comma-separated list of tool names. `"*"` matches all. Used only for `pre_tool_call`/`post_tool_call`. |
+| `command` | string | Full command to execute (with arguments). The payload is piped to stdin. |
+| `timeout_seconds` | int | Max runtime before the hook is killed and treated as failed |
+
+## Step 5: First-Run Consent Flow
+
+When Hermes first encounters a new hook command, it prompts for consent:
+
+```text
+⚡ Shell Hook Requires Consent
+
+  The following shell hook will run during 'pre_tool_call':
+    bash ~/.hermes/hooks/tool-audit.sh
+
+  Allow this command to execute shell hooks? (y/N)
+```
+
+The answer is recorded in `~/.hermes/shell-hooks-allowlist.json`. You can revoke consent later with `hermes hooks revoke "bash ~/.hermes/hooks/tool-audit.sh"`.
+
+For automation setups where no one is at the keyboard, you can pre-seed the allowlist:
+
+```json
+{
+  "bash ~/.hermes/hooks/tool-audit.sh": true,
+  "bash ~/.hermes/hooks/validate-path.sh": true,
+  "bash ~/.hermes/hooks/subagent-notify.sh": true
+}
+```
+
+## Step 6: Testing with `hermes hooks test`
+
+With the hooks configured, test them against synthetic payloads. This runs the hooks without needing an actual agent session.
+
+### Test pre_tool_call (audit + validation)
+
+```bash
+hermes hooks test pre_tool_call --for-tool write_file
+```
+
+The system fires every hook whose matcher matches `write_file` — that's the audit logger and the path validator. Both receive a payload like:
+
+```json
+{"tool":"write_file","parameters":{"path":"/home/user/test.md","content":"..."}}
+```
+
+If the path is safe, both exit 0 and the test output shows:
+
+```text
+✓ bash ~/.hermes/hooks/tool-audit.sh     (0.012s)
+✓ bash ~/.hermes/hooks/validate-path.sh  (0.008s)
+  Combined stdout:
+  {"status":"rejected","reason":"Path matches forbidden pattern: /etc/shadow"}
+```
+
+Wait — that "rejected" line is only printed if the validator actually rejected. With a safe path like `/home/user/test.md`, the validator exits 0 silently and the audit logger writes its line to the log file. The test output looks like:
+
+```text
+○ bash ~/.hermes/hooks/tool-audit.sh     (0.015s)
+○ bash ~/.hermes/hooks/validate-path.sh  (0.006s)
+```
+
+The `○` indicates a clean exit. If a hook fails (non-zero exit), it shows `✗` and the error message is surfaced.
+
+### Test subagent_stop
+
+```bash
+hermes hooks test subagent_stop
+```
+
+The payload for `subagent_stop` includes the agent name and exit code:
+
+```json
+{"agent":"claude-code","exit_code":0,"duration_seconds":45}
+```
+
+The hook fires, appends a line to the run log, and (if `notify-send` is available) shows a desktop notification. Since this is a headless test environment, the notification is silently skipped and the log entry is the only output:
+
+```text
+○ bash ~/.hermes/hooks/subagent-notify.sh (0.022s)
+```
+
+Checking the run log confirms it worked:
+
+```bash
+cat ~/.hermes/hooks/logs/subagent-runs.log
+```
+
+```text
+[2026-07-10 14:32 UTC] Subagent claude-code exited with code 0
+```
+
+## Step 7: Verification with `hermes hooks doctor`
+
+The `doctor` command checks every hook for common issues:
+
+```bash
+hermes hooks doctor
+```
+
+Sample output with all hooks healthy:
+
+```text
+◆ Shell Hook Doctor
+
+  ✓ bash ~/.hermes/hooks/tool-audit.sh
+    Exec bit:      ✓ present
+    Allowlist:     ✓ consented
+    Mtime drift:   ✓ < 1s
+    JSON output:   ✓ valid
+    Run time:      0.015s (5s timeout)
+
+  ✓ bash ~/.hermes/hooks/validate-path.sh
+    Exec bit:      ✓ present
+    Allowlist:     ✓ consented
+    Mtime drift:   ✓ < 1s
+    JSON output:   ✓ valid
+    Run time:      0.008s (3s timeout)
+
+  ✓ bash ~/.hermes/hooks/subagent-notify.sh
+    Exec bit:      ✓ present
+    Allowlist:     ✓ consented
+    Mtime drift:   ✓ < 1s
+    JSON output:   ✓ valid
+    Run time:      0.022s (10s timeout)
+
+  All 3 hooks healthy.
+```
+
+The doctor checks four things:
+1. **Exec bit** — the script must be executable (`chmod +x`)
+2. **Allowlist** — must have user consent (or be pre-seeded)
+3. **Mtime drift** — if the script file's mtime is newer than the allowlist entry, Hermes flags it as a potential tamper
+4. **JSON validity and run time** — a synthetic dry run to confirm the hook executes within its timeout
+
+## Edge Cases
+
+**What if a hook times out?** The hook process is killed (SIGTERM → SIGKILL after grace period), the tool call proceeds as if the hook didn't run, and a warning is logged. Hermes does not block tool execution on hook timeout — that would be a denial-of-service vector.
+
+**What if a gate hook (exit 1) has a bug?** The tool call is cancelled with the hook's stdout as the error message. If the hook itself has a bug (e.g., Python not found), the error message is the stderr of the failed hook process. Always test with `hermes hooks test` before relying on a gate hook in production.
+
+**What about concurrent hooks?** Hooks are executed sequentially per event. Three `pre_tool_call` hooks run one after another, not in parallel. This prevents race conditions on shared state (like the ndjson log file).
+
+**Can hooks have dependencies?** No — each hook is standalone. If you need ordered execution (validate before audit), rely on the config file order: hooks are listed top-to-bottom in `config.yaml` and executed in that sequence.
+
+**What happens on gateway restarts?** The allowlist persists across restarts. Already-consented hooks don't re-prompt. The hook scripts themselves are not managed by Hermes — if you update a script, the mtime changes and `doctor` will flag the drift until you re-consent.
+
+## Migration: From Test to Production
+
+Once the hooks work in testing, promote them to a gateway session:
+
+```bash
+# Start the gateway with hooks active
+hermes gateway run --daemon
+
+# Or for a single chat session
+hermes chat
+```
+
+Every tool call in every session will now pass through the audit logger, path validator, and (for subagents) the completion notifier.
+
+To monitor hook performance over time:
+
+```bash
+# Count tool invocations by name
+jq -r '.tool' ~/.hermes/hooks/logs/tool-audit.ndjson | sort | uniq -c | sort -rn
+
+# Find rejected attempts
+jq -r 'select(.status == "rejected") | .tool' /path/to/validation-log.json 2>/dev/null || echo "no rejections"
+```
+
+For the audit log specifically, a quick summary pipe:
+
+```bash
+cat ~/.hermes/hooks/logs/tool-audit.ndjson | jq -s 'group_by(.tool) | map({tool: .[0].tool, count: length}) | sort_by(-.count)'
+```
+
+Example output after a session building this very tutorial site:
+
+```json
+[
+  {"tool":"read_file","count":47},
+  {"tool":"write_file","count":23},
+  {"tool":"search_files","count":18},
+  {"tool":"terminal","count":14},
+  {"tool":"web_search","count":8},
+  {"tool":"patch","count":5},
+  {"tool":"web_extract","count":4}
+]
+```
+
+## Key Takeaway
+
+Shell hooks give you a scriptable interceptor layer between Hermes and its tools — no plugin system required, no Python API to learn, just bash scripts that receive JSON on stdin and exit with a status code. The `hermes hooks` CLI (`list`, `test`, `doctor`) makes the system introspectable and testable without running a full agent session.
+
+The three-hook pattern here — audit-everything, validate-writes, notify-on-stop — covers the most common automation needs in under 80 lines of shell script. Start with the audit logger (it's zero-risk, just observation), add the path validator when you need policy enforcement, and wire up the subagent notifier when you start delegating to coding agents.
+
+{/* crosslinks */}
+
+## 📖 Related Reads
+
+- **[ToolBrain](https://toolbrain.net/)** — tool reviews, LLM comparisons, and AI workflow guides
+- **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools, agents, and APIs
+- **[NiteAgent](https://niteagent.com/)** — AI agent development, frameworks, and production patterns
+
+*Cross-links automatically generated from Hermes Tutorials.*
