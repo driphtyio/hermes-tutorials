@@ -1,0 +1,125 @@
+---
+title: "Hermes Agent Mid-July Update: v0.18.1/.2 Ship WhatsApp Dashboard, MCP Reliability Overhaul, and Desktop Polish Wave"
+description: "Hermes v0.18.1/.2 ship WhatsApp dashboard, MCP reliability, PTY keep-alive, memory provider switching, desktop drag-sort, simplify-code skill, and more."
+pubDate: "2026-07-11"
+tags: ["hermes", "update"]
+heroImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200"
+---
+
+{/* This post covers Hermes Agent updates since v0.18.0 Judgment Release — v0.18.1 and v0.18.2 shipped July 7, plus ongoing HEAD developments through July 11 */}
+
+Nous Research has shipped two point releases since the Judgment Release — **v0.18.1** and **v0.18.2** — both on July 7, just six days after v0.18.0 cleared the entire P0/P1 backlog. While these are smaller than the major releases, they pack significant new capability: WhatsApp now has a full dashboard onboarding flow, the MCP subsystem got a reliability rewrite, PTY sessions gained keep-alive and attach/detach, and the desktop app is accumulating a steady stream of polish and new features.
+
+Since the hotfix, the development pace hasn't slowed — over 1,000 additional commits have landed, bringing desktop sidebar drag-sorting, a new parallel code-review skill, remote media relay, full tool-backend configuration from the GUI, and a unified overlay design system. Here's the full picture.
+
+## v0.18.1: WhatsApp Dashboard, MCP Rewrite, PTY Keep-Alive
+
+Released July 7 as v2026.7.7, v0.18.1 represents roughly **900 commits** beyond v0.18.0 with 60+ merged pull requests.
+
+### WhatsApp Dashboard Pairing
+
+The biggest user-facing addition is a full **WhatsApp dashboard onboarding flow**. Previously, connecting WhatsApp required a manual pairing flow. Now the web dashboard at `https://localhost:2442/channels` walks you through QR-code scanning, session persistence, and reconnection — all from the GUI. The feature ships with 323 lines of integration tests and a revamped `bridge.js` script.
+
+### MCP Reliability Overhaul
+
+The MCP subsystem received its deepest reliability pass yet:
+
+- **Orphan reaping** — The watchdog now reaps orphaned stdio child processes before spawning replacements, preventing zombie accumulation on reconnect
+- **Handshake bounds** — Stalled MCP `initialize` handshakes now time out, preventing subprocess/FD leaks on misbehaving servers
+- **SIGTERM forwarding** — The watchdog wraps after OSV preflight and forwards SIGTERM to child process groups
+- **Idle recycling** — Idle MCP stdio servers (beyond `idle_timeout_seconds` or `max_lifetime_seconds`) are now recycled automatically
+- **Windows compatibility** — POSIX-only kill primitives are guarded behind platform checks
+
+This closes a long-standing issue where MCP servers left orphaned processes across reconnections, particularly affecting long-running gateway sessions.
+
+### PTY Session Management
+
+A new `PtySessionRegistry` brings proper lifecycle management to dashboard terminal sessions:
+
+- **Keep-alive RingBuffer** — Output is captured in a ring buffer so late-connecting clients don't miss early output
+- **Attach/detach via token** — Sessions can be reattached via `?attach=` token, surviving transient WebSocket closes
+- **Periodic reaper** — A background reaper cleans up stale PTY sessions
+- **Truecolor advertisement** — The dashboard now advertises truecolor support to the embedded chat TUI
+
+### Memory Provider Switching
+
+The Plugins page in the dashboard gained the ability to **switch memory providers** from the GUI. The backend validates provider names before filesystem operations, and the UI surfaces available providers in a picker. This unblocks the workflow where you want to swap between mem0, RetainDB, or filesystem-backed memory without dropping to the CLI.
+
+### Gateway Multiplex Profiles
+
+A new `GATEWAY_MULTIPLEX_PROFILES` environment variable lets operators force multiplexing on, even when the gateway config doesn't explicitly enable it. This is useful for deployment scenarios where multiple profiles need to share a single gateway process.
+
+### Session Export Expansion
+
+The `sessions export` command gained three new output formats:
+
+- **HTML export** with sidebar navigation, expandable system prompts, and standalone rendering
+- **Prompt-only export** — just the user prompts, stripped of agent responses
+- **Trace format** — structured traces suitable for HF dataset uploads or offline analysis
+
+### Discord Fixes
+
+Several Discord platform fixes landed, including honoring pairing grants for message authentication, better error messaging for the fail-closed allowlist default, and approval-owner mentions on execution prompts.
+
+## v0.18.2: WhatsApp Hotfix
+
+**v0.18.2** (v2026.7.7.2) is a targeted hotfix shipped the same day. The WhatsApp Baileys dependency was unpinned from a specific git commit to use the published `7.0.0-rc13` npm package, resolving a build reproducibility issue.
+
+## Developments Since July 7
+
+The repository hasn't slowed down. Here are the most notable features that have landed since the v0.18.2 tag:
+
+### Simplify-Code Skill
+
+A new built-in skill (`simplify-code`) provides **parallel 3-agent code review and cleanup**. Deploy it on any codebase, and three sub-agents independently review the code for simplification opportunities, then consolidate their findings. It's a practical demonstration of Hermes's fan-out subagent architecture for real engineering workflows.
+
+### Desktop Sidebar Drag Sorting
+
+The desktop sidebar now supports **smooth drag-to-reorder** for sessions, with persistence across restarts. Sessions are grouped by platform source (messaging, iMessage, Discord, etc.) with collapsible source folders. The drag state is preserved via the backend, so your custom order survives relaunch.
+
+### Remote Media Relay
+
+Desktop and gateway now support **remote media relay** — you can attach images and PDFs from a remote gateway session and see them rendered in the desktop chat view. This closes a gap where media attachments over gateway connections were silently dropped.
+
+### Tool-Backend Config in Desktop Settings
+
+The desktop Settings page now includes a **full tool-backend configuration panel** with pickers for every backend and per-backend settings. You can configure Docker, local, or remote execution environments without touching YAML files.
+
+### Unified Overlay Design System
+
+The desktop app's overlay system was redesigned with a unified chrome, including the BrandMark and onboarding flow. The new design uses consistent radius, elevation, and animation across all modal surfaces.
+
+### Cron Jobs as First-Class Sidebar Entity
+
+Cron jobs now appear as their own section in the desktop sidebar, with session titles derived from the job configuration rather than the `[IMPORTANT]` hint. Cron sessions can also be fired directly from the dashboard backend, making it easier to trigger scheduled jobs on demand for testing.
+
+### Temporal Anchoring in Compaction
+
+Context compression gained **temporal anchoring** — compaction summaries now include time-based references that help the model maintain chronological awareness after compression. Combined with the raised compaction trigger to 85% for GPT-5.5 on Codex OAuth, this makes long-running sessions more coherent.
+
+### Other Notable Changes
+
+- Hover-reveal collapsed sidebars as fixed overlays
+- Shift+click the status-bar zap to toggle YOLO mode globally
+- Terminal tool calls rendered as native bash code blocks on messaging platforms
+- Agent start/end hook context now includes `thread_id` and `chat_type`
+- Dashboard UI font can be changed independently of the theme
+- Pillow promoted to a core dependency for better image handling
+- Uninstall the Chat GUI without removing the agent (CLI + desktop)
+- Opt-in structured profile-build path for first-contact onboarding
+- Session provenance metadata emitted on compression rotation (ACP)
+
+## Looking Ahead
+
+With the P0/P1 zero-commitment holding since July 1, the team appears focused on **surface-level polish and ecosystem reliability** — desktop UX improvements, MCP robustness, dashboard feature parity with the CLI, and expanded export/import capabilities. The god-file refactoring (`GatewayKanbanWatchersMixin`, subcommand extraction, `TurnRetryState`) hints at deeper architectural cleanup in preparation for a larger release.
+
+At the current cadence — roughly one named release every 6-12 days — the next major version (possibly v0.19.0) could land within the next week. Watch the [Hermes Agent GitHub](https://github.com/NousResearch/hermes-agent) and the [release notes](https://github.com/NousResearch/hermes-agent/releases) for the official announcement.
+
+{/* crosslinks */}
+
+## 📖 Related Reads
+
+- **[NiteAgent](https://niteagent.com/)** — AI agent development, frameworks, and production patterns
+- **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools, agents, and APIs
+
+*Cross-links automatically generated from Hermes Tutorials.*
