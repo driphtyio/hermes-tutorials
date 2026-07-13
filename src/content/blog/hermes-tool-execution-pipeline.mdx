@@ -1,0 +1,550 @@
+---
+title: "Hermes Agent Tool Execution: From Intent to Action"
+description: "How Hermes Agent resolves, dispatches, and executes tool calls — agent loop, toolsets, built-ins, plugins, MCP, and error handling."
+pubDate: 2026-07-13
+tags: ["hermes", "tutorial", "tools", "agent-loop", "extensibility"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-tool-execution-pipeline-1782745530.jpg"
+lastVerified: 2026-07-13
+---
+
+> **TLDR:** Hermes Agent runs a synchronous agentic loop: user message → LLM API call → tool call detection → tool dispatch → result appended → repeat. Tools are organized into named **toolsets** (web, file, terminal, browser, memory, etc.) that can be enabled or disabled per platform. Custom tools are added via plugins (`register_tool()`) or MCP servers. Run `hermes tools list` to see everything available right now.
+
+## Key Takeaways
+
+- The agent loop cycles between LLM inference and tool execution — Hermes never hard-codes tool sequences
+- Tools are grouped into **toolsets** — logical bundles that control tool availability per platform and profile
+- Use `hermes tools list` to inspect every available tool, its schema, and its enabled status
+- Custom tools are registered via plugins using `register_tool()` — no core code modification needed
+- MCP servers expose external APIs and databases as native Hermes tools with zero glue code
+- Tool execution is **concurrency-safe by toolset** — Hermes batches independent calls and runs conflicting tools serially
+
+## The Agent Loop: How Hermes Calls Tools
+
+Every Hermes session runs the same fundamental loop. Understanding it is the key to debugging tool behavior, optimizing token usage, and building reliable workflows.
+
+```
+User Message → LLM API Call → Parse Response
+                                    │
+                          ┌─────────┴─────────┐
+                          │ Has tool calls?    │
+                          ├─── YES ───────────┤
+                          │ Dispatch tools     │
+                          │ Collect results    │
+                          │ Append to context  │
+                          │ Go to LLM API Call │
+                          ├─── NO ────────────┤
+                          │ Return text reply  │
+                          └───────────────────┘
+```
+
+Hermes uses a **synchronous agentic loop** — every tool result is fed back to the model before the next decision. There is no hidden orchestration or hard-coded pipeline; the model decides which tool to call next based on the accumulated context.
+
+### Step-by-Step Walkthrough
+
+When you ask "search the web for the latest Hermes release notes and save them to a file", the loop executes like this:
+
+| Turn | LLM Output | Action |
+|------|-----------|--------|
+| 1 | User query received | LLM generates `web_search(query="Hermes Agent release notes 2026")` |
+| 2 | Tool result: search results | LLM picks a URL and calls `web_extract(url="...")` |
+| 3 | Tool result: page content | LLM formats the content and calls `write_file(path="release-notes.md", content="...")` |
+| 4 | Tool result: file saved | LLM produces a final text summary for the user |
+
+Each turn costs one LLM API call plus tool execution time. The `execute_code` tool can collapse multi-turn workflows into a single turn by letting the agent write Python that calls tools programmatically.
+
+## Toolsets: How Tools Are Organized
+
+Hermes doesn't give the agent every tool at once. Tools are grouped into **toolsets** — named bundles that control tool availability per platform, per profile, and per session.
+
+### Core Toolsets
+
+| Toolset | Tools | Purpose |
+|---------|-------|---------|
+| `file` | `read_file`, `write_file`, `patch`, `search_files` | File system read/write/edit |
+| `terminal` | `terminal` | Shell command execution |
+| `web` | `web_search`, `web_extract` | Web search and content extraction |
+| `browser` | `browser_navigate`, `browser_click`, `browser_screenshot`, `browser_close` | Full browser automation |
+| `memory` | `memory` | Read/write persistent memory |
+| `agent` | `todo`, `clarify`, `execute_code`, `delegate_task` | Planning, clarification, code execution, subagent delegation |
+| `vision` | `vision_analyze` | Image analysis |
+| `process` | `process` | Background process management |
+| `plugin` | (varies) | Tools registered by installed plugins |
+| `mcp` | (varies) | Tools exposed by MCP server connections |
+
+### Listing and Managing Toolsets
+
+```bash
+# See every tool available with its schema and status
+hermes tools list
+
+# Enable/disable entire toolsets
+hermes tools enable web
+hermes tools disable browser
+
+# Start a session with specific toolsets only
+hermes chat --toolsets file,terminal,web
+
+# Check which toolsets are enabled per platform
+hermes config get toolsets
+```
+
+**Expected output of `hermes tools list`:**
+
+```
+Toolset: file
+  ✓ read_file(path, offset?, limit?) — Read a text file
+  ✓ write_file(path, content) — Write content to a file
+  ✓ patch(mode, path, old_string?, new_string?) — Apply edits
+  ✓ search_files(pattern, target?, path?, file_glob?) — Search file contents
+
+Toolset: terminal
+  ✓ terminal(command, timeout?, workdir?, background?) — Execute shell command
+
+Toolset: web
+  ✓ web_search(query, limit?) — Search the web
+  ✓ web_extract(urls) — Extract content from URLs
+
+Toolset: browser
+  ✗ disabled — browser_navigate, browser_click, browser_screenshot, browser_close
+
+Toolset: agent
+  ✓ todo(status?, title?, description?) — Manage task list
+  ✓ clarify(question) — Ask user for clarification
+  ✓ execute_code(code, language?) — Execute Python/shell programmatically
+  ✓ delegate_task(task_description, tools?, profile?) — Delegate to subagent
+```
+
+## Tool Schemas: How the LLM Sees Tools
+
+Every tool exposed to the LLM carries a JSON schema that describes its parameters. Hermes generates these automatically from the tool's Python function signature and docstring.
+
+For example, the `web_search` tool has an internal schema equivalent to:
+
+```json
+{
+  "name": "web_search",
+  "description": "Search the web for information. Returns up to N results with titles, URLs, and descriptions.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "The search query"
+      },
+      "limit": {
+        "type": "integer",
+        "description": "Maximum results (default: 5, max: 100)",
+        "default": 5
+      }
+    },
+    "required": ["query"]
+  }
+}
+```
+
+Hermes includes all tool schemas in the system prompt of every LLM call. The model reads these schemas and emits JSON tool calls that Hermes parses, validates, and dispatches.
+
+### Schema Generation Rules
+
+- **Parameters with defaults** are optional in the schema
+- **Docstring descriptions** become parameter descriptions — always include them
+- **Union types** (`str | None`) become nullable fields
+- **Literal types** become enum restrictions
+- **`**kwargs`** is not supported — all parameters must be explicitly named
+
+## Tool Dispatch: How Hermes Routes Calls
+
+When the LLM returns a tool call, Hermes routes it through a dispatch pipeline:
+
+```
+LLM Response (JSON tool call)
+       │
+Parse & validate arguments
+       │
+Check concurrency safety
+       │
+┌──────┴──────┐
+│ Is tool in  │
+│ same batch? │
+├── YES ──────┤
+│ Run parallel │
+├── NO ───────┤
+│ Run serial   │
+└─────────────┘
+       │
+Execute tool → Collect result → Append to conversation
+```
+
+### Concurrency Safety
+
+Hermes groups tool calls into **batches** based on concurrency safety. Tools within the same toolset that can safely run in parallel (e.g., two `web_search` calls) execute concurrently. Tools that could conflict (e.g., `write_file` followed by `read_file` on the same path) run serially.
+
+| Pattern | Concurrency | Example |
+|---------|-------------|---------|
+| Same tool, different args | **Parallel** | `web_search(q="A")` + `web_search(q="B")` |
+| Different toolsets | **Parallel** | `web_search(q="X")` + `terminal(cmd="ls")` |
+| Same toolset, same resource | **Serial** | `write_file(a)` + `patch(a)` |
+| Browser + any file tool | **Serial** | `browser_navigate` + `write_file` |
+
+This batching is handled automatically — you don't configure it. It's a runtime property of the dispatch engine.
+
+## Built-in Tools in Action
+
+Let's walk through real Hermes tool calls with their expected output.
+
+### File Tools
+
+```bash
+# In a Hermes session, you ask: "create a file with my TODO list"
+# The agent calls:
+write_file(path="/tmp/todo.md", content="- [ ] Finish Hermes tutorial\n- [ ] Deploy site\n- [ ] Review PR")
+```
+
+**Result:**
+```
+Tool write_file completed:
+  path: /tmp/todo.md
+  size: 61 bytes
+  lines: 3
+```
+
+```bash
+# "search for files containing 'Hermes' in the blog directory"
+search_files(pattern="Hermes", path="/home/techgeek/hermes-tutorials/src/content/blog", output_mode="count")
+```
+
+**Result:**
+```
+Tool search_files completed — 44 files matched
+```
+
+### Terminal Tool
+
+```bash
+# "check disk space"
+terminal(command="df -h /", timeout=10)
+```
+
+**Result:**
+```
+Tool terminal completed:
+  exit_code: 0
+  stdout:
+  Filesystem      Size  Used Avail Use% Mounted on
+  /dev/nvme0n1p2  458G  212G  246G  47% /
+  
+  stderr: (empty)
+```
+
+### Web Tools
+
+```bash
+# "search for the latest Hermes release"
+web_search(query="Hermes Agent v0.18 release", limit=3)
+```
+
+**Result:**
+```
+Tool web_search completed — 3 results:
+1. Hermes v0.18 Judgment Release | Nous Research
+   https://hermes-agent.nousresearch.com/blog/judgment-release
+   "Hermes Agent v0.18 Judgment introduces tool orchestration..."
+
+2. Hermes Agent GitHub Releases
+   https://github.com/NousResearch/hermes-agent/releases
+   "v0.18.0 - Judgment - 2026-07-04"
+
+3. Hermes Agent Update July 2026
+   https://hermes-tutorials.dev/blog/2026-07-04-hermes-judgment-release-v018/
+   "The Judgment release brings tool orchestration improvements..."
+```
+
+### Vision Tool
+
+```bash
+# (Only available if the vision toolset is enabled)
+vision_analyze(image="https://example.com/screenshot.png", prompt="Describe what you see in this screenshot")
+```
+
+**Result:**
+```
+Tool vision_analyze completed:
+  The screenshot shows a terminal window with a Hermes Agent session...
+```
+
+## Custom Tools via Plugins
+
+If Hermes' built-in tools don't cover your use case, the plugin system lets you add custom tools without modifying core code.
+
+### Minimal Plugin Structure
+
+A plugin that adds a single custom tool requires three files:
+
+```
+~/.hermes/plugins/weather-tool/
+├── plugin.yaml
+├── __init__.py
+└── handler.py
+```
+
+**plugin.yaml:**
+```yaml
+name: weather-tool
+version: 1.0.0
+description: "Weather lookup tool using wttr.in"
+tools:
+  - name: get_weather
+    description: "Get current weather for a city"
+    handler: handler.get_weather
+```
+
+**handler.py:**
+```python
+import json
+import urllib.request
+
+def get_weather(city: str) -> str:
+    """Get current weather for a city. Returns a JSON string."""
+    try:
+        url = f"https://wttr.in/{city}?format=%C+%t+%w+%h"
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            data = resp.read().decode("utf-8").strip()
+        return json.dumps({"city": city, "weather": data, "status": "ok"})
+    except Exception as e:
+        return json.dumps({"city": city, "error": str(e), "status": "error"})
+```
+
+**`__init__.py`:**
+```python
+from .handler import get_weather
+
+def register(tool_registry):
+    """Register tools with the Hermes tool registry."""
+    tool_registry.register_tool(
+        name="get_weather",
+        description="Get current weather for a city using wttr.in",
+        handler=get_weather,
+        parameters={
+            "city": {
+                "type": "string",
+                "description": "City name (e.g., London, Tokyo, 'New York')",
+            }
+        },
+        required=["city"],
+    )
+```
+
+### Loading and Verifying
+
+```bash
+# Hermes loads plugins from ~/.hermes/plugins/ at startup
+# Verify it loaded:
+hermes plugins list
+```
+
+**Expected output:**
+```
+Installed plugins:
+  weather-tool v1.0.0 — Weather lookup tool using wttr.in
+    Tools: get_weather
+```
+
+After loading, `get_weather` appears in `hermes tools list` under the `plugin` toolset and is available to the agent in every session.
+
+### Using register_tool() from a Session
+
+You can also register tools dynamically if you're building a skill or workflow that needs a one-off tool. This is less common for persistent tools but useful for prototyping:
+
+```python
+# Hermes exposes register_tool during plugin initialization
+# This is handled automatically by the plugin system
+# You DO NOT call this directly in normal use
+```
+
+## MCP Tools: External Tools as Native Tools
+
+MCP (Model Context Protocol) servers let you connect external services as native Hermes tools. Any MCP server that exposes tools becomes available to the agent automatically.
+
+### Adding an MCP Server
+
+```bash
+# Add a GitHub MCP server
+hermes mcp add github --url https://github.com/modelcontextprotocol/servers --command "npx @modelcontextprotocol/server-github"
+
+# Verify tools are available
+hermes tools list | grep mcp
+```
+
+**Expected output:**
+```
+Toolset: mcp
+  ✓ mcp_github_create_issue(owner, repo, title, body?, labels?) — Create a GitHub issue
+  ✓ mcp_github_get_issue(owner, repo, issue_number) — Get issue details
+  ✓ mcp_github_search_repos(query, limit?) — Search repositories
+```
+
+Once connected, these tools work identically to built-in tools. The agent calls `mcp_github_search_repos(query="hermes agent")` the same way it calls `web_search`.
+
+### Listing Configured Servers
+
+```bash
+hermes mcp list
+```
+
+**Expected output:**
+```
+MCP Servers (2 configured):
+  github          — https://github.com/modelcontextprotocol/servers (connected)
+  filesystem      — npx @modelcontextprotocol/server-filesystem /tmp (connected)
+```
+
+## Tool Configuration Reference
+
+### Enabling/Disabling Tools per Platform
+
+You can control which tools are available on which platforms. For example, you might allow `terminal` in CLI sessions but disable it on Telegram for security.
+
+```yaml
+# ~/.hermes/config.yaml
+toolsets:
+  enabled:
+    - file
+    - terminal
+    - web
+    - agent
+  disabled:
+    - browser
+  platform_overrides:
+    telegram:
+      disabled:
+        - terminal
+        - browser
+    discord:
+      enabled:
+        - web
+```
+
+### Per-Session Tool Override
+
+```bash
+# Start a session with only file + terminal tools
+hermes chat --toolsets file,terminal
+
+# Start with specific toolsets PLUS custom additions
+hermes chat -t "file,terminal,web"
+```
+
+### Tool Timeouts
+
+```yaml
+# ~/.hermes/config.yaml
+terminal:
+  timeout: 180              # Default: 180 seconds
+
+web_search:
+  timeout: 30               # Max seconds per search
+
+browser:
+  timeout: 60               # Per-navigation timeout
+```
+
+## Error Handling and Recovery
+
+When a tool call fails, Hermes follows a predictable error recovery pattern:
+
+1. **The error message is returned to the LLM** as the tool result
+2. **The LLM decides how to respond** — retry, fall back, or admit failure
+3. **The `todo` tool** can be used to track failed steps for later retry
+
+### Common Error Patterns
+
+| Error | Likely Cause | Recovery |
+|-------|-------------|----------|
+| `Tool timeout` | Network issue, slow command | Increase timeout; retry |
+| `Tool not found` | Toolset disabled or plugin not loaded | `hermes tools enable <toolset>` |
+| `Parameter validation failed` | LLM hallucinated a parameter name | Usually self-corrects on retry |
+| `Tool returned error` | Tool implementation issue | Check plugin logs at `~/.hermes/logs/` |
+
+### Graceful Degradation Example
+
+When `web_search` fails due to a network timeout, the agent typically:
+
+```
+1. web_search(query="Hermes release") → Timeout error
+2. LLM: "Search timed out. Let me try with a shorter query."
+3. web_search(query="Hermes release 2026", limit=3) → Success
+4. LLM: "Here's what I found..."
+```
+
+This recovery is driven by the LLM, not by hard-coded fallback logic. The quality of recovery depends on the model's capability and the clarity of tool error messages.
+
+## Concurrency and Batching Behavior
+
+Hermes can invoke multiple tools in a single LLM response turn. The dispatch engine handles batching automatically:
+
+```python
+# The LLM returns TWO tool calls in one response:
+# 1. web_search(query="Hermes Agent features")
+# 2. web_search(query="Hermes Agent installation")
+
+# Both are in the 'web' toolset, same tool, different args
+# → They run IN PARALLEL
+# → Results are collected and appended together
+# → LLM processes both results in the next turn
+```
+
+You can observe this happening during a session — Hermes prints batching info when verbose mode is on:
+
+```
+/verbose
+```
+
+With verbose mode, you'll see output like:
+
+```
+[Dispatch] Batching 2 tool calls...
+[Batch 1/1] web_search, web_search (parallel, toolset=web)
+[Batch 1/1] Completed — both succeeded
+```
+
+## Tools vs. Skills: When to Use What
+
+A common point of confusion is when to create a tool vs. when to create a skill.
+
+| Aspect | Tool | Skill |
+|--------|------|-------|
+| What it is | Executable code that performs an action | Markdown document with step-by-step instructions |
+| Who runs it | Hermes runtime (Python) | The LLM reads it as context and follows the steps |
+| Best for | Deterministic operations, API calls, system commands | Multi-step procedures, workflows, domain knowledge |
+| Example | `web_search`, `write_file`, `terminal` | "How to deploy to Cloudflare Pages" |
+| Debugging | Logged to `~/.hermes/logs/` | No execution — LLM follows the instructions |
+| Extension | Plugin (`register_tool()`) or MCP server | Skill file (`~/.hermes/skills/<name>/SKILL.md`) |
+
+**Rule of thumb:** If the operation is deterministic and needs real execution (API call, file write, command run), it's a tool. If it's a procedure the agent should follow step by step, it's a skill.
+
+## Summary
+
+- Hermes runs a **synchronous agent loop**: LLM → tool dispatch → result → LLM → tool dispatch → ...
+- Tools are organized into **toolsets** (file, terminal, web, browser, memory, agent, vision, process, plugin, mcp) that can be enabled/disabled per platform
+- Use `hermes tools list` to inspect all available tools; `hermes tools enable/disable` to toggle them
+- **Custom tools** are added via plugins using `register_tool()` — three files (plugin.yaml, handler.py, __init__.py)
+- **MCP servers** expose external APIs as native tools — `hermes mcp add` then use them as `mcp_<server>_<tool>`
+- Tool execution is **concurrency-safe by toolset** — parallel for independent calls, serial for conflicting ones
+- Error recovery is LLM-driven — the model sees the error and decides how to proceed
+- Use tools for deterministic execution and skills for step-by-step procedures
+
+{/* crosslinks */}
+
+## Related Reads
+
+- **[Building a Custom Plugin for Hermes Agent](https://hermes-tutorials.dev/blog/building-hermes-plugin/)** — Full plugin build walkthrough with timezone converter and pomodoro timer
+- **[MCP Servers: Connecting External Tools](https://hermes-tutorials.dev/blog/mcp-servers-guide/)** — Complete MCP integration guide
+- **[Build a Custom MCP Server](https://hermes-tutorials.dev/blog/build-custom-mcp-server/)** — Create your own MCP server from scratch
+- **[How to Manage Multiple Profiles and Cron Jobs](https://hermes-tutorials.dev/blog/hermes-profiles-cron-guide/)** — Profiles and cron for multi-role setups
+- **[CLI Mastery: Commands, Sessions, and Slash Commands](https://hermes-tutorials.dev/blog/cli-mastery/)** — Full Hermes CLI reference
+- **[Token Usage & Cost Optimization](https://hermes-tutorials.dev/blog/token-cost-optimization/)** — Reduce API costs per tool call
+- **[ToolBrain](https://toolbrain.net/)** — Tool reviews, LLM comparisons, and AI workflow guides
+- **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools and agents
+- **[NiteAgent](https://niteagent.com/)** — AI agent development, frameworks, and production patterns
+
+*Cross-links automatically generated from Hermes Tutorials.*
