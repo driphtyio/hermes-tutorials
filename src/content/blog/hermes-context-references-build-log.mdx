@@ -1,0 +1,193 @@
+---
+title: "Build Log: Using Hermes Agent @-References for Smarter Code Context"
+description: "Explore Hermes Agent's @-reference system — @file:, @folder:, @diff, @git:, and @url: — for faster code review, debugging, and project exploration."
+pubDate: "2026-07-17"
+tags: ["hermes", "build-log", "context", "workflow"]
+heroImage: "https://media.lumenfall.ai/m/3Fn0VKHZhS/med_3GdtjKaZtW1ljD0tLi6eyfoidOJ.jpg"
+---
+
+{/* This build log covers Hermes Agent's @-reference context injection feature, available since v0.18.x HEAD */}
+
+Hermes Agent's v0.18.x release train brought more than just MoA and curator improvements. One of the most immediately useful quality-of-life features is the **Context References** system — the `@`-syntax that lets you inject files, folders, diffs, git history, and URLs directly into your prompts without reaching for separate tools.
+
+This build log walks through what context references are, how they work under the hood, and real workflows where they save the most time.
+
+## What Are Context References?
+
+Context references are shorthand triggers that expand inline before your message reaches the agent. Type `@file:src/main.py` in your prompt, and Hermes reads the file, appends its contents under an `--- Attached Context ---` section, and sends the whole thing to the model.
+
+The supported reference types are:
+
+| Syntax | What it does |
+|--------|-------------|
+| `@file:path` | Injects a file's contents |
+| `@file:path:10-25` | Injects specific line range (1-indexed, inclusive) |
+| `@folder:path` | Injects a directory tree listing with metadata |
+| `@diff` | Injects unstaged git diff |
+| `@staged` | Injects staged git diff |
+| `@git:N` | Injects last N commits with patches (max 10) |
+| `@url:https://...` | Fetches and injects web page content |
+
+Multiple references work in a single message, and trailing punctuation (commas, periods, etc.) is automatically stripped from reference values so `@file:main.py.` still works.
+
+## Step 1: Verifying the Feature
+
+First, let's confirm context references are active in our Hermes session:
+
+```bash
+# Start an interactive session
+hermes chat
+
+# Inside the session, just type @ and hit Tab
+# You should see autocomplete options:
+# @diff  @file:  @folder:  @git:  @staged  @url:
+```
+
+The CLI's tab-completion is the most tactile part of the feature — typing `@` triggers a completions menu showing all reference types, and `@file:` and `@folder:` surface filesystem paths with file sizes.
+
+## Step 2: Code Review with @diff and @file
+
+The most obvious win is code review. Instead of describing what changed:
+
+```
+# Before context references, you'd have to explain:
+"The main.py file has a function authenticate_user() that needs review"
+```
+
+You now write:
+
+```
+Review this change for security issues. @diff
+```
+
+Or for a targeted review of a specific file alongside the diff:
+
+```
+Review @diff and check if the auth changes in @file:src/auth.py:50-120 are consistent with our rate-limiting middleware.
+```
+
+The `@file:` line-range syntax is especially useful here. Instead of dumping an entire 500-line file, you inject only the relevant section (lines 50-120), keeping the context window lean and the model focused.
+
+## Step 3: Project Exploration with @folder
+
+When you're dropped into an unfamiliar codebase, `@folder:` gives you an instant structural overview:
+
+```
+What does this project do? @folder:src @file:README.md
+```
+
+This expands to a directory tree like:
+
+```
+--- Attached Context ---
+## @folder:src
+```
+src/
+├── main.py          (12.4 KB)
+├── auth/
+│   ├── __init__.py   (0.1 KB)
+│   ├── login.py      (8.2 KB)
+│   ├── oauth.py      (15.7 KB)
+│   └── middleware.py  (3.1 KB)
+├── api/
+│   ├── routes.py     (22.4 KB)
+│   └── validators.py (6.8 KB)
+└── db/
+    ├── models.py     (18.2 KB)
+    └── migrations/   (12 entries)
+```
+
+Combined with `@file:README.md`, the agent gets both the project's own documentation and a live snapshot of the actual file tree — no stale architecture diagrams needed.
+
+## Step 4: Debugging with Git History
+
+When a test is failing and you need to know what changed recently:
+
+```
+This test is failing on CI. Here's the test @file:tests/test_auth.py
+and the implementation @file:src/auth/login.py:80-150
+
+Here's what changed in the last 3 commits: @git:3
+```
+
+The `@git:N` reference expands the last N commits with their patches, giving the agent full context of recent changes without you having to manually copy-paste git log output.
+
+## Step 5: Research with @url
+
+The `@url:` reference fetches and injects web page content. This is useful for pulling in documentation, RFCs, or articles as context:
+
+```
+Compare the approach in @url:https://arxiv.org/abs/2301.00001
+with @url:https://arxiv.org/abs/2301.00002
+and tell me which is better suited for our use case in @file:src/models/transformer.py
+```
+
+The agent sees the fetched content inline alongside your code, enabling multi-source analysis in a single turn.
+
+## How It Works Under the Hood
+
+Context references are expanded **before** the message reaches the LLM, in the CLI's pre-processing layer. Here's the flow:
+
+1. You type a message with `@file:src/main.py`
+2. The CLI parses the message for `@`-prefix tokens using a regex scanner
+3. Each reference is resolved relative to the working directory
+4. Content is fetched (file read, git command, HTTP GET, etc.)
+5. Security checks run: sensitive path blocking, path traversal protection, binary file detection
+6. Size limits are enforced — at 25% of context length a warning is appended; at 50% expansion is refused
+7. The expanded content is appended under `--- Attached Context ---`
+8. The full message (original text + attached context) is sent to the agent
+
+The security layer is worth highlighting. These paths are **always blocked** from `@file:` references:
+
+- SSH keys and config (`~/.ssh/id_rsa`, `~/.ssh/config`)
+- Shell profiles (`~/.bashrc`, `~/.zshrc`, `~/.profile`)
+- Credential files (`~/.netrc`, `~/.npmrc`, `~/.pypirc`)
+- Hermes env (`$HERMES_HOME/.env`)
+
+Entire directories are also fully blocked: `~/.ssh/`, `~/.aws/`, `~/.gnupg/`, `~/.kube/`, and the skills hub directory.
+
+## Tips from the Build
+
+After using context references for a few days, here are the patterns that emerged as most useful:
+
+### Line ranges for surgical context
+
+Instead of `@file:src/controllers/user_controller.py`, try `@file:src/controllers/user_controller.py:45-90` when you only need the `create_user` method. This keeps token usage predictable.
+
+### Combine @diff with @staged for PR review
+
+```
+Review these staged changes @staged against the working tree @diff.
+Look for any inconsistencies between what's committed and what's in progress.
+```
+
+### @folder for CI/CD debugging
+
+```
+Our deploy is failing. Here's the config @folder:deploy @file:deploy/cloudbuild.yaml
+Check for any environment mismatches.
+```
+
+### Piping @url results through @file for offline reference
+
+Fetch an API spec and cross-reference with your implementation:
+
+```
+Does my implementation @file:src/api/handlers.py match this spec? @url:https://api.example.com/openapi.json
+```
+
+## Limitations to Know
+
+Context references are primarily a **CLI feature**. On messaging platforms (Telegram, Discord, etc.), the `@` syntax passes through unexpanded — the agent can still use its tools (`read_file`, `search_files`, `web_extract`) but the inline shorthand doesn't work there.
+
+Also, large injected content (especially from `@url:` or `@file:` on big files) contributes to context usage. If the conversation gets compressed later, the injected content is summarized rather than preserved verbatim. Use line ranges for large files.
+
+The folder listing caps at 200 entries, and `@git:N` is clamped to 10 commits max.
+
+## Conclusion
+
+Context references are one of those features that seems small on paper but changes your daily workflow significantly. The ability to type `@diff @file:src/auth.py:50-120` and have the agent instantly see both the working-tree changes and the relevant code section — without you running separate commands or pasting output — eliminates friction from the most common developer-agent interactions.
+
+For anyone doing code review, debugging, or project exploration with Hermes, context references are the feature you didn't know you needed until you had it. Try starting your next session with `@folder:. @file:README.md` and see how much faster the agent understands your project.
+
+*This build log was written while running Hermes Agent v0.18.x HEAD (post-v0.18.2). Context references are available on any recent Hermes install — run `hermes update` to get the latest.*
