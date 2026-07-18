@@ -60,7 +60,7 @@ const breadcrumbSchema = {
 		<script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
 		<style>
 			/* ════════════════════════════════════════════
-			   BlogPost.stepfun — Widescreen + Space Optimized
+			   BlogPost.poolside-laguna — Widescreen + Space-Optimized
 			   ════════════════════════════════════════════ */
 
 			/* ── Escape the 860px global content-width ── */
@@ -68,22 +68,22 @@ const breadcrumbSchema = {
 				width: 100% !important;
 				max-width: min(1800px, 90vw);
 				margin: 0 auto;
-				padding: 1.25em 2em 3em;
+				padding: 1.25em 1.5em 3em;
 			}
 
 			/* ── Breadcrumbs ── */
 			.breadcrumbs {
 				max-width: min(1800px, 90vw);
 				margin: 0 auto;
-				padding: 0.6em 2em 0;
-				font-size: 0.80em;
+				padding: 0.6em 1.5em 0;
+				font-size: 0.8em;
 				color: var(--text-muted);
 			}
 			.breadcrumbs a { color: var(--text-muted); }
 			.breadcrumbs a:hover { color: var(--accent-light); }
-			.breadcrumbs .sep { margin: 0 0.4em; color: var(--border-light); }
+			.breadcrumbs .sep { margin: 0 0.35em; color: var(--border-light); }
 
-			/* ── Hero Image (full-bleed within article, not constrained by prose) ── */
+			/* ── Hero Image (full-bleed within article, NOT constrained by prose width) ── */
 			.hero-image {
 				width: 100%;
 				margin-bottom: 1.25em;
@@ -98,7 +98,7 @@ const breadcrumbSchema = {
 				box-shadow: var(--shadow-md);
 			}
 
-			/* ── Constrained body: title, stats, prose at readable line-length ── */
+			/* ── Constrained body wrapper: title, stats, prose, TLDR at readable width ── */
 			.article-body {
 				max-width: 720px;
 				margin: 0 auto;
@@ -126,11 +126,11 @@ const breadcrumbSchema = {
 				font-size: 0.84em;
 				margin-bottom: 0.6em;
 			}
-			.post-stats .sep { opacity: 0.3; }
+			.post-stats .sep { opacity: 0.35; }
 			.post-stats .tag-link {
 				display: inline-block;
 				padding: 0.06em 0.45em;
-				font-size: 0.80em;
+				font-size: 0.82em;
 				color: var(--accent-light);
 				border: 1px solid var(--border-light);
 				border-radius: var(--radius-sm);
@@ -145,10 +145,10 @@ const breadcrumbSchema = {
 
 			/* ── Description ── */
 			.post-desc {
-				font-size: 1.05em;
+				font-size: 1.08em;
 				color: var(--text-secondary);
 				line-height: 1.6;
-				margin: 0 0 1em;
+				margin: 0 0 1.1em;
 			}
 
 			/* ── Prose ── */
@@ -156,8 +156,8 @@ const breadcrumbSchema = {
 				color: var(--text-primary);
 			}
 			.prose h2 { margin-top: 2em; }
-			.prose h3 { margin-top: 1.2em; }
-			.prose p { margin-bottom: 1.2em; line-height: 1.8; }
+			.prose h3 { margin-top: 1.25em; }
+			.prose p { margin-bottom: 1.25em; line-height: 1.8; }
 
 			/* ── TLDR Callout (compact aside) ── */
 			.tldr-block {
@@ -165,7 +165,7 @@ const breadcrumbSchema = {
 				border: 1px solid var(--border);
 				border-left: 3px solid var(--accent);
 				border-radius: var(--radius-md);
-				padding: 0.85em 1.15em;
+				padding: 0.85em 1.1em;
 				margin: 1em 0;
 				font-size: 0.92em;
 				color: var(--text-secondary);
@@ -173,27 +173,47 @@ const breadcrumbSchema = {
 			.tldr-block strong:first-child {
 				color: var(--accent-light);
 				text-transform: uppercase;
-				font-size: 0.70em;
+				font-size: 0.7em;
 				letter-spacing: 0.06em;
 			}
 
 			/* ── Widescreen Breakpoint Ladder ──
-			     Each step expands main to ~90% of viewport width.
-			     At 1920px: 90vw = 1728px, capped by min(1800px, 90vw) = 1728px (~90%). */
+			   At each step, the 90vw rule grows naturally. We fine-tune
+			   padding, internal spacing, and font sizing for comfort. ── */
+
 			@media (min-width: 1200px) {
-				main { max-width: min(1080px, 90vw); }
+				main { padding: 1.5em 2em 3em; }
+				.breadcrumbs { padding: 0.7em 2em 0; }
+				.post-header h1 { font-size: 3rem; }
 			}
 			@media (min-width: 1440px) {
-				main { max-width: min(1296px, 90vw); }
+				main { padding: 1.75em 2.5em 3em; }
+				.breadcrumbs { padding: 0.8em 2.5em 0; }
+				.post-header h1 { font-size: 3.2rem; }
+				.article-body { max-width: 740px; }
+				.post-desc { font-size: 1.12em; }
 			}
 			@media (min-width: 1600px) {
-				main { max-width: min(1440px, 90vw); }
+				main { padding: 2em 3em 3.5em; }
+				.breadcrumbs { padding: 0.85em 3em 0; }
+				.post-header h1 { font-size: 3.4rem; }
+				.article-body { max-width: 760px; }
+				.post-stats { font-size: 0.88em; gap: 0.35em 0.7em; }
 			}
 			@media (min-width: 1800px) {
-				main { max-width: min(1620px, 90vw); }
+				main { padding: 2em 3.5em 4em; }
+				.breadcrumbs { padding: 0.9em 3.5em 0; }
+				.post-header h1 { font-size: 3.6rem; }
+				.article-body { max-width: 780px; }
+				.post-desc { font-size: 1.15em; }
+				.prose { font-size: 1.04em; }
 			}
 			@media (min-width: 2000px) {
-				main { max-width: min(1800px, 90vw); }
+				main { padding: 2em 4em 4em; }
+				.breadcrumbs { padding: 0.9em 4em 0; }
+				.post-header h1 { font-size: 3.8rem; }
+				.article-body { max-width: 800px; }
+				.prose { font-size: 1.06em; }
 			}
 
 			/* ── Mobile ── */
@@ -202,6 +222,7 @@ const breadcrumbSchema = {
 				.breadcrumbs { padding: 0.4em 1em 0; }
 				.post-header h1 { font-size: 2rem; }
 				.post-stats { font-size: 0.78em; gap: 0.25em 0.4em; }
+				.post-desc { font-size: 1em; }
 			}
 		</style>
 	</head>

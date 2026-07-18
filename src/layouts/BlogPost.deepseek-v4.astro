@@ -60,7 +60,7 @@ const breadcrumbSchema = {
 		<script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
 		<style>
 			/* ════════════════════════════════════════════
-			   BlogPost.stepfun — Widescreen + Space Optimized
+			   BlogPost.deepseek-v4 — Widescreen Optimized
 			   ════════════════════════════════════════════ */
 
 			/* ── Escape the 860px global content-width ── */
@@ -68,25 +68,25 @@ const breadcrumbSchema = {
 				width: 100% !important;
 				max-width: min(1800px, 90vw);
 				margin: 0 auto;
-				padding: 1.25em 2em 3em;
+				padding: 1.5em 2em 3em;
 			}
 
 			/* ── Breadcrumbs ── */
 			.breadcrumbs {
 				max-width: min(1800px, 90vw);
 				margin: 0 auto;
-				padding: 0.6em 2em 0;
-				font-size: 0.80em;
+				padding: 0.75em 2em 0;
+				font-size: 0.82em;
 				color: var(--text-muted);
 			}
 			.breadcrumbs a { color: var(--text-muted); }
 			.breadcrumbs a:hover { color: var(--accent-light); }
 			.breadcrumbs .sep { margin: 0 0.4em; color: var(--border-light); }
 
-			/* ── Hero Image (full-bleed within article, not constrained by prose) ── */
+			/* ── Hero Image (full-bleed within article) ── */
 			.hero-image {
 				width: 100%;
-				margin-bottom: 1.25em;
+				margin-bottom: 1.5em;
 			}
 			.hero-image img {
 				display: block;
@@ -98,7 +98,7 @@ const breadcrumbSchema = {
 				box-shadow: var(--shadow-md);
 			}
 
-			/* ── Constrained body: title, stats, prose at readable line-length ── */
+			/* ── Constrained body: title, stats, prose at readable width ── */
 			.article-body {
 				max-width: 720px;
 				margin: 0 auto;
@@ -106,14 +106,14 @@ const breadcrumbSchema = {
 
 			/* ── Post Header ── */
 			.post-header {
-				margin-bottom: 1.25em;
+				margin-bottom: 1.5em;
 			}
 			.post-header h1 {
 				font-size: 2.8rem;
 				font-weight: 700;
 				letter-spacing: -0.03em;
 				line-height: 1.1;
-				margin: 0 0 0.3em;
+				margin: 0 0 0.35em;
 			}
 
 			/* ── One-line stats bar: author · date · reading time · tags ── */
@@ -121,16 +121,16 @@ const breadcrumbSchema = {
 				display: flex;
 				flex-wrap: wrap;
 				align-items: center;
-				gap: 0.3em 0.6em;
+				gap: 0.4em 0.7em;
 				color: var(--text-muted);
-				font-size: 0.84em;
-				margin-bottom: 0.6em;
+				font-size: 0.85em;
+				margin-bottom: 0.75em;
 			}
-			.post-stats .sep { opacity: 0.3; }
+			.post-stats .sep { opacity: 0.35; }
 			.post-stats .tag-link {
 				display: inline-block;
-				padding: 0.06em 0.45em;
-				font-size: 0.80em;
+				padding: 0.08em 0.5em;
+				font-size: 0.82em;
 				color: var(--accent-light);
 				border: 1px solid var(--border-light);
 				border-radius: var(--radius-sm);
@@ -145,19 +145,19 @@ const breadcrumbSchema = {
 
 			/* ── Description ── */
 			.post-desc {
-				font-size: 1.05em;
+				font-size: 1.1em;
 				color: var(--text-secondary);
 				line-height: 1.6;
-				margin: 0 0 1em;
+				margin: 0 0 1.25em;
 			}
 
 			/* ── Prose ── */
 			.prose {
 				color: var(--text-primary);
 			}
-			.prose h2 { margin-top: 2em; }
-			.prose h3 { margin-top: 1.2em; }
-			.prose p { margin-bottom: 1.2em; line-height: 1.8; }
+			.prose h2 { margin-top: 2.25em; }
+			.prose h3 { margin-top: 1.35em; }
+			.prose p { margin-bottom: 1.35em; line-height: 1.8; }
 
 			/* ── TLDR Callout (compact aside) ── */
 			.tldr-block {
@@ -165,32 +165,30 @@ const breadcrumbSchema = {
 				border: 1px solid var(--border);
 				border-left: 3px solid var(--accent);
 				border-radius: var(--radius-md);
-				padding: 0.85em 1.15em;
-				margin: 1em 0;
-				font-size: 0.92em;
+				padding: 1em 1.25em;
+				margin: 1.25em 0;
+				font-size: 0.93em;
 				color: var(--text-secondary);
 			}
 			.tldr-block strong:first-child {
 				color: var(--accent-light);
 				text-transform: uppercase;
-				font-size: 0.70em;
+				font-size: 0.72em;
 				letter-spacing: 0.06em;
 			}
 
-			/* ── Widescreen Breakpoint Ladder ──
-			     Each step expands main to ~90% of viewport width.
-			     At 1920px: 90vw = 1728px, capped by min(1800px, 90vw) = 1728px (~90%). */
+			/* ── Widescreen Breakpoint Ladder ── */
 			@media (min-width: 1200px) {
 				main { max-width: min(1080px, 90vw); }
 			}
 			@media (min-width: 1440px) {
-				main { max-width: min(1296px, 90vw); }
+				main { max-width: min(1300px, 90vw); }
 			}
 			@media (min-width: 1600px) {
-				main { max-width: min(1440px, 90vw); }
+				main { max-width: min(1520px, 90vw); }
 			}
 			@media (min-width: 1800px) {
-				main { max-width: min(1620px, 90vw); }
+				main { max-width: min(1700px, 90vw); }
 			}
 			@media (min-width: 2000px) {
 				main { max-width: min(1800px, 90vw); }
@@ -198,10 +196,10 @@ const breadcrumbSchema = {
 
 			/* ── Mobile ── */
 			@media (max-width: 720px) {
-				main { padding: 0.75em 1em 2em; }
-				.breadcrumbs { padding: 0.4em 1em 0; }
+				main { padding: 1em 1em 2em; }
+				.breadcrumbs { padding: 0.5em 1em 0; }
 				.post-header h1 { font-size: 2rem; }
-				.post-stats { font-size: 0.78em; gap: 0.25em 0.4em; }
+				.post-stats { font-size: 0.8em; gap: 0.3em 0.5em; }
 			}
 		</style>
 	</head>
