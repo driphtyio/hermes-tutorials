@@ -6,6 +6,25 @@ import { SITE_TITLE } from '../consts';
 import fs from 'fs';
 import arenaData from '../data/hermestuts-arena.json';
 
+// ── Load process feedback ──
+let feedbackData = { matches: [], recurring_issues: [], total_matches_analyzed: 0, clean_match_rate: 0 };
+try {
+  const raw = JSON.parse(fs.readFileSync('/home/techgeek/.hermes/arena/arena-feedback.json', 'utf-8'));
+  const localMatchIds = new Set(localMatches.map(m => m.id));
+  const localFeedback = raw.matches.filter(m => localMatchIds.has(m.match_id));
+  feedbackData = {
+    last_updated: raw.last_updated,
+    total_matches_analyzed: localFeedback.length,
+    clean_match_rate: localFeedback.length > 0
+      ? Math.round((localFeedback.filter(m => m.clean).length / localFeedback.length) * 100)
+      : 0,
+    recurring_issues: raw.recurring_issues || [],
+    matches: localFeedback,
+  };
+} catch (e) {
+  // Feedback file not available — skip
+}
+
 const { matches, leaderboard, model_pool, stability } = arenaData;
 
 // ── Stats ──
@@ -602,6 +621,107 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         background: rgba(107, 107, 118, 0.1);
       }
 
+      /* ── Process Feedback ── */
+      .feedback-section {
+        margin-top: 1.5em;
+      }
+      .feedback-subtitle {
+        font-size: 0.82em;
+        color: var(--text-dim);
+        margin: -0.3em 0 0.8em;
+        line-height: 1.5;
+      }
+      .feedback-stats-bar {
+        display: flex;
+        gap: 2em;
+        padding: 0.6em 0;
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 0.8em;
+      }
+      .feedback-stat { display: flex; flex-direction: column; gap: 0.05em; }
+      .feedback-stat-num { font-size: 1.1em; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
+      .feedback-stat-label { font-size: 0.72em; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+      .recurring-issues {
+        background: var(--surface-1);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0.6em 0.8em;
+        margin-bottom: 0.8em;
+        font-size: 0.82em;
+      }
+      .recurring-issues strong { color: var(--text); }
+      .issues-list { display: flex; flex-wrap: wrap; gap: 0.4em; margin-top: 0.3em; }
+      .issue-tag {
+        font-size: 0.78em;
+        padding: 0.15em 0.5em;
+        border-radius: 4px;
+        background: rgba(234, 179, 8, 0.1);
+        color: var(--yellow);
+        border: 1px solid rgba(234, 179, 8, 0.2);
+      }
+      .issue-tag em { font-style: normal; color: var(--text-dim); margin-left: 0.2em; }
+      .feedback-matches { display: flex; flex-direction: column; gap: 0.5em; }
+      .feedback-match {
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--surface-1);
+        padding: 0.6em 0.75em;
+      }
+      .feedback-match-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5em;
+        margin-bottom: 0.25em;
+      }
+      .feedback-match-topic { font-size: 0.85em; font-weight: 600; color: #fff; }
+      .feedback-match-status {
+        font-size: 0.65em;
+        padding: 0.12em 0.5em;
+        border-radius: 999px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        flex-shrink: 0;
+      }
+      .status-clean { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+      .status-issues { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+      .feedback-signals { display: flex; flex-wrap: wrap; gap: 0.3em; margin-bottom: 0.3em; }
+      .signal-tag {
+        font-size: 0.7em;
+        padding: 0.1em 0.4em;
+        border-radius: 3px;
+        background: var(--surface-2);
+        color: var(--text-dim);
+        border: 1px solid var(--border-light);
+      }
+      .feedback-suggestions {
+        list-style: none;
+        padding: 0;
+        margin: 0.1em 0;
+        font-size: 0.78em;
+      }
+      .feedback-suggestions .suggestion {
+        padding: 0.1em 0;
+        line-height: 1.5;
+        color: var(--text-dim);
+      }
+      .suggestion .suggestion-sev { font-weight: 600; margin-right: 0.3em; }
+      .suggestion.high .suggestion-sev { color: var(--red); }
+      .suggestion.medium .suggestion-sev { color: var(--yellow); }
+      .suggestion.info .suggestion-sev { color: var(--text-muted); }
+      .auto-brief {
+        margin-top: 0.3em;
+        font-size: 0.78em;
+        color: var(--text-dim);
+        padding: 0.3em 0.5em;
+        background: var(--surface-2);
+        border-radius: 4px;
+        border-left: 2px solid var(--accent);
+      }
+      .auto-brief strong { color: var(--accent-light); }
+
       /* ── Last Updated ── */
       .last-updated {
         margin-top: 1.5em;
@@ -974,6 +1094,79 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         ) : (
           <div class="empty-state">
             <p>No models in pool.</p>
+          </div>
+        )}
+      </section>
+
+      <!-- ── Process Feedback ── -->
+      <section class="section feedback-section">
+        <h2 class="section-title">Process Feedback</h2>
+        <p class="feedback-subtitle">Automated analysis from arena-process-feedback.py. Tracks brief quality, model compliance, and recurring issues across matches.</p>
+
+        {feedbackData.matches.length > 0 ? (
+          <>
+            <div class="feedback-stats-bar">
+              <div class="feedback-stat">
+                <span class="feedback-stat-num">{feedbackData.matches.length}</span>
+                <span class="feedback-stat-label">Analyzed</span>
+              </div>
+              <div class="feedback-stat">
+                <span class="feedback-stat-num">{feedbackData.clean_match_rate}%</span>
+                <span class="feedback-stat-label">Clean Rate</span>
+              </div>
+              <div class="feedback-stat">
+                <span class="feedback-stat-num">{feedbackData.matches.filter(m => !m.clean).length}</span>
+                <span class="feedback-stat-label">Issues Found</span>
+              </div>
+            </div>
+
+            {feedbackData.recurring_issues.length > 0 && (
+              <div class="recurring-issues">
+                <strong>Recurring Issues</strong>
+                <div class="issues-list">
+                  {feedbackData.recurring_issues.map(issue => (
+                    <span class="issue-tag">{issue.issue} <em>x{issue.count}</em></span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div class="feedback-matches">
+              {feedbackData.matches.map(fm => (
+                <div class="feedback-match">
+                  <div class="feedback-match-header">
+                    <span class="feedback-match-topic">{fm.topic}</span>
+                    <span class={`feedback-match-status ${fm.clean ? 'status-clean' : 'status-issues'}`}>
+                      {fm.clean ? 'Clean' : 'Issues'}
+                    </span>
+                  </div>
+                  {fm.signals.length > 0 && (
+                    <div class="feedback-signals">
+                      {fm.signals.map(s => <span class="signal-tag">{s}</span>)}
+                    </div>
+                  )}
+                  {fm.suggestions.length > 0 && (
+                    <ul class="feedback-suggestions">
+                      {fm.suggestions.map(s => (
+                        <li class={`suggestion ${s.severity}`}>
+                          <span class="suggestion-sev">[{s.severity.toUpperCase()}]</span>
+                          <span class="suggestion-text">{s.text}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {fm.auto_brief_line && fm.auto_brief_line !== '' && (
+                    <div class="auto-brief">
+                      <strong>Next brief:</strong> {fm.auto_brief_line}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div class="empty-state">
+            <p>No process feedback available yet.</p>
           </div>
         )}
       </section>
