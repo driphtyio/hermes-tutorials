@@ -6,25 +6,6 @@ import { SITE_TITLE } from '../consts';
 import fs from 'fs';
 import arenaData from '../data/hermestuts-arena.json';
 
-// ── Load process feedback ──
-let feedbackData = { matches: [], recurring_issues: [], total_matches_analyzed: 0, clean_match_rate: 0 };
-try {
-  const raw = JSON.parse(fs.readFileSync('/home/techgeek/.hermes/arena/arena-feedback.json', 'utf-8'));
-  const localMatchIds = new Set(localMatches.map(m => m.id));
-  const localFeedback = raw.matches.filter(m => localMatchIds.has(m.match_id));
-  feedbackData = {
-    last_updated: raw.last_updated,
-    total_matches_analyzed: localFeedback.length,
-    clean_match_rate: localFeedback.length > 0
-      ? Math.round((localFeedback.filter(m => m.clean).length / localFeedback.length) * 100)
-      : 0,
-    recurring_issues: raw.recurring_issues || [],
-    matches: localFeedback,
-  };
-} catch (e) {
-  // Feedback file not available — skip
-}
-
 const { matches, leaderboard, model_pool, stability } = arenaData;
 
 // ── Stats ──
@@ -73,6 +54,26 @@ function getAvailabilityBadge(modelName) {
 }
 
 const lastUpdated = stability?.last_updated ?? 'N/A';
+
+// ── Load process feedback ──
+let feedbackData = { matches: [], recurring_issues: [], total_matches_analyzed: 0, clean_match_rate: 0 };
+try {
+  const raw = JSON.parse(fs.readFileSync('/home/techgeek/.hermes/arena/arena-feedback.json', 'utf-8'));
+  const localMatchIds = new Set(localMatches.map(m => m.id));
+  const localFeedback = raw.matches.filter(m => localMatchIds.has(m.match_id));
+  feedbackData = {
+    last_updated: raw.last_updated,
+    total_matches_analyzed: localFeedback.length,
+    clean_match_rate: localFeedback.length > 0
+      ? Math.round((localFeedback.filter(m => m.clean).length / localFeedback.length) * 100)
+      : 0,
+    recurring_issues: raw.recurring_issues || [],
+    matches: localFeedback,
+  };
+} catch (e) {
+  // Feedback file not available — skip
+}
+
 ---
 
 <!doctype html>
