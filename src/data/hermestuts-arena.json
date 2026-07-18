@@ -3,7 +3,7 @@
     "name": "Hermes Tutorials Arena",
     "version": "1.0.0",
     "description": "Model-vs-model battles for Hermes Tutorials content and design.",
-    "total_matches": 7
+    "total_matches": 8
   },
   "model_pool": [
     {
@@ -33,7 +33,7 @@
       "benchmark_weight": 0.84,
       "benchmark_score": 8.4,
       "reliability": 0.38,
-      "matches_played": 21,
+      "matches_played": 22,
       "status": "pass"
     },
     {
@@ -309,7 +309,7 @@
       "benchmark_score": 8.1,
       "benchmark_weight": 0.81,
       "reliability": 0.0,
-      "matches_played": 4,
+      "matches_played": 5,
       "status": "pass"
     },
     {
@@ -1300,7 +1300,7 @@
           "score": 8.4,
           "strengths": [
             "!important width override",
-            "progressive prose width (720\u2192740\u2192760px)",
+            "progressive prose width (720→740→760px)",
             "clean breakpoints"
           ],
           "weaknesses": [
@@ -1339,6 +1339,119 @@
             "missing !important on width override",
             "no article-body wrapper",
             "no inline tags in stats"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cards-widescreen-opt",
+      "date": "2026-07-17",
+      "type": "design",
+      "topic": "Redesign 7 Card Pages for Widescreen & Space Optimization",
+      "winner": "glm-5-turbo",
+      "process_feedback": {
+        "clean": false,
+        "signals": ["delegation_error"],
+        "issues": [
+          {
+            "severity": "high",
+            "category": "wildcard_omission",
+            "description": "Wildcard model (nexum-router via nexum) was not delegated. Batch 2 only delegated 2 competing models instead of 2+wildcard.",
+            "count": 1
+          }
+        ],
+        "auto_brief_line": "MANDATORY: delegate the wildcard model alongside the 5 competitors. In the card-grid redesign match batch 2 only delegated 2 models instead of 2+wildcard — the wildcard (nexum-router) was omitted.",
+        "recurring_issues": [
+          {
+            "issue": "wildcard_omission",
+            "count": 1,
+            "matches_since_fix": 0
+          }
+        ],
+        "total_matches_analyzed": 1,
+        "clean_rate": 0.0
+      },
+      "results": [
+        {
+          "rank": 1,
+          "model": "glm-5-turbo",
+          "model_id": "glm-5-turbo",
+          "provider": "zai",
+          "family": "glm",
+          "score": 8.95,
+          "strengths": [
+            "Best widescreen card grid layout",
+            "Consistent max-width min(1800px,95vw) across all 7 pages",
+            "Compact card padding (0.85em 1em)",
+            "5 widescreen breakpoints + mobile",
+            "Clean CSS variable usage matching DESIGN.md"
+          ],
+          "weaknesses": [
+            "No HERO_IMAGE_PROMPT included"
+          ]
+        },
+        {
+          "rank": 2,
+          "model": "deepseek-v4-flash",
+          "model_id": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "family": "deepseek",
+          "score": 8.5,
+          "strengths": [
+            "Solid widescreen layout across all 7 pages",
+            "Clean card-grid structure"
+          ],
+          "weaknesses": [
+            "Slightly more padding than winner",
+            "No HERO_IMAGE_PROMPT included"
+          ]
+        },
+        {
+          "rank": 3,
+          "model": "qwen-3.6-max-preview-thinking",
+          "model_id": "qwen-3.6-max-preview-thinking",
+          "provider": "nexum",
+          "family": "qwen",
+          "score": 8.3,
+          "strengths": [
+            "Good responsive grid with auto-fill",
+            "Proper section structure"
+          ],
+          "weaknesses": [
+            "Fewer widescreen breakpoints",
+            "No HERO_IMAGE_PROMPT included"
+          ]
+        },
+        {
+          "rank": 4,
+          "model": "codestral-2508",
+          "model_id": "codestral-2508",
+          "provider": "mistral",
+          "family": "codestral",
+          "score": 7.5,
+          "strengths": [
+            "All 7 pages produced",
+            "Basic widescreen support"
+          ],
+          "weaknesses": [
+            "Less space-efficient card padding",
+            "No HERO_IMAGE_PROMPT included"
+          ]
+        },
+        {
+          "rank": 5,
+          "model": "mimo-v2.5-pro",
+          "model_id": "mimo-v2.5-pro",
+          "provider": "xiaomi",
+          "family": "xiaomi",
+          "score": 7.0,
+          "strengths": [
+            "7 pages complete",
+            "SVG icons preserved"
+          ],
+          "weaknesses": [
+            "Less refined layout than top 3",
+            "No HERO_IMAGE_PROMPT included"
           ]
         }
       ]
@@ -1445,16 +1558,28 @@
   ],
   "leaderboard": [
     {
+      "model": "glm-5-turbo",
+      "model_id": "glm-5-turbo",
+      "provider": "zai",
+      "family": "glm",
+      "wins": 1,
+      "losses": 0,
+      "matches": 1,
+      "totalScore": 8.95,
+      "bestScore": 8.95,
+      "avgScore": 8.95
+    },
+    {
       "model": "deepseek-v4-flash",
       "model_id": "deepseek-v4-flash",
       "provider": "deepseek",
       "family": "deepseek",
       "wins": 3,
-      "losses": 2,
-      "matches": 5,
-      "totalScore": 41.5,
+      "losses": 3,
+      "matches": 6,
+      "totalScore": 50.0,
       "bestScore": 9.0,
-      "avgScore": 8.3
+      "avgScore": 8.33
     },
     {
       "model": "gemma-4-31b",
@@ -1490,7 +1615,7 @@
       "matches": 5,
       "totalScore": 40.8,
       "bestScore": 9.0,
-      "avgScore": 8.2
+      "avgScore": 8.16
     },
     {
       "model": "qwen-3.6-max-preview-thinking",
@@ -1498,11 +1623,11 @@
       "provider": "nexum",
       "family": "qwen",
       "wins": 0,
-      "losses": 1,
-      "matches": 1,
-      "totalScore": 8.8,
+      "losses": 2,
+      "matches": 2,
+      "totalScore": 17.1,
       "bestScore": 8.8,
-      "avgScore": 8.8
+      "avgScore": 8.55
     },
     {
       "model": "deepseek-v4",
@@ -1514,7 +1639,7 @@
       "matches": 1,
       "totalScore": 8.6,
       "bestScore": 8.55,
-      "avgScore": 8.6
+      "avgScore": 8.55
     },
     {
       "model": "poolside/laguna-xs-2.1:free",
@@ -1570,11 +1695,11 @@
       "provider": "xiaomi",
       "family": "xiaomi",
       "wins": 0,
-      "losses": 3,
-      "matches": 3,
-      "totalScore": 21.5,
+      "losses": 4,
+      "matches": 4,
+      "totalScore": 28.5,
       "bestScore": 7.5,
-      "avgScore": 7.2
+      "avgScore": 7.13
     },
     {
       "model": "codestral-2508",
@@ -1582,11 +1707,11 @@
       "provider": "mistral",
       "family": "codestral",
       "wins": 0,
-      "losses": 3,
-      "matches": 3,
-      "totalScore": 20.5,
+      "losses": 4,
+      "matches": 4,
+      "totalScore": 28.0,
       "bestScore": 8.0,
-      "avgScore": 6.8
+      "avgScore": 7.0
     },
     {
       "model": "openai/gpt-oss-20b:free",
