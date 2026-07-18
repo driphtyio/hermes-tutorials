@@ -8,58 +8,33 @@ import arenaData from '../data/hermestuts-arena.json';
 
 const { matches, leaderboard, model_pool, stability } = arenaData;
 
-// ── Computed leaderboard from model_pool (benchmark_score descending) ──
-const computedLeaderboard = model_pool
-  .filter(m => typeof m.benchmark_score === 'number')
-  .sort((a, b) => b.benchmark_score - a.benchmark_score)
-  .map((m, i) => ({
-    rank: i + 1,
-    model: m.model,
-    provider: m.provider,
-    score: m.benchmark_score,
-    matches: m.matches_played ?? 0,
-    reliability: m.reliability ?? 0,
-    benchmark_weight: m.benchmark_weight ?? 0,
-  }));
-
 // ── Stats ──
 const totalModels = model_pool.length;
 const totalProviders = [...new Set(model_pool.map(m => m.provider))].length;
-const rankedModels = computedLeaderboard.length;
-const totalMatches = arenaData.arena?.total_matches ?? 0;
+const rankedModels = leaderboard.length;
+const totalMatches = matches.length;
 
 // ── Impact ──
 let leaderAvg = 0;
 let fieldAvg = 0;
-if (computedLeaderboard.length > 0) {
-  const topQuarter = Math.max(1, Math.ceil(computedLeaderboard.length * 0.25));
-  const topModels = computedLeaderboard.slice(0, topQuarter);
-  leaderAvg = topModels.reduce((s, m) => s + m.score, 0) / topModels.length;
-  fieldAvg = computedLeaderboard.reduce((s, m) => s + m.score, 0) / computedLeaderboard.length;
+if (leaderboard.length > 0) {
+  const topQuarter = Math.max(1, Math.ceil(leaderboard.length * 0.25));
+  const topModels = leaderboard.slice(0, topQuarter);
+  leaderAvg = topModels.reduce((s, m) => s + m.avgScore, 0) / topModels.length;
+  fieldAvg = leaderboard.reduce((s, m) => s + m.avgScore, 0) / leaderboard.length;
+} else {
+  // fallback: use model_pool benchmark scores if no matches played yet
+  const withScore = model_pool.filter(m => typeof m.benchmark_score === 'number').sort((a, b) => b.benchmark_score - a.benchmark_score);
+  if (withScore.length > 0) {
+    const topQuarter = Math.max(1, Math.ceil(withScore.length * 0.25));
+    leaderAvg = withScore.slice(0, topQuarter).reduce((s, m) => s + m.benchmark_score, 0) / topQuarter;
+    fieldAvg = withScore.reduce((s, m) => s + m.benchmark_score, 0) / withScore.length;
+  }
 }
 const gapDelta = leaderAvg - fieldAvg;
 
-// ── Feedback JSON ──
-let feedbackData = null;
-try {
-  const raw = fs.readFileSync('/home/techgeek/.hermes/arena/arena-feedback.json', 'utf-8');
-  feedbackData = JSON.parse(raw);
-} catch {
-  feedbackData = null;
-}
-
-const feedbackMatches = feedbackData?.matches ?? [];
-const feedbackFiltered = feedbackMatches.filter(m => m.type !== 'router-selection');
-const totalAnalyzed = feedbackData?.total_matches_analyzed ?? 0;
-const cleanRate = feedbackData?.clean_match_rate ?? 0;
-const issues = feedbackData?.recurring_issues ?? [];
-const topIssue = issues.length > 0 ? issues.reduce((a, b) => (a.count > b.count ? a : b)) : null;
-const autoBriefLines = feedbackFiltered
-  .filter(m => m.auto_brief_line)
-  .map(m => m.auto_brief_line);
-const latestSuggestion = feedbackFiltered.length > 0
-  ? feedbackFiltered[feedbackFiltered.length - 1]?.suggestions?.[0]?.text
-  : null;
+// ── Local matches only ──
+const localMatches = matches.filter(m => m.type !== 'router-selection');
 
 // ── Provider grouping (for model pool) ──
 const providerGroups = model_pool.reduce((acc, m) => {
@@ -628,7 +603,7 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
       <!-- ── Leaderboard ── -->
       <section class="section">
         <h2 class="section-title">Leaderboard</h2>
-        {computedLeaderboard.length > 0 ? (
+        {leaderboard.length > 0 ? (
           <div class="arena-table-wrap">
             <table class="arena-table">
               <thead>
@@ -643,22 +618,22 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
                 </tr>
               </thead>
               <tbody>
-                {computedLeaderboard.map(entry => (
+                {leaderboard.map((entry, i) => (
                   <tr>
-                    <td class="rank-cell">{rankBadge(entry.rank)}</td>
+                    <td class="rank-cell">{i < 3 ? ['🥇', '🥈', '🥉'][i] : `#${i + 1}`}</td>
                     <td class="model-cell">{entry.model}</td>
                     <td class="provider-cell">{entry.provider}</td>
                     <td>
                       <div class="score-bar-wrap">
-                        <span class="score-cell">{entry.score.toFixed(1)}</span>
+                        <span class="score-cell">{entry.avgScore.toFixed(1)}</span>
                         <div class="score-bar-bg">
-                          <div class="score-bar-fill" style={`width: ${(entry.score / 10) * 100}%`}></div>
+                          <div class="score-bar-fill" style={`width: ${(entry.avgScore / 10) * 100}%`}></div>
                         </div>
                       </div>
                     </td>
                     <td class="matches-cell">{entry.matches}</td>
-                    <td class="wl-cell">&mdash;</td>
-                    <td class="best-cell">-</td>
+                    <td class="wl-cell">{entry.wins}/{entry.losses}</td>
+                    <td class="best-cell">{entry.bestScore.toFixed(1)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -675,9 +650,9 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
       <!-- ── Match History ── -->
       <section class="section">
         <h2 class="section-title">Match History</h2>
-        {feedbackFiltered.length > 0 ? (
+        {localMatches.length > 0 ? (
           <div class="match-list">
-            {feedbackFiltered.map(m => (
+            {localMatches.map(m => (
               <details class="match-item">
                 <summary>
                   <span>{m.topic}</span>
@@ -685,32 +660,18 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
                 </summary>
                 <div class="match-detail">
                   <div><strong>Date:</strong> {m.date}</div>
-                  <div><strong>ID:</strong> {m.match_id}</div>
-                  {m.signals && m.signals.length > 0 && (
-                    <div>
-                      <strong>Signals:</strong>
-                      <ul class="signal-list">
-                        {m.signals.map(s => <li>{s}</li>)}
-                      </ul>
-                    </div>
-                  )}
-                  {m.suggestions && m.suggestions.length > 0 && (
-                    <div>
-                      <strong>Suggestions:</strong>
-                      {m.suggestions.map(s => (
-                        <div class="suggestion-text">
-                          <span style={`color: var(--${s.severity === 'high' ? 'red' : s.severity === 'medium' ? 'yellow' : 'text-dim'})`}>
-                            [{s.severity}]
-                          </span>{' '}
-                          {s.text}
+                  <div><strong>Winner:</strong> {m.winner}</div>
+                  {m.results && m.results.length > 0 && (
+                    <div class="match-results-list">
+                      <strong>Results:</strong>
+                      {m.results.sort((a, b) => a.rank - b.rank).map(r => (
+                        <div class={`result-entry ${r.rank === 1 ? 'result-winner' : ''}`}>
+                          <span class="result-rank">{r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : `#${r.rank}`}</span>
+                          <span class="result-model">{r.model}</span>
+                          <span class="result-provider">{r.provider}</span>
+                          <span class="result-score">{r.score.toFixed(1)}/10</span>
                         </div>
                       ))}
-                    </div>
-                  )}
-                  {m.clean && <span class="clean-badge">Clean Match</span>}
-                  {m.auto_brief_line && (
-                    <div class="auto-brief">
-                      <span class="ab-label">AUTO-BRIEF:</span> {m.auto_brief_line}
                     </div>
                   )}
                 </div>
@@ -773,51 +734,14 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
       <!-- ── Process Feedback ── -->
       <section class="section">
         <h2 class="section-title">Process Feedback</h2>
-        {feedbackData ? (
-          <>
-            <div class="feedback-bar">
-              <div class="feedback-stat">
-                <div class="fb-num">{totalAnalyzed}</div>
-                <div class="fb-label">Analyzed</div>
-              </div>
-              <div class="feedback-stat">
-                <div class="fb-num">{cleanRate}%</div>
-                <div class="fb-label">Clean Rate</div>
-              </div>
-              <div class="feedback-stat">
-                <div class="fb-num">{topIssue ? `${topIssue.issue} (${topIssue.count})` : 'None'}</div>
-                <div class="fb-label">Top Issue</div>
-              </div>
-            </div>
-            {feedbackFiltered.some(m => m.suggestions && m.suggestions.length > 0) && (
-              <div class="suggestions-box">
-                <div class="sug-title">Recent Suggestions</div>
-                {feedbackFiltered.slice(-3).reverse().map(m => (
-                  m.suggestions && m.suggestions.length > 0 && m.suggestions.map(s => (
-                    <div class="sug-item">
-                      <strong>{m.topic}:</strong> {s.text}
-                    </div>
-                  ))
-                ))}
-              </div>
-            )}
-            {autoBriefLines.length > 0 && (
-              <div class="auto-brief-box">
-                <span class="ab-label">AUTO-BRIEF:</span>
-                {autoBriefLines.slice(-2).join(' | ')}
-              </div>
-            )}
-          </>
-        ) : (
-          <div class="empty-state">
-            <p>No feedback data available.</p>
-          </div>
-        )}
+        <div class="empty-state">
+          <p>Process feedback will appear once arena matches are analyzed.</p>
+        </div>
       </section>
 
       <!-- ── Last Updated ── -->
       <div class="last-updated">
-        Arena data last updated: <strong>{lastUpdated}</strong>
+        Arena data last updated: <strong>{stability.last_updated || 'N/A'}</strong>
       </div>
 
     </main>

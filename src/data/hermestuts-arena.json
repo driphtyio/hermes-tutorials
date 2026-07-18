@@ -701,6 +701,171 @@
     },
     "last_updated": "2026-07-14"
   },
-  "matches": [],
-  "leaderboard": []
+  "matches": [
+    {
+      "id": "hermestuts-arena-bootstrap",
+      "date": "2026-07-17",
+      "type": "design",
+      "topic": "Hermes Tutorials Arena Page Bootstrap",
+      "winner": "deepseek-v4-flash",
+      "results": [
+        {
+          "rank": 1,
+          "model": "deepseek-v4-flash",
+          "model_id": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "family": "deepseek",
+          "score": 8.5,
+          "strengths": [
+            "Purple theme consistent throughout",
+            "Table-based 16-row leaderboard",
+            "Compact stats bar without card wrappers",
+            "Arena Impact with gap delta",
+            "All 7 sections complete with feedback"
+          ],
+          "weaknesses": [
+            "W/L shows dashes (no local match data yet)"
+          ]
+        },
+        {
+          "rank": 2,
+          "model": "qwen-3.7-max",
+          "model_id": "qwen-3.7-max",
+          "provider": "nexum",
+          "family": "qwen",
+          "score": 7.5,
+          "strengths": [
+            "Best widescreen support (5 breakpoints)",
+            "Match history with PASS/ISSUES badges"
+          ],
+          "weaknesses": [
+            "BUG: BEST column shows family names not scores",
+            "Stats less compact than winner"
+          ]
+        },
+        {
+          "rank": 3,
+          "model": "glm-5.2",
+          "model_id": "glm-5.2",
+          "provider": "zai",
+          "family": "glm",
+          "score": 7.5,
+          "strengths": [
+            "4 widescreen breakpoints",
+            "Feedback section present",
+            "Router filter"
+          ],
+          "weaknesses": [
+            "Similar to deepseek but less polished landing page styling"
+          ]
+        },
+        {
+          "rank": 4,
+          "model": "mimo-v2.5-pro",
+          "model_id": "mimo-v2.5-pro",
+          "provider": "xiaomi",
+          "family": "xiaomi",
+          "score": 7.0,
+          "strengths": [
+            "4 widescreen breakpoints",
+            "Feedback section present"
+          ],
+          "weaknesses": [
+            "Less refined table styling",
+            "Stats bar less compact"
+          ]
+        },
+        {
+          "rank": 5,
+          "model": "codestral-2508",
+          "model_id": "codestral-2508",
+          "provider": "mistral",
+          "family": "codestral",
+          "score": 5.0,
+          "strengths": [
+            "Table-based leaderboard"
+          ],
+          "weaknesses": [
+            "Missing process feedback section entirely"
+          ]
+        },
+        {
+          "rank": 6,
+          "model": "llama-3.3-70b-versatile",
+          "model_id": "llama-3.3-70b-versatile",
+          "provider": "groq",
+          "family": "llama",
+          "score": 5.0,
+          "strengths": [
+            "Table-based leaderboard"
+          ],
+          "weaknesses": [
+            "Missing process feedback section entirely"
+          ]
+        }
+      ]
+    }
+  ],
+  "leaderboard": [
+    {
+      "model": "deepseek-v4-flash",
+      "provider": "deepseek",
+      "family": "deepseek",
+      "wins": 1,
+      "losses": 0,
+      "matches": 1,
+      "bestScore": 8.5,
+      "avgScore": 8.5
+    },
+    {
+      "model": "qwen-3.7-max",
+      "provider": "nexum",
+      "family": "qwen",
+      "wins": 0,
+      "losses": 1,
+      "matches": 1,
+      "bestScore": 7.5,
+      "avgScore": 7.5
+    },
+    {
+      "model": "glm-5.2",
+      "provider": "zai",
+      "family": "glm",
+      "wins": 0,
+      "losses": 1,
+      "matches": 1,
+      "bestScore": 7.5,
+      "avgScore": 7.5
+    },
+    {
+      "model": "mimo-v2.5-pro",
+      "provider": "xiaomi",
+      "family": "xiaomi",
+      "wins": 0,
+      "losses": 1,
+      "matches": 1,
+      "bestScore": 7.0,
+      "avgScore": 7.0
+    },
+    {
+      "model": "codestral-2508",
+      "provider": "mistral",
+      "family": "codestral",
+      "wins": 0,
+      "losses": 1,
+      "matches": 1,
+      "bestScore": 5.0,
+      "avgScore": 5.0
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "provider": "groq",
+      "family": "llama",
+      "wins": 0,
+      "losses": 1,
+      "matches": 1,
+      "bestScore": 5.0,
+      "avgScore": 5.0
+    }
+  ]
 }
