@@ -140,7 +140,28 @@ blockquote p {
 	margin-bottom: 0;
 }
 
-/* ── Tables ── */
+/* ── Breadcrumb nav ── */
+.breadcrumb {
+	font-size: 0.8em;
+	color: var(--text-muted);
+	margin-bottom: 1.5em;
+	display: flex;
+	align-items: center;
+	gap: 0.3em;
+	flex-wrap: wrap;
+}
+.breadcrumb a {
+	color: var(--accent-light);
+	text-decoration: none;
+}
+.breadcrumb a:hover {
+	text-decoration: underline;
+}
+.breadcrumb span {
+	color: var(--text-secondary);
+}
+
+/* ── Table styles ── */
 
 table {
 	display: block;
