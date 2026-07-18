@@ -23,7 +23,6 @@ if (leaderboard.length > 0) {
   leaderAvg = topModels.reduce((s, m) => s + m.avgScore, 0) / topModels.length;
   fieldAvg = leaderboard.reduce((s, m) => s + m.avgScore, 0) / leaderboard.length;
 } else {
-  // fallback: use model_pool benchmark scores if no matches played yet
   const withScore = model_pool.filter(m => typeof m.benchmark_score === 'number').sort((a, b) => b.benchmark_score - a.benchmark_score);
   if (withScore.length > 0) {
     const topQuarter = Math.max(1, Math.ceil(withScore.length * 0.25));
@@ -54,14 +53,6 @@ function getAvailabilityBadge(modelName) {
   return { label: 'Down', cls: 'avail-down' };
 }
 
-// ── Rank badge helper ──
-function rankBadge(n) {
-  if (n === 1) return '\u{1F947}';
-  if (n === 2) return '\u{1F948}';
-  if (n === 3) return '\u{1F949}';
-  return `#${n}`;
-}
-
 const lastUpdated = stability?.last_updated ?? 'N/A';
 ---
 
@@ -70,7 +61,7 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
   <head>
     <BaseHead title={`Arena — ${SITE_TITLE}`} description="Model-vs-model battle arena — comparing LLMs on Hermes Agent content and design tasks." />
     <style>
-      /* ── Arena Design System (v2 widescreen) ── */
+      /* ── Arena Design System (deepseek-v4-flash widescreen redesign) ── */
       :root {
         --accent: #6c5ce7;
         --accent-light: #a29bfe;
@@ -87,53 +78,58 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         --green: #22c55e;
         --red: #ef4444;
         --yellow: #eab308;
-
-        /* Aliases for backward compat with template logic */
-        --bg-card: var(--surface-1);
-        --bg-table: var(--surface-2);
-        --bg-card-hover: var(--surface-2);
+        --orange: #f97316;
       }
 
-      /* ── Container: truly fill widescreen ── */
+      /* ── OVERRIDE global.css main constraint — fill 95%+ of viewport ── */
       .arena-container {
         width: 100%;
-        max-width: min(1800px, 95vw);
+        max-width: min(1900px, 95vw);
         margin: 0 auto;
-        padding: 2em 1.5em 2em;
+        padding: 1.5em 1.5em 1.5em;
       }
 
-      @media (min-width: 1600px) {
+      @media (min-width: 1400px) {
         .arena-container {
-          max-width: min(1900px, 93vw);
+          max-width: min(1800px, 93vw);
+          padding: 1.5em 2em 1.5em;
+        }
+      }
+      @media (min-width: 1800px) {
+        .arena-container {
+          max-width: min(1900px, 94vw);
+          padding: 2em 2.5em 2em;
         }
       }
       @media (min-width: 2000px) {
         .arena-container {
-          max-width: min(2000px, 90vw);
+          max-width: min(2000px, 95vw);
+          padding: 2em 3em 2em;
         }
       }
 
       /* ── Hero ── */
       .arena-hero {
-        margin-bottom: 1.5rem;
+        margin-bottom: 1em;
       }
       .arena-hero h1 {
         font-family: 'Atkinson Hyperlegible', sans-serif;
-        font-size: clamp(2.2rem, 4vw, 3.2rem);
+        font-size: clamp(2rem, 3.5vw, 3rem);
         font-weight: 700;
         letter-spacing: -0.03em;
         line-height: 1.1;
-        margin: 0 0 0.3em;
+        margin: 0 0 0.2em;
         color: #fff;
       }
       .arena-hero h1 span {
         color: var(--accent);
       }
       .arena-hero .subtitle {
-        font-size: clamp(0.95em, 1.2vw, 1.1em);
+        font-size: clamp(0.9em, 1.1vw, 1.05em);
         color: var(--text-dim);
-        margin: 0 0 1em;
+        margin: 0 0 0.6em;
         line-height: 1.5;
+        max-width: 70ch;
       }
 
       /* ── Stats bar: single-row compact with pipe separators ── */
@@ -142,23 +138,23 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         flex-wrap: nowrap;
         align-items: center;
         gap: 0;
-        padding: 0.6em 0;
+        padding: 0.5em 0;
         border-top: 1px solid var(--border);
         border-bottom: 1px solid var(--border);
-        margin-bottom: 1.5rem;
+        margin-bottom: 1em;
       }
       .stat-item {
         display: inline-flex;
         align-items: center;
-        gap: 0.35em;
-        font-size: 0.82em;
+        gap: 0.3em;
+        font-size: 0.8em;
         color: var(--text-dim);
         white-space: nowrap;
       }
       .stat-item + .stat-item::before {
         content: '|';
         color: var(--border);
-        margin: 0 1em;
+        margin: 0 0.85em;
         font-size: 0.85em;
       }
       .stat-item strong {
@@ -167,41 +163,60 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         font-variant-numeric: tabular-nums;
       }
 
-      /* ── Section headers (tighter gaps: 1.5em) ── */
+      /* ── Section headers (tighter gaps: 1em) ── */
       .section {
-        margin-top: 1.5em;
+        margin-top: 1em;
       }
       .section-title {
         font-family: 'Atkinson Hyperlegible', sans-serif;
-        font-size: 1.3em;
+        font-size: 1.2em;
         font-weight: 600;
         color: #fff;
-        margin: 0 0 0.6em;
+        margin: 0 0 0.5em;
         letter-spacing: -0.02em;
       }
 
-      /* ── Impact grid (compact) ── */
-      .impact-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
+      /* ── Impact row: single horizontal row using full width ── */
+      .impact-row {
+        display: flex;
         gap: 0.6em;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1em;
       }
       .impact-card {
-        background: var(--bg-card);
+        flex: 1;
+        background: var(--surface-1);
         border: 1px solid var(--border);
         border-radius: 8px;
-        padding: 0.75em 1em;
+        padding: 0.7em 1em;
+        display: flex;
+        align-items: center;
+        gap: 0.75em;
+      }
+      .impact-card .impact-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        background: var(--accent-glow);
+        color: var(--accent-light);
+      }
+      .impact-card .impact-body {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
       }
       .impact-card .impact-label {
-        font-size: 0.7em;
+        font-size: 0.65em;
         color: var(--text-muted);
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        margin-bottom: 0.1em;
+        margin-bottom: 0.05em;
       }
       .impact-card .impact-value {
-        font-size: 1.25em;
+        font-size: 1.2em;
         font-weight: 700;
         color: #fff;
         font-variant-numeric: tabular-nums;
@@ -214,9 +229,9 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         color: var(--green);
       }
       .impact-card .impact-delta {
-        font-size: 0.75em;
+        font-size: 0.7em;
         color: var(--text-dim);
-        margin-top: 0.1em;
+        margin-top: 0.05em;
       }
 
       /* ── Leaderboard table ── */
@@ -225,7 +240,7 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         -webkit-overflow-scrolling: touch;
         border: 1px solid var(--border);
         border-radius: 8px;
-        background: var(--bg-table);
+        background: var(--surface-2);
       }
       .arena-table {
         width: 100%;
@@ -233,21 +248,21 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         font-size: 0.85em;
       }
       .arena-table thead {
-        background: var(--bg-card);
+        background: var(--surface-1);
       }
       .arena-table th {
         text-align: left;
-        padding: 0.5em 0.65em;
+        padding: 0.45em 0.75em;
         font-weight: 600;
         color: var(--text-dim);
-        font-size: 0.8em;
+        font-size: 0.78em;
         text-transform: uppercase;
         letter-spacing: 0.04em;
         border-bottom: 1px solid var(--border);
         white-space: nowrap;
       }
       .arena-table td {
-        padding: 0.4em 0.65em;
+        padding: 0.35em 0.75em;
         border-bottom: 1px solid var(--border);
         color: var(--text);
         white-space: nowrap;
@@ -256,43 +271,59 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         border-bottom: none;
       }
       .arena-table tr:hover td {
-        background: var(--bg-card-hover);
+        background: var(--surface-2);
+        filter: brightness(1.1);
       }
       .arena-table .rank-cell {
         font-weight: 600;
         text-align: center;
-        width: 2.2em;
+        width: 2em;
         font-size: 0.95em;
       }
       .arena-table .model-cell {
         font-weight: 600;
         color: #fff;
+        min-width: 12ch;
       }
       .arena-table .provider-cell {
         color: var(--text-dim);
+        min-width: 8ch;
+      }
+      .arena-table .model-provider-wrap {
+        display: flex;
+        align-items: baseline;
+        gap: 0.5em;
+      }
+      .arena-table .model-provider-wrap .model-name {
+        font-weight: 600;
+        color: #fff;
+      }
+      .arena-table .model-provider-wrap .provider-tag {
+        font-size: 0.75em;
+        color: var(--text-muted);
       }
       .arena-table .score-cell {
         text-align: right;
         font-weight: 600;
         font-variant-numeric: tabular-nums;
-        min-width: 2.8em;
+        min-width: 2.6em;
       }
       .arena-table .score-bar-wrap {
         display: flex;
         align-items: center;
-        gap: 0.4em;
+        gap: 0.5em;
         min-width: 100px;
       }
       .arena-table .score-bar-bg {
         flex: 1;
-        height: 5px;
+        height: 6px;
         background: var(--border);
         border-radius: 3px;
         overflow: hidden;
       }
       .arena-table .score-bar-fill {
         height: 100%;
-        background: var(--accent);
+        background: linear-gradient(90deg, var(--accent), var(--accent-light));
         border-radius: 3px;
         transition: width 0.3s ease;
       }
@@ -302,117 +333,181 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         text-align: center;
         color: var(--text-dim);
       }
+      .arena-table .wl-cell .wins {
+        color: var(--green);
+      }
+      .arena-table .wl-cell .losses {
+        color: var(--text-muted);
+      }
 
       /* ── Empty state ── */
       .empty-state {
         text-align: center;
-        padding: 2em 1em;
+        padding: 1.5em 1em;
         color: var(--text-muted);
         font-size: 0.9em;
+        border: 1px dashed var(--border);
+        border-radius: 8px;
       }
       .empty-state p {
-        margin: 0.3em 0;
+        margin: 0.2em 0;
       }
 
-      /* ── Match History (tighter summaries) ── */
+      /* ── Match History (compact summaries) ── */
       .match-list {
         display: flex;
         flex-direction: column;
-        gap: 0.4em;
+        gap: 0.35em;
       }
       .match-item {
         border: 1px solid var(--border);
         border-radius: 6px;
-        background: var(--bg-card);
+        background: var(--surface-1);
         overflow: hidden;
       }
       .match-item summary {
-        padding: 0.6em 0.85em;
+        padding: 0.5em 0.75em;
         cursor: pointer;
         font-weight: 500;
         color: var(--text);
         display: flex;
         align-items: center;
-        gap: 0.5em;
+        gap: 0.6em;
         list-style: none;
       }
       .match-item summary::-webkit-details-marker {
         display: none;
       }
-      .match-item summary::before {
-        content: '\u25B6';
-        font-size: 0.65em;
+      .match-item summary .match-arrow {
+        font-size: 0.6em;
         color: var(--accent);
         transition: transform 0.15s ease;
+        flex-shrink: 0;
       }
-      .match-item[open] summary::before {
+      .match-item[open] summary .match-arrow {
         transform: rotate(90deg);
       }
+      .match-item summary .match-topic {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
       .match-item summary .match-type {
-        font-size: 0.65em;
+        font-size: 0.6em;
         text-transform: uppercase;
         letter-spacing: 0.04em;
         color: var(--accent-light);
         background: var(--accent-glow);
-        padding: 0.12em 0.45em;
+        padding: 0.1em 0.4em;
         border-radius: 4px;
-        margin-left: auto;
+        flex-shrink: 0;
+      }
+      .match-item summary .match-compact-info {
+        display: flex;
+        align-items: center;
+        gap: 0.6em;
+        font-size: 0.78em;
+        color: var(--text-dim);
+        flex-shrink: 0;
+      }
+      .match-item summary .match-compact-info .match-winner {
+        color: var(--green);
+        font-weight: 600;
+      }
+      .match-item summary .match-compact-info .match-date {
+        color: var(--text-muted);
+      }
+      .match-item summary .match-compact-info .match-top-score {
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        color: var(--accent-light);
       }
       .match-item .match-detail {
-        padding: 0 0.85em 0.6em;
+        padding: 0 0.75em 0.55em;
         font-size: 0.82em;
         color: var(--text-dim);
         line-height: 1.5;
       }
-      .match-item .match-detail .signal-list {
-        list-style: none;
-        padding: 0;
-        margin: 0.25em 0;
+      .match-item .match-detail .match-results-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2em;
+        margin-top: 0.25em;
       }
-      .match-item .match-detail .signal-list li {
-        padding: 0.12em 0;
+      .match-item .match-detail .result-entry {
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        padding: 0.15em 0.4em;
+        border-radius: 4px;
       }
-      .match-item .match-detail .signal-list li::before {
-        content: '- ';
+      .match-item .match-detail .result-entry.result-winner {
+        background: rgba(34, 197, 94, 0.06);
+      }
+      .match-item .match-detail .result-entry .result-rank {
+        width: 1.6em;
+        text-align: center;
+        flex-shrink: 0;
+      }
+      .match-item .match-detail .result-entry .result-model {
+        font-weight: 500;
+        color: #fff;
+        min-width: 12ch;
+      }
+      .match-item .match-detail .result-entry .result-provider {
+        font-size: 0.85em;
         color: var(--text-muted);
       }
-      .match-item .match-detail .suggestion-text {
-        border-left: 2px solid var(--accent);
-        padding-left: 0.65em;
-        margin: 0.25em 0;
-      }
-      .match-item .match-detail .auto-brief {
-        border-left: 2px solid var(--yellow);
-        padding-left: 0.65em;
-        margin: 0.25em 0;
-        font-size: 0.9em;
-        color: var(--yellow);
-      }
-      .match-item .match-detail .clean-badge {
-        display: inline-block;
-        font-size: 0.72em;
-        color: var(--green);
-        background: rgba(34, 197, 94, 0.1);
-        padding: 0.08em 0.45em;
-        border-radius: 4px;
+      .match-item .match-detail .result-entry .result-score {
+        margin-left: auto;
         font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        color: var(--accent-light);
+      }
+      .match-item .match-detail .match-strengths {
+        margin-top: 0.3em;
+      }
+      .match-item .match-detail .match-strengths .ms-label {
+        font-size: 0.7em;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+        margin-bottom: 0.1em;
+      }
+      .match-item .match-detail .match-strengths ul {
+        list-style: none;
+        padding: 0;
+        margin: 0.1em 0;
+      }
+      .match-item .match-detail .match-strengths ul li {
+        padding: 0.08em 0;
+        font-size: 0.9em;
+      }
+      .match-item .match-detail .match-strengths ul li::before {
+        content: '\\2713 ';
+        color: var(--green);
+        font-size: 0.8em;
       }
 
       /* ── Model Pool table ── */
       .pool-search {
         width: 100%;
-        padding: 0.55em 0.8em;
-        background: var(--bg-card);
+        padding: 0.5em 0.75em;
+        background: var(--surface-1);
         border: 1px solid var(--border);
         border-radius: 6px;
         color: #fff;
         font-size: 0.85em;
-        margin-bottom: 0.6em;
+        margin-bottom: 0.5em;
         outline: none;
         transition: border-color 0.15s ease;
+        font-family: 'Atkinson Hyperlegible', sans-serif;
       }
       .pool-search:focus {
         border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent-glow);
       }
       .pool-search::placeholder {
         color: var(--text-muted);
@@ -423,7 +518,7 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         -webkit-overflow-scrolling: touch;
         border: 1px solid var(--border);
         border-radius: 8px;
-        background: var(--bg-table);
+        background: var(--surface-2);
       }
       .pool-table {
         width: 100%;
@@ -431,20 +526,20 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         font-size: 0.82em;
       }
       .pool-table thead {
-        background: var(--bg-card);
+        background: var(--surface-1);
       }
       .pool-table th {
         text-align: left;
-        padding: 0.5em 0.65em;
+        padding: 0.45em 0.65em;
         font-weight: 600;
         color: var(--text-dim);
-        font-size: 0.8em;
+        font-size: 0.78em;
         text-transform: uppercase;
         letter-spacing: 0.04em;
         border-bottom: 1px solid var(--border);
       }
       .pool-table td {
-        padding: 0.4em 0.65em;
+        padding: 0.35em 0.65em;
         border-bottom: 1px solid var(--border);
         color: var(--text);
       }
@@ -452,7 +547,8 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         border-bottom: none;
       }
       .pool-table tr:hover td {
-        background: var(--bg-card-hover);
+        background: var(--surface-2);
+        filter: brightness(1.1);
       }
       .pool-table .provider-cell-group {
         font-weight: 600;
@@ -478,9 +574,9 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
       /* ── Availability badges ── */
       .avail-badge {
         display: inline-block;
-        font-size: 0.7em;
+        font-size: 0.68em;
         font-weight: 600;
-        padding: 0.12em 0.45em;
+        padding: 0.1em 0.42em;
         border-radius: 4px;
         text-transform: uppercase;
         letter-spacing: 0.03em;
@@ -494,7 +590,7 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         background: rgba(234, 179, 8, 0.12);
       }
       .avail-unstable {
-        color: #f97316;
+        color: var(--orange);
         background: rgba(249, 115, 22, 0.12);
       }
       .avail-down {
@@ -506,158 +602,177 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         background: rgba(107, 107, 118, 0.1);
       }
 
-      /* ── Feedback section ── */
-      .feedback-bar {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.6em;
-        margin-bottom: 0.75em;
-      }
-      .feedback-stat {
-        flex: 1;
-        min-width: 90px;
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        padding: 0.6em 0.85em;
-        text-align: center;
-      }
-      .feedback-stat .fb-num {
-        font-size: 1.2em;
-        font-weight: 700;
-        color: #fff;
-      }
-      .feedback-stat .fb-label {
-        font-size: 0.7em;
-        color: var(--text-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-top: 0.1em;
-      }
-      .suggestions-box {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        padding: 0.6em 0.85em;
-        margin-bottom: 0.6em;
-      }
-      .suggestions-box .sug-title {
-        font-size: 0.75em;
-        font-weight: 600;
-        color: var(--text-dim);
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        margin-bottom: 0.3em;
-      }
-      .suggestions-box .sug-item {
-        font-size: 0.82em;
-        color: var(--text);
-        padding: 0.2em 0;
-        line-height: 1.4;
-      }
-      .auto-brief-box {
-        background: var(--bg-card);
-        border: 1px solid var(--border-light);
-        border-radius: 6px;
-        padding: 0.55em 0.85em;
-        font-size: 0.8em;
-        color: var(--text-dim);
-        line-height: 1.4;
-      }
-      .auto-brief-box .ab-label {
-        font-weight: 600;
-        color: var(--yellow);
-        margin-right: 0.4em;
-      }
-
       /* ── Last Updated ── */
       .last-updated {
-        margin-top: 2em;
+        margin-top: 1.5em;
         text-align: center;
-        font-size: 0.75em;
+        font-size: 0.72em;
         color: var(--text-muted);
         border-top: 1px solid var(--border);
-        padding-top: 1.2em;
+        padding-top: 1em;
+      }
+      .last-updated strong {
+        color: var(--text-dim);
+        font-weight: 500;
       }
 
-      /* ── Responsive ── */
+      /* ── Responsive: Mobile ── */
       @media (max-width: 720px) {
-        .impact-grid {
-          grid-template-columns: 1fr;
-        }
-        .feedback-bar {
-          flex-direction: column;
+        .arena-container {
+          padding: 1em 0.75em 1em;
+          max-width: 100%;
         }
         .stats-bar {
           flex-wrap: wrap;
+          gap: 0.2em;
         }
         .stat-item + .stat-item::before {
-          margin: 0 0.6em;
+          margin: 0 0.5em;
         }
-        .arena-container {
-          padding: 1.5em 1em 2em;
+        .impact-row {
+          flex-direction: column;
+        }
+        .arena-table th,
+        .arena-table td {
+          padding: 0.3em 0.5em;
+        }
+        .arena-table .model-provider-wrap {
+          flex-direction: column;
+          gap: 0.1em;
+        }
+        .match-item summary {
+          flex-wrap: wrap;
+        }
+        .match-item summary .match-compact-info {
+          width: 100%;
+          justify-content: flex-start;
+          padding-left: 1.4em;
+        }
+        .pool-table th,
+        .pool-table td {
+          padding: 0.3em 0.5em;
         }
       }
 
-      /* ── Widescreen: fill the wider container proportionally ── */
+      /* ── Tablet ── */
+      @media (min-width: 720px) and (max-width: 1400px) {
+        .arena-container {
+          padding: 1.5em 1.25em 1.5em;
+        }
+        .impact-card {
+          padding: 0.65em 0.85em;
+        }
+      }
+
+      /* ── Widescreen: 1400px+ proportional scaling ── */
       @media (min-width: 1400px) {
         .arena-table td,
         .arena-table th {
-          padding: 0.45em 0.9em;
+          padding: 0.4em 0.9em;
         }
         .arena-table {
-          font-size: 0.9em;
+          font-size: 0.88em;
         }
         .arena-table .score-bar-wrap {
           min-width: 150px;
         }
         .pool-table td,
         .pool-table th {
-          padding: 0.45em 0.9em;
+          padding: 0.4em 0.9em;
         }
         .impact-card {
-          padding: 0.9em 1.2em;
+          padding: 0.8em 1.1em;
+        }
+        .impact-card .impact-value {
+          font-size: 1.3em;
         }
         .match-item summary {
-          padding: 0.65em 1em;
+          padding: 0.55em 0.9em;
+        }
+        .stat-item {
+          font-size: 0.85em;
+        }
+        .section-title {
+          font-size: 1.3em;
         }
       }
 
-      /* ── Ultra-wide: at 1800px+ scale up proportionally ── */
+      /* ── Ultra-wide: 1800px+ amplify everything ── */
       @media (min-width: 1800px) {
         .arena-table .score-bar-wrap {
-          min-width: 180px;
+          min-width: 200px;
         }
         .arena-table {
-          font-size: 0.95em;
+          font-size: 0.92em;
         }
         .arena-table td,
         .arena-table th {
-          padding: 0.5em 1em;
+          padding: 0.45em 1em;
+        }
+        .arena-table .score-bar-bg {
+          height: 7px;
         }
         .pool-table {
-          font-size: 0.88em;
+          font-size: 0.86em;
         }
-        .stat-item {
-          font-size: 0.9em;
+        .pool-table td,
+        .pool-table th {
+          padding: 0.45em 1em;
+        }
+        .impact-card {
+          padding: 0.9em 1.3em;
         }
         .impact-card .impact-value {
-          font-size: 1.5em;
+          font-size: 1.45em;
+        }
+        .impact-card .impact-icon {
+          width: 42px;
+          height: 42px;
         }
         .section-title {
           font-size: 1.4em;
         }
         .section {
-          margin-top: 1.8em;
+          margin-top: 1.2em;
+        }
+        .stat-item {
+          font-size: 0.9em;
+        }
+        .match-item summary {
+          padding: 0.6em 1em;
         }
       }
 
+      /* ── Maximum: 2000px+ maximum scaling ── */
       @media (min-width: 2000px) {
         .arena-table .score-bar-wrap {
-          min-width: 220px;
+          min-width: 280px;
         }
         .arena-table {
-          font-size: 1em;
+          font-size: 0.96em;
+        }
+        .arena-table td,
+        .arena-table th {
+          padding: 0.5em 1.1em;
+        }
+        .arena-table .score-bar-bg {
+          height: 8px;
+        }
+        .pool-table {
+          font-size: 0.9em;
+        }
+        .impact-card .impact-value {
+          font-size: 1.6em;
+        }
+        .impact-card .impact-icon {
+          width: 48px;
+          height: 48px;
+        }
+        .section-title {
+          font-size: 1.5em;
+        }
+        .stat-item {
+          font-size: 0.95em;
         }
       }
     </style>
@@ -678,24 +793,39 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         </div>
       </section>
 
-      <!-- ── Arena Impact ── -->
+      <!-- ── Arena Impact (full-width inline stats, single horizontal row) ── -->
       <section class="section">
         <h2 class="section-title">Arena Impact</h2>
-        <div class="impact-grid">
+        <div class="impact-row">
           <div class="impact-card">
-            <div class="impact-label">Leader Avg</div>
-            <div class="impact-value accent">{leaderAvg > 0 ? leaderAvg.toFixed(2) : 'N/A'}</div>
-            <div class="impact-delta">Top 25% of ranked models</div>
+            <div class="impact-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5C7 4 7 7 7 7"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5C17 4 17 7 17 7"/><path d="M4 22h16"/><path d="M10 22V2h4v20"/></svg>
+            </div>
+            <div class="impact-body">
+              <div class="impact-label">Leader Avg</div>
+              <div class="impact-value accent">{leaderAvg > 0 ? leaderAvg.toFixed(2) : 'N/A'}</div>
+              <div class="impact-delta">Top 25% of ranked models</div>
+            </div>
           </div>
           <div class="impact-card">
-            <div class="impact-label">Field Avg</div>
-            <div class="impact-value">{fieldAvg > 0 ? fieldAvg.toFixed(2) : 'N/A'}</div>
-            <div class="impact-delta">All ranked models</div>
+            <div class="impact-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            </div>
+            <div class="impact-body">
+              <div class="impact-label">Field Avg</div>
+              <div class="impact-value">{fieldAvg > 0 ? fieldAvg.toFixed(2) : 'N/A'}</div>
+              <div class="impact-delta">All ranked models</div>
+            </div>
           </div>
           <div class="impact-card">
-            <div class="impact-label">Gap Delta</div>
-            <div class="impact-value green">{gapDelta > 0 ? `+${gapDelta.toFixed(2)}` : (gapDelta === 0 ? '0.00' : gapDelta.toFixed(2))}</div>
-            <div class="impact-delta">Leader advantage over field</div>
+            <div class="impact-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div class="impact-body">
+              <div class="impact-label">Gap Delta</div>
+              <div class="impact-value green">{gapDelta > 0 ? `+${gapDelta.toFixed(2)}` : (gapDelta === 0 ? '0.00' : gapDelta.toFixed(2))}</div>
+              <div class="impact-delta">Leader advantage over field</div>
+            </div>
           </div>
         </div>
       </section>
@@ -710,7 +840,6 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
                 <tr>
                   <th>#</th>
                   <th>Model</th>
-                  <th>Provider</th>
                   <th>Score</th>
                   <th>Matches</th>
                   <th>W/L</th>
@@ -721,8 +850,10 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
                 {leaderboard.map((entry, i) => (
                   <tr>
                     <td class="rank-cell">{i < 3 ? ['🥇', '🥈', '🥉'][i] : `#${i + 1}`}</td>
-                    <td class="model-cell">{entry.model}</td>
-                    <td class="provider-cell">{entry.provider}</td>
+                    <td class="model-provider-wrap">
+                      <span class="model-name">{entry.model}</span>
+                      <span class="provider-tag">{entry.provider}</span>
+                    </td>
                     <td>
                       <div class="score-bar-wrap">
                         <span class="score-cell">{entry.avgScore.toFixed(1)}</span>
@@ -732,7 +863,7 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
                       </div>
                     </td>
                     <td class="matches-cell">{entry.matches}</td>
-                    <td class="wl-cell">{entry.wins}/{entry.losses}</td>
+                    <td class="wl-cell"><span class="wins">{entry.wins}</span>/<span class="losses">{entry.losses}</span></td>
                     <td class="best-cell">{entry.bestScore.toFixed(1)}</td>
                   </tr>
                 ))}
@@ -747,7 +878,7 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         )}
       </section>
 
-      <!-- ── Match History ── -->
+      <!-- ── Match History (collapsible details, compact summaries) ── -->
       <section class="section">
         <h2 class="section-title">Match History</h2>
         {localMatches.length > 0 ? (
@@ -755,8 +886,14 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
             {localMatches.map(m => (
               <details class="match-item">
                 <summary>
-                  <span>{m.topic}</span>
+                  <span class="match-arrow">▶</span>
+                  <span class="match-topic">{m.topic}</span>
                   <span class="match-type">{m.type}</span>
+                  <span class="match-compact-info">
+                    {m.winner && <span class="match-winner">&#9878; {m.winner}</span>}
+                    {m.date && <span class="match-date">{m.date}</span>}
+                    {m.results?.[0]?.score && <span class="match-top-score">{m.results[0].score.toFixed(1)}/10</span>}
+                  </span>
                 </summary>
                 <div class="match-detail">
                   <div><strong>Date:</strong> {m.date}</div>
@@ -774,6 +911,16 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
                       ))}
                     </div>
                   )}
+                  {m.results?.filter(r => r.strengths?.length > 0).length > 0 && (
+                    <div class="match-strengths">
+                      <div class="ms-label">Strengths</div>
+                      <ul>
+                        {m.results.filter(r => r.strengths?.length > 0).slice(0, 2).flatMap(r => r.strengths.slice(0, 3)).map(s => (
+                          <li>{s}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </details>
             ))}
@@ -786,7 +933,7 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         )}
       </section>
 
-      <!-- ── Model Pool ── -->
+      <!-- ── Model Pool (searchable table) ── -->
       <section class="section">
         <h2 class="section-title">Model Pool</h2>
         <input type="text" class="pool-search" id="poolSearch" placeholder="Search models by name, provider, or family\u2026" oninput="filterPool()" />
@@ -831,17 +978,9 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         )}
       </section>
 
-      <!-- ── Process Feedback ── -->
-      <section class="section">
-        <h2 class="section-title">Process Feedback</h2>
-        <div class="empty-state">
-          <p>Process feedback will appear once arena matches are analyzed.</p>
-        </div>
-      </section>
-
       <!-- ── Last Updated ── -->
       <div class="last-updated">
-        Arena data last updated: <strong>{stability.last_updated || 'N/A'}</strong>
+        Arena data last updated: <strong>{lastUpdated}</strong>
       </div>
 
     </main>
