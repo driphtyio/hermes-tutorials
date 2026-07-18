@@ -1342,6 +1342,105 @@
           ]
         }
       ]
+    },
+    {
+      "id": "router-selection-20260717-230524",
+      "date": "2026-07-17",
+      "type": "router-selection",
+      "selected_models": [
+        {
+          "model": "gemma-4-31b",
+          "provider": "cerebras",
+          "family": "gemma"
+        },
+        {
+          "model": "qwen-3.6-max-preview-thinking",
+          "provider": "nexum",
+          "family": "qwen"
+        },
+        {
+          "model": "llama-3.1-8b-instant",
+          "provider": "groq",
+          "family": "llama"
+        },
+        {
+          "model": "nvidia/nemotron-3-super-120b-a12b:free",
+          "provider": "openrouter",
+          "family": "nvidia"
+        },
+        {
+          "model": "open-mistral-nemo-2407",
+          "provider": "mistral",
+          "family": "nemo"
+        }
+      ],
+      "retired_models": []
+    },
+    {
+      "id": "router-selection-20260717-230528",
+      "date": "2026-07-17",
+      "type": "router-selection",
+      "selected_models": [
+        {
+          "model": "gemma-4-31b",
+          "provider": "cerebras",
+          "family": "gemma"
+        },
+        {
+          "model": "qwen-3.6-max-preview-thinking",
+          "provider": "nexum",
+          "family": "qwen"
+        },
+        {
+          "model": "magistral-medium-2509",
+          "provider": "mistral",
+          "family": "magistral"
+        },
+        {
+          "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+          "provider": "openrouter",
+          "family": "nvidia"
+        },
+        {
+          "model": "glm-5-turbo",
+          "provider": "zai",
+          "family": "glm"
+        }
+      ],
+      "retired_models": []
+    },
+    {
+      "id": "router-selection-20260717-230532",
+      "date": "2026-07-17",
+      "type": "router-selection",
+      "selected_models": [
+        {
+          "model": "gemma-4-31b",
+          "provider": "cerebras",
+          "family": "gemma"
+        },
+        {
+          "model": "qwen-3.6-max-preview-thinking",
+          "provider": "nexum",
+          "family": "qwen"
+        },
+        {
+          "model": "mistral-medium-2604",
+          "provider": "mistral",
+          "family": "mistral"
+        },
+        {
+          "model": "nvidia/nemotron-nano-12b-v2-vl:free",
+          "provider": "openrouter",
+          "family": "nvidia"
+        },
+        {
+          "model": "mimo-v2.5",
+          "provider": "xiaomi",
+          "family": "xiaomi"
+        }
+      ],
+      "retired_models": []
     }
   ],
   "leaderboard": [

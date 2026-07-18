@@ -8,6 +8,7 @@ import { tools, toolCategories } from '../../data/tools';
 const total = tools.length;
 const defaultOn = tools.filter(t => t.defaultEnabled).length;
 const optional = total - defaultOn;
+const topRated = tools.filter(t => t.rating >= 4).length;
 ---
 
 <!doctype html>
@@ -15,6 +16,44 @@ const optional = total - defaultOn;
 	<head>
 		<BaseHead title={`Tools — ${SITE_TITLE}`} description={`Browse ${total} Hermes Agent tools across ${toolCategories.length} categories with ratings, requirements, capabilities, and pitfalls.`} />
 		<style>
+			/* ── Widescreen main — escapes old 860px clamp ── */
+			main {
+				width: 100%;
+				max-width: min(1800px, 90vw);
+				margin: 0 auto;
+				padding: 2em 1.5em 4em;
+			}
+
+			/* ── One-line compact stats bar ── */
+			.stats-bar {
+				display: flex;
+				justify-content: center;
+				gap: 1.5em;
+				margin: 1.5em 0;
+				flex-wrap: wrap;
+			}
+			.stat-number {
+				font-size: 1.3em;
+				font-weight: 700;
+				color: var(--accent-light);
+			}
+			.stat-label {
+				font-size: 0.78em;
+				color: var(--text-muted);
+			}
+
+			/* ── Space-optimized card grid ── */
+			.card-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+				gap: 0.75em;
+				margin: 1em 0 2em;
+			}
+			.card {
+				padding: 0.85em 1em;
+			}
+
+			/* ── Tool-specific badge / cap / pitfall styles ── */
 			.badge-on { background: rgba(46, 125, 50, 0.2); color: #66bb6a; }
 			.badge-off { background: rgba(230, 81, 0, 0.2); color: #ffa726; }
 			.cap-tag {
@@ -31,6 +70,32 @@ const optional = total - defaultOn;
 				background: rgba(239, 83, 80, 0.04); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 			}
 			.pitfall::before { content: '⚠️ '; }
+
+			/* ── Widescreen breakpoints ── */
+			@media (min-width: 1200px) {
+				.card-grid { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+				.stats-bar { gap: 2em; }
+			}
+			@media (min-width: 1440px) {
+				.card-grid { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 0.85em; }
+			}
+			@media (min-width: 1600px) {
+				.card-grid { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 0.85em; }
+			}
+			@media (min-width: 1800px) {
+				.card-grid { grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 0.9em; }
+			}
+			@media (min-width: 2000px) {
+				.card-grid { grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 0.9em; }
+				.card { padding: 0.95em 1.1em; }
+			}
+
+			/* ── Mobile ── */
+			@media (max-width: 720px) {
+				.card-grid { grid-template-columns: 1fr; gap: 0.65em; }
+				.stats-bar { gap: 1em; }
+				main { padding: 1.5em 1em 3em; }
+			}
 		</style>
 	</head>
 	<body>
@@ -45,7 +110,7 @@ const optional = total - defaultOn;
 				<div class="stat-item"><div class="stat-number">{total}</div><div class="stat-label">Total Tools</div></div>
 				<div class="stat-item"><div class="stat-number">{toolCategories.length}</div><div class="stat-label">Categories</div></div>
 				<div class="stat-item"><div class="stat-number">{defaultOn}</div><div class="stat-label">Default On</div></div>
-				<div class="stat-item"><div class="stat-number">{tools.filter(t => t.rating >= 4).length}</div><div class="stat-label">Top Rated ★4+</div></div>
+				<div class="stat-item"><div class="stat-number">{topRated}</div><div class="stat-label">Top Rated ★4+</div></div>
 			</div>
 
 			<div class="search-box">
@@ -62,7 +127,7 @@ const optional = total - defaultOn;
 			</div>
 
 			<div class="card-grid" id="toolGrid">
-				{tools.map((t, i) => (
+				{tools.map(t => (
 					<div class="card" data-category={t.category} data-name={t.name.toLowerCase()} data-desc={t.description.toLowerCase()}>
 						<div class="category-label">{toolCategories.find(c => c.id === t.category)?.icon} {toolCategories.find(c => c.id === t.category)?.label}</div>
 						<div class="top-row">

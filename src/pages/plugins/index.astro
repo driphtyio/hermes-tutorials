@@ -15,6 +15,9 @@ const communityCount = plugins.filter(p => p.status === 'community' || p.status 
 	<head>
 		<BaseHead title={`Plugin Marketplace — ${SITE_TITLE}`} description="Browse, search, and install Hermes Agent plugins. 55+ plugins across 9 categories with ratings, requirements, and install instructions." />
 		<style>
+			main { width: 100%; max-width: min(1800px, 90vw); margin: 0 auto; padding: 2.5em 1.5em 3em; }
+			.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 0.75em; margin: 1em 0 2em; }
+			.card { padding: 0.85em 1em; }
 			.badge-bundled { background: rgba(46, 125, 50, 0.2); color: #66bb6a; }
 			.badge-community { background: rgba(230, 81, 0, 0.2); color: #ffa726; }
 			.badge-request { background: rgba(198, 40, 40, 0.2); color: #ef5350; }
@@ -38,6 +41,31 @@ const communityCount = plugins.filter(p => p.status === 'community' || p.status 
 			.copy-btn.copied { background: #2e7d32; }
 			@media (max-width: 720px) {
 				.install-cmd { white-space: normal; overflow: visible; word-break: break-all; font-size: 0.72em; padding: 0.35em 0.6em; }
+			}
+		
+			/* ── Widescreen ── */
+			@media (min-width: 1200px) {
+				.card-grid { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+			}
+			@media (min-width: 1440px) {
+				.card-grid { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 0.85em; }
+			}
+			@media (min-width: 1600px) {
+				.card-grid { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 0.85em; }
+			}
+			@media (min-width: 1800px) {
+				.card-grid { grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 0.9em; }
+			}
+			@media (min-width: 2000px) {
+				.card-grid { grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 0.9em; }
+				.card { padding: 0.95em 1.1em; }
+			}
+
+			/* ── Mobile ── */
+			@media (max-width: 720px) {
+				main { padding: 1.25em 1em 2em; }
+				.stats-bar { gap: 1.5em; flex-wrap: wrap; }
+				.stat-number { font-size: 1.2em; }
 			}
 		</style>
 	</head>
