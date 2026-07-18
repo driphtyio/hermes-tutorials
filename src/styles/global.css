@@ -97,13 +97,9 @@ a:hover {
 /* ── Layout ── */
 
 main {
-	width: min(var(--content-width), calc(100% - 2em));
 	margin: 0 auto;
 	padding: 3em 1em;
 }
-
-/* ── Code Blocks ── */
-
 code {
 	font-family: var(--font-mono);
 	font-size: 0.85em;
