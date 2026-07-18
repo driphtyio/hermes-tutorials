@@ -804,6 +804,110 @@
           ]
         }
       ]
+    },
+    {
+      "id": "hermestuts-homepage-redesign",
+      "date": "2026-07-17",
+      "type": "design",
+      "topic": "Homepage Widescreen & Space Optimization",
+      "winner": "deepseek-v4-flash",
+      "results": [
+        {
+          "rank": 1,
+          "model": "deepseek-v4-flash",
+          "model_id": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "family": "deepseek",
+          "score": 8.5,
+          "strengths": [
+            "Most compact at 14KB",
+            "7 widescreen breakpoints (best)",
+            "SVG icon template function - no emoji",
+            "Cleanest, most efficient code",
+            "All sections present with recent posts"
+          ],
+          "weaknesses": [
+            "Missing tags on recent post cards"
+          ]
+        },
+        {
+          "rank": 2,
+          "model": "qwen-3.7-max",
+          "model_id": "qwen-3.7-max",
+          "provider": "nexum",
+          "family": "qwen",
+          "score": 8.0,
+          "strengths": [
+            "19 SVG icons",
+            "Tags shown on recent posts",
+            "Featured images on CTA buttons"
+          ],
+          "weaknesses": [
+            "4 widescreen breakpoints only",
+            "Larger file size"
+          ]
+        },
+        {
+          "rank": 3,
+          "model": "codestral-2508",
+          "model_id": "codestral-2508",
+          "provider": "mistral",
+          "family": "codestral",
+          "score": 7.5,
+          "strengths": [
+            "16 SVG icons",
+            "Good responsive grid"
+          ],
+          "weaknesses": [
+            "Only 4 widescreen breakpoints"
+          ]
+        },
+        {
+          "rank": 4,
+          "model": "glm-5.2",
+          "model_id": "glm-5.2",
+          "provider": "zai",
+          "family": "glm",
+          "score": 7.5,
+          "strengths": [
+            "16 SVG icons",
+            "Proper section structure"
+          ],
+          "weaknesses": [
+            "Less polished than top 2"
+          ]
+        },
+        {
+          "rank": 5,
+          "model": "mimo-v2.5-pro",
+          "model_id": "mimo-v2.5-pro",
+          "provider": "xiaomi",
+          "family": "xiaomi",
+          "score": 7.0,
+          "strengths": [
+            "19 SVG icons",
+            "Widescreen support"
+          ],
+          "weaknesses": [
+            "Less refined layout"
+          ]
+        },
+        {
+          "rank": 6,
+          "model": "llama-3.3-70b-versatile",
+          "model_id": "llama-3.3-70b-versatile",
+          "provider": "groq",
+          "family": "llama",
+          "score": 7.0,
+          "strengths": [
+            "All sections preserved",
+            "SVG icons"
+          ],
+          "weaknesses": [
+            "Fewer widescreen breakpoints"
+          ]
+        }
+      ]
     }
   ],
   "leaderboard": [
@@ -811,9 +915,9 @@
       "model": "deepseek-v4-flash",
       "provider": "deepseek",
       "family": "deepseek",
-      "wins": 1,
+      "wins": 2,
       "losses": 0,
-      "matches": 1,
+      "matches": 2,
       "bestScore": 8.5,
       "avgScore": 8.5
     },
@@ -822,18 +926,18 @@
       "provider": "nexum",
       "family": "qwen",
       "wins": 0,
-      "losses": 1,
-      "matches": 1,
-      "bestScore": 7.5,
-      "avgScore": 7.5
+      "losses": 2,
+      "matches": 2,
+      "bestScore": 8.0,
+      "avgScore": 7.75
     },
     {
       "model": "glm-5.2",
       "provider": "zai",
       "family": "glm",
       "wins": 0,
-      "losses": 1,
-      "matches": 1,
+      "losses": 2,
+      "matches": 2,
       "bestScore": 7.5,
       "avgScore": 7.5
     },
@@ -842,8 +946,8 @@
       "provider": "xiaomi",
       "family": "xiaomi",
       "wins": 0,
-      "losses": 1,
-      "matches": 1,
+      "losses": 2,
+      "matches": 2,
       "bestScore": 7.0,
       "avgScore": 7.0
     },
@@ -852,20 +956,20 @@
       "provider": "mistral",
       "family": "codestral",
       "wins": 0,
-      "losses": 1,
-      "matches": 1,
-      "bestScore": 5.0,
-      "avgScore": 5.0
+      "losses": 2,
+      "matches": 2,
+      "bestScore": 7.5,
+      "avgScore": 6.25
     },
     {
       "model": "llama-3.3-70b-versatile",
       "provider": "groq",
       "family": "llama",
       "wins": 0,
-      "losses": 1,
-      "matches": 1,
-      "bestScore": 5.0,
-      "avgScore": 5.0
+      "losses": 2,
+      "matches": 2,
+      "bestScore": 7.0,
+      "avgScore": 6.0
     }
   ]
 }
