@@ -427,7 +427,7 @@ const refCatalogs = [
 						<h2 class="section-title">Recent Tutorials</h2>
 						<div class="posts-grid">
 							{posts.map((post) => (
-								<a class="post-card" href={`/blog/${post.slug}/`}>
+								<a class="post-card" href={`/blog/${post.id}/`}>
 									<div class="post-meta">
 										<time datetime={post.data.pubDate.toISOString()}>
 											<FormattedDate date={post.data.pubDate} />
