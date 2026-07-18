@@ -23,7 +23,6 @@ import HeaderLink from './HeaderLink.astro';
 			<HeaderLink href="/tools">Tools</HeaderLink>
 			<HeaderLink href="/skills">Skills</HeaderLink>
 			<HeaderLink href="/plugins">Plugins</HeaderLink>
-			<HeaderLink href="/arena">Arena</HeaderLink>
 			<HeaderLink href="/tags">Tags</HeaderLink>
 			<HeaderLink href="/blog">Tutorials</HeaderLink>
 		</div>
@@ -48,7 +47,6 @@ import HeaderLink from './HeaderLink.astro';
 <link href="/pagefind/pagefind-ui.css" rel="stylesheet" is:inline />
 <script src="/pagefind/pagefind-ui.js" is:inline></script>
 <style>
-	/* ── Header container (widescreen) ── */
 	header {
 		position: sticky;
 		top: 0;
@@ -58,9 +56,7 @@ import HeaderLink from './HeaderLink.astro';
 		-webkit-backdrop-filter: blur(12px);
 		border-bottom: 1px solid var(--border);
 	}
-
-	/* ── Nav bar: overrides grid-width with a wider max on big screens ── */
-	nav[data-astro-cid-nen7h5rs] {
+	nav {
 		max-width: min(1800px, 95vw);
 		margin: 0 auto;
 		display: flex;
@@ -70,8 +66,6 @@ import HeaderLink from './HeaderLink.astro';
 		height: var(--nav-height);
 		gap: 2em;
 	}
-
-	/* ── Logo ── */
 	.logo {
 		display: inline-flex;
 		align-items: center;
@@ -82,7 +76,6 @@ import HeaderLink from './HeaderLink.astro';
 		text-decoration: none;
 		letter-spacing: -0.01em;
 		white-space: nowrap;
-		flex-shrink: 0;
 	}
 	.logo svg {
 		color: var(--accent-light);
@@ -91,45 +84,16 @@ import HeaderLink from './HeaderLink.astro';
 	.logo:hover {
 		color: var(--accent-light);
 	}
-
-	/* ── Nav links ── */
 	.nav-links {
-		flex: 1;
 		display: flex;
 		align-items: center;
-		justify-content: flex-end;
-		gap: 0.15em;
-		min-width: 0;
+		gap: 0.25em;
+		margin-left: auto;
 	}
-
-	/* All 11 nav links visible by 1200px — tighten spacing so they fit */
-	@media (min-width: 1200px) {
-		.nav-links {
-			gap: 0.1em;
-		}
-		.nav-links :global(a) {
-			padding: 0.35em 0.55em;
-			font-size: 0.82em;
-		}
-	}
-
-	/* At 1800px+ the nav links spread evenly across the available space */
-	@media (min-width: 1800px) {
-		.nav-links {
-			justify-content: space-evenly;
-		}
-		.nav-links :global(a) {
-			padding: 0.4em 0.7em;
-			font-size: 0.88em;
-		}
-	}
-
-	/* ── Social links ── */
 	.social-links {
 		display: flex;
 		align-items: center;
 		gap: 0.5em;
-		flex-shrink: 0;
 	}
 	.social-links a {
 		display: flex;
@@ -144,6 +108,14 @@ import HeaderLink from './HeaderLink.astro';
 	.social-links a:hover {
 		color: #fff;
 		background: var(--bg-tertiary);
+	}
+
+	/* ── Widescreen: spread nav links across full width ── */
+	@media (min-width: 1800px) {
+		.nav-links {
+			flex: 1;
+			justify-content: space-evenly;
+		}
 	}
 
 	/* ── Search Toggle (inline in nav) ── */
@@ -168,7 +140,7 @@ import HeaderLink from './HeaderLink.astro';
 
 	/* ── Search Panel (below nav, full-width) ── */
 	.search-panel {
-		max-width: min(1800px, 95vw);
+		max-width: var(--grid-width);
 		margin: 0 auto;
 		max-height: 0;
 		overflow: hidden;
@@ -243,7 +215,6 @@ import HeaderLink from './HeaderLink.astro';
 			top: var(--nav-height);
 			left: 0;
 			right: 0;
-			flex: none;
 			flex-direction: column;
 			align-items: stretch;
 			gap: 0;
@@ -257,7 +228,7 @@ import HeaderLink from './HeaderLink.astro';
 			pointer-events: none;
 			transition: opacity 0.2s ease, transform 0.2s ease;
 		}
-		.nav-links :global(a) {
+		.nav-links a {
 			display: block;
 			padding: 0.65em 1em;
 			border-radius: var(--radius-md);
