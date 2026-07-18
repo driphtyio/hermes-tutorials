@@ -1,0 +1,85 @@
+---
+title: "Hermes Agent Late July Update: Headed Browser Persistence, Desktop Zoom Polish, Curator Guardrails, and Gateway Refactoring"
+description: "Desktop gains Ctrl/Cmd+mouse wheel zoom and crash-safe persistence, headed browser sessions survive turns, curator protects manual skills from archival, gateway deduplicates reconnect backoff."
+pubDate: "2026-07-18"
+tags: ["hermes", "update"]
+heroImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200"
+---
+
+{/* This post covers Hermes Agent developments since the v0.18.2 patch — HEAD developments from July 11 through July 18 */}
+
+Nous Research's development pace on Hermes Agent shows no signs of slowing. Since the v0.18.2 patch on July 7 — and the mid-July update July 11 — the `main` branch has accumulated hundreds of additional commits across desktop reliability, browser interactivity, curator safety, and core gateway architecture. While no new tagged release has shipped yet (v0.19.0 is expected to bundle the full curated release notes for the post-v0.18.0 window), the HEAD of `main` is packed with meaningful improvements.
+
+## Desktop Polish Wave Continues
+
+The desktop app — introduced in v0.16.0 "The Surface Release" — continues to receive a steady stream of reliability and UX polish.
+
+### Ctrl/Cmd + Mouse Wheel Zoom
+
+A ground-truth reapply of PR #40414 by @liuhao1024 adds **Ctrl/Cmd + mouse wheel zoom** support across all desktop windows. Unlike the original implementation (which injected a DOM wheel listener via `executeJavaScript` + a new IPC channel), the salvage leverages Electron's native `'zoom-changed'` event on the main-process `webContents`. No renderer injection, no new preload surface, no new IPC channel.
+
+The handler routes through the existing `setAndPersistZoomLevel` funnel — same 0.1 half-step, same `zoom-state.json` persistence, same Settings Scale control sync. Session windows get the gesture automatically via `wireCommonWindowHandlers`; the pet overlay stays opted out. ([#40295](https://github.com/NousResearch/hermes-agent/pull/40295))
+
+### Zoom Persistence Goes Crash-Safe
+
+The desktop's zoom level previously lived only in Electron's `localStorage`, which sits under the cache/storage folders — folders that crash recovery can silently move or recreate, wiping the user's zoom setting exactly when they need it most. A second PR by @Sahil-SS9 ([#56726](https://github.com/NousResearch/hermes-agent/pull/56726)) adds a main-process `zoom-state.json` as the **primary store**, with `localStorage` demoted to a secondary mirror. Pre-JSON installs migrate automatically on first read.
+
+The same PR fixes window geometry persistence: it now saves on `ready-to-show` instead of waiting for the first user resize/move/close, so a crash before any interaction still captures the restored bounds.
+
+### UI Scale Preserved After Resize
+
+A fix by @ildunari ([commit 036b659](https://github.com/NousResearch/hermes-agent/commit/036b659527efc163e103af5044dadc4bca78ddf4)) ensures the desktop UI scale setting survives window resize events — a subtle but important quality-of-life fix for users who rearrange their multi-monitor setups.
+
+## Headed Browser Mode Becomes Usable
+
+A long-standing bug made Hermes's `AGENT_BROWSER_HEADED=1` mode nearly unusable: the per-turn `_cleanup_task_resources` method was unconditionally calling `cleanup_browser`, closing the headed browser window immediately after every bot reply. Users would see the browser window flash up and disappear on every response.
+
+The fix by @vishnukool (salvaged from PR #24064) mirrors the existing VM persistence pattern: **skip per-turn cleanup when headed mode is active** and let the inactivity reaper handle idle sessions instead. Full-session teardown on gateway shutdown remains unconditional. The commit also adds `browser.headed` config.yaml support and `--headed` argv injection for local mode, so users don't need to rely solely on the env var. ([#24064](https://github.com/NousResearch/hermes-agent/pull/24064))
+
+A follow-up by @teknium1 widened the headed-mode gate to consult both the config `browser.headed` field and the `AGENT_BROWSER_HEADED` env var, added `browser.headed` to `DEFAULT_CONFIG`, shipped 14 regression tests for resolution precedence, and documented the Headed Mode section in `browser.md`. ([commit 5988fe6](https://github.com/NousResearch/hermes-agent/commit/5988fe6cd5547d3620df1de889ac6007f5463b4d))
+
+## Curator Gains Manual-Skill Protection
+
+The curator's background review pass — which consolidates and archives agent-created skills — had a blind spot: manually authored skills (installed via URL, created by direct `SKILL.md` authoring, or sourced from Gitee) carry `created_by=None` in `.usage.json`, which the `_background_review_write_guard` wasn't checking. The guard already protected pinned, external, bundled, hub, and built-in skills — but not the manual-skill case.
+
+This wasn't theoretical. A user's `auto-dev` skill (use count: 50, patch count: 119) was archived 28 seconds after its last use during a curator auto-run. A fix by @re-ITRT ([#66579](https://github.com/NousResearch/hermes-agent/pull/66579)) adds: if a skill has a usage record and its `created_by` is not `'agent'`, refuse the background curator write. Skills with no usage record at all (new/unknown) remain unblocked. Tests by @kshitijk4poor added coverage for both the refuse and allow cases.
+
+## Gateway Refactoring: Deduplicated Patterns
+
+A cleanup by @kshitijk4poor addresses a code smell in the gateway layer: `consume_detached_task_result` had near-identical copies in `gateway/run.py`, the Discord adapter, and the Telegram adapter. The canonical implementation now lives in `agent/async_utils.py`, with all callsites importing from the shared home.
+
+Similarly, the reconnect backoff formula `min(30 * 2^(n-1), 300)` was copied verbatim at three sites in `run.py` (primary watcher × 2, secondary-profile reconnect), with one of them hardcoding the cap. Hoisted to a module-level `_reconnect_backoff()` with a single `_RECONNECT_BACKOFF_CAP` constant, so a future tuning pass can't silently miss one path. ([#66222](https://github.com/NousResearch/hermes-agent/pull/66222))
+
+## Community Contributions and GitHub Activity
+
+The past week saw steady community involvement:
+
+- **@liuhao1024** — desktop Ctrl/Cmd+mouse wheel zoom (salvage)
+- **@ildunari** — desktop UI scale preservation
+- **@Sahil-SS9** — desktop zoom persistence via zoom-state.json
+- **@re-ITRT** — curator manual-skill write guard
+- **@kshitijk4poor** — gateway refactoring, curator test coverage, AUTHOR_MAP entries
+- **@vishnukool** — headed browser mode persistence fix (salvage)
+- **@teknium1** — headed-mode gate widening, AUTHOR_MAP, review and merge management
+
+The repository continues its remarkable pace, with commits landing daily and contributions coming in from across the global community. The project remains one of the most actively developed open-source agent frameworks on GitHub.
+
+## Looking Ahead
+
+With the v0.19.0 release expected to carry the complete curated release notes for the v0.18.0→v0.18.2 window — and the `main` branch accumulating steady improvements in desktop polish, browser interactivity, curator safety, and gateway architecture — the next named release could arrive at any time. The team's focus appears to be on **hardening and reliability** after the massive feature push of v0.18.0 "The Judgment Release."
+
+Key areas to watch in the coming days:
+- **Desktop app maturity** — zoom persistence, scale preservation, and drag-sort suggest the desktop is approaching feature parity with the web dashboard
+- **Curator ecosystem** — manual-skill protection closes an important gap for users with custom skill collections
+- **Gateway reliability** — refactoring toward shared patterns hints at deeper gateway architecture improvements
+
+Watch the [Hermes Agent GitHub](https://github.com/NousResearch/hermes-agent) and the [release notes](https://github.com/NousResearch/hermes-agent/releases) for the official v0.19.0 announcement.
+
+{/* crosslinks */}
+
+## 📖 Related Reads
+
+- **[NiteAgent](https://niteagent.com/)** — AI agent development, frameworks, and production patterns
+- **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools, agents, and APIs
+
+*Cross-links automatically generated from Hermes Tutorials.*
