@@ -47,6 +47,10 @@ import HeaderLink from './HeaderLink.astro';
 <link href="/pagefind/pagefind-ui.css" rel="stylesheet" is:inline />
 <script src="/pagefind/pagefind-ui.js" is:inline></script>
 <style is:inline>
+	nav { max-width: min(1800px, 95vw) !important; }
+	@media (min-width: 1800px) { .nav-links { flex: 1 !important; justify-content: space-evenly !important; } }
+</style>
+<style is:inline>
 	header {
 		position: sticky;
 		top: 0;
