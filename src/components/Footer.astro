@@ -20,19 +20,19 @@ import { SITE_TITLE } from '../consts';
 			<a href="https://hermes-agent.nousresearch.com/docs" target="_blank">Official Docs</a>
 			<a href="/rss.xml">RSS Feed</a>
 		</div>
-		<div class="footer-col">
+		<div class="footer-col network-col">
 			<span class="footer-heading">The Network</span>
-						<a href="https://aigamingdev.com" target="_blank" rel="noopener">AIGamingDev</a>
-						<a href="https://codeintel.xyz" target="_blank" rel="noopener">CodeIntel</a>
-						<a href="https://cybersec-ai.xyz" target="_blank" rel="noopener">CyberSec AI</a>
-						<a href="https://design-agent.dev" target="_blank" rel="noopener">Design Agent</a>
-						<a href="https://hermes-tutorials.dev" target="_blank" rel="noopener">Hermes Tutorials</a>
-						<a href="https://niteagent.com" target="_blank" rel="noopener">NiteAgent</a>
-						<a href="https://nocodeinsider.com" target="_blank" rel="noopener">NoCode Insider</a>
-						<a href="https://quantbrainai.net" target="_blank" rel="noopener">QuantBrainAI</a>
-						<a href="https://smarthomefieldguide.com" target="_blank" rel="noopener">SmartHome Field Guide</a>
-						<a href="https://stacksfree.com" target="_blank" rel="noopener">StacksFree</a>
-						<a href="https://toolbrain.net" target="_blank" rel="noopener">ToolBrain</a>
+			<a href="https://aigamingdev.com" target="_blank" rel="noopener">AIGamingDev</a>
+			<a href="https://codeintel.xyz" target="_blank" rel="noopener">CodeIntel</a>
+			<a href="https://cybersec-ai.xyz" target="_blank" rel="noopener">CyberSec AI</a>
+			<a href="https://design-agent.dev" target="_blank" rel="noopener">Design Agent</a>
+			<a href="https://hermes-tutorials.dev" target="_blank" rel="noopener">Hermes Tutorials</a>
+			<a href="https://niteagent.com" target="_blank" rel="noopener">NiteAgent</a>
+			<a href="https://nocodeinsider.com" target="_blank" rel="noopener">NoCode Insider</a>
+			<a href="https://quantbrainai.net" target="_blank" rel="noopener">QuantBrainAI</a>
+			<a href="https://smarthomefieldguide.com" target="_blank" rel="noopener">SmartHome Field Guide</a>
+			<a href="https://stacksfree.com" target="_blank" rel="noopener">StacksFree</a>
+			<a href="https://toolbrain.net" target="_blank" rel="noopener">ToolBrain</a>
 		</div>
 	</div>
 	<div class="footer-bottom">
@@ -45,30 +45,35 @@ import { SITE_TITLE } from '../consts';
 		border-top: 1px solid var(--border);
 		background: var(--bg-secondary);
 	}
+
 	.footer-inner {
-		max-width: var(--grid-width);
+		max-width: min(1800px, 95vw);
 		margin: 0 auto;
 		padding: 3em 1.5em 2em;
 		display: grid;
 		grid-template-columns: 2fr 1fr 1fr 1fr;
 		gap: 2em;
 	}
+
 	.footer-col {
 		display: flex;
 		flex-direction: column;
 		gap: 0.5em;
 	}
+
 	.footer-title {
 		font-size: 1rem;
 		font-weight: 600;
 		color: #fff;
 	}
+
 	.footer-desc {
 		font-size: 0.85em;
 		color: var(--text-muted);
 		margin: 0;
 		line-height: 1.6;
 	}
+
 	.footer-heading {
 		font-size: 0.8em;
 		font-weight: 600;
@@ -77,32 +82,73 @@ import { SITE_TITLE } from '../consts';
 		letter-spacing: 0.06em;
 		margin-bottom: 0.5em;
 	}
+
 	.footer-col a {
 		font-size: 0.88em;
 		color: var(--text-muted);
 		text-decoration: none;
 		transition: color 0.15s;
 	}
+
 	.footer-col a:hover {
 		color: var(--accent-light);
 	}
+
+	/* ── Footer bottom bar ── */
 	.footer-bottom {
-		max-width: var(--grid-width);
+		max-width: min(1800px, 95vw);
 		margin: 0 auto;
 		padding: 1em 1.5em;
 		border-top: 1px solid var(--border);
 	}
+
 	.footer-bottom p {
 		margin: 0;
 		font-size: 0.8em;
 		color: var(--text-muted);
 	}
+
 	.footer-bottom a {
 		color: var(--text-muted);
 	}
+
 	.footer-bottom a:hover {
 		color: var(--accent-light);
 	}
+
+	/* ── Network column: horizontal badges at 1400px+ ── */
+	@media (min-width: 1400px) {
+		.network-col {
+			flex-direction: row;
+			flex-wrap: wrap;
+			gap: 0.5em;
+			align-content: flex-start;
+		}
+		.network-col .footer-heading {
+			width: 100%;  /* heading stays on its own line */
+			margin-bottom: 0.25em;
+		}
+		.network-col a {
+			display: inline-flex;
+			align-items: center;
+			padding: 0.3em 0.75em;
+			border-radius: 999px;
+			font-size: 0.78em;
+			font-weight: 500;
+			background: rgba(108, 92, 231, 0.12);
+			color: var(--accent-light);
+			border: 1px solid rgba(108, 92, 231, 0.2);
+			transition: all 0.15s ease;
+			white-space: nowrap;
+		}
+		.network-col a:hover {
+			background: var(--accent);
+			color: #fff;
+			border-color: var(--accent);
+		}
+	}
+
+	/* ── Mobile ── */
 	@media (max-width: 720px) {
 		.footer-inner {
 			grid-template-columns: 1fr;
