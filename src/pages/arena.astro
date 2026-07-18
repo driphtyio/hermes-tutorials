@@ -94,26 +94,21 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         --bg-card-hover: var(--surface-2);
       }
 
-      /* ── Container: scales from 1200px → 1600px+ ── */
+      /* ── Container: truly fill widescreen ── */
       .arena-container {
-        max-width: min(1400px, 92vw);
+        max-width: min(1800px, 95vw);
         margin: 0 auto;
         padding: 2em 1.5em 2em;
       }
 
-      @media (min-width: 1400px) {
-        .arena-container {
-          max-width: min(1500px, 90vw);
-        }
-      }
       @media (min-width: 1600px) {
         .arena-container {
-          max-width: min(1550px, 88vw);
+          max-width: min(1900px, 93vw);
         }
       }
-      @media (min-width: 1800px) {
+      @media (min-width: 2000px) {
         .arena-container {
-          max-width: 1600px;
+          max-width: min(2000px, 90vw);
         }
       }
 
@@ -603,25 +598,65 @@ const lastUpdated = stability?.last_updated ?? 'N/A';
         }
       }
 
-      /* ── Widescreen: at 1400px+ show more rows without scrolling ── */
+      /* ── Widescreen: fill the wider container proportionally ── */
       @media (min-width: 1400px) {
         .arena-table td,
         .arena-table th {
-          padding: 0.4em 0.8em;
+          padding: 0.45em 0.9em;
         }
         .arena-table {
-          font-size: 0.88em;
+          font-size: 0.9em;
+        }
+        .arena-table .score-bar-wrap {
+          min-width: 150px;
         }
         .pool-table td,
         .pool-table th {
-          padding: 0.4em 0.8em;
+          padding: 0.45em 0.9em;
+        }
+        .impact-card {
+          padding: 0.9em 1.2em;
+        }
+        .match-item summary {
+          padding: 0.65em 1em;
         }
       }
 
-      /* ── Ultra-wide: at 1800px+ use extra horizontal space ── */
+      /* ── Ultra-wide: at 1800px+ scale up proportionally ── */
       @media (min-width: 1800px) {
         .arena-table .score-bar-wrap {
-          min-width: 140px;
+          min-width: 180px;
+        }
+        .arena-table {
+          font-size: 0.95em;
+        }
+        .arena-table td,
+        .arena-table th {
+          padding: 0.5em 1em;
+        }
+        .pool-table {
+          font-size: 0.88em;
+        }
+        .stat-item {
+          font-size: 0.9em;
+        }
+        .impact-card .impact-value {
+          font-size: 1.5em;
+        }
+        .section-title {
+          font-size: 1.4em;
+        }
+        .section {
+          margin-top: 1.8em;
+        }
+      }
+
+      @media (min-width: 2000px) {
+        .arena-table .score-bar-wrap {
+          min-width: 220px;
+        }
+        .arena-table {
+          font-size: 1em;
         }
       }
     </style>
