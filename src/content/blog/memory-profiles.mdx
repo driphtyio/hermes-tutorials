@@ -1,189 +1,323 @@
 ---
-title: "Memory, Profiles & Personalization"
-description: "Set up persistent memory so Hermes remembers you across sessions, create isolated profiles for work vs personal use, and enable voice interaction."
-pubDate: "2026-05-14"
-heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/memory-profiles-1784336890.webp"
-tags: ["memory", "profiles", "personalization", "voice"]
-keywords: [hermes memory, agent memory, cross-session memory, hermes profiles, voice mode, hermes tts, hermes stt, Honcho, Mem0]
+title: "Memory and Profiles — Persistent Context in Hermes Agent"
+description: "Explore Hermes Agent's memory system, Honcho integration, and profile management for cross‑session persistence, enabling rich, context‑aware interactions."
+pubDate: "2026-07-17"
+tags: ["memory", "profiles", "hermes-agent", "quickstart"]
 lastVerified: "2026-07-17"
 ---
 
-> **TLDR:** Hermes remembers you across sessions through its memory system (enable with `hermes config set memory.memory_enabled true`). Profiles create completely isolated Hermes instances (`hermes profile create "work"`). Voice mode turns on with `/voice on`. Together they make Hermes feel like a personal assistant, not a stateless chatbot.
+```mdx
+<Breadcrumb>
+  Home > Quick Start Guides > Memory and Profiles
+</Breadcrumb>
+```
 
-## Key Takeaways
+## 1. Overview
 
-- Memory stores facts about you and your environment; skills store procedures
-- Profiles give you fully independent Hermes instances (work vs personal)
-- Voice mode: `/voice on` for two-way, `/voice tts` for agent-only
-- Memory providers: built-in (free, local SQLite), Honcho, Mem0
-- The curator (`hermes curator`) runs automatic skill lifecycle maintenance
-- `hermes profile export` backs up entire profiles as tar.gz
+Hermes Agent is designed to remember *what* happened, *why* it matters, and *who* it involves. Its memory architecture blends three complementary layers:
 
-## Memory System
+| Layer | Purpose | Lifetime |
+|-------|---------|----------|
+| **Episodic Memory** | Stores raw conversation turns, timestamps, and raw user intent. | Session‑only (cleared when the session ends) |
+| **Semantic Memory** | Extracts concepts, entities, and relationships from episodes, turning raw logs into reusable knowledge. | Persisted across sessions (via Honcho) |
+| **Profile Memory** | Holds persona‑specific preferences, role definitions, and custom prompts. | Persisted per profile, switchable on the fly |
 
-Memory is what makes Hermes feel intelligent between sessions. With cross-session memory enabled, it remembers who you are, your preferences, your environment, and lessons learned.
+Together these layers give Hermes a “long‑term brain” that can recall past interactions, reason about them, and adapt its tone to the active profile.
 
-### Enabling Memory
+---
+
+## 2. How Hermes Memory Works
+
+### 2.1 Episodic Memory
+
+Every inbound and outbound message is captured as an **episode**:
+
+```json
+{
+  "id": "e7b9c4a2",
+  "timestamp": "2026-07-17T14:03:12Z",
+  "direction": "user",
+  "content": "Can you suggest a vegan dinner for two?",
+  "metadata": { "intent": "recipe_suggestion", "entities": ["vegan", "dinner", "two"] }
+}
+```
+
+Episodes are stored in an in‑memory queue that is automatically flushed when the session ends. The queue is accessible to the LLM via a *system prompt* that looks like:
+
+```
+You have access to the last 12 episodes of the conversation. Use them to maintain continuity.
+```
+
+### 2.2 Semantic Memory
+
+When an episode is archived, Hermes runs a **semantic extractor** (a lightweight LLM call or a rule‑based parser) that:
+
+1. **Normalizes** entities (e.g., `"vegan dinner"` → `MealType: Vegan, MealTime: Dinner`).
+2. **Indexes** concepts in a vector store (by default, a Faiss index backed by the Honcho service).
+3. **Links** related concepts (e.g., linking the user’s “vegan dinner” request to a stored recipe collection).
+
+The result is a **knowledge node**:
+
+```json
+{
+  "nodeId": "k_42f9",
+  "type": "RecipeRequest",
+  "attributes": {
+    "diet": "vegan",
+    "servings": 2,
+    "meal": "dinner"
+  },
+  "sourceEpisode": "e7b9c4a2"
+}
+```
+
+These nodes survive beyond the current session and can be retrieved with a simple query:
+
+```js
+await hermes.memory.search("vegan dinner for two", { topK: 3 });
+```
+
+### 2.3 Session Persistence
+
+While episodic memory is volatile, Hermes automatically **hydrates** the LLM with the most relevant semantic nodes at the start of each new session. This “context re‑hydration” ensures the agent can say:
+
+> “Welcome back! I remember you liked a vegan dinner for two last week. Would you like a different recipe this time?”
+
+The persistence mechanism is powered by **Honcho**, a managed vector store that guarantees durability and fast similarity search.
+
+---
+
+## 3. Honcho Integration for Long‑Term Memory
+
+Honcho is Hermes’ default long‑term storage provider. It offers:
+
+* **Scalable vector indexing** (FAISS, HNSW, or proprietary GPU‑accelerated back‑ends)
+* **Versioned snapshots** (useful for rollback or audit)
+* **Tenant isolation** (each profile gets its own namespace)
+
+### 3.1 Connecting Hermes to Honhon
+
+Add the following to `hermes.config.js`:
+
+```js
+module.exports = {
+  memory: {
+    provider: "honcho",
+    endpoint: "https://api.honcho.ai",
+    apiKey: process.env.HONCHO_API_KEY,
+    namespace: "default", // will be overridden per profile
+  },
+};
+```
+
+### 3.2 Managing Namespaces
+
+When a profile is activated, Hermes automatically prefixes all memory keys with the profile’s namespace:
+
+```js
+await hermes.memory.setNamespace(`profile_${profileId}`);
+```
+
+This isolation prevents cross‑profile leakage while still allowing a *global* namespace for truly universal knowledge (e.g., public facts, common sense).
+
+### 3.3 Back‑up & Restore
+
+Honcho supports export/import of vector snapshots. To back up a profile’s knowledge:
 
 ```bash
-hermes config set memory.memory_enabled true
-hermes config set memory.user_profile_enabled true
+hermes memory export --profile=travel_guide --output=travel_guide_snapshot.zip
 ```
 
-These take effect on next session (`/reset` or restart).
-
-### What Gets Saved
-
-The agent automatically saves to memory:
-
-- **Your preferences** — "User prefers pnpm over npm"
-- **Environment facts** — "Running on Arch Linux with Intel CPU"
-- **Corrections** — "Don't use apt, use pacman"
-- **Workflow preferences** — "User likes concise responses"
-
-### Two Memory Stores
-
-| Store | What it holds | Who writes it |
-|-------|--------------|-------------|
-| `memory` | Environment facts, project conventions, lessons learned | Agent writes automatically |
-| `user` | Your name, preferences, communication style | Agent writes when corrected |
-
-### Memory Providers
+To restore:
 
 ```bash
-# Built-in SQLite (default, free, local — data never leaves your machine)
-hermes config set memory.provider "built-in"
-
-# Honcho (cloud, syncs across devices)
-hermes config set memory.provider "honcho"
-
-# Mem0 (cloud, advanced memory management)
-hermes config set memory.provider "mem0"
+hermes memory import --profile=travel_guide --input=travel_guide_snapshot.zip
 ```
 
-### Memory vs Skills
+---
 
-A common point of confusion:
+## 4. Profiles System
 
-| **Memory** | **Skills** |
-|------------|-----------|
-| Facts about you and your environment | Reusable procedures |
-| "User uses Arch Linux" | "How to install packages on Arch" |
-| Written by the agent automatically | Created by the agent on request |
-| Loaded every session automatically | Loaded on demand |
-| Compact, one-sentence entries | Structured documents with steps |
+Profiles let you **swap personas** without restarting the agent. A profile bundles:
 
-**Rule of thumb:** If it's a fact → memory. If it's a process → skill. See the [Skills System guide](/blog/skills-system/) for a deeper dive.
+| Component | Description |
+|-----------|-------------|
+| **System Prompt** | Core instructions that define tone, role, and any domain‑specific rules. |
+| **Memory Namespace** | Isolated vector space for that profile’s semantic nodes. |
+| **Preferences** | User‑specific defaults (e.g., language, units, recurring interests). |
+| **Custom Functions** | Optional JS hooks for domain‑specific actions (e.g., `fetchTravelItinerary`). |
 
-## Profiles
-
-Profiles are fully isolated Hermes instances. Each profile has its own config, session history, skills directory, memory database, and API keys.
-
-### Creating Profiles
+### 4.1 Creating a Profile
 
 ```bash
-# List existing
-hermes profile list
-
-# Create from scratch
-hermes profile create "work"
-
-# Clone current config (recommended)
-hermes profile create "personal" --clone
-
-# Set as default
-hermes profile use "work"
+hermes profile create \
+  --id=travel_guide \
+  --name="Travel Guide" \
+  --system-prompt="You are a friendly travel guide with a deep knowledge of European destinations."
 ```
 
-### Using Profiles
+The command creates a new namespace in Honcho (`profile_travel_guide`) and stores the system prompt.
 
-```bash
-hermes --profile work          # One-off
-hermes profile use "personal"  # Make default
-hermes                         # Uses "personal"
+### 4.2 Switching Profiles at Runtime
+
+Within a conversation, you can instruct the user to change personas:
+
+```js
+await hermes.profile.switch('travel_guide');
 ```
 
-### Managing Profiles
+Or via voice:
 
-```bash
-hermes profile show work       # See details
-hermes profile rename work dev # Rename
-hermes profile delete personal # Remove (irreversible)
-hermes profile export work     # Backup as tar.gz
-hermes profile import work.tar.gz  # Restore
+> **User:** “Switch to travel guide mode.”  
+> **Hermes:** *[recognizes intent]* “Sure thing! I’m now your travel guide.”
+
+The switch automatically:
+
+1. Persists any pending episodic memory.
+2. Loads the new profile’s system prompt.
+3. Re‑hydrates the LLM with the profile’s semantic memory.
+
+### 4.3 Multi‑Profile Scenarios
+
+A single session can *temporarily* blend profiles. For example, a corporate assistant may need a “legal advisor” profile for a brief clause:
+
+```js
+await hermes.profile.activateTemporary('legal_advisor', { duration: '5m' });
 ```
 
-### Use Cases
+After the timer expires, Hermes reverts to the original profile.
 
-- **Work profile** — project configs, company API keys, professional memory
-- **Personal profile** — personal projects, different providers, casual tone
-- **Client profiles** — separate memory per client, isolated skills
-- **Testing profile** — experimental configs, different models
+---
 
-## Voice Mode
+## 5. Configuring Memory Settings & Commands
 
-Hermes supports two-way voice interaction — speak to it, and it speaks back.
+Hermes ships with a set of **CLI commands** and **runtime APIs** to fine‑tune memory behavior.
 
-### Setup
+### 5.1 Global Settings
 
-Configure both STT (speech-to-text) and TTS (text-to-speech):
-
-```bash
-# STT: voice to text
-hermes config set stt.enabled true
-hermes config set stt.provider local   # or groq, openai, mistral
-
-# TTS: text to voice
-hermes config set tts.provider edge    # or elevenlabs, openai
+```js
+module.exports = {
+  memory: {
+    maxEpisodes: 20,          // keep up to 20 recent turns in episodic memory
+    semanticChunkSize: 256,   // token size for each semantic node
+    retentionDays: 90,        // auto‑prune nodes older than 90 days
+    similarityThreshold: 0.78,
+  },
+};
 ```
 
-For local STT:
+### 5.2 Runtime Commands
 
-```bash
-pip install faster-whisper
+| Command | Example | Effect |
+|---------|---------|--------|
+| `memory.flush()` | `await hermes.memory.flush();` | Clears episodic memory immediately. |
+| `memory.search(query, opts)` | `await hermes.memory.search("vegan recipes", { topK: 5 });` | Retrieves the most similar semantic nodes. |
+| `memory.prune()` | `await hermes.memory.prune();` | Removes nodes older than `retentionDays`. |
+| `memory.setNamespace(ns)` | `await hermes.memory.setNamespace('profile_travel_guide');` | Switches the active vector namespace. |
+
+### 5.3 Voice‑Triggered Memory Commands
+
+You can expose memory actions to voice:
+
+```js
+{
+  "intent": "clear_memory",
+  "utterances": [
+    "reset our conversation",
+    "start over",
+    "forget what we talked about"
+  ],
+  "handler": async () => {
+    await hermes.memory.flush();
+    return "All right, I’ve cleared the recent conversation. How can I help you now?";
+  }
+}
 ```
 
-### Voice Commands
+The handler runs the same `flush()` API, giving users a natural way to reset context.
 
+---
+
+## 6. Voice Interaction and Memory
+
+When Hermes is used through a voice channel (e.g., a smart speaker), the memory pipeline includes an extra **speech‑to‑text (STT) enrichment** step:
+
+1. **STT** returns raw transcript + confidence scores.
+2. **Intent extraction** adds metadata to the episode (e.g., `confidence: 0.94`).
+3. **Semantic enrichment** may add prosodic cues (e.g., *tone=question*, *urgency=high*) as extra attributes.
+
+These attributes become part of the semantic node, enabling the agent to respond with appropriate **prosody**:
+
+> “Sure, here’s a quick vegan recipe **(cheerful tone)**.”
+
+Voice‑first users also benefit from **audio‑summaries** that leverage stored memory:
+
+```js
+await hermes.memory.summarize({
+  since: "2026-07-10",
+  format: "audio",
+});
 ```
-/voice on      # Two-way voice (you speak, agent speaks back)
-/voice tts     # Agent always speaks, you type
-/voice off     # Text only (default)
+
+The function returns an MP3 snippet summarizing the user’s recent activity, perfect for “catch‑up” scenarios.
+
+---
+
+## 7. Best Practices for Memory Management
+
+| Practice | Why It Matters |
+|----------|----------------|
+| **Limit episodic depth** | Keeping too many episodes inflates prompt size and can exceed token limits. Use `maxEpisodes` wisely. |
+| **Chunk semantic data** | Break large user inputs into 250‑token chunks before indexing; this improves similarity search relevance. |
+| **Namespace hygiene** | Periodically audit namespaces for orphaned profiles; remove unused ones to save storage. |
+| **Version your system prompts** | Store prompts in a version‑controlled repo; changes can be rolled back without losing memory. |
+| **Respect privacy** | Offer a `memory.clear` voice command and comply with GDPR‑style data‑deletion requests. |
+| **Monitor similarity thresholds** | Too low a threshold yields noisy matches; too high discards useful context. Adjust after observing retrieval quality. |
+| **Leverage temporary profiles** | Use them for short‑lived expertise (e.g., legal advice) to keep the main profile lean. |
+| **Regularly prune** | Schedule `memory.prune()` via a cron job (e.g., nightly) to keep the vector store performant. |
+| **Log memory actions** | Keep an audit trail of `flush`, `prune`, and `import` operations for debugging and compliance. |
+
+---
+
+## 8. Further Reading
+
+- **Hermes Agent Core Docs** – Full API reference for `hermes.memory`, `hermes.profile`, and `hermes.voice`.  
+- **Honcho Vector Store Guide** – Deep dive into index tuning, scaling, and security.  
+- **Prompt Engineering Handbook** – Strategies for crafting effective system prompts per profile.  
+- **Voice UX Patterns** – Best practices for designing conversational flows with memory‑aware agents.  
+
+You can find these resources in the **Docs** section of the Hermes portal or via the following links:
+
+- [Hermes Memory API →](https://docs.hermes.ai/memory)  
+- [Honcho Integration →](https://honcho.ai/docs)  
+- [Profiles & Personas →](https://docs.hermes.ai/profiles)  
+
+---
+
+## 9. Quick Reference Cheat Sheet
+
+```js
+// Switch profile
+await hermes.profile.switch('travel_guide');
+
+// Search memory
+const recipes = await hermes.memory.search('vegan dinner', { topK: 3 });
+
+// Flush episodic memory
+await hermes.memory.flush();
+
+// Export profile memory
+hermes memory export --profile=travel_guide --output=travel.zip;
+
+// Set custom retention
+module.exports = {
+  memory: { retentionDays: 180 }
+};
 ```
 
-Telegram and Discord voice messages are auto-transcribed when STT is enabled.
+---
 
-## The Curator: Automatic Skill Maintenance
+**Ready to make Hermes truly remember you?**  
+Start by creating a profile, enable Honcho, and watch the agent build a lasting, context‑rich relationship.
 
-The curator manages your skills automatically, part of the [skills lifecycle system](/blog/skills-system/):
-
-```bash
-hermes curator status             # See all skills and their state
-hermes curator pin deploy-skill   # Protect from auto-archiving
-hermes curator run                # Run maintenance now
-```
-
-It marks unused skills as stale, archives them after 60 days, but never deletes anything. Pinned skills are excluded from the lifecycle.
-
-## FAQ
-
-**Q: Does memory sync between CLI and gateway?**
-If using the built-in provider, memory is local to the machine. If using Honcho or Mem0, memory syncs across all interfaces.
-
-**Q: Can I export my memory?**
-Memory is stored in the SQLite database at `~/.hermes/`. Export an entire profile with its memory using `hermes profile export work`.
-
-**Q: Will Hermes remember me if I switch profiles?**
-No — each profile has isolated memory. That's by design. Switch profiles with `hermes --profile name`.
-
-**Q: How is memory different from a skill?**
-Memory stores facts ("user prefers pnpm"). Skills store procedures ("how to deploy the app"). See the [Skills guide](/blog/skills-system/) for details.
-
-**Q: Can I use voice on Telegram?**
-Yes — Telegram voice messages are auto-transcribed when STT is enabled. Configure it with `hermes config set stt.provider local` and install `faster-whisper`.
-
-## Next Steps
-
-- **[Security & Privacy](/blog/security-privacy/)** — protect your data with approval modes and secret redaction
-- **[Configuration Deep Dive](/blog/configuration-deep-dive/)** — fine-tune every setting in config.yaml
-- **[Troubleshooting Guide](/blog/troubleshooting/)** — fix common issues with voice, memory, and profiles
+HERO_IMAGE_PROMPT

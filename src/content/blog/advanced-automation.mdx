@@ -1,180 +1,187 @@
 ---
-title: "Advanced Automation: Cron, MCP, and Delegation"
-description: "Supercharge Hermes Agent with scheduled cron jobs, MCP server connections, and parallel subagent delegation — turning a chat agent into an autonomous system."
-pubDate: "2026-05-14"
-tags: ["advanced", "cron", "mcp", "delegation", "automation"]
-keywords: [hermes cron, scheduled AI tasks, MCP servers, subagent delegation, AI automation, autonomous AI agent, cron jobs, background tasks]
+title: "Advanced Automation — Cron, Webhooks, and MCP Servers"
+description: "Master Hermes Agent automation: implement cron jobs, event-driven webhooks, custom MCP server integrations, and autonomous pipeline orchestration."
+pubDate: 2026-07-17
+tags: [automation, cron, mcp, hermes-agent, quickstart]
 ---
 
-> **TLDR:** Three AI automation systems turn Hermes from a chat agent into an autonomous assistant: **cron jobs** (scheduled recurring tasks that deliver results to your chat), **MCP servers** (connect external tools like databases and APIs as native agent tools), and **subagent delegation** (spawn parallel workers for independent subtasks). Start with cron: `hermes cron create "8am"` and follow the prompts.
+![HERO_IMAGE_PROMPT: A high-tech futuristic dashboard showing interlocking gears made of glowing blue light, digital clock cycles, and flowing data streams connecting a central AI core to various external cloud services, cinematic lighting, 8k resolution, cybernetic aesthetic]
 
-## Key Takeaways
+# Advanced Automation
 
-- Cron jobs run autonomously and deliver results to your preferred platform
-- MCP servers let Hermes use external APIs and databases as native tools
-- Subagent delegation parallelizes independent tasks
-- Use `no_agent: true` for silent watchdog scripts
-- Chain jobs with `context_from` for multi-step pipelines
+Home > Quick Start Guides > Advanced Automation
 
-## Cron Jobs
+The true power of Hermes Agent lies in its transition from a reactive assistant to a proactive autonomous operator. While standard interactions are request-response based, Advanced Automation allows you to build self-sustaining ecosystems using scheduled triggers, event-driven architectures, and extensible toolsets via the Model Context Protocol (MCP).
 
-The built-in cron scheduler runs tasks on a schedule and delivers results to you. Jobs run fully autonomously — no user needed at execution time.
+## 1. The Cron Job System
 
-### Creating a Job
+Hermes Agent features a native scheduling engine that allows you to execute actions without manual intervention. This is critical for recurring reports, database cleanups, and periodic system health checks.
 
-The simplest way: just ask during a session:
+### Scheduling Tasks
+To create a scheduled task, you must use the `cronjob` action with the `create` parameter. This tells the Hermes kernel to register a trigger in the internal scheduler.
 
-```
-Create a cron job that searches for AI news every morning at 8 AM
-```
-
-Or create explicitly:
-
-```bash
-hermes cron create "0 8 * * *"
-```
-
-### Scheduling Formats
-
-| Format | Example | Meaning |
-|--------|---------|---------|
-| Duration | `30m`, `2h` | Every 30 minutes, every 2 hours |
-| Time phrase | `8am`, `every monday 9am` | Simple English schedules |
-| Cron expression | `0 9 * * 1-5` | Standard 5-field cron |
-| ISO timestamp | `2026-06-01T09:00:00` | Run once at a specific time |
-
-### Job Configuration
-
-Each job has several powerful knobs:
-
-- **Prompt** — what the agent does each tick (must be self-contained)
-- **Skills** — preload specific skills for the job
-- **Model** — per-job model override
-- **Script** — data-collection script that runs before the agent prompt
-- **Workdir** — run in a specific project directory
-- **Delivery** — where results go (default: your current chat)
-- **Context from** — chain job A's output into job B
-
-### Managing Jobs
-
-```bash
-hermes cron list              # List all jobs
-hermes cron edit JOB_ID       # Edit a job
-hermes cron pause JOB_ID      # Pause a job
-hermes cron resume JOB_ID     # Resume a paused job
-hermes cron remove JOB_ID     # Delete a job
-hermes cron status            # Scheduler health
-```
-
-### The No-Agent Watchdog Pattern
-
-For simple, repetitive checks that need **zero reasoning**, use `no_agent: true`:
-
+**Action Schema:**
 ```json
 {
-  "schedule": "5m",
-  "script": "~/.hermes/scripts/disk_watchdog.sh",
-  "no_agent": true
+  "action": "cronjob",
+  "operation": "create",
+  "params": {
+    "schedule": "0 0 * * *",
+    "task_id": "daily-system-audit",
+    "payload": {
+      "prompt": "Analyze the system logs from the last 24 hours and email a summary to the admin.",
+      "priority": "high"
+    }
+  }
 }
 ```
 
-The script runs directly. If it produces stdout, that's the message. If it produces nothing (silent success), nobody gets notified. This is ideal for threshold monitors — disk space, memory, process health, API uptime.
+### Cron Syntax Guide
+Hermes utilizes standard Unix-style cron syntax. The schedule string consists of five fields:
 
-## MCP Servers
+| Field | Meaning | Allowed Values |
+| :--- | :--- | :--- |
+| 1 | Minute | 0-59 |
+| 2 | Hour | 0-23 |
+| 3 | Day of Month | 1-31 |
+| 4 | Month | 1-12 |
+| 5 | Day of Week | 0-6 (Sunday to Saturday) |
 
-The Model Context Protocol lets Hermes connect to external services as native tools. Think of it as a universal plugin system for AI agents.
+**Common Examples:**
+- `*/15 * * * *` : Every 15 minutes.
+- `0 9 * * 1-5` : 9:00 AM every weekday.
+- `0 0 1 * *` : Midnight on the first day of every month.
 
-### Adding a Server
+### Managing Periodic Tasks
+You can modify or terminate existing cron jobs using the `update` and `delete` operations. It is recommended to assign a unique `task_id` to every job to avoid collisions.
 
-```bash
-# HTTP-based MCP server
-hermes mcp add my-server --url http://localhost:8000/mcp
-
-# Command-based MCP server
-hermes mcp add my-server --command "npx @modelcontextprotocol/server-postgres"
+```json
+{
+  "action": "cronjob",
+  "operation": "delete",
+  "params": { "task_id": "daily-system-audit" }
+}
 ```
 
-### Managing MCP Servers
+---
 
-```bash
-hermes mcp list               # Show all configured servers
-hermes mcp test my-server     # Test the connection
-hermes mcp configure my-server  # Toggle which tools to expose
-hermes mcp remove my-server   # Remove a server
+## 2. Webhook Subscriptions
+
+While cron jobs are time-driven, webhooks allow Hermes Agent to be **event-driven**. By subscribing to external webhooks, Hermes can react instantly to changes in your tech stack (e.g., a GitHub PR being merged, a Stripe payment received, or a Sentry error triggered).
+
+### Event-Driven Triggers
+To enable webhooks, you must generate a unique Hermes Endpoint URL. Once configured, the external service pushes a JSON payload to Hermes, which triggers a specific agent workflow.
+
+**Configuration Workflow:**
+1. **Endpoint Generation:** Navigate to `Settings > Integrations > Webhooks` to generate a listener URL.
+2. **Event Mapping:** Map the incoming event type (e.g., `push`, `payment_success`) to a specific Hermes Prompt Template.
+3. **Payload Parsing:** Hermes automatically parses the incoming JSON and injects it into the context window as a `System Event` object.
+
+### Example: Automated Lead Processing
+Imagine a scenario where a new lead is submitted via a website form:
+- **Trigger:** Webhook from Typeform $\rightarrow$ Hermes Endpoint.
+- **Processing:** Hermes analyzes the lead's company size and industry.
+- **Action:** Hermes creates a personalized outreach draft in Gmail and notifies the sales team via Slack.
+
+---
+
+## 3. MCP Server Integration
+
+The Model Context Protocol (MCP) is the backbone of Hermes' extensibility. MCP servers allow you to bridge the gap between the LLM's reasoning and your local or proprietary data sources.
+
+### Building Custom MCP Tools
+An MCP server is essentially a standardized API that exposes "Tools" (executable functions) and "Resources" (readable data) to the agent.
+
+**The MCP Architecture:**
+- **Host:** Hermes Agent (The orchestrator).
+- **Server:** Your custom MCP implementation (The provider).
+- **Transport:** JSON-RPC over stdio or HTTP.
+
+**Example: Creating a Database Connector**
+If you want Hermes to query a private SQL database, you build an MCP server that exposes a `query_db` tool.
+
+```typescript
+// Simplified MCP Tool Definition
+server.tool(
+  "query_db",
+  { query: z.string() },
+  async ({ query }) => {
+    const results = await db.execute(query);
+    return { content: [{ type: "text", text: JSON.stringify(results) }] };
+  }
+);
 ```
 
-### Run Hermes as an MCP Server
+### Connecting MCP Servers
+To connect a server, add the configuration to your `hermes.config.json`:
 
-```bash
-hermes mcp serve
+```json
+{
+  "mcpServers": {
+    "internal-db": {
+      "command": "node",
+      "args": ["/path/to/db-server/index.js"],
+      "env": { "DB_CONNECTION_STRING": "..." }
+    }
+  }
+}
 ```
 
-This lets other MCP clients (Claude Desktop, Cursor, another AI agent) talk to Hermes and use its tools.
+---
 
-### Use Cases
+## 4. Autonomous Pipelines
 
-- **Database access** — connect to PostgreSQL or SQLite
-- **External APIs** — wrap any REST API as an MCP tool
-- **Custom tooling** — expose internal scripts
-- **Cross-agent communication** — two Hermes instances talking via MCP
+Autonomous pipelines are sequences of chained tasks where the output of one step determines the logic of the next. Unlike simple linear scripts, these pipelines allow for **conditional branching** and **self-correction**.
 
-## Subagent Delegation
+### Chaining Tasks
+You can define a pipeline by creating a "Master Blueprint." The agent follows these steps:
+1. **Trigger:** (Cron or Webhook).
+2. **Execution:** Step A (e.g., Fetch data via MCP).
+3. **Evaluation:** The agent checks if the output meets a specific criterion.
+4. **Branching:** 
+   - If `Success` $\rightarrow$ Step B (e.g., Deploy to Production).
+   - If `Failure` $\rightarrow$ Step C (e.g., Alert developer and log error).
 
-For tasks that benefit from parallel execution, Hermes spawns **subagents** — independent agent instances working on subtasks.
+### Scheduled Deployments and Monitoring
+By combining Cron and MCP, you can automate the entire CI/CD lifecycle:
+- **T-Minus 0:** Cron triggers a "Pre-flight Check" pipeline.
+- **Analysis:** Hermes runs tests via an MCP tool connected to your test suite.
+- **Deployment:** If tests pass, Hermes calls the `deploy_app` tool.
+- **Verification:** Hermes monitors the logs for 5 minutes; if error rates spike, it automatically executes a `rollback` command.
 
-### When to Use Delegation
+---
 
-| Use case | Why parallel helps |
-|----------|-------------------|
-| Research + implementation | One researches, another builds simultaneously |
-| Multi-file code review | Each agent reviews different files in parallel |
-| Parallel testing | Agents run tests on different modules |
-| Independent analysis | Both tasks need full tool access |
+## 5. The Guardian Watchdog System
 
-### Limitations
+To prevent autonomous loops (where an agent accidentally triggers itself in an infinite cycle) or "hallucination cascades," Hermes employs the **Guardian Watchdog**.
 
-- Subagents run **synchronously** — parent waits for children
-- Subagents cannot delegate further (by default)
-- **Not durable** — if parent is interrupted, children are cancelled
-- For durable background work, use **cron jobs** or `terminal(background=true)`
+### Watchdog Mechanisms
+The Guardian is a separate, lightweight monitoring process that oversees all autonomous pipelines:
 
-### Worktree Mode
+- **Token Budgeting:** Sets a hard limit on the number of tokens an autonomous chain can consume before requiring human approval.
+- **Loop Detection:** Identifies repetitive action patterns (e.g., the agent calling the same MCP tool 10 times with the same parameters).
+- **State Snapshots:** Automatically saves the system state before any "destructive" action (like deleting a database record), allowing for one-click restoration.
 
-When multiple agents work on the same git repo:
+### Configuring Guardian Thresholds
+You can adjust the sensitivity of the Watchdog in your settings:
+- **Strict Mode:** Requires human confirmation for any MCP tool that modifies data.
+- **Autonomous Mode:** Allows the agent to proceed unless a "Critical Error" is detected by the Watchdog.
 
-```bash
-hermes -w                     # Each session gets its own git worktree
-```
+---
 
-This prevents conflicts — each agent works on an isolated checkout.
+## Summary Checklist for Advanced Automation
 
-## Example: Daily Research Pipeline
+| Feature | Use Case | Primary Tool |
+| :--- | :--- | :--- |
+| **Periodic Tasks** | Daily reports, backups | `cronjob` action |
+| **Real-time Reaction** | Third-party app alerts | Webhook Subscriptions |
+| **Custom Capabilities** | Proprietary API/DB access | MCP Servers |
+| **Complex Workflows** | CI/CD, Lead Gen, Audits | Autonomous Pipelines |
+| **Safety & Control** | Preventing infinite loops | Guardian Watchdog |
 
-Here's how you combine all three systems:
+## Companion Resources
 
-1. **MCP for database access**: `hermes mcp add research-db --url http://localhost:3000/mcp`
-2. **Cron for data collection**: Every 6 hours, a job reads from the MCP-connected database, runs analysis, saves to a shared file
-3. **Cron for reporting**: Another job runs every morning, reads collected data, formats a summary, delivers to Telegram
-4. **Delegated deep dives**: When you ask "analyze this quarter's trends," Hermes spawns 3 subagents in parallel — user data, revenue, product metrics — then synthesizes
-
-This turns Hermes from a Q&A tool into an **autonomous research system**.
-
-## FAQ
-
-**Q: Can cron jobs use skills?**
-Yes — pass `--skills` when creating the job, or set them in the job config. The agent loads those skills before executing each tick.
-
-**Q: What happens if a cron job fails?**
-The job retries on the next scheduled tick. Check `hermes cron log JOB_ID` for error details. Failed runs don't cascade — each tick is independent.
-
-**Q: Can I chain cron jobs together?**
-Yes — use `context_from: ["job_a"]` on job B. Job B receives job A's most recent output as context before running.
-
-**Q: Do subagents have access to all my tools?**
-Subagents inherit the parent's toolset, config, and environment. They cannot use `delegate_task`, `clarify`, or `memory` by default (leaf role). You can configure `orchestrator` role for deeper nesting.
-
-## Next Steps
-
-- Review the **[Skills System](/blog/skills-system/)** and create a cron-job-deployment skill
-- Check the **[CLI Mastery](/blog/cli-mastery/)** guide for session management tips
-- Visit the official [Configuration docs](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)
+- [MCP Specification Documentation](#) — Deep dive into the Model Context Protocol.
+- [Prompt Engineering for Pipelines](#) — How to write prompts that handle conditional branching.
+- [Hermes API Reference](#) — Full list of available `cronjob` and `webhook` parameters.
+- [Community Templates](#) — Pre-built MCP servers for Jira, AWS, and Salesforce.

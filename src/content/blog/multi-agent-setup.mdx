@@ -1,161 +1,168 @@
 ---
-title: "Running Multiple Agents"
-description: "How to run multiple Hermes Agent instances for parallel work — worktree mode, profiles, subagent delegation, and multi-agent coordination."
-pubDate: "2026-05-15"
-heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/multi-agent-setup-1784336870.jpg"
-tags: ["multi-agent", "delegation", "parallel", "advanced"]
-keywords: [hermes multi-agent, parallel agents, worktree mode, multiple hermes instances, subagent delegation, coordinate agents, parallel ai agents]
-lastVerified: 2026-07-17
+title: "Multi-Agent Setup — Parallel Workflows and Delegation"
+description: "Master the Hermes Agent subagent system, Worktree mode, and parallel workflows to delegate complex tasks across diverse LLM profiles and providers."
+pubDate: 2026-07-17
+tags: [multi-agent, subagents, hermes-agent, quickstart]
 ---
 
-> **TLDR:** Run multiple Hermes instances with `hermes -w` (worktree mode) for isolated git checkouts, or `hermes --profile work` for separate configs. Delegate parallel tasks with the delegate_task tool. For multi-agent coordination, use the kanban board to track work across instances.
+# Multi-Agent Setup: Parallel Workflows and Delegation
 
-## Key Takeaways
+**Home > Quick Start Guides > Multi-Agent Setup**
 
-- `hermes -w` (worktree mode) gives each agent an isolated git checkout — no conflicts
-- Profiles create fully independent Hermes instances with separate configs and memory
-- `delegate_task` spawns subagents for parallel work within a session
-- Kanban board coordinates multi-agent workflows across profiles
-- Use tmux for persistent, independent Hermes sessions
+The Hermes Agent architecture is designed to move beyond the "single-loop" chatbot. By leveraging its multi-agent framework, you can decompose monolithic tasks into smaller, manageable sub-tasks delegated to specialized agents. Whether you are conducting deep market research, performing a full-stack code review, or processing massive datasets, the multi-agent system allows for parallel execution and specialized expertise.
 
-## Why Multiple Agents?
+## The Subagent System
 
-One agent is great. Multiple agents working in parallel are transformative for:
+At the core of Hermes' multi-agent capabilities is the **Subagent System**. Instead of one agent attempting to be a generalist, a "Primary Agent" acts as an orchestrator (the Manager), spawning "Subagents" (the Specialists) to handle specific domains.
 
-- **Code reviews** — one agent reviews frontend, another reviews backend
-- **Research** — one researches approach A, another researches approach B
-- **Parallel builds** — each agent works on a different module
-- **Long-running tasks** — one agent handles your chat, another runs a background job
+### Multi-Profile Architecture
 
-## Method 1: Worktree Mode
+Hermes utilizes a profile-based architecture. Each agent—whether primary or subagent—is defined by a profile that includes:
+- **System Prompt:** The specific persona and constraints.
+- **Tool Access:** A curated subset of tools relevant to the task.
+- **Model Configuration:** The specific LLM provider (e.g., GPT-4o, Claude 3.5 Sonnet, Llama 3) and temperature.
 
-The simplest way to run parallel agents on the same git repo:
+This allows you to combine the strengths of different models. For example, you can use a high-reasoning model (GPT-4o) as the orchestrator and a faster, cheaper model (Groq/Llama 3) for repetitive data extraction sub-tasks.
 
-```bash
-# Start agent A on feature branch
-hermes -w chat -q "Implement user authentication"
+---
 
-# Start agent B on a different feature
-hermes -w chat -q "Add rate limiting middleware"
+## Worktree Mode: Parallelism at Scale
+
+**Worktree Mode** is a specialized execution state where Hermes transforms a linear conversation into a branching tree of independent agents. 
+
+In standard mode, agents operate sequentially. In Worktree Mode, the Primary Agent can spawn multiple subagents simultaneously. Each branch of the tree operates in its own isolated context window, preventing "context pollution" and allowing for true parallel processing.
+
+### How Worktree Mode Operates
+1. **Root Node:** The Primary Agent analyzes the global goal.
+2. **Branching:** The Primary Agent identifies $N$ independent sub-tasks.
+3. **Execution:** $N$ subagents are initialized concurrently.
+4. **Aggregation:** The Primary Agent collects the outputs from all branches and synthesizes a final response.
+
+---
+
+## Implementing Task Delegation
+
+Delegation in Hermes is handled via the `delegate_task` function. This tool allows the orchestrator to hand off a specific prompt and set of constraints to a subagent.
+
+### The `delegate_task` Signature
+
+```typescript
+delegate_task({
+  profileId: "researcher-pro",
+  task: "Analyze the Q3 fiscal reports for the top 5 semiconductor companies.",
+  expectedOutput: "A JSON array containing revenue and growth percentages.",
+  timeout: 300, // seconds
+  contextShare: ["market_trends.pdf", "industry_glossary.txt"]
+})
 ```
 
-The `-w` flag gives each Hermes session its own git worktree — an isolated checkout directory. One agent can modify files without stepping on the other's changes.
+### Delegation Workflow
 
-```bash
-# List worktrees
-git worktree list
+#### Define the Specialized Profiles
+Before delegating, ensure your `profiles.json` contains the necessary personas. Define a `coder` profile with access to the filesystem and a `reviewer` profile with access to the linting tools.
 
-# Clean up when done
-git worktree remove .hermes/worktrees/<name>
-```
+#### Trigger the Orchestrator
+Start your session with the Primary Agent. Provide a complex goal: *"Rewrite the authentication module and ensure it passes all security audits."*
 
-## Method 2: Profiles
+#### Automatic Branching
+The Primary Agent invokes `delegate_task` for the `coder` to write the implementation and simultaneously invokes it for the `reviewer` to prepare the test suite.
 
-Profiles give each agent its own config, sessions, skills, and memory:
+#### Synthesis
+Once the subagents return their results, the Primary Agent merges the code and the audit report into a final delivery.
 
-```bash
-# Create profiles
-hermes profile create "frontend-work" --clone
-hermes profile create "backend-work" --clone
+---
 
-# Run agents with different profiles
-hermes --profile frontend-work
-hermes --profile backend-work
-```
+## Parallel Workflow Patterns
 
-Each profile is fully isolated — different API keys, different models, different session histories. This is ideal for running agents with different personalities or access levels.
+Depending on your goal, you can implement different multi-agent patterns:
 
-## Method 3: Subagent Delegation
+### 1. The Fan-Out/Fan-In Pattern
+Best for **Batch Processing** or **Comparative Research**.
+- **Fan-Out:** One agent creates 10 subagents to summarize 10 different articles.
+- **Fan-In:** One agent collects those 10 summaries and writes a comprehensive meta-analysis.
 
-Within a single session, Hermes can spawn subagents for parallel tasks:
+### 2. The Pipeline Pattern
+Best for **Content Production** or **Software Development**.
+- **Agent A (Architect):** Designs the system schema.
+- **Agent B (Developer):** Implements the schema.
+- **Agent C (QA):** Tests the implementation.
+- **Agent D (DevOps):** Deploys the code.
 
-```bash
-Spawn subagents to research Django REST framework options
-while I work on the frontend
-```
+### 3. The Adversarial Pattern (Criticism Loop)
+Best for **Code Review** or **Fact Checking**.
+- **Generator Agent:** Produces a draft or solution.
+- **Critic Agent:** Searches for flaws, hallucinations, or bugs.
+- **Loop:** The Generator refines the output based on the Critic's feedback until a "quality threshold" is met.
 
-This uses the `delegate_task` tool under the hood. Subagents get their own isolated context and terminal sessions. They report back with summaries when done.
+---
 
-### When to Delegate
+## Combining Models and Providers
 
-| Task type | Why parallel helps |
-|-----------|-------------------|
-| Research + implementation | One researches, another builds |
-| Multi-file code review | Each agent reviews different files |
-| Parallel testing | Agents test different modules |
-| Independent analysis | Both tasks need full tool access |
+One of the most powerful aspects of the Hermes multi-agent setup is the ability to mix and match providers within a single workflow.
 
-### Limitations
+#### reasoning
+**Reasoning Heavy (Orchestrator)**
+Use **Claude 3.5 Sonnet** or **GPT-4o**. These models excel at planning, decomposition, and synthesis. They act as the "Brain" that decides which subagents to spawn.
 
-- Subagents run synchronously — parent waits for results
-- They cannot delegate further by default (configurable)
-- Not durable — parent interruption cancels children
-- For durable work, use cron jobs or background terminal processes
+#### speed
+**Speed/Cost Optimized (Subagents)**
+Use **Llama 3 (via Groq)** or **GPT-4o-mini**. These are ideal for high-volume tasks like data formatting, basic summarization, or regex extraction where millisecond latency is critical.
 
-## Method 4: Tmux Multiplexing
+#### local
+**Privacy Focused (Local)**
+Use **Mistral** or **Phi-3** via Ollama for subagents handling sensitive internal data that should not leave your local network.
 
-For fully independent, persistent agents that run for hours:
 
-```bash
-# Start agent in tmux
-tmux new-session -d -s agent1 -x 120 -y 40 'hermes'
+---
 
-# Wait for startup, send a task
-sleep 8 && tmux send-keys -t agent1 'Build the auth module' Enter
+## Monitoring Subagent Progress
 
-# Start a second agent
-tmux new-session -d -s agent2 -x 120 -y 40 'hermes'
-sleep 8 && tmux send-keys -t agent2 'Build the dashboard' Enter
+When running parallel workflows, visibility is key. Hermes provides a **Subagent Telemetry Dashboard** to monitor active branches.
 
-# Check progress
-tmux capture-pane -t agent1 -p | tail -20
-tmux capture-pane -t agent2 -p | tail -20
+### Key Monitoring Metrics:
+- **Token Usage per Branch:** Track which subagent is consuming the most resources.
+- **State Status:** `PENDING` $\rightarrow$ `EXECUTING` $\rightarrow$ `AWAITING_REVIEW` $\rightarrow$ `COMPLETED`.
+- **Tool Call Logs:** View the specific tool calls each subagent is making in real-time.
+- **Dependency Graph:** A visual representation of which subagents are waiting for the output of others.
 
-# Relay context between them
-tmux send-keys -t agent2 'Auth API is at /api/v1/auth — use that' Enter
-```
+If a subagent hangs or enters a loop, the Primary Agent can issue a `terminate_subagent` command or a `restart_branch` command to reset the state.
 
-This is the most flexible approach but requires tmux familiarity.
+---
 
-## Method 5: Kanban Board
+## Real-World Use Cases
 
-For structured multi-agent coordination, use the built-in kanban board:
+### Deep Market Research
+- **Primary Agent:** Orchestrates the research project.
+- **Subagent 1 (Web Crawler):** Scrapes current pricing from competitor sites.
+- **Subagent 2 (Financial Analyst):** Analyzes PDF annual reports.
+- **Subagent 3 (Sentiment Analyst):** Scrapes Reddit and X for user complaints.
+- **Result:** A comprehensive SWOT analysis generated from three distinct data streams.
 
-```bash
-hermes kanban init              # Create a board
-hermes kanban create "Task"     # Add a task
-hermes kanban assign TASK agent  # Assign to specific profile/instance
-hermes kanban list              # See all tasks and who owns them
-```
+### Automated Code Review & Refactor
+- **Primary Agent:** Manages the PR (Pull Request).
+- **Subagent 1 (Security Expert):** Scans for SQL injection and XSS vulnerabilities.
+- **Subagent 2 (Performance Expert):** Identifies O(n²) complexity issues.
+- **Subagent 3 (Style Guide Expert):** Ensures adherence to PEP8 or Airbnb style guides.
+- **Result:** A consolidated list of required changes with specific line-item references.
 
-The kanban system is designed for dispatching work across multiple profiles. Each worker agent sees only its assigned tasks. When it completes one, the dispatcher assigns the next.
+### Batch Content Localization
+- **Primary Agent:** Manages the localization project.
+- **Subagents (Language Specialists):** Separate agents for Spanish, French, Japanese, and German, each with a profile tuned for regional idioms.
+- **Result:** Parallel translation of 100+ strings with cultural nuance preserved.
 
-## Comparison
+---
 
-| Method | Isolation | Persistence | Ease of use |
-|--------|-----------|-------------|-------------|
-| Worktree Mode | Git isolation only | Same session store | Easy |
-| Profiles | Full (config, memory, sessions) | Each profile persists | Easy |
-| Subagent Delegation | Context + terminal | Not durable (cancelled with parent) | Trivial |
-| Tmux | Full process isolation | Durable (hours/days) | Moderate |
-| Kanban | Full (profile-based workers) | Durable + tracked | Moderate setup |
+## Next Steps and Resources
 
-## FAQ
+To further optimize your multi-agent deployments, explore the following guides:
 
-**Q: How many agents can I run at once?**
-There's no hard limit — it depends on your hardware and API rate limits. Each agent consumes its own context window and makes its own API calls. Start with 2-3 and scale up.
+- **[Advanced Prompting for Orchestrators](./advanced-prompting):** How to write system prompts that effectively decompose tasks.
+- **[Custom Tool Integration](./custom-tools):** Creating specialized tools for your subagents to use.
+- **[Memory Management](./memory-management):** Managing shared state and global variables across parallel branches.
+- **[API Reference](./api-docs):** Technical documentation for the `delegate_task` and `worktree` endpoints.
 
-**Q: Do multiple agents share memory?**
-No — each profile has isolated memory. Worktree and tmux agents also have separate histories unless you explicitly sync them.
+**Need help?** Join the Hermes Community Discord or check the GitHub Discussions for shared `profiles.json` templates.
 
-**Q: Can agents talk to each other?**
-Not directly, but you can relay context manually (tmux send-keys) or set up an MCP server for cross-agent communication.
+***
 
-**Q: Will they conflict on file changes?**
-Worktree mode prevents git conflicts. Without it, multiple agents editing the same files can conflict — use worktree mode when working on the same repo.
-
-## Next Steps
-
-- **[Plugins Guide](/blog/hermes-plugins/)** — extend what your agents can do
-- **[Web Search Backends](/blog/web-search-backends/)** — configure search providers
-- **[Token Usage & Cost Optimization](/blog/token-cost-optimization/)** — manage API spending across multiple agents
+**HERO_IMAGE_PROMPT:** A high-tech, isometric digital visualization of a central glowing neural node (the Primary Agent) branching out into several smaller, specialized nodes (Subagents). Each branch is connected by flowing data streams in neon blue and purple. The background is a dark, minimalist grid representing a digital workspace, symbolizing parallel processing and organized delegation. 8k resolution, cinematic lighting, cyberpunk aesthetic.

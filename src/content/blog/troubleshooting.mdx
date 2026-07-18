@@ -1,252 +1,172 @@
 ---
-title: "Troubleshooting Common Issues"
-description: "A systematic guide to diagnosing and fixing common Hermes Agent problems — from API errors and tool failures to gateway crashes and Windows quirks."
-pubDate: "2026-05-14"
-updatedDate: "2026-05-14"
-tags: ["troubleshooting", "debugging", "errors", "reference"]
-keywords: [hermes troubleshooting, hermes doctor, common errors, API errors, gateway not working, voice not working, tools not available, hermes logs, diagnostic]
+title: "Troubleshooting — Common Issues and Fixes for Hermes Agent"
+description: "Solve common Hermes Agent issues including health check failures, API errors, configuration problems, and system recovery to get your agent back online."
+pubDate: 2026-07-17
+tags: [troubleshooting, debugging, hermes-agent, quickstart]
 ---
 
-> **TLDR:** Set up hermes troubleshooting with `hermes doctor --fix` — it catches 80% of common issues. For gateway problems, check `~/.hermes/logs/gateway.log`. For tool availability, run `hermes tools list`. For API errors, verify your key in `~/.hermes/.env`. This guide covers every common failure and its fix.
+![HERO_IMAGE_PROMPT: A high-tech digital diagnostic dashboard showing a stylized robotic agent with a magnifying glass, circuit board patterns in the background, neon blue and amber accents, cinematic lighting, 4k resolution]
 
-## Key Takeaways
+**Home > Quick Start Guides > Troubleshooting**
 
-- `hermes doctor --fix` is your first step for any issue
-- Logs are in `~/.hermes/logs/gateway.log`
-- Most tool issues are fixed by enabling the toolset and running `/reset`
-- API errors usually mean a wrong key, expired key, or exhausted quota
-- Gateway needs `systemd` or `loginctl enable-linger` to survive logout
+The Hermes Agent is designed for resilience, but complex integrations with LLM providers, MCP servers, and local environments can occasionally lead to instability. This guide provides a systematic approach to diagnosing and resolving the most common issues.
 
-## The Universal First Step
+## 🩺 System Health Checks
+
+Before diving into manual debugging, use the built-in diagnostic suite to identify the root cause of the failure.
+
+### The `hermes doctor` Command
+The `doctor` command scans your environment for missing dependencies, invalid API keys, network latency, and configuration syntax errors.
+
+```bash
+hermes doctor
+```
+
+**What this checks:**
+- **Connectivity:** Pings the configured LLM gateway.
+- **Permissions:** Verifies read/write access to the `.hermes/` config directory.
+- **Dependencies:** Checks if required binaries (e.g., Python, Node, MCP hosts) are in the PATH.
+- **Config Integrity:** Validates `config.yaml` against the latest schema.
+
+### Automated Repair
+If the doctor identifies common misconfigurations (such as incorrect directory permissions or outdated cache files), you can attempt an automated fix:
 
 ```bash
 hermes doctor --fix
 ```
+*Note: `--fix` will not modify your API keys or model preferences, but it may reset temporary cache files and update local symlinks.*
 
-This checks:
-- Dependencies are installed
-- Config file is valid
-- API keys are reachable
-- Required tools are available
-- Python environment is intact
+---
 
-It auto-fixes anything it can and tells you what needs manual attention.
+## 🛠 Common Issues and Fixes
 
-## API & Model Issues
+### 1. API Key & Authentication Errors (401/403)
+**Symptoms:** Agent returns `Authentication Error`, `Invalid API Key`, or HTTP `401 Unauthorized`.
 
-### "401 Unauthorized" or "403 Forbidden"
+- **Check for Whitespace:** Ensure no trailing spaces or quotes were accidentally pasted into your `.env` or `config.yaml`.
+- **Verify Provider Status:** Check the status page of your provider (OpenAI, Anthropic, Google, etc.).
+- **Key Rotation:** If you recently rotated keys, restart the Hermes daemon to force a reload of environment variables.
+- **Quota Limits:** A `429 Too Many Requests` error is often mistaken for an auth error. Check your billing dashboard.
 
-Your API key is wrong, expired, or missing.
+### 2. Provider Connectivity & Gateway Timeouts
+**Symptoms:** `Gateway Timeout (504)`, `Connection Refused`, or "Agent is unresponsive."
 
+- **Proxy Settings:** If you are behind a corporate firewall, ensure `HTTP_PROXY` and `HTTPS_PROXY` environment variables are set.
+- **DNS Issues:** Try pinging the provider endpoint manually. If it fails, flush your DNS cache.
+- **Gateway Latency:** If using a local gateway (e.g., LiteLLM or Ollama), ensure the service is running:
+  ```bash
+  # Example for Ollama
+  systemctl status ollama
+  ```
+
+### 3. Model Switching Problems
+**Symptoms:** Agent continues using a previous model despite updating the config, or returns `Model Not Found`.
+
+- **Cache Flush:** Hermes caches model capabilities to speed up routing. Clear the cache:
+  ```bash
+  hermes cache clear --models
+  ```
+- **Case Sensitivity:** Ensure the model string exactly matches the provider's requirements (e.g., `gpt-4-turbo` vs `GPT-4-Turbo`).
+- **Availability:** Verify that your account has access to the specific model version you are requesting.
+
+### 4. Session & Context Errors
+**Symptoms:** Agent "forgets" previous messages, returns `Context Window Exceeded`, or crashes during long conversations.
+
+- **Context Pruning:** Check your `max_tokens` and `context_window` settings in `config.yaml`. If the window is too small, the agent may crash when attempting to summarize.
+- **Session Corruption:** If a specific thread is behaving erratically, delete the session file:
+  ```bash
+  rm ~/.hermes/sessions/[session_id].json
+  ```
+- **Token Overflow:** Reduce the number of active plugins attached to the session to free up system prompt space.
+
+### 5. Installation & Binary Issues
+**Symptoms:** `command not found: hermes`, `Shared library missing`, or `Segmentation fault`.
+
+- **PATH Verification:** Ensure the Hermes binary directory is in your system PATH.
+- **Architecture Mismatch:** Ensure you downloaded the correct binary for your OS (e.g., `arm64` for Apple Silicon vs `x86_64` for Intel).
+- **Dependency Conflict:** If using a Python-based plugin environment, recreate your venv:
+  ```bash
+  rm -rf .venv && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+  ```
+
+### 6. Plugin Failures
+**Symptoms:** Plugins fail to execute, return `null` responses, or cause the agent to loop.
+
+- **Permission Denied:** Ensure the agent has execution permissions for the plugin script:
+  ```bash
+  chmod +x ~/.hermes/plugins/my-plugin.sh
+  ```
+- **Schema Mismatch:** Update your plugins to the latest version to ensure compatibility with the current Hermes Agent API.
+- **Timeout Settings:** Increase the `plugin_timeout` value in your config if the plugin performs heavy computations.
+
+### 7. MCP (Model Context Protocol) Server Errors
+**Symptoms:** `MCP Server not reachable`, `JSON-RPC Error`, or tools not appearing in the agent's capability list.
+
+- **Stdio Check:** Most MCP servers communicate via stdio. Ensure no other process is locking the server's output.
+- **Log Inspection:** Check the MCP logs:
+  ```bash
+  tail -f ~/.hermes/logs/mcp.log
+  ```
+- **Configuration Syntax:** Ensure the MCP server is correctly defined in the `mcpServers` block of your config:
+  ```yaml
+  mcpServers:
+    sqlite:
+      command: "npx"
+      args: ["-y", "@modelcontextprotocol/server-sqlite", "--db", "/path/to/db"]
+  ```
+
+### 8. Memory Corruption & State Issues
+**Symptoms:** Random crashes, "Unexpected token" in config, or persistent hallucinations despite system prompt changes.
+
+- **State Reset:** Reset the agent's internal state without deleting your config:
+  ```bash
+  hermes state reset
+  ```
+- **Disk Space:** Ensure the drive containing the `.hermes` directory is not full, as this prevents the agent from writing to the state database.
+
+---
+
+## 🔄 Recovery Procedures
+
+When standard troubleshooting fails, follow these recovery paths in order of intensity.
+
+### Level 1: Configuration Reset
+If you suspect a configuration error but don't know where, backup and reset:
+1. Rename current config: `mv config.yaml config.yaml.bak`
+2. Generate default config: `hermes init`
+3. Gradually migrate settings from `.bak` to the new file.
+
+### Level 2: Full Reinstallation
+If binaries are corrupted or dependencies are irreconcilable:
+1. Uninstall the agent.
+2. Remove the global config folder: `rm -rf ~/.hermes`
+3. Re-run the installation script.
+4. Re-authenticate your providers.
+
+### Level 3: Backup Restore
+If you maintain regular backups of your agent's state:
 ```bash
-# Check what key Hermes is using
-cat ~/.hermes/.env | grep API_KEY
-
-# Verify it works
-curl -H "Authorization: Bearer sk-..." https://api.openai.com/v1/models
-
-# Re-authenticate OAuth providers
-hermes login --provider nous
+hermes restore --backup-path ./backups/hermes_2026_07_10.tar.gz
 ```
 
-**Copilot-specific:** `gh auth login` tokens do NOT work for Copilot API. You must use the Copilot OAuth device code flow via `hermes model` → select GitHub Copilot.
+---
 
-### "429 Too Many Requests"
+## ❓ FAQ
 
-You've hit a rate limit. Solutions:
+**Q: Why is my agent suddenly slower than usual?**
+**A:** This is usually due to provider-side latency or an oversized context window. Try reducing the `history_limit` in your configuration to see if performance improves.
 
-1. **Add more keys** to a credential pool: `hermes auth add`
-2. **Switch providers** with `/model`
-3. **Wait and retry** — most rate limits reset within a minute
+**Q: Can I run multiple Hermes Agents on one machine?**
+**A:** Yes, but you must specify different config directories using the `--config-dir` flag to avoid state conflicts.
 
-### Model not responding or timing out
+**Q: The `doctor --fix` command didn't work. What now?**
+**A:** Check the logs at `~/.hermes/logs/error.log`. If the error persists, export your logs (redacting API keys) and open a ticket on the GitHub Issues page.
 
-```bash
-# Check if the model name is correct
-hermes config set model.default "anthropic/claude-sonnet-4"
+---
 
-# Verify provider supports the model
-hermes chat -m "anthropic/claude-sonnet-4" -q "Hello?"
-```
+## 🔗 Companion Resources
 
-Some models only work through specific providers. OpenRouter supports cross-provider model access.
-
-## Tool Issues
-
-### "Tool not available"
-
-```bash
-# Check tool status
-hermes tools list
-
-# Enable a toolset
-hermes tools enable web
-
-# Reset session to apply changes
-# (Type /reset or exit and relaunch)
-```
-
-Tools need `/reset` to take effect — they're loaded at session start.
-
-### Browser tool not working
-
-The browser tool needs a backend:
-
-```bash
-hermes config set browser.backend local    # Needs Chromium installed
-hermes config set browser.backend browserbase  # Needs BROWSERBASE_API_KEY
-```
-
-For local browser:
-
-```bash
-# Install Chromium
-sudo pacman -S chromium       # Arch
-sudo apt install chromium-browser  # Debian/Ubuntu
-
-# Verify
-chromium --version
-```
-
-### Voice not working
-
-```bash
-# 1. Check STT is enabled
-hermes config set stt.enabled true
-
-# 2. Install local STT
-pip install faster-whisper
-
-# 3. Or set a cloud provider
-echo 'GROQ_API_KEY="gsk-..."' >> ~/.hermes/.env
-
-# 4. In gateway: /restart. In CLI: exit and relaunch
-```
-
-## Gateway Issues
-
-### Gateway dies on SSH logout
-
-```bash
-sudo loginctl enable-linger $USER
-```
-
-This keeps user systemd services alive after you disconnect.
-
-### Gateway dies on WSL2 close
-
-WSL2 needs `systemd=true` in `/etc/wsl.conf`:
-
-```ini
-[boot]
-systemd=true
-```
-
-Without systemd, the gateway falls back to `nohup` which dies when the terminal closes.
-
-### Discord bot is silent
-
-Enable **Message Content Intent** in Discord Developer Portal → Bot → Privileged Gateway Intents. Without it, the bot only sees DMs, not channel messages.
-
-### Slack bot only works in DMs
-
-Subscribe to `message.channels` event in your Slack App configuration → Event Subscriptions. Without it, the bot ignores public channels.
-
-### Gateway crash loop
-
-```bash
-systemctl --user reset-failed hermes-gateway
-hermes gateway start
-```
-
-### Checking gateway logs
-
-```bash
-grep -i "failed to send\|error" ~/.hermes/logs/gateway.log | tail -20
-```
-
-## Changes Not Taking Effect
-
-### Config changes
-
-- Model, tool, and memory config: needs **new session** (`/reset` or relaunch)
-- Display settings: take effect immediately
-- Gateway config: needs `/restart` or `hermes gateway restart`
-
-### Skills not showing
-
-```bash
-hermes skills list              # Verify installed
-hermes skills config            # Check platform enablement
-/skill skill-name               # Load manually
-```
-
-## Windows-Specific Issues
-
-### Alt+Enter doesn't insert a newline
-
-Windows Terminal intercepts Alt+Enter for fullscreen toggle. Use **Ctrl+Enter** instead.
-
-### UTF-8 BOM in config.yaml
-
-If you get "HTTP 400 No models provided" on first run, your `config.yaml` might have a UTF-8 BOM. Re-save without BOM — `hermes config edit` writes correctly; Notepad is the usual culprit.
-
-### WinError 10106 (sandbox)
-
-The sandbox child process can't create network sockets. Caused by Hermes's env scrubber dropping `SYSTEMROOT`. Fixed in recent versions — update if you see it.
-
-## Performance Issues
-
-### Slow responses
-
-```bash
-# Switch to a faster model
-/model gemini-2.0-flash
-
-# Reduce context by starting fresh
-/new
-
-# Disable verbose mode
-/verbose off
-```
-
-### Token limits reached
-
-```bash
-# Compress the current session
-/compress
-
-# Or start fresh with essential context
-/new
-```
-
-## Diagnostic Commands Quick Reference
-
-| Command | What it checks |
-|---------|---------------|
-| `hermes doctor` | Everything — dependencies, config, API, tools |
-| `hermes config check` | Config file validity and required fields |
-| `hermes tools list` | Which toolsets are enabled/available |
-| `hermes skills list` | Installed skills |
-| `hermes status` | Session info (gateway) |
-| `grep -i error ~/.hermes/logs/gateway.log \| tail -20` | Gateway errors |
-
-## FAQ
-
-**Q: I changed my config but nothing happened. Why?**
-Most config changes need a session restart. Type `/reset` or exit and run `hermes` again.
-
-**Q: The gateway won't start. What do I check?**
-1. `hermes doctor --fix`
-2. `hermes gateway logs`
-3. `systemctl --user status hermes-gateway`
-4. Check your platform tokens are correct
-
-**Q: Hermes says a tool isn't available but I see it in the docs.**
-Tools are grouped into toolsets. Run `hermes tools list` to see what's enabled for your platform. Some tools need API keys (browser, image generation, voice).
-
-## Next Steps
-
-- **[Provider Setup Guide](/blog/provider-setup/)** — fix API issues at the source
-- **[Configuration Deep Dive](/blog/configuration-deep-dive/)** — understand every setting
-- **[Security & Privacy](/blog/security-privacy/)** — safety features
+- [**Official Documentation**](https://docs.hermes-agent.ai) — Full API and Configuration reference.
+- [**Community Discord**](https://discord.gg/hermes-agent) — Real-time help from other users.
+- [**GitHub Issues**](https://github.com/hermes-agent/hermes/issues) — Report bugs or request features.
+- [**Provider Status Page**](https://status.llm-providers.com) — Check if the outage is external.
