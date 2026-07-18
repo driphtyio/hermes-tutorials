@@ -1,0 +1,706 @@
+{
+  "arena": {
+    "name": "Hermes Tutorials Arena",
+    "version": "1.0.0",
+    "description": "Model-vs-model battles for Hermes Tutorials content and design.",
+    "total_matches": 0
+  },
+  "model_pool": [
+    {
+      "model": "gemma-4-31b",
+      "provider": "cerebras",
+      "family": "gemma",
+      "benchmark_score": 7.3,
+      "benchmark_weight": 0.73,
+      "reliability": 0.0,
+      "matches_played": 3
+    },
+    {
+      "model": "gpt-oss-120b",
+      "provider": "cerebras",
+      "family": "gpt",
+      "benchmark_weight": 0.84,
+      "benchmark_score": 8.4,
+      "reliability": 0.0,
+      "matches_played": 4
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "provider": "deepseek",
+      "family": "deepseek",
+      "benchmark_weight": 0.84,
+      "benchmark_score": 8.4,
+      "reliability": 0.38,
+      "matches_played": 21
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "provider": "groq",
+      "family": "llama"
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "provider": "groq",
+      "family": "llama",
+      "benchmark_weight": 0.79,
+      "benchmark_score": 7.9,
+      "reliability": 0.0,
+      "matches_played": 10
+    },
+    {
+      "model": "mistral-large-latest",
+      "provider": "mistral",
+      "family": "mistral",
+      "benchmark_score": 8.5,
+      "benchmark_weight": 0.85,
+      "reliability": 0.5,
+      "matches_played": 8
+    },
+    {
+      "model": "mistral-medium-latest",
+      "provider": "mistral",
+      "family": "mistral",
+      "benchmark_score": 8.0,
+      "benchmark_weight": 0.8,
+      "reliability": 0.0,
+      "matches_played": 1
+    },
+    {
+      "model": "mistral-small-latest",
+      "provider": "mistral",
+      "family": "mistral"
+    },
+    {
+      "model": "gpt-5.5-instant-14k",
+      "provider": "nexum",
+      "family": "gpt",
+      "benchmark_score": 8.5,
+      "benchmark_weight": 0.85,
+      "reliability": 1.0,
+      "matches_played": 1
+    },
+    {
+      "model": "qwen-3.6-plus",
+      "provider": "nexum",
+      "family": "qwen",
+      "benchmark_score": 7.6,
+      "benchmark_weight": 0.76,
+      "reliability": 0.0,
+      "matches_played": 3
+    },
+    {
+      "model": "qwen-3.7-max",
+      "provider": "nexum",
+      "family": "qwen",
+      "benchmark_score": 8.6,
+      "benchmark_weight": 0.86,
+      "reliability": 0.18,
+      "matches_played": 11
+    },
+    {
+      "model": "qwen-3.7-plus",
+      "provider": "nexum",
+      "family": "qwen"
+    },
+    {
+      "model": "xiaomi-mimo-2.5",
+      "provider": "nexum",
+      "family": "xiaomi",
+      "benchmark_weight": 0.78,
+      "benchmark_score": 7.8,
+      "reliability": 0.0,
+      "matches_played": 1
+    },
+    {
+      "model": "cohere/north-mini-code:free",
+      "provider": "openrouter",
+      "family": "cohere",
+      "benchmark_score": 6.5,
+      "benchmark_weight": 0.65,
+      "reliability": 0.0,
+      "matches_played": 1
+    },
+    {
+      "model": "google/gemma-4-31b-it:free",
+      "provider": "openrouter",
+      "family": "gemma"
+    },
+    {
+      "model": "nvidia/nemotron-3-super-120b-a12b:free",
+      "provider": "openrouter",
+      "family": "nvidia"
+    },
+    {
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "provider": "openrouter",
+      "family": "nvidia"
+    },
+    {
+      "model": "mimo-v2.5",
+      "provider": "xiaomi",
+      "family": "xiaomi",
+      "benchmark_weight": 0.936,
+      "benchmark_score": 4.62
+    },
+    {
+      "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+      "provider": "openrouter",
+      "family": "nvidia"
+    },
+    {
+      "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+      "provider": "openrouter",
+      "family": "nvidia"
+    },
+    {
+      "model": "nvidia/nemotron-nano-12b-v2-vl:free",
+      "provider": "openrouter",
+      "family": "nvidia"
+    },
+    {
+      "model": "openai/gpt-oss-20b:free",
+      "provider": "openrouter",
+      "family": "gpt"
+    },
+    {
+      "model": "poolside/laguna-xs-2.1:free",
+      "provider": "openrouter",
+      "family": "poolside"
+    },
+    {
+      "model": "google/gemma-4-26b-a4b-it:free",
+      "provider": "openrouter",
+      "family": "gemma"
+    },
+    {
+      "model": "nvidia/nemotron-3.5-content-safety:free",
+      "provider": "openrouter",
+      "family": "nvidia"
+    },
+    {
+      "model": "qwen-3.5-plus",
+      "provider": "nexum",
+      "family": "qwen"
+    },
+    {
+      "model": "qwen-3.5-plus-thinking",
+      "provider": "nexum",
+      "family": "qwen"
+    },
+    {
+      "model": "qwen-3.6-plus-thinking",
+      "provider": "nexum",
+      "family": "qwen"
+    },
+    {
+      "model": "qwen-3.7-plus-thinking",
+      "provider": "nexum",
+      "family": "qwen"
+    },
+    {
+      "model": "qwen-3.6-max-preview",
+      "provider": "nexum",
+      "family": "qwen"
+    },
+    {
+      "model": "qwen-3.7-max-thinking",
+      "provider": "nexum",
+      "family": "qwen"
+    },
+    {
+      "model": "qwen-3.6-max-preview-thinking",
+      "provider": "nexum",
+      "family": "qwen"
+    },
+    {
+      "model": "qwen-3.5-omni-plus",
+      "provider": "nexum",
+      "family": "qwen"
+    },
+    {
+      "model": "deepseek-v4",
+      "provider": "nexum",
+      "family": "deepseek",
+      "benchmark_score": 9.0,
+      "benchmark_weight": 0.9,
+      "reliability": 1.0,
+      "matches_played": 1
+    },
+    {
+      "model": "tencent/hy3:free",
+      "provider": "openrouter",
+      "family": "tencent"
+    },
+    {
+      "model": "stepfun/step-3.7-flash:free",
+      "provider": "nousresearch",
+      "family": "stepfun"
+    },
+    {
+      "model": "groq/compound-mini",
+      "provider": "groq",
+      "family": "compound"
+    },
+    {
+      "model": "groq/compound",
+      "provider": "groq",
+      "family": "compound"
+    },
+    {
+      "model": "qwen/qwen3-32b",
+      "provider": "groq",
+      "family": "qwen"
+    },
+    {
+      "model": "openai/gpt-oss-20b",
+      "provider": "groq",
+      "family": "gpt"
+    },
+    {
+      "model": "meta-llama/llama-4-scout-17b-16e-instruct",
+      "provider": "groq",
+      "family": "llama"
+    },
+    {
+      "model": "codestral-2508",
+      "provider": "mistral",
+      "family": "codestral",
+      "benchmark_score": 8.1,
+      "benchmark_weight": 0.81,
+      "reliability": 0.0,
+      "matches_played": 4
+    },
+    {
+      "model": "devstral-2512",
+      "provider": "mistral",
+      "family": "devstral"
+    },
+    {
+      "model": "magistral-medium-2509",
+      "provider": "mistral",
+      "family": "magistral"
+    },
+    {
+      "model": "mistral-medium-2604",
+      "provider": "mistral",
+      "family": "mistral"
+    },
+    {
+      "model": "ministral-14b-2512",
+      "provider": "mistral",
+      "family": "ministral"
+    },
+    {
+      "model": "open-mistral-nemo-2407",
+      "provider": "mistral",
+      "family": "nemo"
+    },
+    {
+      "model": "nexum-router",
+      "provider": "nexum",
+      "family": "router"
+    },
+    {
+      "model": "nemotron-3-ultra-550b",
+      "provider": "openrouter",
+      "family": "nemotron",
+      "benchmark_score": 8.2,
+      "benchmark_weight": 0.82,
+      "reliability": 0.5,
+      "matches_played": 4
+    },
+    {
+      "model": "glm-5.2",
+      "provider": "zai",
+      "family": "glm",
+      "benchmark_score": 6.6,
+      "benchmark_weight": 0.66,
+      "matches_played": 6
+    },
+    {
+      "model": "glm-5",
+      "provider": "zai",
+      "family": "glm"
+    },
+    {
+      "model": "glm-5-turbo",
+      "provider": "zai",
+      "family": "glm"
+    },
+    {
+      "model": "glm-5.1",
+      "provider": "zai",
+      "family": "glm"
+    },
+    {
+      "model": "mimo-v2.5-pro",
+      "provider": "xiaomi",
+      "family": "xiaomi"
+    }
+  ],
+  "stability": {
+    "provider_stats": {
+      "cerebras": {
+        "total_calls": 8,
+        "successes": 8,
+        "failures_404": 0,
+        "failures_503": 0,
+        "failures_timeout": 0,
+        "failures_other": 0,
+        "availability": 100.0
+      },
+      "deepseek": {
+        "total_calls": 7,
+        "successes": 7,
+        "failures_404": 0,
+        "failures_503": 0,
+        "failures_timeout": 0,
+        "failures_other": 0,
+        "availability": 100.0
+      },
+      "groq": {
+        "total_calls": 8,
+        "successes": 8,
+        "failures_404": 0,
+        "failures_503": 0,
+        "failures_timeout": 0,
+        "failures_other": 0,
+        "availability": 100.0
+      },
+      "mistral": {
+        "total_calls": 11,
+        "successes": 11,
+        "failures_404": 0,
+        "failures_503": 0,
+        "failures_timeout": 0,
+        "failures_other": 0,
+        "availability": 100.0
+      },
+      "nexum": {
+        "total_calls": 22,
+        "successes": 20,
+        "failures_404": 0,
+        "failures_503": 0,
+        "failures_timeout": 1,
+        "failures_other": 1,
+        "availability": 87.5
+      },
+      "openrouter": {
+        "total_calls": 17,
+        "successes": 16,
+        "failures_404": 0,
+        "failures_503": 0,
+        "failures_timeout": 0,
+        "failures_other": 1,
+        "availability": 83.33333333333334
+      },
+      "xiaomi": {
+        "total_calls": 2,
+        "successes": 2,
+        "failures_404": 0,
+        "failures_503": 0,
+        "failures_timeout": 0,
+        "failures_other": 0,
+        "availability": 100.0
+      },
+      "nousresearch": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures_404": 0,
+        "failures_503": 0,
+        "failures_timeout": 0,
+        "failures_other": 0,
+        "availability": 100.0
+      },
+      "zai": {
+        "total_calls": 6,
+        "successes": 6,
+        "availability": 100.0
+      }
+    },
+    "model_stats": {
+      "gemma-4-31b": {
+        "total_calls": 4,
+        "successes": 4,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "gpt-oss-120b": {
+        "total_calls": 3,
+        "successes": 3,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "deepseek-v4-flash": {
+        "total_calls": 6,
+        "successes": 6,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "llama-3.1-8b-instant": {
+        "total_calls": 3,
+        "successes": 3,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "llama-3.3-70b-versatile": {
+        "total_calls": 4,
+        "successes": 4,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "mistral-large-latest": {
+        "total_calls": 4,
+        "successes": 4,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "mistral-medium-latest": {
+        "total_calls": 3,
+        "successes": 3,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "mistral-small-latest": {
+        "total_calls": 3,
+        "successes": 3,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "gpt-5.5-instant-14k": {
+        "total_calls": 4,
+        "successes": 3,
+        "failures": 1,
+        "availability": 66.66666666666666,
+        "last_failure": "2026-07-12T21:15:32.532402"
+      },
+      "qwen-3.6-plus": {
+        "total_calls": 4,
+        "successes": 4,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "qwen-3.7-max": {
+        "total_calls": 4,
+        "successes": 4,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "qwen-3.7-plus": {
+        "total_calls": 4,
+        "successes": 4,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "xiaomi-mimo-2.5": {
+        "total_calls": 4,
+        "successes": 4,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "cohere/north-mini-code:free": {
+        "total_calls": 5,
+        "successes": 5,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "google/gemma-4-31b-it:free": {
+        "total_calls": 3,
+        "successes": 2,
+        "failures": 1,
+        "availability": 50.0,
+        "last_failure": "2026-07-12T20:17:38.848411"
+      },
+      "nvidia/nemotron-3-super-120b-a12b:free": {
+        "total_calls": 4,
+        "successes": 4,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "nvidia/nemotron-3-ultra-550b-a55b:free": {
+        "total_calls": 3,
+        "successes": 3,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "mimo-v2.5": {
+        "total_calls": 2,
+        "successes": 2,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "nvidia/nemotron-3-nano-30b-a3b:free": {
+        "total_calls": 1,
+        "successes": 1,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free": {
+        "total_calls": 1,
+        "successes": 1,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "nvidia/nemotron-nano-12b-v2-vl:free": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "openai/gpt-oss-20b:free": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "poolside/laguna-xs-2.1:free": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "google/gemma-4-26b-a4b-it:free": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "nvidia/nemotron-3.5-content-safety:free": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "qwen-3.5-plus": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "qwen-3.5-plus-thinking": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "qwen-3.6-plus-thinking": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "qwen-3.7-plus-thinking": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "qwen-3.6-max-preview": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "qwen-3.7-max-thinking": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "qwen-3.6-max-preview-thinking": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "qwen-3.5-omni-plus": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "deepseek-v4": {
+        "total_calls": 1,
+        "successes": 0,
+        "failures": 1,
+        "availability": 0.0,
+        "last_failure": "2026-07-12T21:16:16.685407"
+      },
+      "tencent/hy3:free": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "stepfun/step-3.7-flash:free": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "nexum-router": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "glm-5.2": {
+        "total_calls": 6,
+        "successes": 6,
+        "availability": 100.0
+      },
+      "glm-5": {
+        "total_calls": 1,
+        "successes": 1,
+        "availability": 100.0
+      },
+      "glm-5-turbo": {
+        "total_calls": 1,
+        "successes": 1,
+        "availability": 100.0
+      },
+      "glm-5.1": {
+        "total_calls": 1,
+        "successes": 1,
+        "availability": 100.0
+      }
+    },
+    "last_updated": "2026-07-14"
+  },
+  "matches": [],
+  "leaderboard": []
+}

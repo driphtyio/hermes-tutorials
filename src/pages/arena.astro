@@ -1,0 +1,845 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { SITE_TITLE } from '../consts';
+import fs from 'fs';
+import arenaData from '../data/hermestuts-arena.json';
+
+const { matches, leaderboard, model_pool, stability } = arenaData;
+
+// ── Computed leaderboard from model_pool (benchmark_score descending) ──
+const computedLeaderboard = model_pool
+  .filter(m => typeof m.benchmark_score === 'number')
+  .sort((a, b) => b.benchmark_score - a.benchmark_score)
+  .map((m, i) => ({
+    rank: i + 1,
+    model: m.model,
+    provider: m.provider,
+    score: m.benchmark_score,
+    matches: m.matches_played ?? 0,
+    reliability: m.reliability ?? 0,
+    benchmark_weight: m.benchmark_weight ?? 0,
+  }));
+
+// ── Stats ──
+const totalModels = model_pool.length;
+const totalProviders = [...new Set(model_pool.map(m => m.provider))].length;
+const rankedModels = computedLeaderboard.length;
+const totalMatches = arenaData.arena?.total_matches ?? 0;
+
+// ── Impact ──
+let leaderAvg = 0;
+let fieldAvg = 0;
+if (computedLeaderboard.length > 0) {
+  const topQuarter = Math.max(1, Math.ceil(computedLeaderboard.length * 0.25));
+  const topModels = computedLeaderboard.slice(0, topQuarter);
+  leaderAvg = topModels.reduce((s, m) => s + m.score, 0) / topModels.length;
+  fieldAvg = computedLeaderboard.reduce((s, m) => s + m.score, 0) / computedLeaderboard.length;
+}
+const gapDelta = leaderAvg - fieldAvg;
+
+// ── Feedback JSON ──
+let feedbackData = null;
+try {
+  const raw = fs.readFileSync('/home/techgeek/.hermes/arena/arena-feedback.json', 'utf-8');
+  feedbackData = JSON.parse(raw);
+} catch {
+  feedbackData = null;
+}
+
+const feedbackMatches = feedbackData?.matches ?? [];
+const feedbackFiltered = feedbackMatches.filter(m => m.type !== 'router-selection');
+const totalAnalyzed = feedbackData?.total_matches_analyzed ?? 0;
+const cleanRate = feedbackData?.clean_match_rate ?? 0;
+const issues = feedbackData?.recurring_issues ?? [];
+const topIssue = issues.length > 0 ? issues.reduce((a, b) => (a.count > b.count ? a : b)) : null;
+const autoBriefLines = feedbackFiltered
+  .filter(m => m.auto_brief_line)
+  .map(m => m.auto_brief_line);
+const latestSuggestion = feedbackFiltered.length > 0
+  ? feedbackFiltered[feedbackFiltered.length - 1]?.suggestions?.[0]?.text
+  : null;
+
+// ── Provider grouping (for model pool) ──
+const providerGroups = model_pool.reduce((acc, m) => {
+  if (!acc[m.provider]) acc[m.provider] = [];
+  acc[m.provider].push(m);
+  return acc;
+}, {});
+
+// ── Availability badge helper ──
+function getAvailabilityBadge(modelName) {
+  const stats = stability?.model_stats?.[modelName];
+  if (!stats) return { label: 'Unknown', cls: 'avail-unknown' };
+  const avail = stats.availability;
+  if (avail >= 99) return { label: 'Stable', cls: 'avail-stable' };
+  if (avail >= 80) return { label: 'Degraded', cls: 'avail-degraded' };
+  if (avail >= 1) return { label: 'Unstable', cls: 'avail-unstable' };
+  return { label: 'Down', cls: 'avail-down' };
+}
+
+// ── Rank badge helper ──
+function rankBadge(n) {
+  if (n === 1) return '\u{1F947}';
+  if (n === 2) return '\u{1F948}';
+  if (n === 3) return '\u{1F949}';
+  return `#${n}`;
+}
+
+const lastUpdated = stability?.last_updated ?? 'N/A';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <BaseHead title={`Arena — ${SITE_TITLE}`} description="Model-vs-model battle arena — comparing LLMs on Hermes Agent content and design tasks." />
+    <style>
+      /* ── Arena page styles ── */
+      .arena-container {
+        max-width: min(1200px, 92vw);
+        margin: 0 auto;
+        padding: 2em 1.5em 4em;
+      }
+
+      /* ── Hero ── */
+      .arena-hero {
+        margin-bottom: 1.5rem;
+      }
+      .arena-hero h1 {
+        font-family: 'Atkinson Hyperlegible', sans-serif;
+        font-size: clamp(2.2rem, 4vw, 3.2rem);
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.1;
+        margin: 0 0 0.3em;
+        color: #fff;
+      }
+      .arena-hero h1 span {
+        color: var(--accent);
+      }
+      .arena-hero .subtitle {
+        font-size: clamp(0.95em, 1.2vw, 1.1em);
+        color: var(--text-dim);
+        margin: 0 0 1em;
+        line-height: 1.5;
+      }
+
+      /* ── Stats bar (single-row compact) ── */
+      .stats-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25em 1.5em;
+        padding: 0.75em 0;
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 1.5rem;
+      }
+      .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 0.4em;
+        font-size: 0.85em;
+        color: var(--text-dim);
+      }
+      .stat-item strong {
+        color: #fff;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ── Section headers ── */
+      .section {
+        margin-top: 2rem;
+      }
+      .section-title {
+        font-family: 'Atkinson Hyperlegible', sans-serif;
+        font-size: 1.3em;
+        font-weight: 600;
+        color: #fff;
+        margin: 0 0 0.75em;
+        letter-spacing: -0.02em;
+      }
+
+      /* ── Impact card ── */
+      .impact-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75em;
+        margin-bottom: 1.5rem;
+      }
+      .impact-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 1em 1.25em;
+      }
+      .impact-card .impact-label {
+        font-size: 0.75em;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25em;
+      }
+      .impact-card .impact-value {
+        font-size: 1.4em;
+        font-weight: 700;
+        color: #fff;
+        font-variant-numeric: tabular-nums;
+      }
+      .impact-card .impact-value.accent {
+        color: var(--accent);
+      }
+      .impact-card .impact-value.green {
+        color: var(--green);
+      }
+      .impact-card .impact-delta {
+        font-size: 0.8em;
+        color: var(--text-dim);
+        margin-top: 0.15em;
+      }
+
+      /* ── Leaderboard table ── */
+      .arena-table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--bg-table);
+      }
+      .arena-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85em;
+      }
+      .arena-table thead {
+        background: var(--bg-card);
+      }
+      .arena-table th {
+        text-align: left;
+        padding: 0.65em 0.75em;
+        font-weight: 600;
+        color: var(--text-dim);
+        font-size: 0.82em;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border-bottom: 1px solid var(--border);
+        white-space: nowrap;
+      }
+      .arena-table td {
+        padding: 0.55em 0.75em;
+        border-bottom: 1px solid var(--border);
+        color: var(--text);
+        white-space: nowrap;
+      }
+      .arena-table tr:last-child td {
+        border-bottom: none;
+      }
+      .arena-table tr:hover td {
+        background: var(--bg-card-hover);
+      }
+      .arena-table .rank-cell {
+        font-weight: 600;
+        text-align: center;
+        width: 2.5em;
+        font-size: 0.95em;
+      }
+      .arena-table .model-cell {
+        font-weight: 600;
+        color: #fff;
+      }
+      .arena-table .provider-cell {
+        color: var(--text-dim);
+      }
+      .arena-table .score-cell {
+        text-align: right;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        min-width: 3em;
+      }
+      .arena-table .score-bar-wrap {
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        min-width: 120px;
+      }
+      .arena-table .score-bar-bg {
+        flex: 1;
+        height: 6px;
+        background: var(--border);
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .arena-table .score-bar-fill {
+        height: 100%;
+        background: var(--accent);
+        border-radius: 3px;
+        transition: width 0.3s ease;
+      }
+      .arena-table .matches-cell,
+      .arena-table .wl-cell,
+      .arena-table .best-cell {
+        text-align: center;
+        color: var(--text-dim);
+      }
+
+      /* ── Empty state ── */
+      .empty-state {
+        text-align: center;
+        padding: 2.5em 1em;
+        color: var(--text-muted);
+        font-size: 0.9em;
+      }
+      .empty-state p {
+        margin: 0.3em 0;
+      }
+
+      /* ── Match History ── */
+      .match-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5em;
+      }
+      .match-item {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg-card);
+        overflow: hidden;
+      }
+      .match-item summary {
+        padding: 0.7em 1em;
+        cursor: pointer;
+        font-weight: 500;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 0.6em;
+        list-style: none;
+      }
+      .match-item summary::-webkit-details-marker {
+        display: none;
+      }
+      .match-item summary::before {
+        content: '\u25B6';
+        font-size: 0.7em;
+        color: var(--accent);
+        transition: transform 0.15s ease;
+      }
+      .match-item[open] summary::before {
+        transform: rotate(90deg);
+      }
+      .match-item summary .match-type {
+        font-size: 0.7em;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--accent-light);
+        background: var(--accent-glow);
+        padding: 0.15em 0.5em;
+        border-radius: 4px;
+        margin-left: auto;
+      }
+      .match-item .match-detail {
+        padding: 0 1em 0.75em;
+        font-size: 0.85em;
+        color: var(--text-dim);
+        line-height: 1.6;
+      }
+      .match-item .match-detail .signal-list {
+        list-style: none;
+        padding: 0;
+        margin: 0.3em 0;
+      }
+      .match-item .match-detail .signal-list li {
+        padding: 0.15em 0;
+      }
+      .match-item .match-detail .signal-list li::before {
+        content: '- ';
+        color: var(--text-muted);
+      }
+      .match-item .match-detail .suggestion-text {
+        border-left: 2px solid var(--accent);
+        padding-left: 0.75em;
+        margin: 0.3em 0;
+      }
+      .match-item .match-detail .auto-brief {
+        border-left: 2px solid var(--yellow);
+        padding-left: 0.75em;
+        margin: 0.3em 0;
+        font-size: 0.9em;
+        color: var(--yellow);
+      }
+      .match-item .match-detail .clean-badge {
+        display: inline-block;
+        font-size: 0.75em;
+        color: var(--green);
+        background: rgba(34, 197, 94, 0.1);
+        padding: 0.1em 0.5em;
+        border-radius: 4px;
+        font-weight: 600;
+      }
+
+      /* ── Model Pool table ── */
+      .pool-search {
+        width: 100%;
+        padding: 0.65em 0.9em;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: #fff;
+        font-size: 0.88em;
+        margin-bottom: 0.75em;
+        outline: none;
+        transition: border-color 0.15s ease;
+      }
+      .pool-search:focus {
+        border-color: var(--accent);
+      }
+      .pool-search::placeholder {
+        color: var(--text-muted);
+      }
+
+      .pool-table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--bg-table);
+      }
+      .pool-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.82em;
+      }
+      .pool-table thead {
+        background: var(--bg-card);
+      }
+      .pool-table th {
+        text-align: left;
+        padding: 0.6em 0.75em;
+        font-weight: 600;
+        color: var(--text-dim);
+        font-size: 0.82em;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border-bottom: 1px solid var(--border);
+      }
+      .pool-table td {
+        padding: 0.5em 0.75em;
+        border-bottom: 1px solid var(--border);
+        color: var(--text);
+      }
+      .pool-table tr:last-child td {
+        border-bottom: none;
+      }
+      .pool-table tr:hover td {
+        background: var(--bg-card-hover);
+      }
+      .pool-table .provider-cell-group {
+        font-weight: 600;
+        color: var(--accent-light);
+        vertical-align: middle;
+      }
+      .pool-table .model-name-cell {
+        font-weight: 500;
+        color: #fff;
+      }
+      .pool-table .family-cell {
+        color: var(--text-dim);
+      }
+      .pool-table .score-cell {
+        font-variant-numeric: tabular-nums;
+        color: var(--text);
+      }
+      .pool-table .no-score {
+        color: var(--text-muted);
+        font-style: italic;
+      }
+
+      /* ── Availability badges ── */
+      .avail-badge {
+        display: inline-block;
+        font-size: 0.72em;
+        font-weight: 600;
+        padding: 0.15em 0.5em;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+      .avail-stable {
+        color: var(--green);
+        background: rgba(34, 197, 94, 0.12);
+      }
+      .avail-degraded {
+        color: var(--yellow);
+        background: rgba(234, 179, 8, 0.12);
+      }
+      .avail-unstable {
+        color: #f97316;
+        background: rgba(249, 115, 22, 0.12);
+      }
+      .avail-down {
+        color: var(--red);
+        background: rgba(239, 68, 68, 0.12);
+      }
+      .avail-unknown {
+        color: var(--text-muted);
+        background: rgba(107, 107, 118, 0.1);
+      }
+
+      /* ── Feedback section ── */
+      .feedback-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75em;
+        margin-bottom: 1em;
+      }
+      .feedback-stat {
+        flex: 1;
+        min-width: 100px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.75em 1em;
+        text-align: center;
+      }
+      .feedback-stat .fb-num {
+        font-size: 1.3em;
+        font-weight: 700;
+        color: #fff;
+      }
+      .feedback-stat .fb-label {
+        font-size: 0.72em;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 0.15em;
+      }
+      .suggestions-box {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.75em 1em;
+        margin-bottom: 0.75em;
+      }
+      .suggestions-box .sug-title {
+        font-size: 0.78em;
+        font-weight: 600;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.4em;
+      }
+      .suggestions-box .sug-item {
+        font-size: 0.85em;
+        color: var(--text);
+        padding: 0.25em 0;
+        line-height: 1.5;
+      }
+      .auto-brief-box {
+        background: var(--bg-card);
+        border: 1px solid var(--border-light);
+        border-radius: 8px;
+        padding: 0.65em 1em;
+        font-size: 0.82em;
+        color: var(--text-dim);
+        line-height: 1.5;
+      }
+      .auto-brief-box .ab-label {
+        font-weight: 600;
+        color: var(--yellow);
+        margin-right: 0.5em;
+      }
+
+      /* ── Last Updated ── */
+      .last-updated {
+        margin-top: 2.5rem;
+        text-align: center;
+        font-size: 0.78em;
+        color: var(--text-muted);
+        border-top: 1px solid var(--border);
+        padding-top: 1.5em;
+      }
+
+      /* ── Responsive ── */
+      @media (max-width: 720px) {
+        .impact-grid {
+          grid-template-columns: 1fr;
+        }
+        .feedback-bar {
+          flex-direction: column;
+        }
+        .stats-bar {
+          gap: 0.2em 1em;
+        }
+        .arena-container {
+          padding: 1.5em 1em 3em;
+        }
+      }
+      @media (min-width: 1400px) {
+        .arena-container {
+          max-width: 1200px;
+        }
+      }
+      @media (min-width: 1600px) {
+        .arena-container {
+          max-width: min(1300px, 92vw);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <Header />
+    <main class="arena-container">
+
+      <!-- ── Hero ── -->
+      <section class="arena-hero">
+        <h1><span>Arena</span> — Model Battleground</h1>
+        <p class="subtitle">Comparing LLMs head-to-head on Hermes Agent content generation, design, and engineering tasks. Track scores, reliability, and match outcomes.</p>
+        <div class="stats-bar">
+          <span class="stat-item"><strong>{totalMatches}</strong> matches</span>
+          <span class="stat-item"><strong>{totalModels}</strong> models</span>
+          <span class="stat-item"><strong>{totalProviders}</strong> providers</span>
+          <span class="stat-item"><strong>{rankedModels}</strong> ranked</span>
+        </div>
+      </section>
+
+      <!-- ── Arena Impact ── -->
+      <section class="section">
+        <h2 class="section-title">Arena Impact</h2>
+        <div class="impact-grid">
+          <div class="impact-card">
+            <div class="impact-label">Leader Avg</div>
+            <div class="impact-value accent">{leaderAvg > 0 ? leaderAvg.toFixed(2) : 'N/A'}</div>
+            <div class="impact-delta">Top 25% of ranked models</div>
+          </div>
+          <div class="impact-card">
+            <div class="impact-label">Field Avg</div>
+            <div class="impact-value">{fieldAvg > 0 ? fieldAvg.toFixed(2) : 'N/A'}</div>
+            <div class="impact-delta">All ranked models</div>
+          </div>
+          <div class="impact-card">
+            <div class="impact-label">Gap Delta</div>
+            <div class="impact-value green">{gapDelta > 0 ? `+${gapDelta.toFixed(2)}` : (gapDelta === 0 ? '0.00' : gapDelta.toFixed(2))}</div>
+            <div class="impact-delta">Leader advantage over field</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Leaderboard ── -->
+      <section class="section">
+        <h2 class="section-title">Leaderboard</h2>
+        {computedLeaderboard.length > 0 ? (
+          <div class="arena-table-wrap">
+            <table class="arena-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Model</th>
+                  <th>Provider</th>
+                  <th>Score</th>
+                  <th>Matches</th>
+                  <th>W/L</th>
+                  <th>Best</th>
+                </tr>
+              </thead>
+              <tbody>
+                {computedLeaderboard.map(entry => (
+                  <tr>
+                    <td class="rank-cell">{rankBadge(entry.rank)}</td>
+                    <td class="model-cell">{entry.model}</td>
+                    <td class="provider-cell">{entry.provider}</td>
+                    <td>
+                      <div class="score-bar-wrap">
+                        <span class="score-cell">{entry.score.toFixed(1)}</span>
+                        <div class="score-bar-bg">
+                          <div class="score-bar-fill" style={`width: ${(entry.score / 10) * 100}%`}></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="matches-cell">{entry.matches}</td>
+                    <td class="wl-cell">&mdash;</td>
+                    <td class="best-cell">-</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div class="empty-state">
+            <p>No ranked models yet.</p>
+            <p>Leaderboard will populate once arena matches begin.</p>
+          </div>
+        )}
+      </section>
+
+      <!-- ── Match History ── -->
+      <section class="section">
+        <h2 class="section-title">Match History</h2>
+        {feedbackFiltered.length > 0 ? (
+          <div class="match-list">
+            {feedbackFiltered.map(m => (
+              <details class="match-item">
+                <summary>
+                  <span>{m.topic}</span>
+                  <span class="match-type">{m.type}</span>
+                </summary>
+                <div class="match-detail">
+                  <div><strong>Date:</strong> {m.date}</div>
+                  <div><strong>ID:</strong> {m.match_id}</div>
+                  {m.signals && m.signals.length > 0 && (
+                    <div>
+                      <strong>Signals:</strong>
+                      <ul class="signal-list">
+                        {m.signals.map(s => <li>{s}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {m.suggestions && m.suggestions.length > 0 && (
+                    <div>
+                      <strong>Suggestions:</strong>
+                      {m.suggestions.map(s => (
+                        <div class="suggestion-text">
+                          <span style={`color: var(--${s.severity === 'high' ? 'red' : s.severity === 'medium' ? 'yellow' : 'text-dim'})`}>
+                            [{s.severity}]
+                          </span>{' '}
+                          {s.text}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {m.clean && <span class="clean-badge">Clean Match</span>}
+                  {m.auto_brief_line && (
+                    <div class="auto-brief">
+                      <span class="ab-label">AUTO-BRIEF:</span> {m.auto_brief_line}
+                    </div>
+                  )}
+                </div>
+              </details>
+            ))}
+          </div>
+        ) : (
+          <div class="empty-state">
+            <p>No matches recorded yet.</p>
+            <p>Match history will appear as arena battles are judged.</p>
+          </div>
+        )}
+      </section>
+
+      <!-- ── Model Pool ── -->
+      <section class="section">
+        <h2 class="section-title">Model Pool</h2>
+        <input type="text" class="pool-search" id="poolSearch" placeholder="Search models by name, provider, or family\u2026" oninput="filterPool()" />
+        {model_pool.length > 0 ? (
+          <div class="pool-table-wrap">
+            <table class="pool-table" id="poolTable">
+              <thead>
+                <tr>
+                  <th>Provider</th>
+                  <th>Model</th>
+                  <th>Family</th>
+                  <th>Score</th>
+                  <th>Availability</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(providerGroups).map(([provider, models]) => (
+                  models.map((m, idx) => {
+                    const badge = getAvailabilityBadge(m.model);
+                    return (
+                      <tr data-provider={provider} data-model={m.model} data-family={m.family ?? ''}>
+                        {idx === 0 && (
+                          <td class="provider-cell-group" rowspan={models.length}>{provider}</td>
+                        )}
+                        <td class="model-name-cell">{m.model}</td>
+                        <td class="family-cell">{m.family ?? '-'}</td>
+                        <td class="score-cell">
+                          {typeof m.benchmark_score === 'number' ? m.benchmark_score.toFixed(1) : <span class="no-score">--</span>}
+                        </td>
+                        <td><span class={`avail-badge ${badge.cls}`}>{badge.label}</span></td>
+                      </tr>
+                    );
+                  })
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div class="empty-state">
+            <p>No models in pool.</p>
+          </div>
+        )}
+      </section>
+
+      <!-- ── Process Feedback ── -->
+      <section class="section">
+        <h2 class="section-title">Process Feedback</h2>
+        {feedbackData ? (
+          <>
+            <div class="feedback-bar">
+              <div class="feedback-stat">
+                <div class="fb-num">{totalAnalyzed}</div>
+                <div class="fb-label">Analyzed</div>
+              </div>
+              <div class="feedback-stat">
+                <div class="fb-num">{cleanRate}%</div>
+                <div class="fb-label">Clean Rate</div>
+              </div>
+              <div class="feedback-stat">
+                <div class="fb-num">{topIssue ? `${topIssue.issue} (${topIssue.count})` : 'None'}</div>
+                <div class="fb-label">Top Issue</div>
+              </div>
+            </div>
+            {feedbackFiltered.some(m => m.suggestions && m.suggestions.length > 0) && (
+              <div class="suggestions-box">
+                <div class="sug-title">Recent Suggestions</div>
+                {feedbackFiltered.slice(-3).reverse().map(m => (
+                  m.suggestions && m.suggestions.length > 0 && m.suggestions.map(s => (
+                    <div class="sug-item">
+                      <strong>{m.topic}:</strong> {s.text}
+                    </div>
+                  ))
+                ))}
+              </div>
+            )}
+            {autoBriefLines.length > 0 && (
+              <div class="auto-brief-box">
+                <span class="ab-label">AUTO-BRIEF:</span>
+                {autoBriefLines.slice(-2).join(' | ')}
+              </div>
+            )}
+          </>
+        ) : (
+          <div class="empty-state">
+            <p>No feedback data available.</p>
+          </div>
+        )}
+      </section>
+
+      <!-- ── Last Updated ── -->
+      <div class="last-updated">
+        Arena data last updated: <strong>{lastUpdated}</strong>
+      </div>
+
+    </main>
+    <Footer />
+
+    <script is:inline>
+      function filterPool() {
+        const input = document.getElementById('poolSearch');
+        if (!input) return;
+        const q = input.value.toLowerCase().trim();
+        const rows = document.querySelectorAll('#poolTable tbody tr');
+        rows.forEach(row => {
+          const provider = row.getAttribute('data-provider') || '';
+          const model = row.getAttribute('data-model') || '';
+          const family = row.getAttribute('data-family') || '';
+          const match = q === '' ||
+            provider.toLowerCase().includes(q) ||
+            model.toLowerCase().includes(q) ||
+            family.toLowerCase().includes(q);
+          row.style.display = match ? '' : 'none';
+        });
+      }
+    </script>
+  </body>
+</html>
