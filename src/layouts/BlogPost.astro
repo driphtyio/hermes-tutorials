@@ -131,14 +131,177 @@ const breadcrumbSchema = {
 				color: var(--text-primary);
 			}
 			.prose h2 {
-				margin-top: 2em;
+				margin-top: 2.5em;
 				position: relative;
+				padding-top: 0.5em;
+				border-top: 1px solid var(--border);
+			}
+			.prose h2:first-of-type {
+				border-top: none;
+				margin-top: 1.5em;
 			}
 			.prose h3 {
 				margin-top: 1.2em;
 				position: relative;
 			}
 			.prose p { margin-bottom: 1.2em; line-height: 1.8; }
+
+			/* ── Widescreen: wider prose, better space use ── */
+			@media (min-width: 1440px) {
+				.article-body {
+					max-width: 1200px;
+				}
+				.prose {
+					font-size: 1.05rem;
+				}
+				.prose h2 {
+					margin-top: 3em;
+				}
+			}
+
+			/* ── Code blocks: label bar + copy button ── */
+			.prose pre {
+				position: relative;
+				padding-top: 2.5em;
+				margin: 1.5em 0;
+			}
+			.prose pre::before {
+				content: attr(data-lang) "▸ Code";
+				position: absolute;
+				top: 0;
+				left: 0;
+				right: 0;
+				padding: 0.4em 1em;
+				font-size: 0.72em;
+				font-family: var(--font-sans);
+				color: var(--text-muted);
+				background: rgba(255,255,255,0.03);
+				border-bottom: 1px solid var(--border);
+				border-radius: var(--radius-md) var(--radius-md) 0 0;
+				text-transform: uppercase;
+				letter-spacing: 0.04em;
+			}
+			.copy-btn {
+				position: absolute;
+				top: 0.3em;
+				right: 0.5em;
+				padding: 0.2em 0.6em;
+				font-size: 0.7em;
+				font-family: var(--font-sans);
+				color: var(--text-muted);
+				background: transparent;
+				border: 1px solid var(--border-light);
+				border-radius: 4px;
+				cursor: pointer;
+				transition: color 0.15s, border-color 0.15s;
+				z-index: 2;
+			}
+			.copy-btn:hover {
+				color: var(--accent-light);
+				border-color: var(--accent);
+			}
+			.copy-btn.copied {
+				color: #10b981;
+				border-color: #10b981;
+			}
+
+			/* ── Blockquotes as callout cards ── */
+			.prose blockquote {
+				position: relative;
+				border-left: 3px solid var(--accent);
+				padding: 1em 1.25em 1em 2.5em;
+				margin: 1.5em 0;
+				font-size: 0.93em;
+				color: var(--text-secondary);
+				background: rgba(108, 92, 231, 0.06);
+				border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+			}
+			.prose blockquote::before {
+				content: "💡";
+				position: absolute;
+				left: 0.7em;
+				top: 0.9em;
+				font-size: 1em;
+			}
+			.prose blockquote p { margin-bottom: 0; }
+
+			/* ── Callout variants via blockquote content prefix ── */
+			.prose blockquote:has(strong:first-child) {
+				border-left-color: #f59e0b;
+				background: rgba(245, 158, 11, 0.06);
+			}
+			.prose blockquote:has(strong:first-child)::before {
+				content: "⚠️";
+			}
+			.prose blockquote:has(strong:first-child) strong:first-child {
+				color: #f59e0b;
+				text-transform: uppercase;
+				font-size: 0.72em;
+				letter-spacing: 0.06em;
+			}
+
+			/* ── Tables: responsive card-like on narrow, wider on desktop ── */
+			.prose table {
+				font-size: 0.88em;
+				margin: 1.5em 0;
+				border-collapse: collapse;
+				width: 100%;
+			}
+			.prose th {
+				background: var(--bg-secondary);
+				color: #fff;
+				font-weight: 600;
+				padding: 0.6em 0.8em;
+				text-align: left;
+				border-bottom: 2px solid var(--border);
+			}
+			.prose td {
+				padding: 0.6em 0.8em;
+				border-bottom: 1px solid var(--border);
+			}
+			.prose tr:hover td {
+				background: rgba(255,255,255,0.02);
+			}
+			@media (max-width: 720px) {
+				.prose table {
+					display: block;
+					overflow-x: auto;
+					-webkit-overflow-scrolling: touch;
+				}
+			}
+
+			/* ── Inline code ── */
+			.prose code {
+				font-family: var(--font-mono);
+				font-size: 0.85em;
+				padding: 0.15em 0.4em;
+				background: rgba(255,255,255,0.06);
+				border-radius: 4px;
+				color: var(--text-primary);
+			}
+
+			/* ── Horizontal rules as visual section markers ── */
+			.prose hr {
+				border: none;
+				height: 1px;
+				background: linear-gradient(to right, var(--border), transparent);
+				margin: 2.5em 0;
+			}
+
+			/* ── Description / quick-ref sections ── */
+			.prose p > code:only-child {
+				display: inline-block;
+			}
+
+			/* ── Lists ── */
+			.prose ul, .prose ol {
+				padding-left: 1.5em;
+				margin-bottom: 1.2em;
+			}
+			.prose li {
+				margin-bottom: 0.3em;
+				line-height: 1.7;
+			}
 
 			/* ── Heading Permalink # icons ── */
 			.heading-permalink {
@@ -203,6 +366,7 @@ const breadcrumbSchema = {
 			@media (max-width: 720px) {
 				.post-header h1 { font-size: 2rem; }
 				.post-stats { font-size: 0.78em; gap: 0.25em 0.4em; }
+				.prose h2 { margin-top: 1.8em; padding-top: 0.3em; }
 			}
 		</style>
 	</head>
@@ -253,7 +417,6 @@ const breadcrumbSchema = {
 
 				var headings = prose.querySelectorAll('h2, h3');
 
-				/* ── Ensure each heading has an id ── */
 				headings.forEach(function (h, i) {
 					if (!h.id) {
 						var text = (h.textContent || '')
@@ -265,7 +428,6 @@ const breadcrumbSchema = {
 					}
 				});
 
-				/* ── Permalink SVG ── */
 				var permalinkSvg =
 					'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
 						'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>' +
@@ -293,7 +455,38 @@ const breadcrumbSchema = {
 					h.appendChild(link);
 				});
 
-				/* ── Handle initial hash on page load ── */
+				/* ── Copy buttons on code blocks ── */
+				prose.querySelectorAll('pre').forEach(function (pre) {
+					if (pre.querySelector('.copy-btn')) return;
+					var btn = document.createElement('button');
+					btn.className = 'copy-btn';
+					btn.textContent = 'Copy';
+					btn.addEventListener('click', function () {
+						var code = pre.querySelector('code');
+						var text = code ? code.textContent : pre.textContent;
+						navigator.clipboard.writeText(text).then(function () {
+							btn.textContent = 'Copied!';
+							btn.classList.add('copied');
+							setTimeout(function () {
+								btn.textContent = 'Copy';
+								btn.classList.remove('copied');
+							}, 2000);
+						});
+					});
+					pre.style.position = 'relative';
+					pre.appendChild(btn);
+
+					/* ── Detect language for label ── */
+					var code = pre.querySelector('code');
+					if (code) {
+						var cls = Array.from(code.classList);
+						var lang = cls.find(function(c) { return c.startsWith('language-'); });
+						if (lang) {
+							pre.setAttribute('data-lang', lang.replace('language-', ''));
+						}
+					}
+				});
+
 				if (window.location.hash) {
 					var hashId = window.location.hash.slice(1);
 					var hashTarget = document.getElementById(hashId);
