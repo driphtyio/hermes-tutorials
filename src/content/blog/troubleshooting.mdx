@@ -4,75 +4,109 @@ description: "Solve common Hermes Agent issues including health check failures, 
 pubDate: 2026-07-17
 tags: [troubleshooting, debugging, hermes-agent, quickstart]
 ---
+
 Hermes Agent is designed for resilience, but complex integrations with LLM providers, MCP servers, and local environments can occasionally lead to instability. This guide provides a systematic approach to diagnosing and resolving the most common issues.
+
 ## System Health Checks
+
 Before diving into manual debugging, use the built-in diagnostic suite to identify the root cause.
+
 ### The `hermes doctor` Command
+
 The `doctor` command scans your environment for missing dependencies, invalid API keys, network latency, and configuration syntax errors.
+
 ```bash
 hermes doctor
 ```
+
 **What this checks:**
 - **Connectivity:** Pings the configured LLM gateway
 - **Permissions:** Verifies read/write access to the `.hermes/` config directory
 - **Dependencies:** Checks if required binaries (Python, Node, MCP hosts) are in the PATH
 - **Config Integrity:** Validates `config.yaml` against the latest schema
+
 ### Automated Repair
+
 If the doctor identifies common misconfigurations (incorrect directory permissions or outdated cache files):
+
 ```bash
 hermes doctor --fix
 ```
+
 > Note: `--fix` will not modify your API keys or model preferences, but it may reset temporary cache files and update local symlinks.
+
 ---
+
 ## Common Issues and Fixes
+
 ### 1. API Key & Authentication Errors (401/403)
+
 **Symptoms:** Agent returns `Authentication Error`, `Invalid API Key`, or HTTP `401 Unauthorized`.
+
 - **Check for Whitespace:** Ensure no trailing spaces or quotes in your `.env` or `config.yaml`
 - **Verify Provider Status:** Check the status page of your provider (OpenAI, Anthropic, Google, etc.)
 - **Key Rotation:** If you recently rotated keys, restart the Hermes daemon to force a reload
 - **Quota Limits:** A `429 Too Many Requests` error is often mistaken for an auth error — check your billing dashboard
+
 ### 2. Provider Connectivity & Gateway Timeouts
+
 **Symptoms:** `Gateway Timeout (504)`, `Connection Refused`, or "Agent is unresponsive."
+
 - **Proxy Settings:** If behind a corporate firewall, ensure `HTTP_PROXY` and `HTTPS_PROXY` are set
 - **DNS Issues:** Try pinging the provider endpoint manually. If it fails, flush your DNS cache
 - **Gateway Latency:** If using a local gateway (e.g., LiteLLM or Ollama), ensure the service is running:
   ```bash
   systemctl status ollama
   ```
+
 ### 3. Model Switching Problems
+
 **Symptoms:** Agent continues using a previous model despite config updates, or returns `Model Not Found`.
+
 - **Cache Flush:** Clear the model cache:
   ```bash
   hermes cache clear --models
   ```
 - **Case Sensitivity:** Ensure the model string matches the provider's requirements (e.g., `gpt-4-turbo` vs `GPT-4-Turbo`)
 - **Availability:** Verify your account has access to the specific model version
+
 ### 4. Session & Context Errors
+
 **Symptoms:** Agent forgets previous messages, returns `Context Window Exceeded`, or crashes during long conversations.
+
 - **Context Pruning:** Check `max_tokens` and `context_window` settings in `config.yaml`
 - **Session Corruption:** Delete the problematic session file:
   ```bash
   rm ~/.hermes/sessions/[session_id].json
   ```
 - **Token Overflow:** Reduce the number of active plugins to free up system prompt space
+
 ### 5. Installation & Binary Issues
+
 **Symptoms:** `command not found: hermes`, `Shared library missing`, or `Segmentation fault`.
+
 - **PATH Verification:** Ensure the Hermes binary directory is in your system PATH
 - **Architecture Mismatch:** Download the correct binary for your OS (e.g., `arm64` for Apple Silicon vs `x86_64` for Intel)
 - **Dependency Conflict:** Recreate your Python venv:
   ```bash
   rm -rf .venv && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
   ```
+
 ### 6. Plugin Failures
+
 **Symptoms:** Plugins fail to execute, return `null` responses, or cause the agent to loop.
+
 - **Permission Denied:** Ensure execution permissions:
   ```bash
   chmod +x ~/.hermes/plugins/my-plugin.sh
   ```
 - **Schema Mismatch:** Update plugins to the latest version for API compatibility
 - **Timeout Settings:** Increase `plugin_timeout` in your config for heavy computations
+
 ### 7. MCP Server Errors
+
 **Symptoms:** `MCP Server not reachable`, `JSON-RPC Error`, or tools not appearing in the capability list.
+
 - **Stdio Check:** Ensure no other process is locking the server's output
 - **Log Inspection:** Check the MCP logs:
   ```bash
@@ -85,39 +119,59 @@ hermes doctor --fix
       command: "npx"
       args: ["-y", "@modelcontextprotocol/server-sqlite", "--db", "/path/to/db"]
   ```
+
 ### 8. Memory Corruption & State Issues
+
 **Symptoms:** Random crashes, "Unexpected token" in config, or persistent hallucinations despite system prompt changes.
+
 - **State Reset:** Reset the agent's internal state without deleting config:
   ```bash
   hermes state reset
   ```
 - **Disk Space:** Ensure the drive containing `.hermes` is not full, preventing writes to the state database
+
 ---
+
 ## Recovery Procedures
+
 When standard troubleshooting fails, follow these recovery paths in order of intensity.
+
 ### Level 1: Configuration Reset
+
 1. Rename current config: `mv config.yaml config.yaml.bak`
 2. Generate default config: `hermes init`
 3. Gradually migrate settings from the backup
+
 ### Level 2: Full Reinstallation
+
 1. Uninstall the agent
 2. Remove the global config folder: `rm -rf ~/.hermes`
 3. Re-run the installation script
 4. Re-authenticate your providers
+
 ### Level 3: Backup Restore
+
 ```bash
 hermes restore --backup-path ./backups/hermes_2026_07_10.tar.gz
 ```
+
 ---
+
 ## FAQ
+
 **Q: Why is my agent suddenly slower than usual?**
 **A:** This is usually due to provider-side latency or an oversized context window. Try reducing `history_limit` in your configuration.
+
 **Q: Can I run multiple Hermes Agents on one machine?**
 **A:** Yes, but specify different config directories using the `--config-dir` flag to avoid state conflicts.
+
 **Q: The `doctor --fix` command didn't work. What now?**
 **A:** Check the logs at `~/.hermes/logs/error.log`. If the error persists, export your logs (redacting API keys) and open a ticket on GitHub Issues.
+
 ---
+
 ## Companion Resources
+
 - [**Official Documentation**](https://docs.hermes-agent.ai) — Full API and Configuration reference
 - [**Community Discord**](https://discord.gg/hermes-agent) — Real-time help from other users
 - [**GitHub Issues**](https://github.com/hermes-agent/hermes/issues) — Report bugs or request features

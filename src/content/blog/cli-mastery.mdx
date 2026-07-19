@@ -5,38 +5,58 @@ pubDate: "2026-07-17"
 tags: ["cli", "commands", "hermes-agent", "quickstart"]
 lastVerified: "2026-07-17"
 ---
+
 Hermes Agent ships with a powerful command-line interface (CLI) that lets you interact with LLMs, manage sessions, configure models, and extend functionality through plugins and skills. This guide walks you through every flag, sub-command, and best practice for both interactive and automated workflows.
+
 ## What is the Hermes CLI?
+
 The Hermes CLI is the primary entry point for all local LLM interactions. It can be invoked in three distinct modes:
+
 | Mode | Command | Typical Use-Case |
 |------|---------|------------------|
 | **Interactive** | `hermes` | Launches a REPL-style chat where you type and receive responses in real time |
 | **Query (non-interactive)** | `hermes chat -q "<prompt>"` | One-off query useful for scripts, CI pipelines, or quick lookups |
 | **TUI (Terminal UI)** | `hermes --tui` | Full-screen, curses-based UI with panels for history, context, and model selection |
+
 All modes share a common set of global flags (`--model`, `--temperature`, `--tui`, etc.) that can be overridden per invocation.
+
 ## Session Management
+
 Hermes automatically groups a series of exchanges into a **session**. Sessions preserve context, enable switching between projects, and resume conversations after closing the terminal.
+
 ### Starting a New Session
+
 ```bash
 hermes           # starts a fresh interactive session
 hermes --model gpt-4o   # start with a specific model
 ```
+
 When you launch without `--resume`, Hermes creates a new session ID (UUID) and stores it under `~/.hermes/sessions/`.
+
 ### Resuming an Existing Session
+
 ```bash
 hermes resume <session-id>
 ```
+
 If you omit `<session-id>`, Hermes presents an interactive picker of recent sessions.
+
 ### Listing Sessions
+
 ```bash
 hermes sessions   # prints a table of session IDs, timestamps, and model used
 ```
+
 Filter by date or tag:
+
 ```bash
 hermes sessions --since 2024-01-01 --tag research
 ```
+
 ## Slash Commands Reference
+
 Inside any interactive or TUI session, Hermes recognises **slash commands** that control the environment without leaving the chat.
+
 | Slash | Description |
 |-------|-------------|
 | `/help` | Show cheat-sheet inside the session |
@@ -50,45 +70,70 @@ Inside any interactive or TUI session, Hermes recognises **slash commands** that
 | `/config` | Open inline editor for runtime configuration overrides |
 | `/doctor` | Run a health check |
 | `/quit` | Exit the current session cleanly |
+
 Type `/` followed by **Tab** to get auto-completion in the TUI.
+
 ## Configuration Commands
+
 Hermes stores persistent configuration in `~/.hermes/config.yaml`. The CLI provides helpers to edit it safely.
+
 ### Global Config Editor
+
 ```bash
 hermes config          # Opens your default $EDITOR with the config file
 ```
+
 Typical entries include default model, temperature, API keys, and plugin directories.
+
 ### Model Picker
+
 ```bash
 hermes model          # Interactive selector of all models defined in config or discovered from providers
 ```
+
 Specify a model directly:
+
 ```bash
 hermes --model claude-3-opus
 ```
+
 ## Plugin Management
+
 Plugins augment Hermes with domain-specific capabilities (database connectors, custom parsers). They are installed as npm packages or local binaries.
+
 ### List Installed Plugins
+
 ```bash
 hermes plugins list
 ```
+
 ### Install a New Plugin
+
 ```bash
 hermes plugins install @hermes/plugin-redis
 hermes plugins install ./my-custom-plugin
 ```
+
 After installation, run `hermes plugins reload` to make the plugin available without restarting the CLI.
+
 ## Skills Commands
+
 **Skills** are reusable snippets of prompt engineering invoked via `/skills`. They are stored as YAML files under `~/.hermes/skills/`.
+
 ### List Skills
+
 ```bash
 hermes skills list
 ```
+
 ### Create a New Skill
+
 ```bash
 hermes skills create <skill-name>
 ```
+
 The command launches an editor pre-filled with a scaffold:
+
 ```yaml
 name: <skill-name>
 description: "Brief description"
@@ -96,37 +141,53 @@ prompt: |
   # Write your prompt template here
   {{input}}
 ```
+
 ### Edit or Delete a Skill
+
 ```bash
 hermes skills edit <skill-name>
 hermes skills delete <skill-name>
 ```
+
 ## Health Check
+
 Running a health diagnostic ensures that API keys, network connectivity, and plugin integrity are functional.
+
 ```bash
 hermes doctor
 ```
+
 Typical output:
 ```
 ✔ API keys: OK
 ✖ Redis plugin: Not found
 ✔ Network latency: 42ms
 ```
+
 ### Auto-Fix Mode
+
 ```bash
 hermes doctor --fix
 ```
+
 The `--fix` flag attempts to resolve detected issues automatically (re-install missing plugins, prompt for missing keys).
+
 ## Quick Query Mode for Automation
+
 Query mode (`hermes chat -q`) is designed for scripting and CI pipelines. It reads from stdin or a pipe and returns raw JSON if requested.
+
 ### Example: Pipe Input
+
 ```bash
 echo "Summarize the following log file:" | hermes chat -q -i log.txt
 ```
+
 ### JSON Output
+
 ```bash
 hermes chat -q "What is the weather in Paris?" --json
 ```
+
 Result:
 ```json
 {
@@ -135,11 +196,15 @@ Result:
   "usage": {"prompt_tokens": 12, "completion_tokens": 15}
 }
 ```
+
 Combine with `jq` for downstream processing:
+
 ```bash
 hermes chat -q "List all TODO items in the repo." --json | jq '.response'
 ```
+
 ## Companion Guides
+
 - **[Getting Started](/guides/getting-started)** — Installation, first-run, and basic concepts
 - **[Providers](/guides/providers)** — Configuring OpenAI, Anthropic, Azure, and custom endpoints
 - **[Gateway](/guides/gateway)** — Using the Hermes Gateway for multi-agent orchestration
@@ -147,11 +212,15 @@ hermes chat -q "List all TODO items in the repo." --json | jq '.response'
 - **[Multi-Agent](/guides/multi-agent)** — Running several agents in parallel and routing messages
 - **[Automation](/guides/automation)** — Advanced scripting, webhooks, and CI/CD integration
 - **[Troubleshooting](/guides/troubleshooting)** — Common errors, log locations, and debug tips
+
 All documentation: **[https://hermes-agent.nousresearch.com/docs](https://hermes-agent.nousresearch.com/docs)**
+
 ## Best Practices Checklist
+
 - **Pin a model** for production scripts (`--model gpt-4o-mini`) to avoid unexpected behavior
 - **Persist sessions** when you need reproducibility (`hermes resume <id>`)
 - **Leverage slash commands** for quick context tweaks without leaving the REPL
 - **Run `hermes doctor --fix`** after any plugin installation or configuration change
 - **Store reusable prompts** as skills; invoke them with `/skills <name>` for consistency
+
 By mastering these commands and flags, you'll unlock the full potential of Hermes Agent — whether you're chatting interactively, automating workflows, or building sophisticated multi-agent systems.

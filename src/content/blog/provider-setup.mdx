@@ -9,24 +9,38 @@ tags:
 - quickstart
 lastVerified: 2026-07-17
 ---
+
 Hermes Agent is designed to work with multiple large language model (LLM) providers through a unified configuration system. Whether you're connecting to a hosted API, using a managed routing service, or running models locally, Hermes lets you switch providers without changing your workflows.
+
 This guide covers the fastest setup path, manual configuration, provider settings, credential pools, model switching, local inference, and health verification.
+
 ---
+
 ## Provider Overview
+
 Hermes Agent supports more than 20 providers through a consistent interface. Once a provider is configured, every Hermes command uses the active model without requiring provider-specific syntax.
+
 Commonly used providers include: OpenRouter, Anthropic, OpenAI, DeepSeek, Groq, Mistral, Google, Together, Cerebras, Ollama, llama.cpp, Fireworks, xAI, Cohere, Azure OpenAI, AWS Bedrock, Vertex AI, AI21, SambaNova, Novita, LM Studio, and OpenAI-compatible endpoints.
+
 Most providers require only:
 1. An API key
 2. A model identifier
 3. (Optional) A custom base URL
+
 Hermes stores provider settings separately from project configuration, making it easy to reuse the same credentials across multiple repositories.
+
 > **Tip:** If you're just getting started, use the Hermes Portal OAuth flow. It automatically configures credentials without manually copying API keys.
+
 ---
+
 ## Fastest Path: Nous Portal OAuth
+
 The quickest way to configure Hermes Agent is through the integrated Portal authentication flow.
+
 ```bash
 hermes setup --portal
 ```
+
 Hermes will:
 1. Open the authentication page
 2. Sign you into your account
@@ -34,27 +48,40 @@ Hermes will:
 4. Download encrypted credentials
 5. Configure your default provider
 6. Verify connectivity
+
 A typical setup takes less than a minute. After completion, confirm everything is working:
+
 ```bash
 hermes doctor
 ```
+
 ---
+
 ## Manual Provider Setup
+
 If you prefer direct API keys or your organization manages credentials manually, use the setup wizard.
+
 ```bash
 hermes setup
 ```
+
 The wizard walks through selecting a provider, entering credentials, choosing a default model, and testing connectivity.
+
 Hermes stores provider configuration in your user directory at `~/.hermes/`. Environment variables are commonly stored in `~/.hermes/.env`:
+
 ```env
 OPENAI_API_KEY=sk-xxxxxxxx
 ANTHROPIC_API_KEY=***
 OPENROUTER_API_KEY=xxxxxxxx
 DEEPSEEK_API_KEY=xxxxxxxx
 ```
+
 After editing the file manually, reload Hermes or rerun `hermes doctor` to validate the configuration.
+
 ---
+
 ## Provider Configuration Table
+
 | Provider | Environment Variable | Base URL | Notes |
 | --- | --- | --- | --- |
 | OpenAI | `OPENAI_API_KEY` | `https://api.openai.com/v1` | Default OpenAI endpoint |
@@ -71,28 +98,44 @@ After editing the file manually, reload Hermes or rerun `hermes doctor` to valid
 | Azure OpenAI | `AZURE_OPENAI_API_KEY` | Deployment URL | Requires deployment configuration |
 | AWS Bedrock | AWS credentials | AWS endpoint | Uses IAM authentication |
 | Vertex AI | Google credentials | Regional endpoint | Google Cloud authentication |
+
 Only the provider-specific credential is required for most hosted services.
+
 ---
+
 ## Switching Models
+
 Hermes separates provider configuration from model selection.
+
 The easiest way to change models is the interactive picker:
+
 ```bash
 hermes model
 ```
+
 The picker displays configured providers, available models, recommended defaults, favorites, and recently used models. Selecting a model immediately updates the active session.
+
 To permanently change the default:
+
 ```bash
 hermes config set model.default openai/gpt-5
 hermes config set model.default anthropic/claude-sonnet
 ```
+
 Override the model for a single command without changing your default configuration:
+
 ```bash
 hermes chat --model openrouter/deepseek-r1
 ```
+
 ---
+
 ## Credential Pools
+
 Many teams maintain multiple API keys for reliability, cost allocation, or quota management. Hermes supports credential pools that group multiple credentials for the same provider.
+
 Example configuration:
+
 ```yaml
 providers:
   openrouter:
@@ -101,10 +144,15 @@ providers:
     - key: OPENROUTER_KEY_BACKUP
     - key: OPENROUTER_KEY_TEAM
 ```
+
 Credential pools provide automatic failover, quota distribution, regional routing, workload separation, and organizational access control. If one key reaches its quota or becomes unavailable, Hermes moves to the next credential without interrupting execution.
+
 ---
+
 ## Fallback Chains
+
 Fallback chains extend this concept across providers:
+
 ```text
 OpenRouter
 ↓
@@ -114,36 +162,56 @@ OpenAI
 ↓
 Local Ollama
 ```
+
 If the preferred provider is unavailable, Hermes continues using the next configured provider. Fallback chains are especially useful for CI pipelines, automated agents, long-running workflows, scheduled jobs, and production deployments.
+
 > **Info:** Fallbacks work best when equivalent models are configured across providers.
+
 ---
+
 ## Local Models
+
 Hermes also supports completely local inference, enabling offline development, reduced latency, and improved privacy.
+
 ### Ollama
+
 Install Ollama and pull a model:
+
 ```bash
 ollama pull llama3.1
 ```
+
 Ensure the Ollama server is running. Hermes detects the default endpoint automatically at `http://localhost:11434`. Select an Ollama model through `hermes model` or specify it directly:
+
 ```bash
 hermes chat --model ollama/llama3.1
 ```
+
 ### llama.cpp
+
 Hermes also supports OpenAI-compatible llama.cpp servers:
 1. Start the llama.cpp server
 2. Configure its endpoint
 3. Select the desired local model
+
 ```bash
 hermes config set providers.llamacpp.base_url http://localhost:8080
 ```
+
 Once configured, local models behave like any other provider. Switch between cloud and local inference using the same commands without modifying prompts or workflows.
+
 ---
+
 ## Verifying Provider Health
+
 After configuring providers, run the diagnostic utility:
+
 ```bash
 hermes doctor --fix
 ```
+
 The doctor command verifies configuration syntax, environment variables, provider authentication, network connectivity, model availability, local inference endpoints, credential permissions, and cached configuration. The `--fix` option automatically repairs common problems.
+
 Typical output:
 ```text
 ✔ Configuration
@@ -153,11 +221,16 @@ Typical output:
 ✔ Local Endpoints
 ✔ Cache
 ✔ Default Model
+
 System is healthy.
 ```
+
 ---
+
 ## Recommended Workflow
+
 For most users, this sequence provides the smoothest onboarding:
+
 1. Run `hermes setup --portal`
 2. Verify with `hermes doctor --fix`
 3. Select a preferred model using `hermes model`
@@ -165,11 +238,17 @@ For most users, this sequence provides the smoothest onboarding:
 5. Add additional credential pools as needed
 6. Enable local models for offline work
 7. Periodically rerun diagnostics after changing providers
+
 ---
+
 ## Companion Guides
+
 Continue with these related guides: Installation Guide, First Chat, Project Configuration, Model Selection, Agent Profiles, Authentication, CLI Reference, Troubleshooting, Local Development, and Configuration Reference.
+
 ---
+
 ## External Documentation
+
 - OpenRouter: https://openrouter.ai/docs
 - Anthropic: https://docs.anthropic.com
 - OpenAI: https://platform.openai.com/docs
@@ -181,7 +260,11 @@ Continue with these related guides: Installation Guide, First Chat, Project Conf
 - Cerebras: https://inference-docs.cerebras.ai
 - Ollama: https://ollama.com
 - llama.cpp: https://github.com/ggml-org/llama.cpp
+
 Review provider-specific documentation for supported models, authentication methods, rate limits, pricing, and advanced capabilities before deploying production workloads.
+
 ---
+
 ## Summary
+
 Hermes Agent provides a unified experience across hosted and local LLM providers. Whether you authenticate through the Nous Portal, configure API keys manually, or run models on your own hardware, the same commands continue to work. Credential pools improve reliability, fallback chains reduce downtime, interactive model selection simplifies experimentation, and built-in diagnostics help ensure every provider remains healthy. With a single configuration layer abstracting differences between providers, you can focus on building workflows instead of managing infrastructure.
