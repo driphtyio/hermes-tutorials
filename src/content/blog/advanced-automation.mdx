@@ -4,21 +4,11 @@ description: "Configure cron jobs, webhooks, and MCP servers in Hermes Agent for
 pubDate: 2026-07-17
 tags: [automation, cron, mcp, hermes-agent, quickstart]
 ---
-
-# Advanced Automation
-
-**Home > Quick Start Guides > Advanced Automation**
-
 The true power of Hermes Agent lies in its transition from a reactive assistant to a proactive autonomous operator. While standard interactions are request-response based, Advanced Automation allows you to build self-sustaining ecosystems using scheduled triggers, event-driven architectures, and extensible toolsets via the Model Context Protocol (MCP).
-
 ## The Cron Job System
-
 Hermes Agent features a native scheduling engine that allows you to execute actions without manual intervention. This is critical for recurring reports, database cleanups, and periodic system health checks.
-
 ### Scheduling Tasks
-
 To create a scheduled task, use the `cronjob` action with the `create` parameter. This registers a trigger in the internal scheduler.
-
 **Action Schema:**
 ```json
 {
@@ -34,11 +24,8 @@ To create a scheduled task, use the `cronjob` action with the `create` parameter
   }
 }
 ```
-
 ### Cron Syntax Guide
-
 Hermes utilizes standard Unix-style cron syntax with five fields:
-
 | Field | Meaning | Allowed Values |
 | :--- | :--- | :--- |
 | 1 | Minute | 0-59 |
@@ -46,16 +33,12 @@ Hermes utilizes standard Unix-style cron syntax with five fields:
 | 3 | Day of Month | 1-31 |
 | 4 | Month | 1-12 |
 | 5 | Day of Week | 0-6 (Sunday to Saturday) |
-
 **Common Examples:**
 - `*/15 * * * *` — Every 15 minutes
 - `0 9 * * 1-5` — 9:00 AM every weekday
 - `0 0 1 * *` — Midnight on the first day of every month
-
 ### Managing Periodic Tasks
-
 Modify or terminate existing cron jobs using `update` and `delete` operations. Assign a unique `task_id` to every job to avoid collisions.
-
 ```json
 {
   "action": "cronjob",
@@ -63,43 +46,28 @@ Modify or terminate existing cron jobs using `update` and `delete` operations. A
   "params": { "task_id": "daily-system-audit" }
 }
 ```
-
 ---
-
 ## Webhook Subscriptions
-
 While cron jobs are time-driven, webhooks allow Hermes Agent to be **event-driven**. By subscribing to external webhooks, Hermes can react instantly to changes in your tech stack (e.g., a GitHub PR being merged, a Stripe payment received, or a Sentry error triggered).
-
 ### Event-Driven Triggers
-
 To enable webhooks, generate a unique Hermes Endpoint URL. The external service pushes a JSON payload to Hermes, which triggers a specific agent workflow.
-
 **Configuration Workflow:**
 1. **Endpoint Generation:** Navigate to `Settings > Integrations > Webhooks` to generate a listener URL.
 2. **Event Mapping:** Map the incoming event type (e.g., `push`, `payment_success`) to a Hermes Prompt Template.
 3. **Payload Parsing:** Hermes automatically parses the incoming JSON and injects it into the context window as a `System Event` object.
-
 ### Example: Automated Lead Processing
-
 - **Trigger:** Webhook from Typeform → Hermes Endpoint
 - **Processing:** Hermes analyzes the lead's company size and industry
 - **Action:** Hermes creates a personalized outreach draft in Gmail and notifies the sales team via Slack
-
 ---
-
 ## MCP Server Integration
-
 The Model Context Protocol (MCP) is the backbone of Hermes' extensibility. MCP servers bridge the gap between the LLM's reasoning and your local or proprietary data sources.
-
 ### Building Custom MCP Tools
-
 An MCP server is a standardized API that exposes **Tools** (executable functions) and **Resources** (readable data) to the agent.
-
 **MCP Architecture:**
 - **Host:** Hermes Agent (The orchestrator)
 - **Server:** Your custom MCP implementation (The provider)
 - **Transport:** JSON-RPC over stdio or HTTP
-
 **Example: Database Connector**
 ```typescript
 // Simplified MCP Tool Definition
@@ -112,11 +80,8 @@ server.tool(
   }
 );
 ```
-
 ### Connecting MCP Servers
-
 Add the configuration to your `hermes.config.json`:
-
 ```json
 {
   "mcpServers": {
@@ -128,15 +93,10 @@ Add the configuration to your `hermes.config.json`:
   }
 }
 ```
-
 ---
-
 ## Autonomous Pipelines
-
 Autonomous pipelines are sequences of chained tasks where the output of one step determines the logic of the next. Unlike linear scripts, these pipelines allow for **conditional branching** and **self-correction**.
-
 ### Chaining Tasks
-
 Define a pipeline by creating a **Master Blueprint**. The agent follows these steps:
 1. **Trigger:** (Cron or Webhook)
 2. **Execution:** Step A (e.g., Fetch data via MCP)
@@ -144,36 +104,24 @@ Define a pipeline by creating a **Master Blueprint**. The agent follows these st
 4. **Branching:**
    - If **Success** → Step B (e.g., Deploy to Production)
    - If **Failure** → Step C (e.g., Alert developer and log error)
-
 ### Scheduled Deployments and Monitoring
-
 Combine Cron and MCP to automate the entire CI/CD lifecycle:
 - **T-Minus 0:** Cron triggers a pre-flight check pipeline
 - **Analysis:** Hermes runs tests via an MCP tool
 - **Deployment:** If tests pass, Hermes calls the `deploy_app` tool
 - **Verification:** Hermes monitors logs for 5 minutes; if error rates spike, it executes a `rollback` command
-
 ---
-
 ## The Guardian Watchdog System
-
 To prevent autonomous loops or hallucination cascades, Hermes employs the **Guardian Watchdog** — a separate, lightweight monitoring process overseeing all autonomous pipelines.
-
 ### Watchdog Mechanisms
-
 - **Token Budgeting:** Hard limit on tokens an autonomous chain can consume before requiring human approval
 - **Loop Detection:** Identifies repetitive action patterns (e.g., same MCP tool called 10 times with identical parameters)
 - **State Snapshots:** Saves system state before any destructive action, allowing one-click restoration
-
 ### Configuring Guardian Thresholds
-
 - **Strict Mode:** Requires human confirmation for any MCP tool that modifies data
 - **Autonomous Mode:** Allows the agent to proceed unless a critical error is detected
-
 ---
-
 ## Summary Checklist
-
 | Feature | Use Case | Primary Tool |
 | :--- | :--- | :--- |
 | **Periodic Tasks** | Daily reports, backups | `cronjob` action |
@@ -181,21 +129,15 @@ To prevent autonomous loops or hallucination cascades, Hermes employs the **Guar
 | **Custom Capabilities** | Proprietary API/DB access | MCP Servers |
 | **Complex Workflows** | CI/CD, Lead Gen, Audits | Autonomous Pipelines |
 | **Safety & Control** | Preventing infinite loops | Guardian Watchdog |
-
 ## Companion Resources
-
 - [MCP Specification Documentation](#) — Deep dive into the Model Context Protocol
 - [Prompt Engineering for Pipelines](#) — How to write prompts that handle conditional branching
 - [Hermes API Reference](#) — Full list of `cronjob` and `webhook` parameters
 - [Community Templates](#) — Pre-built MCP servers for Jira, AWS, and Salesforce
-
 {/* crosslinks */}
-
 ## 📖 Related Reads
-
 - **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools, agents, and APIs
 - **[ToolBrain](https://toolbrain.net/)** — Tool reviews, LLM comparisons, and AI workflow guides
 - **[NiteAgent](https://niteagent.com/)** — AI agent development, frameworks, and production patterns
 - **[CodeIntel Log](https://codeintel.xyz/)** — Code quality, debugging, and software engineering benchmarks
-
 *Cross-links automatically generated from Hermes Tutorials.*
