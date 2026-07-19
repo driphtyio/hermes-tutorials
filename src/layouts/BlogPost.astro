@@ -188,6 +188,8 @@ const articleSchema = {
 			.article-layout {
 				display: flex;
 				width: 100%;
+				max-width: 1800px;
+				margin: 0 auto;
 				position: relative;
 			}
 
@@ -232,7 +234,7 @@ const articleSchema = {
 			}
 
 			.toc-header-label {
-				font-size: 0.72em;
+				font-size: 0.75em;
 				font-weight: 700;
 				text-transform: uppercase;
 				letter-spacing: 0.08em;
@@ -323,6 +325,12 @@ const articleSchema = {
 				padding-left: 1.8em;
 			}
 
+			/* ── Nested TOC list under h2 ── */
+			.toc-nav li ul {
+				padding-left: 0;
+				margin: 0.15em 0;
+			}
+
 			/* ── Main content when inside article layout ── */
 			.article-layout .blog-post-main {
 				flex: 1;
@@ -396,7 +404,7 @@ const articleSchema = {
 					<div class="toc-header-wrap">
 						<span class="toc-header-label">On This Page</span>
 						<button class="toc-toggle" id="toc-toggle" aria-label="Toggle sidebar" aria-expanded="true">
-							<span class="toggle-icon">‹</span>
+							<svg class="toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
 						</button>
 					</div>
 					<nav class="toc-nav" id="toc-nav" aria-label="Table of Contents"></nav>
@@ -452,23 +460,20 @@ const articleSchema = {
 				var tocNav = document.getElementById('toc-nav');
 				var toggleBtn = document.getElementById('toc-toggle');
 
-				/* ── 1. Generate TOC ── */
+				/* ── 1. Generate TOC (nested h2 → h3) ── */
 				var ul = document.createElement('ul');
 				ul.className = 'toc-list';
 
+				var currentH2Ul = null;
+
 				headings.forEach(function(h, idx) {
-					/* Ensure heading has an id */
 					if (!h.id) {
 						h.id = 'heading-' + idx;
 					}
 
-					var li = document.createElement('li');
 					var a = document.createElement('a');
 					a.href = '#' + h.id;
 					a.textContent = h.textContent;
-					if (h.tagName === 'H3') {
-						a.className = 'toc-link-h3';
-					}
 					a.addEventListener('click', function(e) {
 						e.preventDefault();
 						var target = document.getElementById(h.id);
@@ -477,8 +482,23 @@ const articleSchema = {
 							history.pushState(null, '', '#' + h.id);
 						}
 					});
-					li.appendChild(a);
-					ul.appendChild(li);
+
+					if (h.tagName === 'H3') {
+						a.className = 'toc-link-h3';
+						var li = document.createElement('li');
+						li.appendChild(a);
+						if (currentH2Ul) {
+							currentH2Ul.appendChild(li);
+						} else {
+							ul.appendChild(li);
+						}
+					} else {
+						currentH2Ul = document.createElement('ul');
+						var li = document.createElement('li');
+						li.appendChild(a);
+						li.appendChild(currentH2Ul);
+						ul.appendChild(li);
+					}
 				});
 
 				tocNav.appendChild(ul);
@@ -509,14 +529,9 @@ const articleSchema = {
 
 				/* ── 3. Sidebar collapse toggle ── */
 				if (sidebar && toggleBtn) {
-					var icon = toggleBtn.querySelector('.toggle-icon');
-
 					toggleBtn.addEventListener('click', function() {
 						var isCollapsed = sidebar.classList.toggle('collapsed');
 						toggleBtn.setAttribute('aria-expanded', String(!isCollapsed));
-						if (icon) {
-							icon.textContent = isCollapsed ? '›' : '‹';
-						}
 					});
 				}
 
