@@ -202,25 +202,15 @@ const articleSchema = {
 				top: var(--nav-height);
 				align-self: flex-start;
 				max-height: calc(100vh - var(--nav-height));
-				overflow-y: auto;
-				overflow-x: hidden;
-				border-right: 1px solid var(--border);
-				padding: 2em 1.25em 2em 0;
+				overflow: hidden;
+				padding: 2em 0;
 				transition: width 250ms ease, min-width 250ms ease, padding 250ms ease;
-				scrollbar-width: thin;
-				scrollbar-color: var(--border) transparent;
 			}
 
 			.toc-sidebar.collapsed {
 				width: 40px;
 				min-width: 40px;
 				padding: 2em 0;
-				overflow: hidden;
-			}
-
-			.toc-sidebar.collapsed .toc-inner > *:not(.toc-header-wrap) {
-				opacity: 0;
-				pointer-events: none;
 			}
 
 			/* ── Sidebar Header Row ── */
@@ -239,11 +229,6 @@ const articleSchema = {
 				text-transform: uppercase;
 				letter-spacing: 0.08em;
 				color: var(--text-muted);
-				transition: opacity 200ms ease;
-			}
-
-			.toc-sidebar.collapsed .toc-header-label {
-				opacity: 0;
 			}
 
 			.toc-toggle {
