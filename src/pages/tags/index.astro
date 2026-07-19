@@ -26,6 +26,11 @@ const sortedTags = Array.from(tagCounts.entries()).sort((a, b) => b[1] - a[1]);
 			description={`Browse ${sortedTags.length} topic tags across ${posts.length} Hermes Agent tutorials.`}
 		/>
 		<style>
+			.tag-container {
+				max-width: 1200px;
+				margin: 0 auto;
+				padding: 0 2em;
+			}
 			.tag-grid {
 				display: grid;
 				grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -70,17 +75,19 @@ const sortedTags = Array.from(tagCounts.entries()).sort((a, b) => b[1] - a[1]);
 	<body>
 		<Header />
 		<main>
-			<div class="page-header">
-				<h1>Tags</h1>
-				<p class="subtitle">{sortedTags.length} topics across {posts.length} tutorials</p>
-			</div>
-			<div class="tag-grid">
-				{sortedTags.map(([tag, count]) => (
-					<a class="tag-card" href={`/tags/${tag}/`}>
-						<span class="tag-name">{tag}</span>
-						<span class="tag-count">{count}</span>
-					</a>
-				))}
+			<div class="tag-container">
+				<div class="page-header">
+					<h1>Tags</h1>
+					<p class="subtitle">{sortedTags.length} topics across {posts.length} tutorials</p>
+				</div>
+				<div class="tag-grid">
+					{sortedTags.map(([tag, count]) => (
+						<a class="tag-card" href={`/tags/${tag}/`}>
+							<span class="tag-name">{tag}</span>
+							<span class="tag-count">{count}</span>
+						</a>
+					))}
+				</div>
 			</div>
 		</main>
 		<Footer />
