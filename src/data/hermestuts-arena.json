@@ -1667,7 +1667,10 @@
           "provider": "xiaomi",
           "family": "mimo",
           "score": 10.0,
-          "strengths": ["Unanimous 10/10 across all 3 judges", "Best layout and widescreen optimization"],
+          "strengths": [
+            "Unanimous 10/10 across all 3 judges",
+            "Best layout and widescreen optimization"
+          ],
           "weaknesses": []
         },
         {
@@ -1677,8 +1680,12 @@
           "provider": "zai",
           "family": "glm",
           "score": 9.0,
-          "strengths": ["Strong layout and code block presentation"],
-          "weaknesses": ["Slightly less elaborate layout than winner"]
+          "strengths": [
+            "Strong layout and code block presentation"
+          ],
+          "weaknesses": [
+            "Slightly less elaborate layout than winner"
+          ]
         },
         {
           "rank": 3,
@@ -1687,8 +1694,14 @@
           "provider": "deepseek",
           "family": "deepseek",
           "score": 6.7,
-          "strengths": ["Fastest generation (0.4s)", "Widest context window (1M)"],
-          "weaknesses": ["Minimal layout customization", "No code block presentation"]
+          "strengths": [
+            "Fastest generation (0.4s)",
+            "Widest context window (1M)"
+          ],
+          "weaknesses": [
+            "Minimal layout customization",
+            "No code block presentation"
+          ]
         },
         {
           "rank": 4,
@@ -1697,8 +1710,13 @@
           "provider": "nexum",
           "family": "qwen",
           "score": 5.7,
-          "strengths": ["Decent layout score from Mistral judge"],
-          "weaknesses": ["Lowest content preservation score", "Slow generation (41s)"]
+          "strengths": [
+            "Decent layout score from Mistral judge"
+          ],
+          "weaknesses": [
+            "Lowest content preservation score",
+            "Slow generation (41s)"
+          ]
         }
       ]
     }
@@ -1763,6 +1781,18 @@
       "bestScore": 9.0,
       "avgScore": 8.3,
       "rank": 5
+    },
+    {
+      "model": "mimo-v2.5-pro",
+      "provider": "xiaomi",
+      "family": "mimo",
+      "wins": 1,
+      "losses": 4,
+      "matches": 5,
+      "totalScore": 38.5,
+      "bestScore": 10.0,
+      "avgScore": 7.7,
+      "rank": 6
     },
     {
       "model": "qwen-3.6-max-preview-thinking",
@@ -1847,18 +1877,6 @@
       "bestScore": 8.5,
       "avgScore": 7.44,
       "rank": 13
-    },
-    {
-      "model": "mimo-v2.5-pro",
-      "provider": "xiaomi",
-      "family": "mimo",
-      "wins": 1,
-      "losses": 4,
-      "matches": 5,
-      "totalScore": 38.5,
-      "bestScore": 10.0,
-      "avgScore": 7.7,
-      "rank": 6
     },
     {
       "model": "codestral-2508",
