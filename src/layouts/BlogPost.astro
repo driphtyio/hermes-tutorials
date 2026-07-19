@@ -57,7 +57,7 @@ const breadcrumbSchema = {
 		/>
 		<script type="application/ld+json" set:html={JSON.stringify(articleSchema)} />
 		<script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
-		<style>
+		<style is:global>
 			/* ════════════════════════════════════════════
 			   BlogPost.xiaomi-mimo — Integrated TOC Sidebar
 			   ════════════════════════════════════════════ */
@@ -65,21 +65,10 @@ const breadcrumbSchema = {
 			/* ── Escape the 860px global content-width ── */
 			main {
 				width: 100% !important;
+				max-width: 1800px;
 				margin: 0 auto;
 				padding: 1.25em 2em 3em;
 			}
-
-			/* ── Breadcrumbs ── */
-			.breadcrumbs {
-				max-width: min(1800px, 90vw);
-				margin: 0 auto;
-				padding: 0.6em 2em 0;
-				font-size: 0.80em;
-				color: var(--text-muted);
-			}
-			.breadcrumbs a { color: var(--text-muted); }
-			.breadcrumbs a:hover { color: var(--accent-light); }
-			.breadcrumbs .sep { margin: 0 0.4em; color: var(--border-light); }
 
 			/* ── Flex Layout: sidebar + article ── */
 			.blog-layout {
@@ -88,6 +77,10 @@ const breadcrumbSchema = {
 				max-width: 1800px;
 				margin: 0 auto;
 				align-items: flex-start;
+			}
+			.blog-layout > article {
+				flex: 1;
+				min-width: 0;
 			}
 
 			/* ── TOC Sidebar ── */
@@ -206,8 +199,6 @@ const breadcrumbSchema = {
 
 			/* ── Article Body ── */
 			.article-body {
-				flex: 1;
-				min-width: 0;
 				max-width: 1000px;
 			}
 
@@ -348,7 +339,6 @@ const breadcrumbSchema = {
 			/* ── Mobile ── */
 			@media (max-width: 720px) {
 				main { padding: 0.75em 1em 2em; }
-				.breadcrumbs { padding: 0.4em 1em 0; }
 				.post-header h1 { font-size: 2rem; }
 				.post-stats { font-size: 0.78em; gap: 0.25em 0.4em; }
 			}
@@ -356,10 +346,6 @@ const breadcrumbSchema = {
 	</head>
 	<body>
 		<Header />
-		<nav class="breadcrumbs" aria-label="Breadcrumb">
-			<a href="/blog">Tutorials</a><span class="sep">›</span>
-			<span style="color: var(--text-secondary)">{title}</span>
-		</nav>
 		<main>
 			<div class="blog-layout">
 				<aside class="toc-sidebar" id="tocSidebar" aria-label="Table of contents">
