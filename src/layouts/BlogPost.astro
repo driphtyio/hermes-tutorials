@@ -89,7 +89,7 @@ const breadcrumbSchema = {
 				top: var(--nav-height);
 				flex-shrink: 0;
 				width: 240px;
-				overflow: hidden;
+				overflow-y: auto;
 				align-self: flex-start;
 				max-height: calc(100vh - var(--nav-height));
 				padding: 2em 0;
@@ -97,6 +97,7 @@ const breadcrumbSchema = {
 			}
 			.toc-sidebar.collapsed {
 				max-height: 40px;
+				overflow: hidden;
 			}
 
 			/* ── TOC Header ── */
