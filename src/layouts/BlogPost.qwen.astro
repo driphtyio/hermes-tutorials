@@ -59,7 +59,7 @@ const breadcrumbSchema = {
 		<script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
 		<style>
 			/* ════════════════════════════════════════════
-			   BlogPost.xiaomi-mimo — Integrated TOC Sidebar
+			   BlogPost.qwen — TOC Sidebar + Widescreen
 			   ════════════════════════════════════════════ */
 
 			/* ── Escape the 860px global content-width ── */
@@ -91,18 +91,18 @@ const breadcrumbSchema = {
 			}
 
 			/* ── TOC Sidebar ── */
-			.toc-sidebar {
+			.sidebar {
 				position: sticky;
 				top: var(--nav-height);
 				flex-shrink: 0;
 				width: 240px;
+				padding: 2em 0;
 				overflow: hidden;
 				align-self: flex-start;
 				max-height: calc(100vh - var(--nav-height));
-				padding: 2em 0;
-				transition: max-height 0.3s ease;
+				transition: max-height 0.35s ease;
 			}
-			.toc-sidebar.collapsed {
+			.sidebar.collapsed {
 				max-height: 40px;
 			}
 
@@ -139,11 +139,11 @@ const breadcrumbSchema = {
 				color: var(--accent-light);
 				background: var(--bg-tertiary);
 			}
-			.toc-sidebar.collapsed .toc-toggle {
+			.sidebar.collapsed .toc-toggle {
 				transform: rotate(-90deg);
 			}
 
-			/* ── TOC Navigation ── */
+			/* ── TOC Nav ── */
 			.toc-nav {
 				font-size: 0.82em;
 				line-height: 1.5;
@@ -153,7 +153,7 @@ const breadcrumbSchema = {
 				margin: 0;
 				padding: 0;
 			}
-			.toc-link {
+			.toc-item a {
 				display: block;
 				padding: 0.35em 0.5em 0.35em 0;
 				color: var(--text-secondary);
@@ -165,27 +165,24 @@ const breadcrumbSchema = {
 				text-overflow: ellipsis;
 				white-space: nowrap;
 			}
-			.toc-link:hover {
+			.toc-item a:hover {
 				color: var(--accent-light);
 				background: var(--bg-tertiary);
 			}
-			.toc-link.active {
+			.toc-item a.active {
 				color: var(--accent-light);
 				border-left-color: var(--accent);
 				background: rgba(108, 92, 231, 0.08);
 				font-weight: 500;
 			}
-			.toc-nested {
-				list-style: none;
-				padding: 0;
-				margin: 0;
-			}
-			.toc-nested .toc-link {
+			.toc-item.toc-h3 {
 				padding-left: 1em;
+			}
+			.toc-item.toc-h3 a {
 				font-size: 0.92em;
 				color: var(--text-muted);
 			}
-			.toc-nested .toc-link.active {
+			.toc-item.toc-h3 a.active {
 				color: var(--accent-light);
 			}
 
@@ -204,10 +201,8 @@ const breadcrumbSchema = {
 				box-shadow: var(--shadow-md);
 			}
 
-			/* ── Article Body ── */
+			/* ── Constrained body: title, stats, prose ── */
 			.article-body {
-				flex: 1;
-				min-width: 0;
 				max-width: 1000px;
 			}
 
@@ -223,7 +218,7 @@ const breadcrumbSchema = {
 				margin: 0 0 0.3em;
 			}
 
-			/* ── One-line stats bar: author · date · reading time · tags ── */
+			/* ── Stats bar ── */
 			.post-stats {
 				display: flex;
 				flex-wrap: wrap;
@@ -258,7 +253,7 @@ const breadcrumbSchema = {
 				margin: 0 0 1em;
 			}
 
-			/* ── Prose (headings need relative for permalink) ── */
+			/* ── Prose ── */
 			.prose {
 				color: var(--text-primary);
 			}
@@ -272,9 +267,8 @@ const breadcrumbSchema = {
 			}
 			.prose p { margin-bottom: 1.2em; line-height: 1.8; }
 
-			/* ── Heading Permalink # icons ── */
+			/* ── Heading Permalink ── */
 			.heading-permalink {
-				opacity: 0;
 				display: inline-flex;
 				align-items: center;
 				justify-content: center;
@@ -284,6 +278,7 @@ const breadcrumbSchema = {
 				color: var(--text-muted);
 				text-decoration: none;
 				border-radius: 4px;
+				opacity: 0;
 				transition: opacity 0.15s, color 0.15s, background 0.15s;
 				vertical-align: middle;
 				position: relative;
@@ -295,22 +290,7 @@ const breadcrumbSchema = {
 			.heading-permalink:hover {
 				color: var(--accent-light);
 				background: var(--bg-tertiary);
-			}
-			.heading-permalink[data-copied="true"]::after {
-				content: "Copied!";
-				position: absolute;
-				top: -1.8em;
-				left: 50%;
-				transform: translateX(-50%);
-				font-size: 0.65em;
-				background: var(--bg);
-				color: var(--accent-light);
-				padding: 0.2em 0.5em;
-				border-radius: 4px;
-				border: 1px solid var(--border);
-				white-space: nowrap;
-				font-family: var(--font-sans);
-				font-weight: 500;
+				opacity: 1;
 			}
 
 			/* ── TLDR Callout ── */
@@ -333,7 +313,7 @@ const breadcrumbSchema = {
 
 			/* ── Responsive: below 1440px hide sidebar, single column ── */
 			@media (max-width: 1439px) {
-				.toc-sidebar {
+				.sidebar {
 					display: none;
 				}
 				.blog-layout {
@@ -362,7 +342,7 @@ const breadcrumbSchema = {
 		</nav>
 		<main>
 			<div class="blog-layout">
-				<aside class="toc-sidebar" id="tocSidebar" aria-label="Table of contents">
+				<aside class="sidebar" id="sidebar" aria-label="Table of contents">
 					<div class="toc-header">
 						<span class="toc-header-label">On This Page</span>
 						<button class="toc-toggle" id="tocToggle" aria-label="Toggle table of contents" type="button">
@@ -372,7 +352,7 @@ const breadcrumbSchema = {
 						</button>
 					</div>
 					<nav class="toc-nav" aria-label="Section navigation">
-						<ul id="tocList"></ul>
+						<ul id="toc-list"></ul>
 					</nav>
 				</aside>
 				<article itemscope itemtype="https://schema.org/Article">
@@ -410,93 +390,28 @@ const breadcrumbSchema = {
 		</main>
 		<Footer />
 
-		<script is:inline>
+		<script>
 			(function () {
 				'use strict';
 
-				/* ════════════════════════════════════════════
-				   TOC Generation + Scrollspy + Permalinks
-				   ════════════════════════════════════════════ */
+				/* ── Heading Permalinks ── */
+				const headingSelector = '.prose h2, .prose h3';
+				const headings = document.querySelectorAll(headingSelector);
 
-				var prose = document.querySelector('.prose');
-				var tocList = document.getElementById('tocList');
-				var sidebar = document.getElementById('tocSidebar');
-				var toggleBtn = document.getElementById('tocToggle');
-
-				if (!prose || !tocList) return;
-
-				var headings = prose.querySelectorAll('h2, h3');
-				if (headings.length === 0) {
-					if (sidebar) sidebar.style.display = 'none';
-					return;
-				}
-
-				var tocAnchors = [];
-				var headingElements = [];
-
-				/* ── Ensure each heading has an id ── */
-				headings.forEach(function (h, i) {
-					if (!h.id) {
-						var text = (h.textContent || '')
-							.trim()
-							.toLowerCase()
-							.replace(/[^a-z0-9]+/g, '-')
-							.replace(/^-|-$/g, '');
-						h.id = text || ('heading-' + i);
-					}
-				});
-
-				/* ── Build TOC items (hierarchical nesting) ── */
-				var currentH2Item = null;
-				headings.forEach(function (h) {
-					var tag = h.tagName.toLowerCase();
-
-					if (tag === 'h2') {
-						currentH2Item = document.createElement('li');
-						currentH2Item.className = 'toc-item toc-item-h2';
-
-						var a = document.createElement('a');
-						a.className = 'toc-link';
-						a.href = '#' + h.id;
-						a.textContent = h.textContent.replace(/#$/, '').trim();
-
-						var nestedUl = document.createElement('ul');
-						nestedUl.className = 'toc-nested';
-
-						currentH2Item.appendChild(a);
-						currentH2Item.appendChild(nestedUl);
-						tocList.appendChild(currentH2Item);
-						tocAnchors.push(a);
-						headingElements.push(h);
-					} else if (tag === 'h3') {
-						var li = document.createElement('li');
-						li.className = 'toc-item toc-item-h3';
-
-						var a = document.createElement('a');
-						a.className = 'toc-link';
-						a.href = '#' + h.id;
-						a.textContent = h.textContent.replace(/#$/, '').trim();
-
-						li.appendChild(a);
-
-						if (currentH2Item) {
-							currentH2Item.querySelector('.toc-nested').appendChild(li);
-						} else {
-							tocList.appendChild(li);
-						}
-						tocAnchors.push(a);
-						headingElements.push(h);
-					}
-				});
-
-				/* ── Permalink (#) icons ── */
-				var permalinkSvg =
+				const permalinkSvg =
 					'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
 						'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>' +
 						'<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>' +
 					'</svg>';
 
 				headings.forEach(function (h) {
+					if (!h.id) {
+						h.id = h.textContent
+							.toLowerCase()
+							.replace(/[^a-z0-9]+/g, '-')
+							.replace(/^-|-$/g, '');
+					}
+
 					var link = document.createElement('a');
 					link.className = 'heading-permalink';
 					link.href = '#' + h.id;
@@ -517,80 +432,81 @@ const breadcrumbSchema = {
 					h.appendChild(link);
 				});
 
-				/* ── IntersectionObserver Scrollspy ── */
-				var activeLink = null;
-
-				function updateActive(id) {
-					tocAnchors.forEach(function (link) {
-						var isActive = link.getAttribute('href') === '#' + id;
-						link.classList.toggle('active', isActive);
-						if (isActive) {
-							activeLink = link;
-						}
+				/* ── Table of Contents ── */
+				var tocList = document.getElementById('toc-list');
+				if (tocList && headings.length > 0) {
+					var tocItems = [];
+					headings.forEach(function (h) {
+						var tag = h.tagName.toLowerCase();
+						var item = document.createElement('li');
+						item.className = 'toc-item toc-' + tag;
+						var a = document.createElement('a');
+						a.href = '#' + h.id;
+						a.textContent = h.textContent.replace(/#$/, '').trim();
+						item.appendChild(a);
+						tocItems.push({ el: item, tag: tag, id: h.id, anchor: a });
+						tocList.appendChild(item);
 					});
-				}
 
-				if (headingElements.length > 0 && typeof IntersectionObserver !== 'undefined') {
+					/* ── IntersectionObserver Scrollspy ── */
+					var activeLink = null;
+					var headingMap = {};
+					headings.forEach(function (h) {
+						headingMap[h.id] = h;
+					});
+
 					var observer = new IntersectionObserver(function (entries) {
 						var visible = entries.filter(function (e) { return e.isIntersecting; });
 						if (visible.length === 0) return;
-
 						var top = visible.reduce(function (best, e) {
 							return e.boundingClientRect.top < best.boundingClientRect.top ? e : best;
 						});
-
-						updateActive(top.target.id);
+						var id = top.target.id;
+						for (var i = 0; i < tocItems.length; i++) {
+							if (tocItems[i].id === id) {
+								if (activeLink) activeLink.classList.remove('active');
+								tocItems[i].anchor.classList.add('active');
+								activeLink = tocItems[i].anchor;
+								break;
+							}
+						}
 					}, {
 						rootMargin: '-80px 0px -60% 0px',
 						threshold: 0,
 					});
 
-					headingElements.forEach(function (h) { observer.observe(h); });
+					headings.forEach(function (h) { observer.observe(h); });
 				}
 
 				/* ── Sidebar Collapse Toggle ── */
+				var sidebar = document.getElementById('sidebar');
+				var toggleBtn = document.getElementById('tocToggle');
 				if (sidebar && toggleBtn) {
-					var saved = localStorage.getItem('toc-sidebar-collapsed');
-					if (saved === 'true') {
-						sidebar.classList.add('collapsed');
-					}
-
 					toggleBtn.addEventListener('click', function () {
 						sidebar.classList.toggle('collapsed');
-						var collapsed = sidebar.classList.contains('collapsed');
-						localStorage.setItem('toc-sidebar-collapsed', collapsed ? 'true' : 'false');
 					});
 				}
 
-				/* ── Smooth scroll on TOC link click ── */
-				tocAnchors.forEach(function (link) {
-					link.addEventListener('click', function (e) {
-						e.preventDefault();
-						var id = link.getAttribute('href').slice(1);
-						var target = document.getElementById(id);
-						if (target) {
-							var navHeight = 80;
-							var pos = target.getBoundingClientRect().top + window.pageYOffset - navHeight;
-							window.scrollTo({ top: pos, behavior: 'smooth' });
-							history.replaceState(null, '', '#' + id);
-							updateActive(id);
-						}
-					});
-				});
-
-				/* ── Handle initial hash on page load ── */
-				if (window.location.hash) {
-					var hashId = window.location.hash.slice(1);
-					var hashTarget = document.getElementById(hashId);
-					if (hashTarget) {
-						setTimeout(function () {
-							var navHeight = 80;
-							var pos = hashTarget.getBoundingClientRect().top + window.pageYOffset - navHeight;
-							window.scrollTo({ top: pos, behavior: 'instant' });
-							updateActive(hashId);
-						}, 100);
-					}
-				}
+				/* ── Copied indicator styling ── */
+				var style = document.createElement('style');
+				style.textContent =
+					'.heading-permalink[data-copied="true"]::after {' +
+						'content: "Copied!";' +
+						'position: absolute;' +
+						'top: -1.8em;' +
+						'left: 50%;' +
+						'transform: translateX(-50%);' +
+						'font-size: 0.65em;' +
+						'background: var(--bg);' +
+						'color: var(--accent-light);' +
+						'padding: 0.2em 0.5em;' +
+						'border-radius: 4px;' +
+						'border: 1px solid var(--border);' +
+						'white-space: nowrap;' +
+						'font-family: var(--font-sans);' +
+						'font-weight: 500;' +
+					'}';
+				document.head.appendChild(style);
 			})();
 		</script>
 	</body>

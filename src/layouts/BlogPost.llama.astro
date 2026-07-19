@@ -1,0 +1,614 @@
+---
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import FormattedDate from '../components/FormattedDate.astro';
+import Header from '../components/Header.astro';
+
+interface Props {
+	post: CollectionEntry<'blog'>;
+	readingTime: number;
+}
+
+const { post, readingTime } = Astro.props;
+const { title, description, pubDate, updatedDate, heroImage, tags, author, keywords } = post.data;
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+
+const articleSchema = {
+	'@context': 'https://schema.org',
+	'@type': 'Article',
+	headline: title,
+	description,
+	author: { '@type': 'Person', name: author },
+	publisher: {
+		'@type': 'Organization', name: 'Hermes Agent Tutorials',
+		logo: { '@type': 'ImageObject', url: new URL('/favicon.svg', Astro.site).toString() },
+	},
+	datePublished: pubDate.toISOString(),
+	...(updatedDate && { dateModified: updatedDate.toISOString() }),
+	mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalURL.toString() },
+	...(tags.length > 0 && { keywords: tags.join(', ') }),
+	wordCount: readingTime * 200,
+	timeRequired: `PT${readingTime}M`,
+};
+
+const breadcrumbSchema = {
+	'@context': 'https://schema.org',
+	'@type': 'BreadcrumbList',
+	itemListElement: [
+		{ '@type': 'ListItem', position: 1, name: 'Tutorials', item: new URL('/blog', Astro.site).toString() },
+		{ '@type': 'ListItem', position: 2, name: title, item: canonicalURL.toString() },
+	],
+};
+---
+
+<html lang="en">
+	<head>
+		<BaseHead
+			title={`${title} — Hermes Agent Tutorials`}
+			description={description}
+			image={heroImage}
+			type="article"
+			pubDate={pubDate}
+			updatedDate={updatedDate}
+			tags={tags}
+			keywords={keywords}
+		/>
+		<script type="application/ld+json" set:html={JSON.stringify(articleSchema)} />
+		<script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+		<style>
+			/* ════════════════════════════════════════════
+			   BlogPost.llama — Widescreen + TOC Sidebar
+			   ════════════════════════════════════════════ */
+
+			/* ── Escaped breadcrumbs (match baseline) ── */
+			.breadcrumbs {
+				max-width: min(1800px, 90vw);
+				margin: 0 auto;
+				padding: 0.6em 2em 0;
+				font-size: 0.80em;
+				color: var(--text-muted);
+			}
+			.breadcrumbs a { color: var(--text-muted); }
+			.breadcrumbs a:hover { color: var(--accent-light); }
+			.breadcrumbs .sep { margin: 0 0.4em; color: var(--border-light); }
+
+			/* ── Flex Layout: sidebar + main ── */
+			.blog-layout {
+				display: flex;
+				max-width: min(1800px, 90vw);
+				margin: 0 auto;
+				padding: 0 2em;
+				gap: 0;
+			}
+
+			/* ── TOC Sidebar ── */
+			.toc-sidebar {
+				width: 240px;
+				flex-shrink: 0;
+				padding: 2em 0;
+				overflow: hidden;
+			}
+			.toc-sticky {
+				position: sticky;
+				top: var(--nav-height);
+				max-height: calc(100vh - var(--nav-height) - 2em);
+				overflow-y: auto;
+				overflow-x: hidden;
+				scrollbar-width: thin;
+				scrollbar-color: var(--border) transparent;
+			}
+			.toc-sticky::-webkit-scrollbar { width: 4px; }
+			.toc-sticky::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+			/* ── TOC Header ── */
+			.toc-header {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				margin-bottom: 0.75em;
+				padding-right: 0.5em;
+			}
+			.toc-header-text {
+				font-size: 0.75em;
+				font-weight: 600;
+				text-transform: uppercase;
+				letter-spacing: 0.08em;
+				color: var(--text-muted);
+			}
+			.toc-toggle {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				width: 22px;
+				height: 22px;
+				padding: 0;
+				border: none;
+				border-radius: var(--radius-sm);
+				background: transparent;
+				color: var(--text-muted);
+				cursor: pointer;
+				transition: color 0.15s, background 0.15s;
+				flex-shrink: 0;
+			}
+			.toc-toggle:hover {
+				color: var(--text-primary);
+				background: var(--bg-tertiary);
+			}
+			.toc-toggle svg {
+				width: 14px;
+				height: 14px;
+				transition: transform 0.2s ease;
+			}
+			/* Chevron points up when expanded, down when collapsed */
+			.toc-sidebar.collapsed .toc-toggle svg {
+				transform: rotate(180deg);
+			}
+
+			/* ── TOC Nav ── */
+			.toc-nav {
+				overflow: hidden;
+				transition: max-height 0.25s ease;
+				max-height: 100vh;
+			}
+			.toc-sidebar.collapsed .toc-nav {
+				max-height: 0;
+			}
+			.toc-list {
+				list-style: none;
+				margin: 0;
+				padding: 0;
+				border-left: 1px solid var(--border);
+			}
+			.toc-link {
+				display: block;
+				padding: 0.3em 0 0.3em 0.85em;
+				font-size: 0.80em;
+				line-height: 1.45;
+				color: var(--text-muted);
+				text-decoration: none;
+				border-left: 2px solid transparent;
+				margin-left: -1px;
+				transition: color 0.15s, border-color 0.15s;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+			.toc-link:hover {
+				color: var(--text-secondary);
+			}
+			.toc-link.active {
+				color: var(--accent-light);
+				border-left-color: var(--accent);
+			}
+			/* h3 indentation */
+			.toc-item-h3 .toc-link {
+				padding-left: 1.7em;
+			}
+
+			/* ── Collapse to 40px ── */
+			.toc-sidebar.collapsed .toc-sticky {
+				overflow: hidden;
+			}
+			.toc-sidebar.collapsed {
+				height: 40px;
+				overflow: hidden;
+			}
+
+			/* ── Main content ── */
+			.blog-layout main {
+				flex: 1;
+				min-width: 0;
+				width: 100% !important;
+				padding: 1.25em 0 3em 3em;
+			}
+
+			/* ── Hero Image (full-bleed within article, not constrained by prose) ── */
+			.hero-image {
+				width: 100%;
+				margin-bottom: 1.25em;
+			}
+			.hero-image img {
+				display: block;
+				width: 100%;
+				height: auto;
+				aspect-ratio: 16 / 9;
+				object-fit: cover;
+				border-radius: var(--radius-lg);
+				box-shadow: var(--shadow-md);
+			}
+
+			/* ── Constrained body: title, stats, prose at readable line-length ── */
+			.article-body {
+				max-width: 1000px;
+				margin: 0 auto;
+			}
+
+			/* ── Post Header ── */
+			.post-header {
+				margin-bottom: 1.25em;
+			}
+			.post-header h1 {
+				font-size: 2.8rem;
+				font-weight: 700;
+				letter-spacing: -0.03em;
+				line-height: 1.1;
+				margin: 0 0 0.3em;
+			}
+
+			/* ── One-line stats bar: author · date · reading time · tags ── */
+			.post-stats {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				gap: 0.3em 0.6em;
+				color: var(--text-muted);
+				font-size: 0.84em;
+				margin-bottom: 0.6em;
+			}
+			.post-stats .sep { opacity: 0.3; }
+			.post-stats .tag-link {
+				display: inline-block;
+				padding: 0.06em 0.45em;
+				font-size: 0.80em;
+				color: var(--accent-light);
+				border: 1px solid var(--border-light);
+				border-radius: var(--radius-sm);
+				text-decoration: none;
+				transition: border-color 0.15s, color 0.15s;
+			}
+			.post-stats .tag-link:hover {
+				border-color: var(--accent);
+				color: var(--accent-light);
+			}
+			.last-updated { font-style: italic; }
+
+			/* ── Description ── */
+			.post-desc {
+				font-size: 1.05em;
+				color: var(--text-secondary);
+				line-height: 1.6;
+				margin: 0 0 1em;
+			}
+
+			/* ── Prose ── */
+			.prose {
+				color: var(--text-primary);
+			}
+			.prose h2 {
+				margin-top: 2em;
+				position: relative;
+			}
+			.prose h3 {
+				margin-top: 1.2em;
+				position: relative;
+			}
+			.prose p { margin-bottom: 1.2em; line-height: 1.8; }
+
+			/* ── Heading Permalink ── */
+			.heading-permalink {
+				position: absolute;
+				left: -1.2em;
+				top: 50%;
+				transform: translateY(-50%);
+				width: 1em;
+				height: 1em;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				color: var(--text-muted);
+				opacity: 0;
+				transition: opacity 0.15s, color 0.15s;
+				text-decoration: none;
+				font-size: 0.7em;
+				font-weight: 400;
+			}
+			.prose h2:hover .heading-permalink,
+			.prose h3:hover .heading-permalink {
+				opacity: 1;
+			}
+			.heading-permalink:hover {
+				color: var(--accent-light) !important;
+				opacity: 1 !important;
+			}
+			.heading-permalink svg {
+				width: 16px;
+				height: 16px;
+			}
+
+			/* ── Copied! toast ── */
+			.link-copied-toast {
+				position: fixed;
+				bottom: 2em;
+				left: 50%;
+				transform: translateX(-50%);
+				background: var(--bg-tertiary);
+				color: var(--text-primary);
+				border: 1px solid var(--border);
+				border-radius: var(--radius-md);
+				padding: 0.5em 1em;
+				font-size: 0.82em;
+				pointer-events: none;
+				opacity: 0;
+				transition: opacity 0.2s ease;
+				z-index: 200;
+			}
+			.link-copied-toast.show {
+				opacity: 1;
+			}
+
+			/* ── TLDR Callout (compact aside) ── */
+			.tldr-block {
+				background: var(--bg-secondary);
+				border: 1px solid var(--border);
+				border-left: 3px solid var(--accent);
+				border-radius: var(--radius-md);
+				padding: 0.85em 1.15em;
+				margin: 1em 0;
+				font-size: 0.92em;
+				color: var(--text-secondary);
+			}
+			.tldr-block strong:first-child {
+				color: var(--accent-light);
+				text-transform: uppercase;
+				font-size: 0.70em;
+				letter-spacing: 0.06em;
+			}
+
+			/* ── Mobile / Narrow viewport: hide sidebar, single column ── */
+			@media (max-width: 1439px) {
+				.toc-sidebar { display: none; }
+				.blog-layout {
+					padding: 0 1em;
+				}
+				.blog-layout main {
+					padding: 1.25em 0 3em;
+				}
+				.breadcrumbs { padding: 0.6em 1em 0; }
+			}
+
+			@media (max-width: 720px) {
+				.blog-layout main { padding: 0.75em 0 2em; }
+				.breadcrumbs { padding: 0.4em 1em 0; }
+				.post-header h1 { font-size: 2rem; }
+				.post-stats { font-size: 0.78em; gap: 0.25em 0.4em; }
+			}
+		</style>
+	</head>
+	<body>
+		<Header />
+		<nav class="breadcrumbs" aria-label="Breadcrumb">
+			<a href="/blog">Tutorials</a><span class="sep">›</span>
+			<span style="color: var(--text-secondary)">{title}</span>
+		</nav>
+		<div class="blog-layout">
+			<aside class="toc-sidebar" data-toc-sidebar>
+				<div class="toc-sticky">
+					<div class="toc-header">
+						<span class="toc-header-text">On This Page</span>
+						<button class="toc-toggle" data-toc-toggle aria-label="Toggle table of contents">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<polyline points="18 15 12 9 6 15"></polyline>
+							</svg>
+						</button>
+					</div>
+					<nav class="toc-nav" data-toc-nav aria-label="Table of contents">
+						<ul class="toc-list" data-toc-list></ul>
+					</nav>
+				</div>
+			</aside>
+			<main>
+				<article itemscope itemtype="https://schema.org/Article">
+					<meta itemprop="author" content={author} />
+					<meta itemprop="datePublished" content={pubDate.toISOString()} />
+					{updatedDate && <meta itemprop="dateModified" content={updatedDate.toISOString()} />}
+
+					{heroImage && (
+						<div class="hero-image">
+							<Image width={1020} height={510} src={heroImage} alt={`Hero image for ${title}`} itemprop="image" />
+						</div>
+					)}
+
+					<div class="article-body">
+						<div class="post-header">
+							<h1 itemprop="headline">{title}</h1>
+
+							<div class="post-stats">
+								<span>By {author}</span><span class="sep">·</span>
+								<FormattedDate date={pubDate} /><span class="sep">·</span>
+								<span>{readingTime} min read</span>
+								{updatedDate && <><span class="sep">·</span><span class="last-updated">Updated <FormattedDate date={updatedDate} /></span></>}
+								{tags.length > 0 && <><span class="sep">·</span>{tags.map(tag => <a class="tag-link" href={`/tags/${tag}`}>{tag}</a>)}</>}
+							</div>
+
+							<p class="post-desc" itemprop="description">{description}</p>
+						</div>
+
+						<div class="prose">
+							<slot />
+						</div>
+					</div>
+				</article>
+			</main>
+		</div>
+		<Footer />
+
+		<div class="link-copied-toast" data-link-copied-toast>Copied!</div>
+
+		<script is:inline>
+(function() {
+	'use strict';
+
+	// ── TOC Generation ──
+	const prose = document.querySelector('.prose');
+	const tocList = document.querySelector('[data-toc-list]');
+	const tocSidebar = document.querySelector('[data-toc-sidebar]');
+	const tocToggle = document.querySelector('[data-toc-toggle]');
+	const tocNav = document.querySelector('[data-toc-nav]');
+
+	if (prose && tocList) {
+		const headings = prose.querySelectorAll('h2, h3');
+		const items = [];
+		let idCounter = 0;
+
+		headings.forEach(function(h) {
+			// Ensure heading has an id
+			if (!h.id) {
+				h.id = 'heading-' + (++idCounter) + '-' + Math.random().toString(36).slice(2, 6);
+			}
+
+			const tag = h.tagName.toLowerCase();
+			const text = h.textContent.trim();
+
+			// Add permalink
+			var permalink = document.createElement('a');
+			permalink.className = 'heading-permalink';
+			permalink.setAttribute('href', '#' + h.id);
+			permalink.setAttribute('aria-label', 'Copy link to "' + text + '"');
+			permalink.setAttribute('data-permalink', '');
+			permalink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+			h.insertBefore(permalink, h.firstChild);
+
+			items.push({ id: h.id, tag: tag === 'h3' ? 'h3' : 'h2', text: text });
+		});
+
+		if (items.length === 0) {
+			tocSidebar.style.display = 'none';
+		} else {
+			// Render TOC items
+			var ul = tocList;
+			items.forEach(function(item) {
+				var li = document.createElement('li');
+				li.className = 'toc-item toc-item-' + item.tag;
+
+				var a = document.createElement('a');
+				a.className = 'toc-link';
+				a.setAttribute('href', '#' + item.id);
+				a.setAttribute('data-toc-target', item.id);
+				a.textContent = item.text;
+
+				li.appendChild(a);
+				ul.appendChild(li);
+			});
+		}
+	}
+
+	// ── Scrollspy via IntersectionObserver ──
+	var tocLinks = document.querySelectorAll('[data-toc-target]');
+	var headingElements = [];
+
+	tocLinks.forEach(function(link) {
+		var id = link.getAttribute('data-toc-target');
+		var el = document.getElementById(id);
+		if (el) headingElements.push(el);
+	});
+
+	if (headingElements.length > 0 && typeof IntersectionObserver !== 'undefined') {
+		var observer = new IntersectionObserver(function(entries) {
+			// Find the first visible heading
+			var visible = [];
+			entries.forEach(function(entry) {
+				if (entry.isIntersecting) {
+					visible.push(entry.target);
+				}
+			});
+			if (visible.length === 0) return;
+
+			// Pick the topmost visible heading
+			var top = visible.reduce(function(a, b) {
+				return a.getBoundingClientRect().top < b.getBoundingClientRect().top ? a : b;
+			});
+
+			// Remove active from all, add to matching link
+			tocLinks.forEach(function(l) { l.classList.remove('active'); });
+			var activeLink = document.querySelector('[data-toc-target="' + top.id + '"]');
+			if (activeLink) {
+				activeLink.classList.add('active');
+				// Scroll sidebar to active item
+				var sidebarNav = document.querySelector('.toc-sticky');
+				if (sidebarNav) {
+					var linkRect = activeLink.getBoundingClientRect();
+					var navRect = sidebarNav.getBoundingClientRect();
+					if (linkRect.bottom > navRect.bottom || linkRect.top < navRect.top) {
+						activeLink.scrollIntoView({ block: 'center', behavior: 'smooth' });
+					}
+				}
+			}
+		}, {
+			rootMargin: '-64px 0px -60% 0px',
+			threshold: 0
+		});
+
+		headingElements.forEach(function(el) { observer.observe(el); });
+	}
+
+	// ── TOC Collapse Toggle ──
+	if (tocToggle && tocSidebar) {
+		// Check saved state
+		var saved = localStorage.getItem('toc-sidebar-collapsed');
+		if (saved === 'true') {
+			tocSidebar.classList.add('collapsed');
+		}
+
+		tocToggle.addEventListener('click', function() {
+			tocSidebar.classList.toggle('collapsed');
+			var isCollapsed = tocSidebar.classList.contains('collapsed');
+			localStorage.setItem('toc-sidebar-collapsed', isCollapsed ? 'true' : 'false');
+		});
+	}
+
+	// ── Permalink click → copy URL ──
+	var toast = document.querySelector('[data-link-copied-toast]');
+	var toastTimer = null;
+
+	document.addEventListener('click', function(e) {
+		var permalink = e.target.closest('[data-permalink]');
+		if (!permalink) return;
+		e.preventDefault();
+
+		var url = window.location.origin + window.location.pathname + permalink.getAttribute('href');
+		if (typeof navigator.clipboard !== 'undefined' && navigator.clipboard.writeText) {
+			navigator.clipboard.writeText(url).catch(function() {
+				// Fallback
+				fallbackCopy(url);
+			});
+		} else {
+			fallbackCopy(url);
+		}
+
+		if (toast) {
+			toast.classList.add('show');
+			clearTimeout(toastTimer);
+			toastTimer = setTimeout(function() { toast.classList.remove('show'); }, 2000);
+		}
+	});
+
+	function fallbackCopy(text) {
+		var ta = document.createElement('textarea');
+		ta.value = text;
+		ta.style.position = 'fixed';
+		ta.style.opacity = '0';
+		document.body.appendChild(ta);
+		ta.select();
+		try { document.execCommand('copy'); } catch(e) {}
+		document.body.removeChild(ta);
+	}
+
+	// ── Smooth scroll for TOC links (override Astro's default scroll) ──
+	document.addEventListener('click', function(e) {
+		var link = e.target.closest('.toc-link');
+		if (!link) return;
+		e.preventDefault();
+		var target = document.getElementById(link.getAttribute('data-toc-target'));
+		if (target) {
+			var top = target.getBoundingClientRect().top + window.pageYOffset - 80;
+			window.scrollTo({ top: top, behavior: 'smooth' });
+			// Update URL hash without jump
+			history.replaceState(null, '', '#' + target.id);
+		}
+	});
+})();
+		</script>
+	</body>
+</html>
