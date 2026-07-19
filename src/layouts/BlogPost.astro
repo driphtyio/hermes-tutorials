@@ -48,13 +48,13 @@ const articleSchema = {
 			keywords={keywords}
 		/>
 		<script type="application/ld+json" set:html={JSON.stringify(articleSchema)} />
-		<style>
+		<style is:global>
 			/* ════════════════════════════════════════════
-			   BlogPost.stepfun — Widescreen + Space Optimized
+			   BlogPost.astro — Widescreen + Space Optimized
 			   ════════════════════════════════════════════ */
 
 			/* ── Escape the 860px global content-width ── */
-			main {
+			.blog-post-main {
 				width: 100% !important;
 				max-width: min(1800px, 90vw);
 				margin: 0 auto;
@@ -159,64 +159,397 @@ const articleSchema = {
 			     Each step expands main to ~90% of viewport width.
 			     At 1920px: 90vw = 1728px, capped by min(1800px, 90vw) = 1728px (~90%). */
 			@media (min-width: 1200px) {
-				main { max-width: min(1080px, 90vw); }
+				.blog-post-main { max-width: min(1080px, 90vw); }
 			}
 			@media (min-width: 1440px) {
-				main { max-width: min(1296px, 90vw); }
+				.blog-post-main { max-width: min(1296px, 90vw); }
 			}
 			@media (min-width: 1600px) {
-				main { max-width: min(1440px, 90vw); }
+				.blog-post-main { max-width: min(1440px, 90vw); }
 			}
 			@media (min-width: 1800px) {
-				main { max-width: min(1620px, 90vw); }
+				.blog-post-main { max-width: min(1620px, 90vw); }
 			}
 			@media (min-width: 2000px) {
-				main { max-width: min(1800px, 90vw); }
+				.blog-post-main { max-width: min(1800px, 90vw); }
 			}
 
 			/* ── Mobile ── */
 			@media (max-width: 720px) {
-				main { padding: 0.75em 1em 2em; }
+				.blog-post-main { padding: 0.75em 1em 2em; }
 				.post-header h1 { font-size: 2rem; }
 				.post-stats { font-size: 0.78em; gap: 0.25em 0.4em; }
+			}
+
+			/* ════════════════════════════════════════════
+			   Article Layout — Sidebar + Main Flex
+			   ════════════════════════════════════════════ */
+
+			.article-layout {
+				display: flex;
+				width: 100%;
+				position: relative;
+			}
+
+			/* ── Sidebar ── */
+			.toc-sidebar {
+				width: 240px;
+				min-width: 240px;
+				flex-shrink: 0;
+				position: sticky;
+				top: var(--nav-height);
+				align-self: flex-start;
+				max-height: calc(100vh - var(--nav-height));
+				overflow-y: auto;
+				overflow-x: hidden;
+				border-right: 1px solid var(--border);
+				padding: 2em 1.25em 2em 0;
+				transition: width 250ms ease, min-width 250ms ease, padding 250ms ease;
+				scrollbar-width: thin;
+				scrollbar-color: var(--border) transparent;
+			}
+
+			.toc-sidebar.collapsed {
+				width: 40px;
+				min-width: 40px;
+				padding: 2em 0;
+				overflow: hidden;
+			}
+
+			.toc-sidebar.collapsed .toc-inner > *:not(.toc-header-wrap) {
+				opacity: 0;
+				pointer-events: none;
+			}
+
+			/* ── Sidebar Header Row ── */
+			.toc-header-wrap {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				margin-bottom: 1.25em;
+				white-space: nowrap;
+				min-height: 1.8em;
+			}
+
+			.toc-header-label {
+				font-size: 0.72em;
+				font-weight: 700;
+				text-transform: uppercase;
+				letter-spacing: 0.08em;
+				color: var(--text-muted);
+				transition: opacity 200ms ease;
+			}
+
+			.toc-sidebar.collapsed .toc-header-label {
+				opacity: 0;
+			}
+
+			.toc-toggle {
+				background: none;
+				border: none;
+				color: var(--text-muted);
+				cursor: pointer;
+				padding: 0.25em;
+				font-size: 1em;
+				line-height: 1;
+				border-radius: var(--radius-sm);
+				transition: color 0.15s ease, background 0.15s ease;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				flex-shrink: 0;
+				width: 28px;
+				height: 28px;
+			}
+
+			.toc-toggle:hover {
+				color: var(--accent-light);
+				background: var(--bg-tertiary);
+			}
+
+			.toc-toggle .toggle-icon {
+				display: inline-block;
+				font-size: 1.1em;
+				transition: transform 250ms ease;
+				line-height: 1;
+			}
+
+			.toc-sidebar.collapsed .toc-toggle .toggle-icon {
+				transform: rotate(180deg);
+			}
+
+			/* ── TOC Navigation ── */
+			.toc-nav {
+				font-size: 0.82em;
+			}
+
+			.toc-nav ul {
+				list-style: none;
+				padding: 0;
+				margin: 0;
+			}
+
+			.toc-nav li {
+				margin: 0;
+			}
+
+			.toc-nav a {
+				display: block;
+				padding: 0.3em 0.8em;
+				color: var(--text-secondary);
+				text-decoration: none;
+				border-left: 2px solid transparent;
+				border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+				transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+				font-size: 1em;
+				line-height: 1.45;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+
+			.toc-nav a:hover {
+				color: var(--text-primary);
+				background: var(--bg-tertiary);
+			}
+
+			.toc-nav a.active {
+				color: var(--accent-light);
+				border-left-color: var(--accent);
+				background: rgba(108, 92, 231, 0.06);
+			}
+
+			.toc-nav .toc-link-h3 {
+				padding-left: 1.8em;
+			}
+
+			/* ── Main content when inside article layout ── */
+			.article-layout .blog-post-main {
+				flex: 1;
+				min-width: 0;
+				max-width: none;
+				width: auto;
+				margin: 0;
+				padding: 1.25em 2em 3em;
+			}
+
+			/* ── Article body scaling in flex context ── */
+			.article-layout .article-body {
+				max-width: 1100px;
+			}
+
+			/* ── Heading Permalink Icons ── */
+			.heading-permalink {
+				display: inline-block;
+				margin-left: 0.3em;
+				opacity: 0;
+				color: var(--text-muted);
+				text-decoration: none;
+				font-size: 0.8em;
+				font-weight: 400;
+				transition: opacity 0.15s ease, color 0.15s ease;
+				user-select: none;
+				position: relative;
+				top: -0.05em;
+			}
+
+			.prose h2:hover .heading-permalink,
+			.prose h3:hover .heading-permalink {
+				opacity: 1;
+			}
+
+			.heading-permalink:hover {
+				color: var(--accent-light) !important;
+			}
+
+			/* ── Responsive: hide sidebar below 1440px ── */
+			@media (max-width: 1439px) {
+				.article-layout {
+					display: block;
+				}
+				.toc-sidebar {
+					display: none;
+				}
+				.article-layout .blog-post-main {
+					max-width: min(1800px, 90vw);
+					margin: 0 auto;
+					width: 100% !important;
+					padding: 1.25em 2em 3em;
+				}
+				.article-layout .article-body {
+					max-width: 1000px;
+				}
+			}
+
+			@media (max-width: 720px) {
+				.article-layout .blog-post-main {
+					padding: 0.75em 1em 2em;
+				}
 			}
 		</style>
 	</head>
 	<body>
 		<Header />
-		<main>
-			<article itemscope itemtype="https://schema.org/Article">
-				<meta itemprop="author" content={author} />
-				<meta itemprop="datePublished" content={pubDate.toISOString()} />
-				{updatedDate && <meta itemprop="dateModified" content={updatedDate.toISOString()} />}
-
-				{heroImage && (
-					<div class="hero-image">
-						<Image width={1020} height={510} src={heroImage} alt={`Hero image for ${title}`} itemprop="image" />
+		<div class="article-layout">
+			<aside class="toc-sidebar" id="toc-sidebar">
+				<div class="toc-inner">
+					<div class="toc-header-wrap">
+						<span class="toc-header-label">On This Page</span>
+						<button class="toc-toggle" id="toc-toggle" aria-label="Toggle sidebar" aria-expanded="true">
+							<span class="toggle-icon">‹</span>
+						</button>
 					</div>
-				)}
+					<nav class="toc-nav" id="toc-nav" aria-label="Table of Contents"></nav>
+				</div>
+			</aside>
+			<main class="blog-post-main">
+				<article itemscope itemtype="https://schema.org/Article">
+					<meta itemprop="author" content={author} />
+					<meta itemprop="datePublished" content={pubDate.toISOString()} />
+					{updatedDate && <meta itemprop="dateModified" content={updatedDate.toISOString()} />}
 
-				<div class="article-body">
-					<div class="post-header">
-						<h1 itemprop="headline">{title}</h1>
+					{heroImage && (
+						<div class="hero-image">
+							<Image width={1020} height={510} src={heroImage} alt={`Hero image for ${title}`} itemprop="image" />
+						</div>
+					)}
 
-						<div class="post-stats">
-							<span>By {author}</span><span class="sep">·</span>
-							<FormattedDate date={pubDate} /><span class="sep">·</span>
-							<span>{readingTime} min read</span>
-							{updatedDate && <><span class="sep">·</span><span class="last-updated">Updated <FormattedDate date={updatedDate} /></span></>}
-							{tags.length > 0 && <><span class="sep">·</span>{tags.map(tag => <a class="tag-link" href={`/tags/${tag}`}>{tag}</a>)}</>}
+					<div class="article-body">
+						<div class="post-header">
+							<h1 itemprop="headline">{title}</h1>
+
+							<div class="post-stats">
+								<span>By {author}</span><span class="sep">·</span>
+								<FormattedDate date={pubDate} /><span class="sep">·</span>
+								<span>{readingTime} min read</span>
+								{updatedDate && <><span class="sep">·</span><span class="last-updated">Updated <FormattedDate date={updatedDate} /></span></>}
+								{tags.length > 0 && <><span class="sep">·</span>{tags.map(tag => <a class="tag-link" href={`/tags/${tag}`}>{tag}</a>)}</>}
+							</div>
+
+							<p class="post-desc" itemprop="description">{description}</p>
 						</div>
 
-						<p class="post-desc" itemprop="description">{description}</p>
+						<div class="prose">
+							<slot />
+						</div>
 					</div>
-
-					<div class="prose">
-						<slot />
-					</div>
-				</div>
-			</article>
-		</main>
+				</article>
+			</main>
+		</div>
 		<Footer />
+
+		<script>
+			(function() {
+				'use strict';
+
+				var prose = document.querySelector('.prose');
+				if (!prose) return;
+
+				var headings = prose.querySelectorAll('h2, h3');
+				if (!headings.length) return;
+
+				var sidebar = document.getElementById('toc-sidebar');
+				var tocNav = document.getElementById('toc-nav');
+				var toggleBtn = document.getElementById('toc-toggle');
+
+				/* ── 1. Generate TOC ── */
+				var ul = document.createElement('ul');
+				ul.className = 'toc-list';
+
+				headings.forEach(function(h, idx) {
+					/* Ensure heading has an id */
+					if (!h.id) {
+						h.id = 'heading-' + idx;
+					}
+
+					var li = document.createElement('li');
+					var a = document.createElement('a');
+					a.href = '#' + h.id;
+					a.textContent = h.textContent;
+					if (h.tagName === 'H3') {
+						a.className = 'toc-link-h3';
+					}
+					a.addEventListener('click', function(e) {
+						e.preventDefault();
+						var target = document.getElementById(h.id);
+						if (target) {
+							target.scrollIntoView({ behavior: 'smooth' });
+							history.pushState(null, '', '#' + h.id);
+						}
+					});
+					li.appendChild(a);
+					ul.appendChild(li);
+				});
+
+				tocNav.appendChild(ul);
+
+				/* ── 2. Scrollspy with IntersectionObserver ── */
+				var activeLink = null;
+
+				var observer = new IntersectionObserver(function(entries) {
+					entries.forEach(function(entry) {
+						if (entry.isIntersecting) {
+							var id = entry.target.id;
+							var link = tocNav.querySelector('a[href="#' + id.replace(/"/g, '\\"') + '"]');
+							if (link) {
+								if (activeLink) activeLink.classList.remove('active');
+								link.classList.add('active');
+								activeLink = link;
+							}
+						}
+					});
+				}, {
+					rootMargin: '-64px 0px -75% 0px',
+					threshold: 0
+				});
+
+				headings.forEach(function(h) {
+					observer.observe(h);
+				});
+
+				/* ── 3. Sidebar collapse toggle ── */
+				if (sidebar && toggleBtn) {
+					var icon = toggleBtn.querySelector('.toggle-icon');
+
+					toggleBtn.addEventListener('click', function() {
+						var isCollapsed = sidebar.classList.toggle('collapsed');
+						toggleBtn.setAttribute('aria-expanded', String(!isCollapsed));
+						if (icon) {
+							icon.textContent = isCollapsed ? '›' : '‹';
+						}
+					});
+				}
+
+				/* ── 4. Heading permalink icons ── */
+				headings.forEach(function(h) {
+					var link = document.createElement('a');
+					link.className = 'heading-permalink';
+					link.href = '#' + h.id;
+					link.setAttribute('aria-label', 'Copy link to heading');
+					link.textContent = '#';
+					link.addEventListener('click', function(e) {
+						e.preventDefault();
+						e.stopPropagation();
+						var url = window.location.href.split('#')[0] + '#' + h.id;
+						navigator.clipboard.writeText(url).catch(function() {
+							/* Fallback for older browsers */
+							var ta = document.createElement('textarea');
+							ta.value = url;
+							ta.style.position = 'fixed';
+							ta.style.opacity = '0';
+							document.body.appendChild(ta);
+							ta.select();
+							try {
+								document.execCommand('copy');
+							} catch (e) {
+								/* silently fail */
+							}
+							document.body.removeChild(ta);
+						});
+					});
+					h.appendChild(link);
+				});
+			})();
+		</script>
 	</body>
 </html>
