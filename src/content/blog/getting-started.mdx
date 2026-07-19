@@ -6,10 +6,7 @@ tags: ["getting-started", "installation", "hermes-agent", "quickstart"]
 lastVerified: "2026-07-17"
 ---
 
-{/* Breadcrumb */}
-<nav aria-label="Breadcrumb" class="breadcrumb">
-  <a href="/">Home</a> &rsaquo; <a href="/blog">Quick Start Guides</a> &rsaquo; <span>Getting Started</span>
-</nav>
+**Home > Quick Start Guides > Getting Started**
 
 # Getting Started with Hermes Agent — Install, Setup & First Conversation
 
@@ -22,7 +19,6 @@ lastVerified: "2026-07-17"
 Hermes Agent isn't a chatbot wrapper around a single API or a coding copilot tethered to an IDE. It's an **autonomous agent** that gets more capable the longer it runs. It lives wherever you put it — a $5 VPS, a GPU cluster, or serverless infrastructure like Daytona or Modal that costs nearly nothing when idle.
 
 Key capabilities:
-
 - **Closed learning loop** — Creates skills from experience, improves them during use, and builds a deepening model of who you are across sessions
 - **Runs anywhere** — 6 terminal backends (local, Docker, SSH, Daytona, Singularity, Modal)
 - **20+ messaging platforms** — Telegram, Discord, Slack, WhatsApp, Signal, Matrix, Teams, and more
@@ -67,7 +63,6 @@ iex (irm https://hermes-agent.nousresearch.com/install.ps1)
 The installer handles everything automatically — all dependencies (Python 3.11 via uv, Node.js v22, ripgrep, ffmpeg), the repo clone at `~/.hermes/hermes-agent/`, virtual environment creation, and a global `hermes` command symlinked to `~/.local/bin/hermes`. By the end, you can type `hermes` and get a working agent.
 
 After it finishes, reload your shell:
-
 ```bash
 source ~/.bashrc   # or source ~/.zshrc
 ```
@@ -90,10 +85,9 @@ hermes setup --portal
 
 {/* hermes setup --portal flow */}
 That single command does three things:
-
 1. Opens a browser-based OAuth login to [Nous Portal](https://portal.nousresearch.com)
 2. Sets Nous as your LLM provider with a capable default model
-3. Enables the Tool Gateway — web search, image generation, TTS, and a cloud browser — all through one subscription
+3. Enables the Tool Gateway — web search, image generation, TTS, and a cloud browser
 
 No API keys to copy, no `.env` files to edit, no model names to look up. You're authenticated and configured in under 30 seconds.
 
@@ -105,7 +99,7 @@ If you already have an API key for another provider — or you want to use a loc
 hermes model
 ```
 
-This walks you through an interactive menu of all supported providers. Some popular choices:
+This walks you through an interactive menu of all supported providers.
 
 | Provider | What It Is | Setup |
 |----------|-----------|-------|
@@ -124,12 +118,10 @@ For a complete catalog of all supported providers with env vars and setup detail
 ### How Settings Are Stored
 
 Hermes separates secrets from normal config automatically:
-
 - **Secrets and tokens** → `~/.hermes/.env`
 - **Non-secret settings** → `~/.hermes/config.yaml`
 
-You rarely need to touch these files directly — the CLI handles it:
-
+The CLI handles it:
 ```bash
 hermes config set model anthropic/claude-opus-4.6
 hermes config set terminal.backend docker
@@ -165,8 +157,6 @@ Summarize what Hermes Agent is and what tools I have available.
 - It can use a tool if needed (terminal, file read, web search)
 - The conversation continues naturally for multiple turns
 
-If all of the above works, you've cleared the hardest part.
-
 ### Slash Commands
 
 Type `/` to see an autocomplete dropdown of all in-session commands:
@@ -196,7 +186,7 @@ This should bring you right back to your last conversation. If it doesn't, check
 
 ## 4. Next Steps & Key Features
 
-Once your base chat is working, layer on more capabilities in this order:
+Once your base chat is working, layer on more capabilities in this order.
 
 ### Connect a Messaging Platform
 
@@ -246,7 +236,6 @@ hermes config set terminal.backend ssh       # Remote server
 ## Recovery Toolkit
 
 When something feels off, run through this sequence:
-
 1. `hermes doctor` — diagnostic check
 2. `hermes model` — verify provider and auth
 3. `hermes setup` — re-run the setup wizard
@@ -254,7 +243,7 @@ When something feels off, run through this sequence:
 5. `hermes --continue` — resume last session
 6. `hermes gateway status` — verify messaging gateway
 
-That order gets you from "broken vibes" back to a known state fast. See the [Troubleshooting guide](/blog/troubleshooting) for deep dives into specific issues.
+That order gets you from broken vibes back to a known state fast. See the [Troubleshooting guide](/blog/troubleshooting) for deep dives into specific issues.
 
 ---
 

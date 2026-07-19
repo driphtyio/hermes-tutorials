@@ -12,9 +12,9 @@ lastVerified: 2026-07-17
 
 # Gateway Setup
 
-**Breadcrumb:** Home > Quick Start Guides > Gateway Setup
+**Home > Quick Start Guides > Gateway Setup**
 
-The Hermes Agent Tool Gateway connects your Hermes Agent to messaging platforms through a unified interface. Instead of implementing separate integrations for every service, you configure each platform once and allow the gateway to handle message delivery, authentication, routing, and session management.
+The Hermes Agent Tool Gateway connects your Hermes Agent to messaging platforms through a unified interface. Instead of implementing separate integrations for every service, you configure each platform once and let the gateway handle message delivery, authentication, routing, and session management.
 
 Whether you're building an internal assistant, customer support automation, or a multi-agent workflow, the gateway provides a consistent way to expose Hermes Agent across popular messaging ecosystems.
 
@@ -22,34 +22,16 @@ This guide walks through setting up the gateway, connecting Telegram, Discord, a
 
 ## What is the Tool Gateway?
 
-The Tool Gateway is the messaging bridge between Hermes Agent and external communication platforms.
+The Tool Gateway is the messaging bridge between Hermes Agent and external communication platforms. Rather than interacting directly with each platform API, Hermes Agent communicates with the gateway, which handles platform-specific protocols and converts incoming events into a common format.
 
-Rather than interacting directly with each platform API, Hermes Agent communicates with the gateway, which handles platform-specific protocols and converts incoming events into a common format.
+The gateway supports multiple messaging services:
+- Telegram, Discord, Slack, WhatsApp, Signal, Matrix, Microsoft Teams, iMessage
 
-The gateway supports multiple messaging services, including:
-
-- Telegram
-- Discord
-- Slack
-- WhatsApp
-- Signal
-- Matrix
-- Microsoft Teams
-- iMessage
-
-A single gateway instance can connect to multiple platforms at the same time. For example, one Hermes deployment can simultaneously serve:
-
-- A Telegram bot for public users
-- A Discord assistant for developers
-- A Slack bot for internal teams
-- A Matrix room for self-hosted collaboration
-
-Because every connector exposes the same interface to Hermes Agent, workflows remain consistent regardless of where users send messages.
+A single gateway instance can connect to multiple platforms simultaneously. For example, one Hermes deployment can simultaneously serve a Telegram bot for public users, a Discord assistant for developers, and a Slack bot for internal teams. Because every connector exposes the same interface to Hermes Agent, workflows remain consistent regardless of where users send messages.
 
 ## Before You Begin
 
 Ensure you have:
-
 - Hermes Agent installed
 - The `hermes` CLI available in your terminal
 - Network access from the gateway to the messaging platform
@@ -59,7 +41,7 @@ Each platform requires its own authentication token. Store these securely and av
 
 ## Gateway Architecture
 
-A typical deployment looks like this:
+A typical deployment:
 
 ```text
 Users
@@ -80,16 +62,7 @@ Hermes Agent
 Tools & Models
 ```
 
-The gateway manages:
-
-- Authentication
-- Incoming webhook or polling events
-- Message normalization
-- Session management
-- Platform-specific formatting
-- Outgoing message delivery
-
-This architecture keeps messaging integrations separate from your agent logic.
+The gateway manages authentication, incoming webhook or polling events, message normalization, session management, platform-specific formatting, and outgoing message delivery. This architecture keeps messaging integrations separate from your agent logic.
 
 ---
 
@@ -97,54 +70,39 @@ This architecture keeps messaging integrations separate from your agent logic.
 
 Telegram is one of the quickest platforms to configure.
 
-## Step 1: Create a Telegram Bot
+### Step 1: Create a Telegram Bot
 
-Open Telegram and start a conversation with **@BotFather**.
+Open Telegram and start a conversation with **@BotFather**. Create a new bot using the `/newbot` command.
 
-Create a new bot using the `/newbot` command.
-
-BotFather will prompt you for:
-
+BotFather will prompt for:
 1. A display name
 2. A unique username ending in `bot`
 
 After creation, BotFather returns an API token similar to:
-
 ```text
 123456789:AAExampleTokenHere
 ```
 
 Keep this token secure.
 
-## Step 2: Register the Gateway
-
-Add the Telegram connector to Hermes:
+### Step 2: Register the Gateway
 
 ```bash
-hermes gateway add telegram --token &lt;token&gt;
+hermes gateway add telegram --token <token>
 ```
 
-Replace `&lt;token&gt;` with the value provided by BotFather.
+Replace `<token>` with the value from BotFather.
 
 Example:
-
 ```bash
 hermes gateway add telegram --token 123456789:AAExampleTokenHere
 ```
 
 The gateway stores the connector configuration and associates it with your Hermes installation.
 
-## Step 3: Test the Bot
+### Step 3: Test the Bot
 
-Open your bot in Telegram.
-
-Send a simple message such as:
-
-```text
-Hello
-```
-
-Once the gateway is running, Hermes Agent should receive the message and generate a response.
+Open your bot in Telegram and send a simple message. Once the gateway is running, Hermes Agent should receive the message and generate a response.
 
 ---
 
@@ -152,47 +110,33 @@ Once the gateway is running, Hermes Agent should receive the message and generat
 
 Discord integration requires creating an application and bot through the Discord Developer Portal.
 
-## Step 1: Create an Application
+### Step 1: Create an Application
 
-Open the Discord Developer Portal.
+Open the Discord Developer Portal. Create a new application with an appropriate name.
 
-Create a new application.
-
-Give the application an appropriate name.
-
-## Step 2: Create a Bot
+### Step 2: Create a Bot
 
 Within the application:
-
 - Navigate to **Bot**
 - Create a bot user
 - Copy the bot token
 
 Keep the token private.
 
-## Step 3: Invite the Bot
+### Step 3: Invite the Bot
 
-Generate an OAuth invitation URL with the required scopes and permissions.
+Generate an OAuth invitation URL with the required scopes and permissions. Invite the bot to the desired Discord server. Verify the bot appears in the member list before continuing.
 
-Invite the bot to the desired Discord server.
-
-Verify the bot appears in the member list before continuing.
-
-## Step 4: Register the Connector
-
-Configure Hermes:
+### Step 4: Register the Connector
 
 ```bash
-hermes gateway add discord --token &lt;token&gt;
+hermes gateway add discord --token <token>
 ```
 
 Example:
-
 ```bash
 hermes gateway add discord --token YOUR_DISCORD_BOT_TOKEN
 ```
-
-Once registered, the gateway is ready to receive Discord events after it starts.
 
 ---
 
@@ -200,48 +144,34 @@ Once registered, the gateway is ready to receive Discord events after it starts.
 
 Slack uses applications rather than standalone bots.
 
-## Step 1: Create a Slack App
+### Step 1: Create a Slack App
 
-Create a new Slack application within your workspace.
+Create a new Slack application within your workspace. Select the workspace where Hermes Agent will operate.
 
-Select the workspace where Hermes Agent will operate.
+### Step 2: Enable Bot Features
 
-## Step 2: Enable Bot Features
-
-Configure the bot user.
-
-Assign the permissions required by your use case.
+Configure the bot user and assign the required permissions.
 
 Typical capabilities include:
-
 - Reading messages
 - Posting messages
 - Receiving mentions
 - Participating in channels
 
-## Step 3: Install the App
+### Step 3: Install the App
 
-Install the application into the workspace.
+Install the application into the workspace. Slack generates a bot token. Copy the token for the next step.
 
-Slack generates a bot token.
-
-Copy the token for the next step.
-
-## Step 4: Register the Gateway
-
-Add the Slack connector:
+### Step 4: Register the Gateway
 
 ```bash
-hermes gateway add slack --token &lt;token&gt;
+hermes gateway add slack --token <token>
 ```
 
 Example:
-
 ```bash
-hermes gateway add slack --token xoxb-example-token
+hermes gateway add slack --token xoxb-e...oken
 ```
-
-The connector is now available to the gateway.
 
 ---
 
@@ -253,27 +183,15 @@ Once one or more platforms have been configured, start the gateway:
 hermes gateway start
 ```
 
-The gateway loads every configured connector during startup.
+The gateway loads every configured connector during startup. A successful launch includes loading configuration, authenticating platform connectors, establishing connections, and beginning message processing.
 
-A successful launch typically includes:
-
-- Loading configuration
-- Authenticating platform connectors
-- Establishing connections
-- Beginning message processing
-- Waiting for incoming events
-
-If everything is configured correctly, your gateway remains running and continuously forwards messages between users and Hermes Agent.
-
-For production deployments, consider running the gateway under a process supervisor or service manager so it automatically restarts after unexpected failures or system reboots.
+For production deployments, consider running the gateway under a process supervisor so it automatically restarts after unexpected failures or system reboots.
 
 ---
 
 ## Connecting Multiple Platforms
 
 One of the primary advantages of the Tool Gateway is that multiple messaging platforms can be active simultaneously.
-
-For example:
 
 ```text
 Telegram  ─┐
@@ -282,26 +200,13 @@ Slack     ─┤
 Matrix    ─┘
 ```
 
-Users on each platform interact with the same Hermes deployment while maintaining independent conversations.
-
-This enables organizations to serve different communities without duplicating agent infrastructure.
-
-Examples include:
-
-- Employees using Slack
-- Developers using Discord
-- Customers using Telegram
-- Partners using Matrix
-
-All of these can operate concurrently through one gateway.
+Users on each platform interact with the same Hermes deployment while maintaining independent conversations. This enables organizations to serve different communities without duplicating agent infrastructure — employees using Slack, developers using Discord, customers using Telegram, and partners using Matrix can all operate concurrently through one gateway.
 
 ---
 
 ## Platform-Specific Features
 
 Although the gateway provides a common messaging interface, each platform exposes unique capabilities.
-
-Examples include:
 
 | Platform | Example Features |
 |----------|------------------|
@@ -314,40 +219,17 @@ Examples include:
 | Signal | Secure messaging |
 | iMessage | Native Apple messaging support |
 
-Hermes Agent can take advantage of these platform-specific capabilities where supported while still exposing a unified programming model.
-
 If a feature is unavailable on another platform, the gateway gracefully falls back to a compatible message representation whenever possible.
 
 ---
 
 ## Multi-Agent Per Platform
 
-The gateway is not limited to a single agent.
+The gateway is not limited to a single agent. Multiple Hermes Agents can coexist on the same messaging platform — Customer Support Agent, Documentation Assistant, Internal Knowledge Agent, Scheduling Assistant, Deployment Assistant.
 
-Multiple Hermes Agents can coexist on the same messaging platform.
-
-Examples include:
-
-- Customer Support Agent
-- Documentation Assistant
-- Internal Knowledge Agent
-- Scheduling Assistant
-- Deployment Assistant
-
-Depending on your routing configuration, the gateway can direct conversations to different agents based on:
-
-- Channel
-- Server
-- Workspace
-- User
-- Command prefix
-- Mention
-- Conversation context
-
-This allows organizations to separate responsibilities while maintaining a unified messaging infrastructure.
+Depending on your routing configuration, the gateway can direct conversations to different agents based on channel, server, workspace, user, command prefix, mention, or conversation context.
 
 For example:
-
 ```text
 Slack Workspace
 
@@ -370,28 +252,23 @@ The same approach applies to Discord servers, Telegram bots, Matrix rooms, and o
 
 ## Operational Recommendations
 
-As your deployment grows, consider the following operational practices:
-
-- Store tokens in a secure secrets manager rather than directly in shell history.
-- Limit platform permissions to only those required for your application.
-- Monitor gateway logs for authentication failures or rate limits.
-- Rotate credentials periodically according to your organization's security policies.
-- Keep Hermes Agent and gateway components updated together to ensure connector compatibility.
-- Validate new platform integrations in a staging environment before deploying to production.
-
-Following these practices helps maintain reliable messaging integrations while reducing operational risk.
+- Store tokens in a secure secrets manager rather than shell history
+- Limit platform permissions to only those required
+- Monitor gateway logs for authentication failures or rate limits
+- Rotate credentials periodically according to security policies
+- Keep Hermes Agent and gateway components updated together
+- Validate new platform integrations in a staging environment first
 
 ---
 
 ## Troubleshooting
 
 If messages are not reaching Hermes Agent, verify the following:
-
-1. The gateway is running.
-2. The platform token is valid.
-3. The bot or application has been added to the correct workspace, server, or chat.
-4. Network connectivity allows communication with the messaging platform.
-5. The Hermes Agent backend is available and accepting requests.
+1. The gateway is running
+2. The platform token is valid
+3. The bot or application has been added to the correct workspace, server, or chat
+4. Network connectivity allows communication with the messaging platform
+5. The Hermes Agent backend is available and accepting requests
 
 Authentication failures are commonly caused by expired or regenerated tokens. If necessary, create a new token through the platform's developer tools and update the corresponding gateway configuration.
 
@@ -399,10 +276,7 @@ Authentication failures are commonly caused by expired or regenerated tokens. If
 
 ## Next Steps
 
-After successfully configuring the Tool Gateway, you can continue expanding your Hermes deployment.
-
-Recommended companion guides include:
-
+After successfully configuring the Tool Gateway, continue expanding your Hermes deployment with these companion guides:
 - Hermes Agent Installation Guide
 - Configuration Guide
 - Authentication Guide
@@ -413,14 +287,11 @@ Recommended companion guides include:
 - API Reference
 - CLI Reference
 
-These guides cover advanced configuration, deployment strategies, observability, scaling, security, and customization options for production environments.
-
 ---
 
 ## Summary
 
 You have now learned how to:
-
 - Understand the purpose of the Hermes Tool Gateway
 - Connect Telegram using a BotFather token
 - Connect Discord using a Developer Portal bot

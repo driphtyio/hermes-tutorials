@@ -9,34 +9,35 @@ tags: [multi-agent, subagents, hermes-agent, quickstart]
 
 **Home > Quick Start Guides > Multi-Agent Setup**
 
-The Hermes Agent architecture is designed to move beyond the "single-loop" chatbot. By leveraging its multi-agent framework, you can decompose monolithic tasks into smaller, manageable sub-tasks delegated to specialized agents. Whether you are conducting deep market research, performing a full-stack code review, or processing massive datasets, the multi-agent system allows for parallel execution and specialized expertise.
+The Hermes Agent architecture is designed to move beyond the single-loop chatbot. By leveraging its multi-agent framework, you can decompose monolithic tasks into smaller, manageable sub-tasks delegated to specialized agents. Whether you are conducting deep market research, performing a full-stack code review, or processing massive datasets, the multi-agent system allows for parallel execution and specialized expertise.
 
 ## The Subagent System
 
-At the core of Hermes' multi-agent capabilities is the **Subagent System**. Instead of one agent attempting to be a generalist, a "Primary Agent" acts as an orchestrator (the Manager), spawning "Subagents" (the Specialists) to handle specific domains.
+At the core of Hermes' multi-agent capabilities is the **Subagent System**. Instead of one agent attempting to be a generalist, a Primary Agent acts as an orchestrator (the Manager), spawning Subagents (the Specialists) to handle specific domains.
 
 ### Multi-Profile Architecture
 
-Hermes utilizes a profile-based architecture. Each agent—whether primary or subagent—is defined by a profile that includes:
-- **System Prompt:** The specific persona and constraints.
-- **Tool Access:** A curated subset of tools relevant to the task.
-- **Model Configuration:** The specific LLM provider (e.g., GPT-4o, Claude 3.5 Sonnet, Llama 3) and temperature.
+Hermes utilizes a profile-based architecture. Each agent — whether primary or subagent — is defined by a profile that includes:
+- **System Prompt:** The specific persona and constraints
+- **Tool Access:** A curated subset of tools relevant to the task
+- **Model Configuration:** The specific LLM provider (e.g., GPT-4o, Claude 3.5 Sonnet, Llama 3) and temperature
 
-This allows you to combine the strengths of different models. For example, you can use a high-reasoning model (GPT-4o) as the orchestrator and a faster, cheaper model (Groq/Llama 3) for repetitive data extraction sub-tasks.
+This allows you to combine the strengths of different models. For example, use a high-reasoning model (GPT-4o) as the orchestrator and a faster, cheaper model (Groq/Llama 3) for repetitive data extraction sub-tasks.
 
 ---
 
 ## Worktree Mode: Parallelism at Scale
 
-**Worktree Mode** is a specialized execution state where Hermes transforms a linear conversation into a branching tree of independent agents. 
+**Worktree Mode** is a specialized execution state where Hermes transforms a linear conversation into a branching tree of independent agents.
 
-In standard mode, agents operate sequentially. In Worktree Mode, the Primary Agent can spawn multiple subagents simultaneously. Each branch of the tree operates in its own isolated context window, preventing "context pollution" and allowing for true parallel processing.
+In standard mode, agents operate sequentially. In Worktree Mode, the Primary Agent can spawn multiple subagents simultaneously. Each branch of the tree operates in its own isolated context window, preventing context pollution and allowing for true parallel processing.
 
 ### How Worktree Mode Operates
-1. **Root Node:** The Primary Agent analyzes the global goal.
-2. **Branching:** The Primary Agent identifies $N$ independent sub-tasks.
-3. **Execution:** $N$ subagents are initialized concurrently.
-4. **Aggregation:** The Primary Agent collects the outputs from all branches and synthesizes a final response.
+
+1. **Root Node:** The Primary Agent analyzes the global goal
+2. **Branching:** The Primary Agent identifies N independent sub-tasks
+3. **Execution:** N subagents are initialized concurrently
+4. **Aggregation:** The Primary Agent collects outputs from all branches and synthesizes a final response
 
 ---
 
@@ -59,59 +60,57 @@ delegate_task({
 ### Delegation Workflow
 
 #### Define the Specialized Profiles
+
 Before delegating, ensure your `profiles.json` contains the necessary personas. Define a `coder` profile with access to the filesystem and a `reviewer` profile with access to the linting tools.
 
 #### Trigger the Orchestrator
+
 Start your session with the Primary Agent. Provide a complex goal: *"Rewrite the authentication module and ensure it passes all security audits."*
 
 #### Automatic Branching
+
 The Primary Agent invokes `delegate_task` for the `coder` to write the implementation and simultaneously invokes it for the `reviewer` to prepare the test suite.
 
 #### Synthesis
+
 Once the subagents return their results, the Primary Agent merges the code and the audit report into a final delivery.
 
 ---
 
 ## Parallel Workflow Patterns
 
-Depending on your goal, you can implement different multi-agent patterns:
-
 ### 1. The Fan-Out/Fan-In Pattern
+
 Best for **Batch Processing** or **Comparative Research**.
-- **Fan-Out:** One agent creates 10 subagents to summarize 10 different articles.
-- **Fan-In:** One agent collects those 10 summaries and writes a comprehensive meta-analysis.
+- **Fan-Out:** One agent creates 10 subagents to summarize 10 different articles
+- **Fan-In:** One agent collects those 10 summaries and writes a comprehensive meta-analysis
 
 ### 2. The Pipeline Pattern
+
 Best for **Content Production** or **Software Development**.
-- **Agent A (Architect):** Designs the system schema.
-- **Agent B (Developer):** Implements the schema.
-- **Agent C (QA):** Tests the implementation.
-- **Agent D (DevOps):** Deploys the code.
+- **Agent A (Architect):** Designs the system schema
+- **Agent B (Developer):** Implements the schema
+- **Agent C (QA):** Tests the implementation
+- **Agent D (DevOps):** Deploys the code
 
 ### 3. The Adversarial Pattern (Criticism Loop)
+
 Best for **Code Review** or **Fact Checking**.
-- **Generator Agent:** Produces a draft or solution.
-- **Critic Agent:** Searches for flaws, hallucinations, or bugs.
-- **Loop:** The Generator refines the output based on the Critic's feedback until a "quality threshold" is met.
+- **Generator Agent:** Produces a draft or solution
+- **Critic Agent:** Searches for flaws, hallucinations, or bugs
+- **Loop:** The Generator refines the output based on the Critic's feedback until a quality threshold is met
 
 ---
 
 ## Combining Models and Providers
 
-One of the most powerful aspects of the Hermes multi-agent setup is the ability to mix and match providers within a single workflow.
+One of the most powerful aspects of Hermes multi-agent setup is the ability to mix and match providers within a single workflow.
 
-#### reasoning
-**Reasoning Heavy (Orchestrator)**
-Use **Claude 3.5 Sonnet** or **GPT-4o**. These models excel at planning, decomposition, and synthesis. They act as the "Brain" that decides which subagents to spawn.
+**Reasoning Heavy (Orchestrator)** — Use **Claude 3.5 Sonnet** or **GPT-4o**. These models excel at planning, decomposition, and synthesis. They act as the Brain that decides which subagents to spawn.
 
-#### speed
-**Speed/Cost Optimized (Subagents)**
-Use **Llama 3 (via Groq)** or **GPT-4o-mini**. These are ideal for high-volume tasks like data formatting, basic summarization, or regex extraction where millisecond latency is critical.
+**Speed/Cost Optimized (Subagents)** — Use **Llama 3 (via Groq)** or **GPT-4o-mini**. Ideal for high-volume tasks like data formatting, basic summarization, or regex extraction where latency is critical.
 
-#### local
-**Privacy Focused (Local)**
-Use **Mistral** or **Phi-3** via Ollama for subagents handling sensitive internal data that should not leave your local network.
-
+**Privacy Focused (Local)** — Use **Mistral** or **Phi-3** via Ollama for subagents handling sensitive internal data that should not leave your local network.
 
 ---
 
@@ -119,48 +118,49 @@ Use **Mistral** or **Phi-3** via Ollama for subagents handling sensitive interna
 
 When running parallel workflows, visibility is key. Hermes provides a **Subagent Telemetry Dashboard** to monitor active branches.
 
-### Key Monitoring Metrics:
-- **Token Usage per Branch:** Track which subagent is consuming the most resources.
-- **State Status:** `PENDING` $\rightarrow$ `EXECUTING` $\rightarrow$ `AWAITING_REVIEW` $\rightarrow$ `COMPLETED`.
-- **Tool Call Logs:** View the specific tool calls each subagent is making in real-time.
-- **Dependency Graph:** A visual representation of which subagents are waiting for the output of others.
+### Key Monitoring Metrics
 
-If a subagent hangs or enters a loop, the Primary Agent can issue a `terminate_subagent` command or a `restart_branch` command to reset the state.
+- **Token Usage per Branch:** Track which subagent is consuming the most resources
+- **State Status:** `PENDING` → `EXECUTING` → `AWAITING_REVIEW` → `COMPLETED`
+- **Tool Call Logs:** View the specific tool calls each subagent is making in real-time
+- **Dependency Graph:** A visual representation of which subagents are waiting for the output of others
+
+If a subagent hangs or enters a loop, the Primary Agent can issue a `terminate_subagent` or `restart_branch` command to reset the state.
 
 ---
 
 ## Real-World Use Cases
 
 ### Deep Market Research
-- **Primary Agent:** Orchestrates the research project.
-- **Subagent 1 (Web Crawler):** Scrapes current pricing from competitor sites.
-- **Subagent 2 (Financial Analyst):** Analyzes PDF annual reports.
-- **Subagent 3 (Sentiment Analyst):** Scrapes Reddit and X for user complaints.
-- **Result:** A comprehensive SWOT analysis generated from three distinct data streams.
+
+- **Primary Agent:** Orchestrates the research project
+- **Subagent 1 (Web Crawler):** Scrapes current pricing from competitor sites
+- **Subagent 2 (Financial Analyst):** Analyzes PDF annual reports
+- **Subagent 3 (Sentiment Analyst):** Scrapes Reddit and X for user complaints
+- **Result:** A comprehensive SWOT analysis generated from three distinct data streams
 
 ### Automated Code Review & Refactor
-- **Primary Agent:** Manages the PR (Pull Request).
-- **Subagent 1 (Security Expert):** Scans for SQL injection and XSS vulnerabilities.
-- **Subagent 2 (Performance Expert):** Identifies O(n²) complexity issues.
-- **Subagent 3 (Style Guide Expert):** Ensures adherence to PEP8 or Airbnb style guides.
-- **Result:** A consolidated list of required changes with specific line-item references.
+
+- **Primary Agent:** Manages the PR (Pull Request)
+- **Subagent 1 (Security Expert):** Scans for SQL injection and XSS vulnerabilities
+- **Subagent 2 (Performance Expert):** Identifies O(n²) complexity issues
+- **Subagent 3 (Style Guide Expert):** Ensures adherence to PEP8 or Airbnb style guides
+- **Result:** A consolidated list of required changes with specific line-item references
 
 ### Batch Content Localization
-- **Primary Agent:** Manages the localization project.
-- **Subagents (Language Specialists):** Separate agents for Spanish, French, Japanese, and German, each with a profile tuned for regional idioms.
-- **Result:** Parallel translation of 100+ strings with cultural nuance preserved.
+
+- **Primary Agent:** Manages the localization project
+- **Subagents (Language Specialists):** Separate agents for Spanish, French, Japanese, and German, each with a profile tuned for regional idioms
+- **Result:** Parallel translation of 100+ strings with cultural nuance preserved
 
 ---
 
 ## Next Steps and Resources
 
-To further optimize your multi-agent deployments, explore the following guides:
-
-- **[Advanced Prompting for Orchestrators](./advanced-prompting):** How to write system prompts that effectively decompose tasks.
-- **[Custom Tool Integration](./custom-tools):** Creating specialized tools for your subagents to use.
-- **[Memory Management](./memory-management):** Managing shared state and global variables across parallel branches.
-- **[API Reference](./api-docs):** Technical documentation for the `delegate_task` and `worktree` endpoints.
+To further optimize your multi-agent deployments, explore these guides:
+- **[Advanced Prompting for Orchestrators](./advanced-prompting)** — How to write system prompts that effectively decompose tasks
+- **[Custom Tool Integration](./custom-tools)** — Creating specialized tools for your subagents
+- **[Memory Management](./memory-management)** — Managing shared state and global variables across parallel branches
+- **[API Reference](./api-docs)** — Technical documentation for `delegate_task` and `worktree` endpoints
 
 **Need help?** Join the Hermes Community Discord or check the GitHub Discussions for shared `profiles.json` templates.
-
-***
