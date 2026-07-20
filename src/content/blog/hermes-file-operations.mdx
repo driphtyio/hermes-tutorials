@@ -1,0 +1,400 @@
+---
+title: "File Operations in Hermes Agent — Read, Write, Search, and Patch"
+description: "Master Hermes Agent's four core file tools — read_file, write_file, search_files, and patch — with real examples showing how to work with files efficiently and safely."
+pubDate: 2026-07-20
+tags: [hermes, tutorial, files, tools, workflow]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-file-operations-20260720.jpg"
+lastVerified: 2026-07-20
+---
+
+Hermes Agent gives you four file tools that cover the entire file lifecycle: reading, writing, searching, and editing. Each one is designed to replace a common shell command with a safer, smarter alternative that integrates directly with the agent's context and safety systems.
+
+This guide walks through every tool with real examples, expected output, and the patterns that experienced Hermes users rely on daily.
+
+By the end, you'll know exactly when to reach for each tool and how to chain them into productive workflows.
+
+## The Four File Tools
+
+| Tool | Replaces | Best for |
+|------|----------|----------|
+| `read_file` | `cat`, `head`, `tail` | Reading files with line numbers and pagination |
+| `write_file` | `echo`, `cat heredoc` | Creating or overwriting files |
+| `search_files` | `grep`, `rg`, `find` | Searching file contents or finding files by name |
+| `patch` | `sed`, `awk` | Targeted find-and-replace edits |
+
+Each tool runs inside Hermes' agent loop — the agent decides which tool to call, the tool executes, and the result feeds back into the conversation context.
+
+---
+
+## read_file — Reading with Context
+
+The `read_file` tool is the safest way to inspect files. Unlike `cat`, it adds line numbers, paginates large files, and refuses to read binary content.
+
+```bash
+# Basic usage (path can be absolute, relative, or ~)
+read_file(path="/home/user/project/config.yaml")
+
+# Paginate — read lines 20-60 of a 500-line file
+read_file(path="/home/user/project/config.yaml", offset=20, limit=40)
+
+# Max 2000 lines per call, ~100K character limit
+```
+
+**Expected output format:**
+
+```
+LINE_NUM|CONTENT
+1|---
+2|title: "My Project"
+3|description: "Example config"
+4|...
+20|model:
+21|  default: anthropic/claude-sonnet-4
+```
+
+### When to use read_file instead of terminal
+
+| Situation | Shell alternative | Hermes tool |
+|-----------|-------------------|-------------|
+| Quick file peek | `cat file` | `read_file(path="file")` |
+| Read specific section | `sed -n '20,60p' file` | `read_file(path="file", offset=20, limit=40)` |
+| Check if file exists | `ls` or `test -f` | `read_file` returns a clear "not found" + suggestions |
+| Read a config file | `cat config.yaml` | `read_file` with line numbers + syntax hints |
+| Import binary/image | `xxd` or `file` | Rejected with clear error — use `vision_analyze` for images |
+
+**Pro tip:** `read_file` suggests similar filenames when the exact path doesn't exist, saving you from hunting around:
+
+```
+File not found: /home/user/project/config.yml
+Did you mean one of these?
+  /home/user/project/config.yaml
+  /home/user/project/setup.yml
+  /home/user/project/deploy.yml
+```
+
+---
+
+## write_file — Safe Multi-Line Writes
+
+The `write_file` tool creates new files or overwrites existing ones. It automatically creates parent directories and runs syntax checks on supported file types.
+
+```python
+# Create a new Python file — parents are auto-created
+write_file(
+    path="/home/user/scripts/analyze.py",
+    content='''#!/usr/bin/env python3
+"""A simple log analyzer."""
+
+import re
+from collections import Counter
+
+def analyze_log(path: str) -> dict:
+    """Count log levels in a file."""
+    pattern = re.compile(r"\\b(INFO|WARN|ERROR|DEBUG)\\b")
+    counts: Counter[str] = Counter()
+
+    with open(path) as f:
+        for line in f:
+            if match := pattern.search(line):
+                counts[match.group(1)] += 1
+
+    return dict(counts)
+
+
+if __name__ == "__main__":
+    import sys
+    result = analyze_log(sys.argv[1])
+    for level, count in sorted(result.items()):
+        print(f"{level}: {count}")
+'''
+)
+```
+
+### Syntax checks run automatically
+
+After every `write_file`, Hermes validates syntax for:
+
+| File type | Check |
+|-----------|-------|
+| `.py` | `python3 -c "compile(...)"` |
+| `.json` | `python3 -m json.tool` |
+| `.yaml` / `.yml` | `python3 -c "yaml.safe_load(...)"` |
+| `.toml` | `python3 -c "tomllib.load(...)"` |
+
+Only **new** errors introduced by the write are reported — pre-existing issues in the file are filtered out, so you never see noise from unrelated problems.
+
+**Important:** `write_file` **overwrites the entire file**. For targeted edits, use `patch` instead.
+
+---
+
+## search_files — grep and find Combined
+
+`search_files` replaces both `grep` (content search) and `find` / `ls` (file search) with a single interface backed by ripgrep — significantly faster than shell equivalents.
+
+### Content Search
+
+Search inside file contents with regex patterns:
+
+```python
+# Find all TODO comments in Python files
+search_files(
+    pattern="TODO|FIXME|HACK",
+    target="content",
+    file_glob="*.py",
+    path="/home/user/project",
+    limit=50
+)
+```
+
+**Expected output:**
+
+```
+src/main.py|45|  # TODO: refactor this into a helper function
+src/utils.py|12|  # FIXME: edge case when input is None
+src/cli.py|89|    # HACK: workaround for API rate limiting
+```
+
+### Output modes
+
+| `output_mode` | What you get |
+|---------------|-------------|
+| `"content"` | Matching lines with line numbers (default) |
+| `"files_only"` | Filenames only — useful for finding which files match |
+| `"count"` | Match count per file — useful for measuring impact |
+
+```python
+# Just find which files reference a function
+search_files(
+    pattern="def calculate_total",
+    target="content",
+    output_mode="files_only"
+)
+```
+
+### File Search
+
+Find files by name or glob pattern, sorted by modification time (newest first):
+
+```python
+# Find all MDX files
+search_files(
+    pattern="*.mdx",
+    target="files"
+)
+
+# Find config files anywhere
+search_files(
+    pattern="*config*",
+    target="files"
+)
+```
+
+This is the recommended replacement for `ls` — results are sorted by modification time and properly filtered.
+
+### Context lines
+
+For content search, you can include surrounding context:
+
+```python
+# Show 3 lines before and after each match
+search_files(
+    pattern="def handle_request",
+    target="content",
+    file_glob="*.py",
+    context=3
+)
+```
+
+---
+
+## patch — The Smart Editor
+
+The `patch` tool is the crown jewel of Hermes file operations. It performs targeted find-and-replace edits using **9 fuzzy matching strategies** that tolerate minor whitespace, indentation, and formatting differences.
+
+### Replace Mode (default)
+
+The most common mode: find a unique string and replace it.
+
+```python
+patch(
+    mode="replace",
+    path="/home/user/project/config.yaml",
+    old_string="model:\n  default: anthropic/claude-sonnet-4",
+    new_string="model:\n  default: openrouter/deepseek-v3"
+)
+```
+
+**Key behaviors:**
+- The `old_string` must be **unique** in the file unless `replace_all=true` is set
+- Include surrounding context to ensure uniqueness
+- Pass empty string `""` as `new_string` to delete the matched text
+- Returns a unified diff showing exactly what changed
+
+**Fuzzy matching** means this works even with minor differences:
+
+```
+# These all match the same old_string despite formatting changes:
+old_string="  default: anthropic/claude-sonnet-4"
+File has:   default:   anthropic/claude-sonnet-4    (extra spaces)
+File has:  default: anthropic/claude-sonnet-4       (different indent)
+File has:default: anthropic/claude-sonnet-4          (no indent)
+```
+
+### Replace All
+
+When you need to change every occurrence of a pattern:
+
+```python
+patch(
+    mode="replace",
+    path="/home/user/project/src/*.py",
+    old_string="logging.info",
+    new_string="logger.info",
+    replace_all=True
+)
+```
+
+### Delete Matches
+
+Remove a block of text by passing an empty `new_string`:
+
+```python
+patch(
+    mode="replace",
+    path="/home/user/project/config.yaml",
+    old_string="# Deprecated section\n# This will be removed next version\nold_feature: true",
+    new_string=""
+)
+```
+
+### Patch Mode (multi-file changes)
+
+For bulk changes across multiple files, use patch mode with a V4A-format diff:
+
+```python
+patch(
+    mode="patch",
+    patch='''*** Begin Patch
+*** Update File: src/main.py
+@@ update import statement @@
+-import os
++from pathlib import Path
+*** Update File: src/utils.py
+@@ rename function @@
+-def old_name():
++def new_name():
+*** End Patch'''
+)
+```
+
+### Auto syntax checks
+
+Like `write_file`, `patch` automatically validates syntax after edits. This catches errors immediately — before you try to run the code.
+
+---
+
+## Workflow: A Real Editing Session
+
+Let's walk through a complete workflow. You need to add a new command to a CLI tool.
+
+**Step 1: Find the CLI entry point**
+
+```python
+search_files(
+    pattern="def main|cli|entrypoint",
+    target="content",
+    file_glob="*.py",
+    path="/home/user/project"
+)
+```
+
+**Step 2: Read the relevant file**
+
+```python
+read_file(
+    path="/home/user/project/cli.py",
+    offset=1,
+    limit=80
+)
+```
+
+**Step 3: Add the new command**
+
+```python
+patch(
+    mode="replace",
+    path="/home/user/project/cli.py",
+    old_string="def main():",
+    new_string="""def status():
+    \"\"\"Check system health.\"\"\"
+    print(\"All systems operational\")
+
+def main():"""
+)
+```
+
+**Step 4: Register the command in the help text**
+
+```python
+patch(
+    mode="replace",
+    path="/home/user/project/cli.py",
+    old_string="subparsers = parser.add_subparsers(title=\"Commands\")",
+    new_string="""subparsers = parser.add_subparsers(title=\"Commands\")
+status_parser = subparsers.add_parser(\"status\", help=\"Check system health\")
+status_parser.set_defaults(func=status)"""
+)
+```
+
+**Step 5: Verify the changes**
+
+```python
+read_file(
+    path="/home/user/project/cli.py",
+    offset=40,
+    limit=30
+)
+```
+
+Each step uses the right tool for the job. No `sed` one-liners, no accidental `cat` truncation, no `grep` flags to remember.
+
+---
+
+## Tool Selection Quick Reference
+
+| What you want to do | Use | Instead of |
+|---------------------|-----|-----------|
+| Peek at a file | `read_file(path="f")` | `cat f` |
+| Read lines 20-60 | `read_file(path="f", offset=20, limit=40)` | `sed -n '20,60p'` |
+| Create a file | `write_file(path="f", content="...")` | `echo > f`, heredoc |
+| Overwrite a config | `write_file(path="f", content="...")` | `cat > f` |
+| Search file contents | `search_files(pattern="...", target="content")` | `grep -r`, `rg` |
+| Find a file by name | `search_files(pattern="*.py", target="files")` | `find . -name`, `ls` |
+| Single-file edit | `patch(mode="replace", ...)` | `sed -i` |
+| Multi-file edit | `patch(mode="patch", ...)` | `sed` loop, `awk` |
+| Delete text | `patch(mode="replace", new_string="")` | `sed -i '/pattern/d'` |
+| List files | `search_files(pattern="*", target="files")` | `ls` |
+
+---
+
+## Safety Notes
+
+- **`write_file` overwrites entirely** — always read the file first, then write
+- **`patch` requires unique matches** — include surrounding context lines for safety
+- **Binary files are rejected** by `read_file` — use platform-appropriate tools for images, PDFs, etc.
+- **Syntax validation runs automatically** on `.py`, `.json`, `.yaml`, `.toml` — but it only reports **new** errors
+- **File operations respect the working directory** — when a cron job sets `--workdir`, all file tools operate relative to that directory
+- **Cross-profile guard** — `write_file` and `patch` block writes to other Hermes profiles by default; use `cross_profile=True` only with explicit direction
+
+---
+
+## Summary
+
+The four file tools form a coherent, safe, and fast file editing suite:
+
+- **`read_file`** — paginated reading with line numbers and error-resistant path resolution
+- **`write_file`** — multi-line writes with auto-directory creation and syntax validation
+- **`search_files`** — ripgrep-backed content and file search, faster than shell alternatives
+- **`patch`** — fuzzy-matching find-and-replace with syntax checks and diff output
+
+Together they replace `cat`, `grep`, `find`, `ls`, `sed`, `awk`, and `echo` — providing a safer, smarter interface that works directly in the agent loop. Use them as your go-to file tools in every Hermes session.
