@@ -751,21 +751,113 @@
         "total_calls": 1,
         "successes": 1,
         "availability": 100.0
+      },
+      "codestral-2508": {
+        "total_calls": 5,
+        "successes": 5,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "devstral-2512": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "magistral-medium-2509": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "mistral-medium-2604": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "ministral-14b-2512": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "open-mistral-nemo-2407": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "nemotron-3-ultra-550b": {
+        "total_calls": 4,
+        "successes": 4,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "mimo-v2.5-pro": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "groq/compound-mini": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "groq/compound": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "qwen/qwen3-32b": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "openai/gpt-oss-20b": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
+      },
+      "meta-llama/llama-4-scout-17b-16e-instruct": {
+        "total_calls": 0,
+        "successes": 0,
+        "failures": 0,
+        "availability": 100.0,
+        "last_failure": null
       }
     },
-    "last_updated": "2026-07-14"
+    "last_updated": "2026-07-24"
   },
   "matches": [
     {
       "match_id": "her-0003-2026-07-24",
       "date": "2026-07-24",
       "topic": "Hermes Agent vs Claude Code vs Codex CLI: Which Open-Source AI Agent Should You Use in 2026?",
+      "type": "review",
       "category": "review",
       "pipeline": "zai-subagent-arena",
       "orchestrator": "glm-5.2 (custom:zai)",
       "models_competed": [
         { "model": "deepseek-v4-flash", "provider": "deepseek", "label": "A" },
-        { "model": "mimo-v2.5-pro", "provider": "custom:xiaomi", "label": "B" }
+        { "model": "mimo-v2.5-pro", "provider": "xiaomi", "label": "B" }
       ],
       "judges": [
         { "slot": "Nemotron", "model": "nvidia/nemotron-3-ultra-550b-a55b", "provider": "openrouter" },
@@ -783,7 +875,11 @@
         "A": { "structure": 8.5, "technical_depth": 7.75, "completeness": 8.5, "practical_value": 8.5, "sourcing": 8.0, "total": 41.25 },
         "B": { "structure": 8.5, "technical_depth": 8.25, "completeness": 8.25, "practical_value": 8.25, "sourcing": 7.0, "total": 40.25 }
       },
-      "winner": "A",
+      "results": [
+        { "rank": 1, "model": "deepseek-v4-flash", "provider": "deepseek", "score": 8.25, "strengths": ["Well-structured comparison", "Practical use-case examples", "Comprehensive coverage"], "weaknesses": ["Sourcing citations could be stronger"] },
+        { "rank": 2, "model": "mimo-v2.5-pro", "provider": "xiaomi", "score": 8.05, "strengths": ["Deep technical analysis", "Thorough completeness"], "weaknesses": ["Sourcing needs more citations", "Structure slightly less clear"] }
+      ],
+      "winner": "deepseek-v4-flash",
       "winning_model": "deepseek-v4-flash",
       "qa": {
         "threshold": 8.0,
@@ -796,6 +892,9 @@
       "slug": "hermes-agent-vs-claude-code-vs-codex-cli-which-open-source-ai-agent-should-you-u"
     }
   ],
-  "leaderboard": [],
+  "leaderboard": [
+    { "model": "deepseek-v4-flash", "provider": "deepseek", "avgScore": 8.25, "wins": 1, "losses": 0, "bestScore": 8.25, "matches": 1 },
+    { "model": "mimo-v2.5-pro", "provider": "xiaomi", "avgScore": 8.05, "wins": 0, "losses": 1, "bestScore": 8.05, "matches": 1 }
+  ],
   "last_updated": "2026-07-24"
 }
