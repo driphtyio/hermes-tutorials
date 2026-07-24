@@ -3,7 +3,7 @@
     "name": "Hermes Tutorials Arena",
     "version": "1.0.0",
     "description": "Model-vs-model battles for Hermes Tutorials content and design.",
-    "total_matches": 9
+    "total_matches": 10
   },
   "model_pool": [
     {
@@ -755,7 +755,47 @@
     },
     "last_updated": "2026-07-14"
   },
-  "matches": [],
+  "matches": [
+    {
+      "match_id": "her-0003-2026-07-24",
+      "date": "2026-07-24",
+      "topic": "Hermes Agent vs Claude Code vs Codex CLI: Which Open-Source AI Agent Should You Use in 2026?",
+      "category": "review",
+      "pipeline": "zai-subagent-arena",
+      "orchestrator": "glm-5.2 (custom:zai)",
+      "models_competed": [
+        { "model": "deepseek-v4-flash", "provider": "deepseek", "label": "A" },
+        { "model": "mimo-v2.5-pro", "provider": "custom:xiaomi", "label": "B" }
+      ],
+      "judges": [
+        { "slot": "Nemotron", "model": "nvidia/nemotron-3-ultra-550b-a55b", "provider": "openrouter" },
+        { "slot": "Gemma", "model": "openai/gpt-oss-20b", "provider": "openrouter", "note": "substitute: google/gemma-3-27b-it could not invoke tools in this harness" },
+        { "slot": "Cohere", "model": "nvidia/nemotron-3-super-120b-a12b", "provider": "openrouter", "note": "substitute: cohere/command-r-plus-08-2024 could not persist files in this harness" },
+        { "slot": "GPT-OSS", "model": "openai/gpt-oss-120b", "provider": "openrouter" }
+      ],
+      "per_judge_scores": [
+        { "judge": "Nemotron", "A": 42, "B": 42, "winner": "B" },
+        { "judge": "Gemma", "A": 41, "B": 45, "winner": "B" },
+        { "judge": "Cohere", "A": 38, "B": 36, "winner": "A" },
+        { "judge": "GPT-OSS", "A": 44, "B": 38, "winner": "A" }
+      ],
+      "per_model_averages": {
+        "A": { "structure": 8.5, "technical_depth": 7.75, "completeness": 8.5, "practical_value": 8.5, "sourcing": 8.0, "total": 41.25 },
+        "B": { "structure": 8.5, "technical_depth": 8.25, "completeness": 8.25, "practical_value": 8.25, "sourcing": 7.0, "total": 40.25 }
+      },
+      "winner": "A",
+      "winning_model": "deepseek-v4-flash",
+      "qa": {
+        "threshold": 8.0,
+        "initial_score": 7.8,
+        "initial_verdict": "FAIL",
+        "retries": 1,
+        "final_score": 9.0,
+        "qa_passed": true
+      },
+      "slug": "hermes-agent-vs-claude-code-vs-codex-cli-which-open-source-ai-agent-should-you-u"
+    }
+  ],
   "leaderboard": [],
-  "last_updated": "2026-07-18"
+  "last_updated": "2026-07-24"
 }

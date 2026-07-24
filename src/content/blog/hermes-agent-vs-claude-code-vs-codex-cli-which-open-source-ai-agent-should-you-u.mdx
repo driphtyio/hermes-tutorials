@@ -1,0 +1,202 @@
+---
+title: "Hermes Agent vs Claude Code vs Codex CLI: Which Open-Source AI Agent Should You Use in 2026?"
+description: "A developer's head-to-head of Hermes Agent, Claude Code, and Codex CLI — install steps, real benchmarks, honest limitations, and when to pick each in 2026."
+pubDate: "2026-07-24"
+tags: ["comparison", "claude-code", "codex-cli", "ai-agents", "benchmark"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-vs-claude-code-vs-codex-cli-which-open-source-ai-agent-should-you-u-1784920198.jpg"
+keywords: [hermes agent vs claude code, hermes agent vs codex cli, best open source ai agent 2026, ai coding agent comparison, swebench claude code codex, open source coding agent review]
+---
+
+It is mid-2026 and the open-source AI coding agent landscape has three dominant contenders: **Hermes Agent**, **Claude Code**, and **Codex CLI**. Each is open-source, production-ready, and fiercely capable — but they excel in fundamentally different dimensions. If you are a developer choosing your primary AI coding sidekick, this guide breaks down the real differences, CLI installations, practical walkthroughs, hard benchmark data, and — for the first time in this format — honest limitations for each tool.
+
+---
+
+## The Contenders at a Glance
+
+| Agent | License | Stars (as of July 2026) | Core Strength | Weakness |
+|---|---|---|---|---|
+| **Hermes Agent** | MIT | 175K+ | Provider-agnostic, persistent memory, cron scheduler, 24 chat platforms | Lacks independently confirmed SWE-bench score |
+| **Claude Code** | MIT (agent layer) | ~100–161K | Highest SWE-bench Verified score (88.6%), deepest refactoring | Vendor lock-in to Anthropic API; higher per-task token cost |
+| **Codex CLI** | Apache 2.0 | 67K+ (→~90K) | Rust-native speed, OS-level sandbox, highest token efficiency | Smallest ecosystem; newer to market |
+
+**Primary sources:** [Hermes Agent GitHub](https://github.com/NousResearch/hermes-agent), [Hermes Agent Docs](https://hermes-agent.nousresearch.com/docs/), [Anthropic Code CLI Docs](https://docs.anthropic.com/en/docs/claude-code/overview), [Claude Code GitHub](https://github.com/anthropics/claude-code), [OpenAI Codex Developers](https://developers.openai.com/), [Codex CLI GitHub](https://github.com/openai/codex)
+
+---
+
+## Installation & First Invocation
+
+### Hermes Agent
+
+Hermes Agent is designed for maximum portability. Install it via pip, npx, or a one-liner:
+
+```bash
+# Recommended (pip with uv for speed)
+uv tool install hermes-agent
+
+# Or via npx
+npx hermes-agent
+
+# Or the desktop app (Linux/macOS/Windows)
+# https://hermes-agent.nousresearch.com/
+```
+
+Launch your first session — the agent auto-senses your environment and asks for an API key on first run:
+
+```bash
+hermes
+# → Detected: Linux, Python 3.11, git available
+# → No API key configured. Supported providers: openai, anthropic, google, xai, nous
+# → Enter provider (default: anthropic):
+```
+
+Hermes is **provider-agnostic** — use Anthropic, OpenAI, Google, xAI, or self-host via [Nous Portal](https://hermes-agent.nousresearch.com/docs). This zero-lock-in design is unique among the three agents.
+
+### Claude Code
+
+Claude Code is an npm package that runs best with an Anthropic API key. Its open-source MIT release (2026) made it accessible beyond Claude Pro subscribers:
+
+```bash
+# Install globally
+npm install -g @anthropic-ai/claude-code
+
+# Authenticate
+claude login
+# → Opens browser to get your API key from console.anthropic.com
+
+# Start a session in your project
+claude
+```
+
+Claude Code reads your repository structure, `.gitignore`, and any project-level guidelines. It uses Sonnet 5 as its default model with a massive **1M token context window** — enough to ingest your entire codebase ([Anthropic Docs](https://docs.anthropic.com/en/docs/claude-code/overview)).
+
+### Codex CLI
+
+Codex CLI is the newest kid, rebuilt in **Rust** (94.9–96.3% Rust codebase) for raw speed and security. Install via npm or Homebrew:
+
+```bash
+# npm
+npm i -g @openai/codex
+
+# Or Homebrew
+brew install --cask codex
+
+# Start a session
+codex
+```
+
+Codex CLI uses an **OS-level sandbox with kernel-enforced security limits** — the most aggressive isolation of the three. It runs GPT-5.5 by default and uses ~4x fewer tokens than Claude Code for equivalent tasks, as independently measured by sanj.dev's 2026 head-to-head benchmark ([sanj.dev](https://sanj.dev/post/claude-code-vs-codex-cli/)).
+
+---
+
+## Benchmark Data: Reality Check
+
+Numbers from [SSOJet's 2026 comparison](https://ssojet.com/blog/ai-coding-agents-compared), [MorphLLM's leaderboard](https://www.morphllm.com/best-ai-coding-agents-2026), and [sanj.dev's head-to-head](https://sanj.dev/post/claude-code-vs-codex-cli/) tell a clear story (all scores dated June 2026):
+
+| Benchmark | Claude Code (Opus 4.8) | Codex CLI (GPT-5.5) | Hermes Agent |
+|---|---|---|---|
+| **SWE-bench Verified** | **88.6%** | ~80.9%¹ | No independently confirmed score² |
+| **SWE-bench Pro** | 69.2% | 58.6% | MoA presets claim to exceed both³ |
+| **Terminal-Bench 2.1** | 78.9% | **83.4% (#1)** | Built-in TBLite & TB 2.0 eval suite |
+| **Token Efficiency** | Baseline (1×) | **~4× fewer** than Claude Code | Provider-specific |
+| **Context Window** | 1M tokens (Sonnet 5) | Not publicly specified | Not publicly specified |
+
+¹ **Codex CLI estimate:** The ~80.9% figure is extrapolated from Terminal-Bench 2.1 (83.4%, #1) and cross-referenced with SWE-bench Pro (58.6%). Official OpenAI benchmark disclosures for Codex CLI on SWE-bench Verified have not been published as of July 2026.
+
+² **Hermes on SWE-bench:** Hermes Agent has not been independently tested on SWE-bench Verified. Its built-in benchmark subsystem (TBLite, Terminal-Bench 2.0) focuses on different evaluation dimensions. The MoA (Mixture of Agents) presets have claimed to outperform both Opus 4.8 and GPT-5.5 on the harder SWE-bench Pro variant, but these claims lack third-party confirmation at time of writing.
+
+³ Source: [trust.armalo.ai](https://trust.armalo.ai/blog/hermes-agent-benchmark-the-complete-guide) — note this is a third-party analysis blog, not an official Nous Research disclosure.
+
+---
+
+## How GEPA Works (Hermes Agent's Learning Subsystem)
+
+GEPA — **G**enerative **E**volutionary **P**attern **A**cquisition — is Hermes Agent's built-in self-improvement mechanism. Here is how it operates under the hood:
+
+1. **Session Recording:** During each task, GEPA logs the sequence of tool calls, user corrections, and successful outcomes.
+2. **Pattern Extraction:** After task completion, the subsystem analyzes the logged sequence, identifying reusable patterns (e.g., "when fixing a Python import error, first check `pip list`, then try `pip install`, then update `requirements.txt`").
+3. **Skill Synthesis:** Extracted patterns are compiled into reusable Hermes skills stored in `~/.hermes/profiles/<profile>/skills/`. These skills are versioned and available across sessions.
+4. **Evolutionary Optimization:** When similar tasks recur, GEPA compares multiple stored patterns and retains the one that minimizes tool calls and completion time. Over repeated use, the agent converges on the most efficient approach — independently measured at a ~40% speedup on repeated tasks ([Digital Applied benchmark](https://www.digitalapplied.com/blog/openclaw-hermes-codex-cli-coding-agent-benchmark-2026)).
+
+```yaml
+# Example: A GEPA-generated skill stored in ~/.hermes/profiles/default/skills/
+name: "fix-python-dependency"
+trigger: "ImportError|ModuleNotFoundError"
+steps:
+  - Check pip list for installed packages
+  - If missing: pip install <package>
+  - If version mismatch: pip install <package>==<compatible-version>
+  - Update requirements.txt and lockfile
+learning_metadata:
+  iterations: 7
+  avg_completion_time_s: 3.2
+  evolution_stage: 3
+```
+
+This is not a one-time speedup — it compounds. Each session makes the agent more efficient on the class of tasks you actually perform.
+
+---
+
+## Limitations & Cons
+
+Every agent has trade-offs. Here is a candid assessment of where each falls short.
+
+### Hermes Agent
+
+- **Learning drift:** GEPA's pattern extraction can produce unpredictable behavior if the agent learns suboptimal patterns from user corrections. A user who repeatedly fixes the same typo may teach the agent to *expect* typos rather than avoid them. Skills require periodic audit to prevent drift.
+- **No independently confirmed SWE-bench score:** Despite its MoA presets claiming strong performance on SWE-bench Pro, no third-party has verified these claims. If raw SWE-bench numbers are your primary decision metric, Hermes cannot yet compete with Claude Code's independently benchmarked 88.6%.
+- **Setup complexity:** The provider-agnostic design means first-time setup requires selecting a provider, configuring an API key, and understanding the skill/memory subsystem — a higher initial cognitive load than Claude Code's single-API approach or Codex CLI's bundled ChatGPT plan.
+- **Modest ecosystem:** Approximately 80 built-in skills and 40+ tools, but no third-party plugin marketplace. Community contributions are growing but remain small relative to Claude Code's 3,000+ MCP integrations.
+
+### Claude Code
+
+- **Anthropic vendor lock-in:** Claude Code requires an Anthropic API key or Claude Pro/Max subscription. You cannot route it through OpenAI, Google, or a local model. If Anthropic changes pricing or availability, your workflow is directly affected.
+- **Higher token consumption:** Claude Code uses approximately 4× more tokens than Codex CLI for equivalent tasks ([sanj.dev](https://sanj.dev/post/claude-code-vs-codex-cli/)), making it the most expensive option on a per-task basis for API-billed users.
+- **Limited to terminal and IDE:** Unlike Hermes Agent (24 chat platforms) or Codex CLI (GitHub Actions, VS Code, Cursor, Windsurf), Claude Code primarily operates in the terminal and VS Code. No Discord, Slack, or Telegram integration.
+- **No built-in persistence:** Claude Code does not have a learning subsystem comparable to GEPA. Each session starts fresh unless you explicitly save and restore conversation context.
+
+### Codex CLI
+
+- **Smallest ecosystem:** Codex CLI is the newest of the three (Rust rewrite ~June 2025). It has ~90K GitHub stars compared to Hermes's 175K+ and Claude Code's 161K+. Third-party tutorials, community plugins, and troubleshooting resources are comparatively sparse.
+- **Narrowest model support:** Codex CLI defaults to GPT-5.5 and has no official support for Anthropic, Google, or open-source models. It is effectively OpenAI-native.
+- **Less mature multi-agent:** While Codex CLI has Symphony for multi-agent orchestration, Claude Code's Agent Teams and Hermes Agent's subagent profiles are more battle-tested in production environments.
+- **Token efficiency variability:** The "4× fewer tokens" figure is measured against Claude Code on specific task profiles (well-scoped refactors, terminal commands). The efficiency gap narrows on open-ended coding tasks that require multiple tool calls and context loads.
+
+---
+
+## Ecosystem & Community Comparison
+
+| Dimension | Hermes Agent | Claude Code | Codex CLI |
+|---|---|---|---|
+| **GitHub Stars** | 175K+ (July 2026) | ~100–161K (July 2026) | 67K+ (→~90K, July 2026) |
+| **License** | MIT | MIT (agent layer) | Apache 2.0 |
+| **Codebase** | Python | TypeScript (~500K lines) | Rust (94.9–96.3%) |
+| **Plugin/Extension System** | 80+ built-in skills, 40+ tools, no plugin marketplace | 3,000+ MCP integrations, hooks system | Starlark policies, AGENTS.md, GitHub Action |
+| **Platforms Supported** | Terminal, 24 chat platforms, desktop app, Android | Terminal, VS Code | Terminal, VS Code, Cursor, Windsurf, GitHub Actions |
+| **Documentation Quality** | Comprehensive official docs + FAQs | Anthropic official docs, extensive community tutorials | OpenAI learn.chatgpt.com docs, growing community |
+| **Learning Curve** | Moderate (API config, skill management) | Low (single `npm install`) | Low–Moderate (npm/brew, AGENTS.md config) |
+| **Multi-Provider Support** | Yes (Anthropic, OpenAI, Google, xAI, Nous) | No (Anthropic only) | No (OpenAI only) |
+| **Autonomous Scheduling** | Built-in cron scheduler | None | None |
+
+Sources: [Hermes Agent Docs](https://hermes-agent.nousresearch.com/docs/), [Claude Code GitHub](https://github.com/anthropics/claude-code), [Codex CLI GitHub](https://github.com/openai/codex), [SSOJet comparison](https://ssojet.com/blog/ai-coding-agents-compared)
+
+---
+
+## Key Takeaways
+
+**Claude Code** delivers the highest independently benchmarked SWE-bench Verified score (88.6%) and richest in-repo refactoring capability, but at the cost of Anthropic vendor lock-in and higher per-task token consumption. Choose Claude Code when code quality and deep refactoring are your primary concern and you can commit to the Anthropic ecosystem.
+
+**Codex CLI** offers the best terminal task execution speed (83.4% Terminal-Bench 2.1, #1) and strongest per-task token efficiency (~4× fewer tokens than Claude Code), backed by Rust-native performance and OS-level sandbox security. Choose Codex CLI when speed, sandboxing, and cost-per-task are your top priorities — but be aware of its smaller community and narrower model support.
+
+**Hermes Agent** is the only provider-agnostic agent with persistent memory, a built-in cron scheduler, and a self-improving learning subsystem (GEPA) that measurably accelerates repeated tasks. Choose Hermes Agent when you need an autonomous operator that works across multiple platforms and providers, not just a coding assistant — but accept that its SWE-bench claims remain unverified by third parties.
+
+---
+
+## Production Insights
+
+**Choose Claude Code** if your primary work is in-repo coding and refactoring — it is the undisputed champion of deep code quality, backed by the highest independently benchmarked SWE-bench score ([88.6% with Opus 4.8](https://www.morphllm.com/best-ai-coding-agents-2026)). Its 3,000+ MCP integrations make it the most extensible coding agent for established workflows.
+
+**Choose Codex CLI** if you need blazing speed in the terminal, token efficiency, and enterprise-grade security. Its OS sandbox and Rust architecture make it ideal for CI/CD pipelines and multi-agent orchestration via its Symphony framework ([Codex CLI GitHub](https://github.com/openai/codex)). It is the cheapest on a per-task basis for well-scoped tasks, as confirmed by independent tests across 30 real tasks ([Gudz.ai comparison](https://gudz.ai/posts/hermes-agent-vs-competitors-2026)).
+
+**Choose Hermes Agent** if you want an autonomous operator — not just a coding agent. Its GEPA self-improvement subsystem, persistent memory, cron scheduler, and provider-agnostic design let it run across terminals, Discord, Telegram, Slack, and GitHub workflows simultaneously. Independent benchmarks measure a ~40% speedup on repeat tasks ([Digital Applied](https://www.digitalapplied.com/blog/openclaw-hermes-codex-cli-coding-agent-benchmark-2026)). However, factor in the learning curve of skill management and the lack of independently confirmed SWE-bench scores.
+
+The gap between all three is shrinking fast. As [Flowtivity's analysis](https://flowtivity.ai/blog/hermes-vs-codex-vs-claude-cowork/) concludes, "the differentiator is becoming trust, cost, and integration fit" — not raw capability. Pick the one that fits your workflow rather than chasing the highest benchmark.
