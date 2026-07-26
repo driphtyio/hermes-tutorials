@@ -3,7 +3,7 @@
     "name": "Hermes Tutorials Arena",
     "version": "1.0.0",
     "description": "Model-vs-model battles for Hermes Tutorials content and design.",
-    "total_matches": 10
+    "total_matches": 11
   },
   "model_pool": [
     {
@@ -856,28 +856,114 @@
       "pipeline": "zai-subagent-arena",
       "orchestrator": "glm-5.2 (custom:zai)",
       "models_competed": [
-        { "model": "deepseek-v4-flash", "provider": "deepseek", "label": "A" },
-        { "model": "mimo-v2.5-pro", "provider": "xiaomi", "label": "B" }
+        {
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "A"
+        },
+        {
+          "model": "mimo-v2.5-pro",
+          "provider": "xiaomi",
+          "label": "B"
+        }
       ],
       "judges": [
-        { "slot": "Nemotron", "model": "nvidia/nemotron-3-ultra-550b-a55b", "provider": "openrouter" },
-        { "slot": "Gemma", "model": "openai/gpt-oss-20b", "provider": "openrouter", "note": "substitute: google/gemma-3-27b-it could not invoke tools in this harness" },
-        { "slot": "Cohere", "model": "nvidia/nemotron-3-super-120b-a12b", "provider": "openrouter", "note": "substitute: cohere/command-r-plus-08-2024 could not persist files in this harness" },
-        { "slot": "GPT-OSS", "model": "openai/gpt-oss-120b", "provider": "openrouter" }
+        {
+          "slot": "Nemotron",
+          "model": "nvidia/nemotron-3-ultra-550b-a55b",
+          "provider": "openrouter"
+        },
+        {
+          "slot": "Gemma",
+          "model": "openai/gpt-oss-20b",
+          "provider": "openrouter",
+          "note": "substitute: google/gemma-3-27b-it could not invoke tools in this harness"
+        },
+        {
+          "slot": "Cohere",
+          "model": "nvidia/nemotron-3-super-120b-a12b",
+          "provider": "openrouter",
+          "note": "substitute: cohere/command-r-plus-08-2024 could not persist files in this harness"
+        },
+        {
+          "slot": "GPT-OSS",
+          "model": "openai/gpt-oss-120b",
+          "provider": "openrouter"
+        }
       ],
       "per_judge_scores": [
-        { "judge": "Nemotron", "A": 42, "B": 42, "winner": "B" },
-        { "judge": "Gemma", "A": 41, "B": 45, "winner": "B" },
-        { "judge": "Cohere", "A": 38, "B": 36, "winner": "A" },
-        { "judge": "GPT-OSS", "A": 44, "B": 38, "winner": "A" }
+        {
+          "judge": "Nemotron",
+          "A": 42,
+          "B": 42,
+          "winner": "B"
+        },
+        {
+          "judge": "Gemma",
+          "A": 41,
+          "B": 45,
+          "winner": "B"
+        },
+        {
+          "judge": "Cohere",
+          "A": 38,
+          "B": 36,
+          "winner": "A"
+        },
+        {
+          "judge": "GPT-OSS",
+          "A": 44,
+          "B": 38,
+          "winner": "A"
+        }
       ],
       "per_model_averages": {
-        "A": { "structure": 8.5, "technical_depth": 7.75, "completeness": 8.5, "practical_value": 8.5, "sourcing": 8.0, "total": 41.25 },
-        "B": { "structure": 8.5, "technical_depth": 8.25, "completeness": 8.25, "practical_value": 8.25, "sourcing": 7.0, "total": 40.25 }
+        "A": {
+          "structure": 8.5,
+          "technical_depth": 7.75,
+          "completeness": 8.5,
+          "practical_value": 8.5,
+          "sourcing": 8.0,
+          "total": 41.25
+        },
+        "B": {
+          "structure": 8.5,
+          "technical_depth": 8.25,
+          "completeness": 8.25,
+          "practical_value": 8.25,
+          "sourcing": 7.0,
+          "total": 40.25
+        }
       },
       "results": [
-        { "rank": 1, "model": "deepseek-v4-flash", "provider": "deepseek", "score": 8.25, "strengths": ["Well-structured comparison", "Practical use-case examples", "Comprehensive coverage"], "weaknesses": ["Sourcing citations could be stronger"] },
-        { "rank": 2, "model": "mimo-v2.5-pro", "provider": "xiaomi", "score": 8.05, "strengths": ["Deep technical analysis", "Thorough completeness"], "weaknesses": ["Sourcing needs more citations", "Structure slightly less clear"] }
+        {
+          "rank": 1,
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "score": 8.25,
+          "strengths": [
+            "Well-structured comparison",
+            "Practical use-case examples",
+            "Comprehensive coverage"
+          ],
+          "weaknesses": [
+            "Sourcing citations could be stronger"
+          ]
+        },
+        {
+          "rank": 2,
+          "model": "mimo-v2.5-pro",
+          "provider": "xiaomi",
+          "score": 8.05,
+          "strengths": [
+            "Deep technical analysis",
+            "Thorough completeness"
+          ],
+          "weaknesses": [
+            "Sourcing needs more citations",
+            "Structure slightly less clear"
+          ]
+        }
       ],
       "winner": "deepseek-v4-flash",
       "winning_model": "deepseek-v4-flash",
@@ -890,11 +976,151 @@
         "qa_passed": true
       },
       "slug": "hermes-agent-vs-claude-code-vs-codex-cli-which-open-source-ai-agent-should-you-u"
+    },
+    {
+      "match_id": "her-0035-2026-07-25",
+      "date": "2026-07-25",
+      "topic": "Self-Host Your Meeting Transcriber: Complete Meetily Setup Guide",
+      "type": "tutorial",
+      "category": "tutorial",
+      "pipeline": "zai-subagent-arena",
+      "orchestrator": "glm-5.2 (custom:zai)",
+      "models_competed": [
+        {
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "A"
+        },
+        {
+          "model": "mimo-v2.5-pro",
+          "provider": "custom:xiaomi",
+          "label": "B"
+        }
+      ],
+      "judges": [
+        {
+          "slot": "Nemotron",
+          "model": "nvidia/nemotron-3-super-120b-a12b",
+          "provider": "openrouter",
+          "note": "substitute: nvidia/llama-nemotron-4-340b is not a valid OpenRouter model ID; used nemotron-3-super-120b-a12b"
+        },
+        {
+          "slot": "Gemma",
+          "model": "qwen/qwen3-235b-a22b-2507",
+          "provider": "openrouter",
+          "note": "substitute: google/gemma-3-27b-it could not invoke tools in this harness (3 attempts, emitted raw tool-call JSON instead of executing)"
+        },
+        {
+          "slot": "Cohere",
+          "model": "cohere/command-r-plus-08-2024",
+          "provider": "openrouter"
+        },
+        {
+          "slot": "GPT-OSS",
+          "model": "openai/gpt-oss-120b",
+          "provider": "openrouter",
+          "note": "correct ID is openai/ (not cerebras/) per OpenRouter model list"
+        }
+      ],
+      "per_judge_scores": [
+        {
+          "judge": "Nemotron",
+          "A": 45,
+          "B": 42,
+          "winner": "A"
+        },
+        {
+          "judge": "Gemma/Qwen",
+          "A": 45,
+          "B": 41,
+          "winner": "A"
+        },
+        {
+          "judge": "Cohere",
+          "A": 38,
+          "B": 36,
+          "winner": "A"
+        },
+        {
+          "judge": "GPT-OSS",
+          "A": 45,
+          "B": 41,
+          "winner": "A"
+        }
+      ],
+      "per_model_averages": {
+        "A": 43.25,
+        "B": 40.0
+      },
+      "results": [
+        {
+          "rank": 1,
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "score": 8.65,
+          "strengths": [
+            "Clean architecture overview + data-flow",
+            "Full Docker Compose YAML with GPU block",
+            "Strong Hermes integration patterns",
+            "5+ inline citations"
+          ],
+          "weaknesses": [
+            "Cohere scored it lower on sourcing diversity"
+          ]
+        },
+        {
+          "rank": 2,
+          "model": "mimo-v2.5-pro",
+          "provider": "custom:xiaomi",
+          "score": 8.0,
+          "strengths": [
+            "Deeper install-step explanations",
+            "Strong sourcing (11 citations)"
+          ],
+          "weaknesses": [
+            "Slightly weaker structure",
+            "Lower technical-depth scores from 3/4 judges"
+          ]
+        }
+      ],
+      "winner": "deepseek-v4-flash",
+      "winning_model": "deepseek-v4-flash",
+      "qa": {
+        "threshold": 8.0,
+        "initial_score": 9.2,
+        "initial_verdict": "PASS",
+        "retries": 0,
+        "qa_passed": true,
+        "qa_scores": {
+          "structure": 9.5,
+          "technical_depth": 9.0,
+          "completeness": 8.5,
+          "quality": 9.0,
+          "relevance": 10.0
+        }
+      },
+      "slug": "self-host-your-meeting-transcriber-complete-meetily-setup-guide"
     }
   ],
   "leaderboard": [
-    { "model": "deepseek-v4-flash", "provider": "deepseek", "avgScore": 8.25, "wins": 1, "losses": 0, "bestScore": 8.25, "matches": 1 },
-    { "model": "mimo-v2.5-pro", "provider": "xiaomi", "avgScore": 8.05, "wins": 0, "losses": 1, "bestScore": 8.05, "matches": 1 }
+    {
+      "model": "deepseek-v4-flash",
+      "provider": "deepseek",
+      "avgScore": 8.25,
+      "wins": 1,
+      "losses": 0,
+      "bestScore": 8.25,
+      "matches": 1
+    },
+    {
+      "model": "mimo-v2.5-pro",
+      "provider": "xiaomi",
+      "avgScore": 8.05,
+      "wins": 0,
+      "losses": 1,
+      "bestScore": 8.05,
+      "matches": 1
+    }
   ],
-  "last_updated": "2026-07-24"
+  "last_updated": "2026-07-25"
 }

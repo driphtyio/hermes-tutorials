@@ -1,0 +1,192 @@
+---
+title: "Self-Host Your Meeting Transcriber: Complete Meetily Setup Guide"
+description: "Self-host Meetily, the privacy-first MIT-licensed meeting transcriber. Docker Compose + native install, Whisper and Parakeet engines, and Ollama summaries."
+pubDate: "2026-07-25"
+lastVerified: "2026-07-25"
+tags: ["hermes", "self-hosting", "meetily", "transcription", "privacy"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/self-host-your-meeting-transcriber-complete-meetily-setup-guide-1785007583.jpg"
+keywords: [meetily self-host, self-hosted meeting transcription, local meeting notes, whisper.cpp transcription, nvidia parakeet, ollama meeting summaries, privacy meeting assistant, hermes agent transcription, docker compose whisper, gdpr meeting notes]
+---
+
+## Why Self-Host Meetily vs Cloud
+
+Every cloud meeting transcription tool — Otter.ai, Fireflies, Granola — sends your audio through external servers for processing. That means your confidential strategy sessions, client calls, and internal standups are being transcribed, analyzed, and stored on someone else's infrastructure. For developers operating under GDPR or HIPAA obligations, this is a non-starter.
+
+[Meetily](https://github.com/Zackriya-Solutions/meetily) flips the model: everything runs on your hardware. Audio capture, speech-to-text, and LLM summarization all happen locally with zero egress. The tool's system-audio loopback capture means no meeting bots join your calls — it records the audio stream already on your machine. As the Meetily open-source page states, this makes it "GDPR and HIPAA compliant by design" ([source](https://meetily.ai/open-source)). With 26,000+ GitHub stars, 369,000+ users, and an MIT license, Meetily isn't a toy — it's the most mature self-hosted meeting assistant available as of mid-2026 ([source](https://www.bitdoze.com/meetily-self-hosted-ai-meeting-assistant/)).
+
+Beyond compliance, self-hosting eliminates per-seat SaaS bills. The Community Edition is free forever. If you need speaker diarization or custom export templates, PRO is $10/user/month — still cheaper than cloud tools at scale, and the data never leaves your network.
+
+---
+
+## Architecture Overview
+
+Meetily has a clean, modern stack worth understanding before you deploy:
+
+| Layer | Technology | Role |
+|---|---|---|
+| Desktop shell | **Tauri** (Rust) | Native window, system audio capture, GPU detection |
+| Frontend | **Next.js / TypeScript** | UI for live transcription, history, settings |
+| STT Engine 1 | **Whisper.cpp** (GGML) | OpenAI Whisper models, quantized for local inference |
+| STT Engine 2 | **NVIDIA Parakeet** (ONNX Runtime) | 4x faster than Whisper on supported GPUs |
+| Backend (Docker) | **FastAPI** (Python) | REST API for the meeting-app service |
+| ASR Server (Docker) | **whisper-server** (C++) | Compiled Whisper.cpp as a gRPC/HTTP service |
+| Summarization | **Ollama** (plugged in) | Local LLMs for meeting summaries (Gemma 3 4B, Llama 3, Mistral, Qwen3) |
+| Export | Built-in | Markdown, PDF, DOCX, TXT, SRT |
+
+**Data flow**: Tauri app captures system audio → streams to local STT engine (Whisper GGML or Parakeet ONNX) → transcribed text appears in real-time → on meeting end, text optionally sent to Ollama (or any of 8 AI providers) for summarization → results stored locally and exported in your chosen format.
+
+The two transcription engines serve different use-cases ([source](https://deepwiki.com/Zackriya-Solutions/meetily/4-transcription-engines)): Whisper (GGML) offers broad language support (99+ languages) and runs on CPU or any GPU with Vulkan; Parakeet (ONNX Runtime) trades some language breadth for ~4x speed on NVIDIA GPUs. You can switch between them per-session.
+
+---
+
+## Step-by-Step Installation
+
+### Path A: Docker Compose (Server/Headless Deployment)
+
+Recommended for always-on setups, team servers, or integration with agent workflows. The Docker Compose deployment packages two services: `whisper-server` (the C++ ASR backend) and `meeting-app` (the FastAPI Python backend) ([source](https://runany.dev/blog/meetily-self-hosted-ai-meeting-notes/)).
+
+```yaml
+# docker-compose.yml
+version: "3.8"
+services:
+  whisper-server:
+    image: zackriyasolutions/whisper-server:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models          # STT model storage
+      - ./data:/app/data              # transcription output
+    environment:
+      - WHISPER_MODEL=base           # tiny/base/small/medium/large-v3
+      - WHISPER_ENGINE=whisper.cpp   # or parakeet
+      - OMP_NUM_THREADS=4
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]     # remove if no GPU
+
+  meeting-app:
+    image: zackriyasolutions/meeting-app:latest
+    ports:
+      - "80:80"                      # web UI
+      - "443:443"                    # HTTPS (optional)
+    depends_on:
+      - whisper-server
+    volumes:
+      - ./data:/app/data
+    environment:
+      - ASR_SERVER_URL=http://whisper-server:8000
+      - OLLAMA_URL=http://ollama:11434  # if using local LLM
+      - ALLOWED_ORIGINS=*
+```
+
+Deploy:
+
+```bash
+docker compose up -d
+# First-run downloads the STT model (~1.5 GB for base, ~3 GB for large-v3)
+# Access web UI at http://localhost
+```
+
+**Minimum specs**: 4 GB RAM, 20 GB disk, 4 CPU cores. GPU recommended.
+
+### Path B: Native Desktop (macOS/Windows)
+
+Best for individual developers who want the full GUI experience.
+
+1. **Download** the latest release from [GitHub releases](https://github.com/Zackriya-Solutions/meetily/releases) — `.dmg` for macOS, `.exe` for Windows.
+2. **Install** like any native app. On macOS, you'll need to grant microphone and system audio permissions.
+3. **First launch** triggers model download (~1.5–3 GB). Choose between Whisper (GGML) or Parakeet (ONNX) engines.
+4. **Configure summarization**: Point to your Ollama instance (default `http://localhost:11434`) or pick a cloud provider.
+
+> **Linux users**: There is no native Linux desktop app yet — build from source or use the Docker Compose path. A native Linux app is on the roadmap ([source](https://shaam.blog/articles/offline-ai-meeting-assistant-meetily-guide-2026)).
+
+---
+
+## Configuration
+
+### Ports
+
+- **8000**: whisper-server ASR API (Docker only)
+- **80/443**: meeting-app web UI (Docker only)
+- **11434**: Ollama (if running alongside)
+- **Native desktop**: ephemeral localhost ports, no manual config needed
+
+### Model Selection
+
+| Model Size | RAM Usage | Quality | Speed (CPU) | Speed (GPU) |
+|---|---|---|---|---|
+| `tiny` | ~1 GB | OK | Fast | Very Fast |
+| `base` | ~1.5 GB | Good | Moderate | Fast |
+| `small` | ~2.5 GB | Better | Slow | Moderate |
+| `medium` | ~5 GB | Best | Very Slow | Moderate |
+| `large-v3` | ~10 GB | State-of-art | Impractical | Slow |
+
+**Recommendation**: Start with `base` for daily use. Upgrade to `small` or `medium` on GPU-equipped machines.
+
+### GPU Acceleration
+
+- **NVIDIA CUDA**: Windows/Linux — automatic detection in v0.4.0+
+- **AMD/Intel Vulkan**: Supported by Whisper.cpp GGML backend
+- **Apple Metal + CoreML**: macOS — automatic with native .dmg install
+- Speedup: 5–10x over CPU inference ([source](https://www.bitdoze.com/meetily-self-hosted-ai-meeting-assistant/))
+
+### Ollama Integration
+
+```bash
+# Run Ollama alongside Meetily
+ollama pull gemma3:4b    # recommended for summaries
+ollama pull llama3.2:3b  # lightweight alternative
+ollama pull qwen3:8b     # on-device Qwen3 model (v0.4.0+)
+```
+
+In Meetily settings → Summarization → Provider: Ollama → Endpoint: `http://localhost:11434`. Test the connection from the UI.
+
+---
+
+## Integration Angle: Meetily + Hermes Agent Workflows
+
+Meetily pairs naturally with the Hermes Agent ecosystem in several ways:
+
+1. **Automated transcription pipelines**: A Hermes cron job can poll Meetily's local data directory, detect new transcriptions, and pipe them into a processing chain — keyword extraction, action-item detection, or archival to your knowledge base.
+
+2. **Agent-triggered summarization**: After a meeting ends, a Hermes agent can call the Ollama API (or Meetily's output files) to generate structured summaries, push to Notion/GitHub Issues, or Slack notifications — all autonomously.
+
+3. **Compliance auditing**: Run a periodic Hermes agent that scans transcribed meetings for PII/PHI patterns, generating compliance reports without any cloud egress. The entire audit pipeline stays on-prem.
+
+4. **Knowledge base ingestion**: Transcriptions stored as Markdown exports feed directly into RAG pipelines. A Hermes skill can index the `./data/` directory nightly and make meeting knowledge searchable via your local LLM.
+
+Because Meetily is MIT-licensed and exposes a clean FastAPI REST API (Docker path) or local filesystem (native path), it's trivially scriptable from any agent framework — including Hermes.
+
+---
+
+## Operational Notes & Gotchas
+
+- **First model download is large**: The initial Whisper model pull is 1.5–10 GB depending on model size. On the Docker path, this happens at container startup. On native desktop, it blocks the first launch. Budget ~15 minutes.
+- **GPU detection is engine-dependent**: Parakeet (ONNX) requires NVIDIA CUDA. Whisper (GGML) supports a wider range (Vulkan, Metal, CoreML). If GPU acceleration isn't working, switch engines.
+- **Docker path = headless**: The Docker Compose deployment provides a web UI and API, but not the Tauri desktop recording interface. You'll need to either (a) use the native desktop app for capture + Docker backend for processing, or (b) inject audio files into the server for batch transcription.
+- **System audio permissions**: On macOS Ventura+, the Tauri app needs either Screen Recording or System Audio Recording permission. Without it, silent transcripts. On Windows, WASAPI loopback usually works out of the box.
+- **Meeting-scoped, not continuous**: Unlike Screenpipe, Meetily is designed for per-meeting capture — start/stop per session. Not a screen-activity monitor.
+- **Linux friction**: No native .deb/.rpm/.AppImage yet. Build from source (Rust + Node.js) or run the Docker setup. The community has working build scripts, but it's not turnkey.
+- **Analytics opt-out**: v0.4.0 ships with analytics off by default — verify in Settings → Privacy to ensure zero telemetry egress.
+
+---
+
+## Analysis, Implications & Actionable Takeaways
+
+**The self-hosting inflection point**: Meetily's trajectory — from ~1,100 stars in March 2025 to 26,000+ in July 2026, and 369,000 users — signals that the market has reached a tipping point where local inference is fast and cheap enough to replace cloud transcription for most teams. The combination of Whisper.cpp's CPU efficiency with optional GPU boosts means even a modest workstation can handle real-time transcription.
+
+**Competitive landscape**: Compared to alternatives, Meetily is the most complete self-hosted solution ([source](https://meetily.ai/blog/best-self-hosted-meeting-transcription-tools-2026)). Screenpipe offers continuous capture but lacks the meeting-centric UX. WhisperX and Vosk are engine-only — no GUI, no AI summaries, no export pipeline. Meetily wins on being a fully integrated product that happens to be open-source.
+
+**For Hermes users**: The ability to pair a self-hosted transcriber with autonomous agents creates a new category of workflow — meetings that not only get recorded but produce structured, actionable output (issues, tickets, calendar updates) without any human copying-pasting. The compliance story (GDPR, HIPAA, zero egress) makes this stack viable for regulated industries that have historically avoided AI meeting tools entirely.
+
+**Action items**:
+
+1. Start with the native desktop app on macOS/Windows — 5-minute install, test quality with your typical meeting audio
+2. Deploy the Docker Compose stack if you want a shared server that multiple machines can use
+3. Pull Ollama with `gemma3:4b` for local summarization — no API keys, no rate limits
+4. Write a Hermes cron script to poll transcripts and push action items to your task tracker
+5. Validate zero-telemetry by running `tcpdump` on the Docker bridge network if compliance is critical
