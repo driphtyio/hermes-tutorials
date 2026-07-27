@@ -35,9 +35,77 @@ lastVerified: 2026-07-17
 | Profiles | ✅ Full isolation | Limited |
 | Kanban orchestration | ✅ | ❌ |
 | Migration tool | ✅ `hermes claw migrate` | ❌ |
-| Community | Growing fast | Established |
+| Community | Growing fast — 50k+ sessions/day, 2k+ skills hub | Established — mature user base |
+| Architecture | CLI-native with gateway bridge | IDE-native with script extensions |
+| Self-improvement | Skills system — agent writes, tests, refines its own procedures | Manual — community templates only |
+| Sub-agent delegation | Built-in task decomposition with progress tracking | Limited to function calls |
+| Context window | Automatic compression at configurable thresholds | Manual context management |
+| Plugin ecosystem | 30+ official plugins + plugin SDK | 15+ official plugins |
 
-## Where Hermes Wins
+## Architecture Comparison
+
+### Runtime Architecture
+
+**Hermes** runs as a Python CLI application with a gateway layer that bridges to 15+ messaging platforms. The core loop is: receive input → load skills → select tools → generate response → execute → learn. Each turn can update the agent's skills, memory, and config — self-improvement is baked in.
+
+**OpenClaw** runs as a Python CLI with IDE extension support (Cursor, VS Code). Its architecture follows a traditional agent loop: receive input → select tool → execute → respond. Self-improvement isn't part of the runtime; improvements come from manual config changes or community template updates.
+
+### Skills System (Hermes-Only)
+
+The skills system is the architectural difference that explains most feature gaps. Skills are executable Markdown documents that teach Hermes how to perform specific tasks. They're loaded at session start and can be installed from the [Hermes Skills Hub](https://hermes-agent.nousresearch.com/skills) (2,000+ community skills), self-written by the agent, or published by developers.
+
+```bash
+# Install a skill from the hub
+hermes skills install context-engineer
+
+# Write a skill during a session — Hermes saves it automatically
+"Save this procedure as a skill called 'deploy-mcp-server'"
+
+# Publish your own skill
+hermes skills publish ./my-skill.md
+```
+
+OpenClaw has no equivalent. Custom behavior requires modifying configuration files or writing Python extensions.
+
+### Multi-Platform Gateway
+
+Hermes's gateway layer runs as a separate daemon process (`hermes gateway run`) that listens on 15+ platforms simultaneously. This means the same agent with the same skills, memory, and tools is accessible from:
+- **Chat apps**: Telegram, Discord, Slack, Matrix, WhatsApp
+- **Email**: IMAP/SMTP integration
+- **Voice**: TTS/STT via ElevenLabs, Whisper
+- **SMS**: Twilio integration
+- **Web**: Embeddable chat widget
+
+OpenClaw is primarily CLI-only. Community wrappers exist for Discord and Telegram but aren't officially maintained.
+
+### Provider Architecture
+
+Hermes uses a credential pool architecture — you can add multiple API keys per provider and the system auto-rotates on rate limits:
+
+```bash
+hermes auth add openrouter sk-1
+hermes auth add openrouter sk-2  # Auto-failover
+hermes auth list openrouter       # Shows pool status
+```
+
+OpenClaw uses a single-key-per-provider model. No built-in failover or rotation.
+
+## Performance & Benchmarks
+
+While direct head-to-head benchmarks are scarce, we can compare using available data:
+
+| Metric | Hermes | OpenClaw |
+|--------|--------|----------|
+| OpenRouter ranking | #1 app (May 2026) | #2 (Jan 2026), now #4+ |
+| Daily active sessions | 50,000+ | Not publicly disclosed |
+| Skills hub submissions | 2,000+ | N/A (no skills hub) |
+| Plugin count | 30+ | 15+ |
+| GitHub stars | 15,000+ | 20,000+ (older project) |
+| Release cadence | Weekly | Monthly |
+
+Data sources: [OpenRouter leaderboard](https://openrouter.ai/rankings), Hermes GitHub, OpenClaw GitHub.
+
+## Community & Momentum
 
 ### 1. Skills System
 
