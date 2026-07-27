@@ -1,0 +1,203 @@
+---
+title: "Parallel Subagent Delegation in Hermes Agent"
+description: "Hermes Agent's delegate_task tasks array lets you fan out work across concurrent subagents that run in parallel — cutting wall-clock time from the sum of all tasks to the slowest single one. Here's how it works, how to configure it, and when to use it."
+pubDate: 2026-07-27
+tags: [hermes, tutorial, subagents, delegation, parallel, multi-agent, configuration]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-parallel-subagent-delegation-1785172963.webp"
+lastVerified: 2026-07-27
+---
+
+## Waiting Is the Old Way
+
+Picture this: you're in a Hermes session, you've just asked your agent to research three topics — competitive analysis, pricing trends, and market positioning — for that big report due Friday. The agent fires off a web search for topic one. You wait. Then topic two. You wait again. Then topic three. By the time all three come back, your momentum is gone, your coffee is cold, and you've alt-tabbed into a Twitter doomscroll wondering why an agent that can run Python, edit files, and deploy code can't seem to do two things at once.
+
+This used to be the default. Single-task delegation in Hermes Agent was *sequential* — fire one task, sit tight, get one answer, then fire the next. Parallel work required manual orchestration hacks or running multiple terminal sessions. It worked, but it felt like owning a Ferrari and only driving it in first gear.
+
+That changed when Nous Research shipped parallel subagent delegation via the `tasks` array. Today, when you tell Hermes to research three topics, it doesn't line them up like a grocery checkout queue. It sends all three agents into the world simultaneously — and the parent blocks until every last one reports back. The wall-clock time is roughly the slowest single agent, not the sum of all three. That's the real win: parallelism means you get the answer as fast as your hardest subproblem, not as fast as all of them added together.
+
+Let's look at how this actually works, and why it changes what it means to delegate.
+
+---
+
+## What Parallel Delegation Actually Is
+
+When your Hermes agent calls `delegate_task`, it spawns a child `AIAgent` — a fully independent instance with its own conversation history, its own terminal session, and access to its own tools. That child agent thinks, researches, edits files, and iterates just like the parent. The critical difference: only the final summary comes back. Every intermediate tool call, every false start, every internal monologue — it stays in the child's context, not the parent's.
+
+In the old single-task model, the parent would freeze while a single child ran: no new messages, no progress until that one child returned. With the parallel `tasks` array, the parent still freezes — but now it freezes while *multiple* children run concurrently. You send off a batch, the parent blocks until the slowest child finishes, and then you get a consolidated summary of everything. The benefit isn't non-blocking execution; it's parallelism — your wall-clock time drops from the sum to the max.
+
+Here is the simplest possible single-task delegation:
+
+```python
+delegate_task(
+    goal="Audit the node_modules directory for known vulnerabilities",
+    context="""
+    Project at /home/user/webapp. Run `npm audit --json` and summarize
+    any critical or high-severity findings. Recommend fix versions.
+    """
+)
+```
+
+This is synchronous: the parent waits for this one child to finish before continuing. The power comes when you batch work together.
+
+---
+
+## The Batch: Where Parallelism Shines
+
+The real superpower comes when you send work to multiple subagents at once. Pass a `tasks` array:
+
+```python
+delegate_task(tasks=[
+    {
+        "goal": "Research WebAssembly outside the browser in 2026",
+        "context": "Focus on: Wasmtime, Wasmer, cloud/edge use cases, WASI progress"
+    },
+    {
+        "goal": "Research RISC-V server chip adoption",
+        "context": "Focus on: shipping hardware, cloud providers adopting, software ecosystem"
+    },
+    {
+        "goal": "Research practical quantum computing progress",
+        "context": "Focus on: error correction, real-world applications, key companies"
+    }
+])
+```
+
+Three subagents spin up concurrently (up to three by default, configurable via `delegation.max_concurrent_children` in `~/.hermes/config.yaml`). Each gets a terminal, a browser tool, and full file access. They search, they read, they synthesize — all at the same time.
+
+The parent blocks until all three finish, then receives a consolidated summary. The parent sees one clean message rather than three interleaved streams of raw tool calls. And because each subagent starts fresh, there's no cross-contamination between research topics — no bias bleeding from one analysis into another.
+
+**Sequential execution** would take: `time(A) + time(B) + time(C)`. **Parallel execution** takes: `max(time(A), time(B), time(C))`. For a batch where one task is a 30-second web search and another is a 2-minute multi-file code analysis, you go from roughly 3 minutes to roughly 2 minutes. The more evenly balanced your tasks, the bigger the savings.
+
+---
+
+## What Makes Parallel Different
+
+The parallel shift isn't just about speed. It changes the *character* of what you can delegate.
+
+**Parallel compare-and-contrast.** Need to evaluate three approaches to a problem? Delegate each approach to its own subagent. Each comes back with a pure, uncontaminated evaluation. You get three independent takes, side by side, without having to mentally context-switch between them.
+
+**Multi-file refactoring without the mess.** Large refactors that touch many files used to flood your context window with intermediate state. Now you can split across subagents — one per module — and let each child handle its piece independently. Because each subagent gets its own terminal session, they can work on the same repository without stepping on each other, as long as they're editing different files.
+
+**Fire-batch-and-collect.** You compose a batch of related tasks, send them off, and when they all return — at the speed of the slowest — you get a synthesized result. No need to manually stitch together outputs from three separate turns.
+
+---
+
+## The Role Parameter: Leaf vs. Orchestrator
+
+Every subagent gets a `role` parameter that controls what it's allowed to do:
+
+- **`"leaf"` (default):** A standard worker subagent. It can use most tools freely, but several powerful tools are blocked to prevent runaway delegation chains and unwanted side effects.
+- **`"orchestrator"`:** A privileged subagent that *can* call `delegate_task` itself, spawning its own children (bounded by `max_spawn_depth`). Useful for hierarchical decomposition of complex problems.
+
+```python
+delegate_task(
+    goal="Plan the migration architecture",
+    role="orchestrator",
+    tasks=[
+        {"goal": "Audit current database schema", "context": "...", "role": "leaf"},
+        {"goal": "Design new schema", "context": "...", "role": "leaf"},
+        {"goal": "Write migration scripts", "context": "...", "role": "leaf"},
+    ]
+)
+```
+
+Here the parent delegates orchestration to a subagent that then farms out three leaf tasks. Without `role="orchestrator"`, the middle subagent would be blocked from delegating further.
+
+### Blocked Tools for Leaf Subagents
+
+Leaf subagents cannot call these tools (orchestrator-role subagents can, provided `max_spawn_depth` hasn't been exceeded):
+
+- **`clarify`** — leaf subagents cannot ask the user clarifying questions. Include everything they need in `context`.
+- **`delegate_task`** — leaves cannot spawn their own subagents. Only orchestrators can.
+- **`memory`** — leaf subagents cannot read or write long-term memory. Prevents contamination.
+- **`send_message`** — leaf subagents cannot send messages to external channels (Discord, Telegram, etc.).
+- **`execute_code`** — leaf subagents cannot execute arbitrary code directly (though they can use their terminal sessions for approved tasks).
+
+This is by design: it keeps leaf agents focused, contained, and predictable. The tradeoff is that you *must* provide full context up front — a leaf that realizes it needs more information can't ask you for it or look it up from memory.
+
+---
+
+## The Gotcha You Need to Remember
+
+Subagents start with *nothing*. No conversation history, no memory of what you discussed three turns ago, no context beyond what you give them in the `goal` and `context` fields. If you delegate "fix that bug we were talking about," the subagent has no idea which bug you mean.
+
+This is the single biggest source of confusion when people start using delegation. You must pass everything the subagent needs explicitly:
+
+```python
+# BAD — the subagent has no context
+delegate_task(goal="Fix the error")
+
+# GOOD — the subagent knows exactly what to do
+delegate_task(
+    goal="Fix the TypeError in api/handlers.py",
+    context="""
+    File: /home/user/webapp/api/handlers.py, line 47
+    Error: 'NoneType' object has no attribute 'get'
+    The function process_request() receives a dict from parse_body(),
+    but parse_body() returns None when Content-Type is missing.
+    Project: Python 3.11, Flask.
+    """
+)
+```
+
+Think of it like writing a clear ticket for a teammate. The more explicit you are, the better the subagent performs — and since leaf subagents can't call `clarify`, you'll save yourself the headache of an incomplete or wrong result.
+
+---
+
+## Watching Them Work (Because Watching Is Fun)
+
+Hermes doesn't just throw subagents into a black box and hope for the best. Every delegation creates live transcripts you can tail in real time:
+
+```bash
+tail -f ~/.hermes/cache/delegation/live/deleg_ab12cd34/task-0.log
+```
+
+Each line is timestamped, showing the child's reasoning, tool calls, results, and status. It's like watching three parallel streams of consciousness — one per subagent — unfolding simultaneously. In the TUI, the `/agents` overlay (aliased as `/tasks`) gives you a live tree view with per-branch cost, token counts, and kill/pause controls.
+
+This isn't just a debugging nicety. It transforms delegation from a "hope it works" abstraction into something you can actually observe, audit, and interrupt when a subagent goes off the rails.
+
+---
+
+## Configure for Your Use Case
+
+Parallel delegation comes with sensible defaults, but you'll want to tune it once you understand your workload:
+
+```yaml
+# ~/.hermes/config.yaml
+delegation:
+  max_concurrent_children: 3        # Default: 3. Raise for bigger fan-outs
+  max_spawn_depth: 1                # Default: 1 (flat). Set to 2+ for nested orchestration
+  orchestrator_enabled: true        # Allow role="orchestrator" children
+  model: "google/gemini-flash-2.0"  # Cheaper model for subagents
+  provider: "openrouter"            # Separate provider for children
+  child_timeout_seconds: 1200       # Max wall-clock per child before forced return
+  max_iterations: 50                # Turns per child before forced return
+  context_length: 1048576           # Subagent context window (in tokens)
+  inherit_mcp_toolsets: true        # Pass parent's MCP tools to children
+  subagent_auto_approve: false      # Require approval for subagent actions
+```
+
+Want subagents to use a cheaper/faster model than the parent? Set `delegation.model`. Need deeper delegation trees where subagents can spawn their own subagents? Raise `max_spawn_depth` — but be careful: depth 3 with 3 concurrent children per level means up to 27 leaf agents running simultaneously. Costs multiply fast.
+
+---
+
+## When Not to Delegate
+
+Parallel subagents are powerful, but they're not the right tool for everything.
+
+- **Single tool calls** — just use the tool directly. Spinning up a subagent to check if a file exists is overkill.
+- **Mechanical multi-step pipelines** — use `execute_code` instead. It's cheaper, faster, and doesn't burn a full reasoning loop on deterministic work.
+- **Tasks needing user interaction** — subagents can't call `clarify`. If the task might need to ask you something, keep it in the main conversation.
+- **Durable work that must survive a crash** — delegation is process-local. If Hermes restarts, in-flight children become `unknown`. For work that must survive restarts, use `cronjob` or `terminal(background=True, notify_on_complete=True)`.
+
+The rule of thumb: delegate when a task needs *judgment*. Use `execute_code` when it needs *execution*. The two complement each other beautifully — gather data mechanically with `execute_code`, then delegate the analysis to a reasoning-heavy subagent.
+
+---
+
+## The Bottom Line
+
+Parallel subagent delegation via the `tasks` array transforms Hermes from a single-threaded assistant into something closer to a team lead. You describe the work, the work gets distributed across concurrent workers, and when the slowest one finishes, you get back a consolidated result.
+
+The days of waiting for one research result before starting the next are over. Fire off three subagents in a single `delegate_task(tasks=[...])` call, wait once — for the longest-running agent, not for all three sequentially — and get your synthesized answer. It's not just faster. It's a fundamentally different way of interacting with an agent — one where parallelism is the default, not an afterthought.
+
+And that cold coffee? You finally have time to drink it while your agent works.

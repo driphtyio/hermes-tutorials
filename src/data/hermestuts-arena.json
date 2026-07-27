@@ -3,7 +3,7 @@
     "name": "Hermes Tutorials Arena",
     "version": "1.0.0",
     "description": "Model-vs-model battles for Hermes Tutorials content and design.",
-    "total_matches": 11
+    "total_matches": 12
   },
   "model_pool": [
     {
@@ -1100,6 +1100,96 @@
         }
       },
       "slug": "self-host-your-meeting-transcriber-complete-meetily-setup-guide"
+    },
+    {
+      "match_id": "her-0036-2026-07-27",
+      "date": "2026-07-27",
+      "topic": "Parallel Subagent Delegation in Hermes Agent",
+      "type": "tutorial",
+      "category": "tutorial",
+      "pipeline": "cron-subagent-arena",
+      "orchestrator": "glm-5.2 (custom:zai)",
+      "models_competed": [
+        {
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "A",
+          "note": "standard technical-doc voice"
+        },
+        {
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "B",
+          "note": "engaging narrative voice; intended model mimo-v2.5-pro but per-task model override not applied in batch delegation, so both ran as deepseek-v4-flash (prompting-strategy A/B instead of model A/B)"
+        }
+      ],
+      "judges": [
+        {
+          "slot": "MiMo V2.5 Pro",
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "note": "intended judge mimo-v2.5-pro (xiaomi) but delegation subagents ran with default model; judge verified accuracy against actual Hermes source code"
+        }
+      ],
+      "per_judge_scores": [
+        {
+          "judge": "MiMo V2.5 Pro",
+          "A": 2.4,
+          "B": 8.8,
+          "winner": "B"
+        }
+      ],
+      "results": [
+        {
+          "rank": 1,
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "B",
+          "score": 8.8,
+          "strengths": [
+            "Accurate real API (delegate_task tasks array, max_concurrent_children, role parameter)",
+            "Engaging narrative voice with relatable analogies",
+            "Practical gotchas section (context isolation, blocked tools)",
+            "Correct YAML config with all real keys"
+          ],
+          "weaknesses": [
+            "Initially framed delegation as non-blocking; corrected to synchronous-but-parallel in QA"
+          ]
+        },
+        {
+          "rank": 2,
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "A",
+          "score": 2.4,
+          "strengths": [
+            "Well-structured and readable"
+          ],
+          "weaknesses": [
+            "Fatally inaccurate — fabricated entire async_delegation toolset with 6 nonexistent tools",
+            "Invented release date and GitHub issue reference",
+            "Used TypeScript syntax for Python tool calls",
+            "All code examples use non-existent API"
+          ]
+        }
+      ],
+      "winner": "B",
+      "winning_model": "deepseek-v4-flash",
+      "qa": {
+        "threshold": 8.0,
+        "initial_score": 8.8,
+        "initial_verdict": "PASS",
+        "retries": 0,
+        "final_score": 8.8,
+        "qa_passed": true,
+        "fixes_applied": [
+          "Corrected non-blocking framing to synchronous-but-parallel",
+          "Added role parameter (leaf vs orchestrator) section",
+          "Added blocked tools list for leaf subagents",
+          "Added subagent_auto_approve and child_timeout_seconds config keys"
+        ]
+      },
+      "slug": "hermes-parallel-subagent-delegation"
     }
   ],
   "leaderboard": [
@@ -1122,5 +1212,5 @@
       "matches": 1
     }
   ],
-  "last_updated": "2026-07-25"
+  "last_updated": "2026-07-27"
 }
