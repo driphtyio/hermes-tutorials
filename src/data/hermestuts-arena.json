@@ -3,7 +3,7 @@
     "name": "Hermes Tutorials Arena",
     "version": "1.0.0",
     "description": "Model-vs-model battles for Hermes Tutorials content and design.",
-    "total_matches": 12
+    "total_matches": 4
   },
   "model_pool": [
     {
@@ -389,6 +389,12 @@
       "model": "mimo-v2.5-pro",
       "provider": "xiaomi",
       "family": "xiaomi",
+      "status": "pass"
+    },
+    {
+      "model": "qwen3.7-flash",
+      "provider": "openrouter",
+      "family": "qwen",
       "status": "pass"
     }
   ],
@@ -1166,7 +1172,7 @@
             "Well-structured and readable"
           ],
           "weaknesses": [
-            "Fatally inaccurate — fabricated entire async_delegation toolset with 6 nonexistent tools",
+            "Fatally inaccurate \u2014 fabricated entire async_delegation toolset with 6 nonexistent tools",
             "Invented release date and GitHub issue reference",
             "Used TypeScript syntax for Python tool calls",
             "All code examples use non-existent API"
@@ -1190,27 +1196,143 @@
         ]
       },
       "slug": "hermes-parallel-subagent-delegation"
+    },
+    {
+      "match_id": "her-0037-2026-07-31",
+      "date": "2026-07-31",
+      "topic": "Using Git Worktrees with Hermes Agent for Parallel Workflows",
+      "type": "tutorial",
+      "category": "tutorial",
+      "pipeline": "cron-subagent-arena",
+      "orchestrator": "glm-5.2 (custom:zai)",
+      "models_competed": [
+        {
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "A"
+        },
+        {
+          "model": "mimo-v2.5",
+          "provider": "custom:xiaomi",
+          "label": "B"
+        },
+        {
+          "model": "qwen/qwen3.7-flash",
+          "provider": "openrouter",
+          "label": "C"
+        }
+      ],
+      "judges": [
+        {
+          "slot": "MiMo V2.5 Pro",
+          "model": "mimo-v2.5-pro",
+          "provider": "custom:xiaomi"
+        }
+      ],
+      "results": [
+        {
+          "rank": 1,
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "A",
+          "score": 8.9,
+          "word_count": 1759,
+          "strengths": [
+            "Excellent accuracy with correct Hermes features",
+            "Strong sourcing with clickable inline links",
+            "Practical code examples throughout",
+            "Complete real-world workflow example"
+          ],
+          "weaknesses": [
+            "Contained 'game-changer' slop word (fixed in QA)"
+          ]
+        },
+        {
+          "rank": 2,
+          "model": "qwen3.7-flash",
+          "provider": "openrouter",
+          "label": "C",
+          "score": 8.75,
+          "word_count": 1013,
+          "strengths": [
+            "Comprehensive coverage",
+            "Strong practical examples",
+            "Good engagement"
+          ],
+          "weaknesses": [
+            "Shorter than other posts",
+            "Fewer code examples"
+          ]
+        },
+        {
+          "rank": 3,
+          "model": "mimo-v2.5",
+          "provider": "custom:xiaomi",
+          "label": "B",
+          "score": 8.65,
+          "word_count": 1247,
+          "strengths": [
+            "Accurate information",
+            "Practical guidance",
+            "Good sourcing"
+          ],
+          "weaknesses": [
+            "Slightly less engaging title/hook"
+          ]
+        }
+      ],
+      "winner": "A",
+      "winning_model": "deepseek-v4-flash",
+      "qa": {
+        "threshold": 8.0,
+        "initial_score": 8.9,
+        "initial_verdict": "PASS",
+        "retries": 0,
+        "final_score": 8.9,
+        "qa_passed": true,
+        "fixes_applied": [
+          "Removed 'game-changer' AI slop word",
+          "Removed trailing separator and ready-to-dive footer block",
+          "Shortened description to under 160 chars for SEO",
+          "Omitted heroImage (gen-image-verified.sh failed on all backends)"
+        ]
+      },
+      "slug": "hermes-git-worktrees-parallel-workflows"
     }
   ],
   "leaderboard": [
     {
       "model": "deepseek-v4-flash",
-      "provider": "deepseek",
-      "avgScore": 8.25,
-      "wins": 1,
+      "avgScore": 7.4,
+      "wins": 5,
       "losses": 0,
-      "bestScore": 8.25,
+      "bestScore": 8.9,
+      "matches": 5
+    },
+    {
+      "model": "qwen3.7-flash",
+      "avgScore": 8.75,
+      "wins": 0,
+      "losses": 1,
+      "bestScore": 8.75,
+      "matches": 1
+    },
+    {
+      "model": "mimo-v2.5",
+      "avgScore": 8.65,
+      "wins": 0,
+      "losses": 1,
+      "bestScore": 8.65,
       "matches": 1
     },
     {
       "model": "mimo-v2.5-pro",
-      "provider": "xiaomi",
-      "avgScore": 8.05,
+      "avgScore": 8.03,
       "wins": 0,
-      "losses": 1,
+      "losses": 2,
       "bestScore": 8.05,
-      "matches": 1
+      "matches": 2
     }
   ],
-  "last_updated": "2026-07-27"
+  "last_updated": "2026-07-31"
 }
