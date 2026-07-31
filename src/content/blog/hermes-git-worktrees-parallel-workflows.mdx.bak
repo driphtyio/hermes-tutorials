@@ -2,7 +2,6 @@
 title: "Supercharge Your AI Agent Workflow: Git Worktrees + Hermes Agent"
 description: "Use Git worktrees with Hermes Agent for safe parallel AI workflows — manual setup, hermes -w, and best practices."
 pubDate: "2026-07-31"
-heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-git-worktrees-parallel-workflows-1785523593.webp"
 tags: ["hermes-agent", "git-worktrees", "parallel-workflows", "developer-tools"]
 lastVerified: "2026-07-31"
 ---
