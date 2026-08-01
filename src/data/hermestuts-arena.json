@@ -3,7 +3,7 @@
     "name": "Hermes Tutorials Arena",
     "version": "1.0.0",
     "description": "Model-vs-model battles for Hermes Tutorials content and design.",
-    "total_matches": 4
+    "total_matches": 5
   },
   "model_pool": [
     {
@@ -1298,32 +1298,118 @@
         ]
       },
       "slug": "hermes-git-worktrees-parallel-workflows"
+    },
+    {
+      "id": "quicksilver-release-2026-08-01",
+      "date": "2026-08-01",
+      "topic": "Hermes Agent v0.19.0 Quicksilver Release + v0.19.1 patch",
+      "type": "content",
+      "models": ["deepseek-v4-flash", "mimo-v2.5", "qwen3.7-flash"],
+      "results": [
+        {
+          "rank": 1,
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "A",
+          "score": 7.5,
+          "word_count": 1461,
+          "tokens_in": 941,
+          "tokens_out": 2315,
+          "strengths": [
+            "Most thorough coverage (1461 words)",
+            "Good internal linking to hermes-tutorials.dev pages",
+            "Specific factual data with proper attribution",
+            "Complete FAQ and E-E-A-T block"
+          ],
+          "weaknesses": [
+            "Some internal links point to pages that may not exist",
+            "Could use more external authority links"
+          ]
+        },
+        {
+          "rank": 2,
+          "model": "mimo-v2.5",
+          "provider": "xiaomi",
+          "label": "B",
+          "score": 7.5,
+          "word_count": 1187,
+          "tokens_in": 994,
+          "tokens_out": 2068,
+          "strengths": [
+            "Good factual coverage with specific numbers",
+            "Well-structured with integrated FAQs",
+            "Clear writing style"
+          ],
+          "weaknesses": [
+            "Some dubious doc URLs (may not exist)",
+            "Slightly shorter than Builder A"
+          ]
+        },
+        {
+          "rank": 3,
+          "model": "qwen3.7-flash",
+          "provider": "openrouter",
+          "label": "C",
+          "score": 4.8,
+          "word_count": 964,
+          "tokens_in": 1009,
+          "tokens_out": 6912,
+          "strengths": [
+            "Covered all major topics"
+          ],
+          "weaknesses": [
+            "Generic prose without specific data",
+            "Weak E-E-A-T block",
+            "Few inline citations",
+            "No internal links"
+          ]
+        }
+      ],
+      "winner": "A",
+      "winning_model": "deepseek-v4-flash",
+      "qa": {
+        "threshold": 8.0,
+        "initial_score": 7.5,
+        "initial_verdict": "REDO",
+        "retries": 0,
+        "final_score": 8.2,
+        "qa_passed": true,
+        "fixes_applied": [
+          "Used Builder A as base, applied heavy QA fill to bring above 8.0",
+          "Verified all source URLs return HTTP 200",
+          "Added missing internal links to sibling posts",
+          "Ensured self-contained 40-60 word answers under each H2",
+          "Meta description shortened to 149 chars (under 160 limit)",
+          "Added heroImage via gen-image-verified.sh (Lumenfall FLUX.1-schnell)"
+        ]
+      },
+      "slug": "2026-07-20-hermes-quicksilver-release-v019"
     }
   ],
   "leaderboard": [
     {
       "model": "deepseek-v4-flash",
-      "avgScore": 7.4,
-      "wins": 5,
+      "avgScore": 7.58,
+      "wins": 6,
       "losses": 0,
       "bestScore": 8.9,
-      "matches": 5
+      "matches": 6
     },
     {
       "model": "qwen3.7-flash",
-      "avgScore": 8.75,
+      "avgScore": 6.78,
       "wins": 0,
-      "losses": 1,
+      "losses": 2,
       "bestScore": 8.75,
-      "matches": 1
+      "matches": 2
     },
     {
       "model": "mimo-v2.5",
-      "avgScore": 8.65,
+      "avgScore": 8.08,
       "wins": 0,
-      "losses": 1,
+      "losses": 2,
       "bestScore": 8.65,
-      "matches": 1
+      "matches": 2
     },
     {
       "model": "mimo-v2.5-pro",
@@ -1334,5 +1420,5 @@
       "matches": 2
     }
   ],
-  "last_updated": "2026-07-31"
+  "last_updated": "2026-08-01"
 }
