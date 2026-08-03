@@ -3,7 +3,7 @@
     "name": "Hermes Tutorials Arena",
     "version": "1.0.0",
     "description": "Model-vs-model battles for Hermes Tutorials content and design.",
-    "total_matches": 5
+    "total_matches": 6
   },
   "model_pool": [
     {
@@ -395,6 +395,12 @@
       "model": "qwen3.7-flash",
       "provider": "openrouter",
       "family": "qwen",
+      "status": "pass"
+    },
+    {
+      "model": "poolside/laguna-s-2.1",
+      "provider": "openrouter",
+      "family": "poolside",
       "status": "pass"
     }
   ],
@@ -1304,7 +1310,11 @@
       "date": "2026-08-01",
       "topic": "Hermes Agent v0.19.0 Quicksilver Release + v0.19.1 patch",
       "type": "content",
-      "models": ["deepseek-v4-flash", "mimo-v2.5", "qwen3.7-flash"],
+      "models": [
+        "deepseek-v4-flash",
+        "mimo-v2.5",
+        "qwen3.7-flash"
+      ],
       "results": [
         {
           "rank": 1,
@@ -1384,32 +1394,158 @@
         ]
       },
       "slug": "2026-07-20-hermes-quicksilver-release-v019"
+    },
+    {
+      "match_id": "her-browser-2026-08-03",
+      "date": "2026-08-03",
+      "topic": "Browser Automation with Hermes Agent: Getting Started Guide",
+      "type": "tutorial",
+      "category": "tutorial",
+      "pipeline": "cron-subagent-arena",
+      "orchestrator": "glm-5.2 (custom:zai)",
+      "models_competed": [
+        {
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "A"
+        },
+        {
+          "model": "mimo-v2.5",
+          "provider": "custom:xiaomi",
+          "label": "B"
+        },
+        {
+          "model": "poolside/laguna-s-2.1",
+          "provider": "openrouter",
+          "label": "C"
+        }
+      ],
+      "judges": [
+        {
+          "slot": "Judge 1",
+          "model": "qwen3.7-flash",
+          "provider": "openrouter"
+        }
+      ],
+      "results": [
+        {
+          "rank": 1,
+          "model": "mimo-v2.5",
+          "provider": "xiaomi",
+          "label": "B",
+          "score": 9.3,
+          "word_count": 1247,
+          "tokens_in": 1582,
+          "tokens_out": 2067,
+          "scores": {
+            "accuracy": 9,
+            "sourcing": 9.5,
+            "quality": 9.5,
+            "practicality": 9.5,
+            "engagement": 9
+          },
+          "strengths": [
+            "Longest, most complete guide (1247 words)",
+            "Numbered beginner tasks with specific tool names",
+            "Excellent FAQ covering snapshot vs vision, coding knowledge, and free version",
+            "E-E-A-T block cites tools.ts as a source",
+            "All inline links, no numbered references, no slop words"
+          ],
+          "weaknesses": [
+            "Description initially less keyword-optimized (fixed in QA)"
+          ]
+        },
+        {
+          "rank": 2,
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "A",
+          "score": 8.5,
+          "word_count": 907,
+          "tokens_in": 1647,
+          "tokens_out": 1496,
+          "scores": {
+            "accuracy": 8.5,
+            "sourcing": 9,
+            "quality": 8.5,
+            "practicality": 8,
+            "engagement": 8
+          },
+          "strengths": [
+            "All inline links, no numbered references",
+            "E-E-A-T block present with named sources",
+            "Self-contained answer paragraph under every H2",
+            "No AI slop words"
+          ],
+          "weaknesses": [
+            "Shortest at 907 words",
+            "Fewer concrete beginner tasks",
+            "Less distinctive FAQ"
+          ]
+        },
+        {
+          "rank": 3,
+          "model": "poolside/laguna-s-2.1",
+          "provider": "openrouter",
+          "label": "C",
+          "score": 8.03,
+          "word_count": 921,
+          "tokens_in": 1633,
+          "tokens_out": 1517,
+          "scores": {
+            "accuracy": 8.5,
+            "sourcing": 9,
+            "quality": 7,
+            "practicality": 7.5,
+            "engagement": 7
+          },
+          "strengths": [
+            "Deep technical detail (CDP endpoints, frame_tree, pending_dialogs, debugging)",
+            "Good inline linking including external links in Where-to-go-next",
+            "E-E-A-T block present, no slop words"
+          ],
+          "weaknesses": [
+            "Self-contained H2 answers only partial",
+            "Wrapped in mdx code fences that must be stripped",
+            "Technical/H2-heavy structure hurts beginner narrative flow"
+          ]
+        }
+      ],
+      "winner": "B",
+      "winning_model": "mimo-v2.5",
+      "qa": {
+        "threshold": 8.0,
+        "initial_score": 9.3,
+        "initial_verdict": "PASS",
+        "retries": 0,
+        "final_score": 9.3,
+        "qa_passed": true,
+        "fixes_applied": [
+          "Fixed internal links from /<slug>/ to /blog/<slug>/ format",
+          "Improved meta description to 153 chars with keyword placement",
+          "Added heroImage via gen-image-verified.sh (Lumenfall FLUX.1-schnell)",
+          "Verified all external URLs return HTTP 200"
+        ]
+      },
+      "slug": "hermes-browser-automation"
     }
   ],
   "leaderboard": [
     {
       "model": "deepseek-v4-flash",
-      "avgScore": 7.58,
+      "avgScore": 7.57,
       "wins": 6,
-      "losses": 0,
+      "losses": 1,
       "bestScore": 8.9,
-      "matches": 6
-    },
-    {
-      "model": "qwen3.7-flash",
-      "avgScore": 6.78,
-      "wins": 0,
-      "losses": 2,
-      "bestScore": 8.75,
-      "matches": 2
+      "matches": 7
     },
     {
       "model": "mimo-v2.5",
-      "avgScore": 8.08,
-      "wins": 0,
+      "avgScore": 8.48,
+      "wins": 1,
       "losses": 2,
-      "bestScore": 8.65,
-      "matches": 2
+      "bestScore": 9.3,
+      "matches": 3
     },
     {
       "model": "mimo-v2.5-pro",
@@ -1418,7 +1554,23 @@
       "losses": 2,
       "bestScore": 8.05,
       "matches": 2
+    },
+    {
+      "model": "poolside/laguna-s-2.1",
+      "avgScore": 8.03,
+      "wins": 0,
+      "losses": 1,
+      "bestScore": 8.03,
+      "matches": 1
+    },
+    {
+      "model": "qwen3.7-flash",
+      "avgScore": 6.78,
+      "wins": 0,
+      "losses": 2,
+      "bestScore": 8.75,
+      "matches": 2
     }
   ],
-  "last_updated": "2026-08-01"
+  "last_updated": "2026-08-03"
 }
