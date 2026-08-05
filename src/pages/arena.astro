@@ -1,4 +1,6 @@
 ---
+// DESIGN B — hermes-tutorials arena page (space-optimized variant)
+// Priority: information density. Same content as arena.astro, compressed layout.
 import BaseHead from '../components/BaseHead.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
@@ -20,8 +22,8 @@ let fieldAvg = 0;
 if (leaderboard.length > 0) {
   const topQuarter = Math.max(1, Math.ceil(leaderboard.length * 0.25));
   const topModels = leaderboard.slice(0, topQuarter);
-  leaderAvg = topModels.reduce((s, m) => s + m.avgScore, 0) / topModels.length;
-  fieldAvg = leaderboard.reduce((s, m) => s + m.avgScore, 0) / leaderboard.length;
+  leaderAvg = topModels.reduce((s, m) => s + (m.avgScore ?? 0), 0) / topModels.length;
+  fieldAvg = leaderboard.reduce((s, m) => s + (m.avgScore ?? 0), 0) / leaderboard.length;
 } else {
   const withScore = model_pool.filter(m => typeof m.benchmark_score === 'number').sort((a, b) => b.benchmark_score - a.benchmark_score);
   if (withScore.length > 0) {
@@ -35,13 +37,6 @@ const gapDelta = leaderAvg - fieldAvg;
 // ── Local matches only ──
 const localMatches = matches.filter(m => m.type !== 'router-selection');
 
-// ── Provider grouping (for model pool) ──
-const providerGroups = model_pool.reduce((acc, m) => {
-  if (!acc[m.provider]) acc[m.provider] = [];
-  acc[m.provider].push(m);
-  return acc;
-}, {});
-
 // ── Availability badge helper ──
 function getAvailabilityBadge(modelName) {
   const stats = stability?.model_stats?.[modelName];
@@ -53,14 +48,26 @@ function getAvailabilityBadge(modelName) {
   return { label: 'Down', cls: 'avail-down' };
 }
 
+// ── Role badge helper (model pool ROLE column) ──
+function getRoleBadge(role) {
+  if (!role) return { label: '—', cls: 'role-none' };
+  const r = String(role).toLowerCase();
+  if (r === 'builder') return { label: 'Builder', cls: 'role-builder' };
+  if (r === 'judge') return { label: 'Judge', cls: 'role-judge' };
+  if (r === 'qa') return { label: 'QA', cls: 'role-qa' };
+  return { label: String(role), cls: 'role-other' };
+}
+
 const lastUpdated = stability?.last_updated ?? 'N/A';
 
 // ── Load process feedback ──
+// FIX (DESIGN B): local matches may carry `id` OR `match_id`; feedback entries
+// are keyed by `match_id` OR `id`. Match on both, so filtering actually works.
 let feedbackData = { matches: [], recurring_issues: [], total_matches_analyzed: 0, clean_match_rate: 0 };
 try {
   const raw = JSON.parse(fs.readFileSync('/home/techgeek/.hermes/arena/arena-feedback.json', 'utf-8'));
-  const localMatchIds = new Set(localMatches.map(m => m.id));
-  const localFeedback = raw.matches.filter(m => localMatchIds.has(m.match_id));
+  const localMatchIds = new Set(localMatches.map(m => m.id ?? m.match_id));
+  const localFeedback = raw.matches.filter(fm => localMatchIds.has(fm.match_id ?? fm.id));
   feedbackData = {
     last_updated: raw.last_updated,
     total_matches_analyzed: localFeedback.length,
@@ -81,7 +88,7 @@ try {
   <head>
     <BaseHead title={`Arena — ${SITE_TITLE}`} description="Model-vs-model battle arena — comparing LLMs on Hermes Agent content and design tasks." />
     <style>
-      /* ── Arena Design System (deepseek-v4-flash widescreen redesign) ── */
+      /* ── DESIGN B: space-optimized arena (denser layout, same accent) ── */
       :root {
         --accent: #6c5ce7;
         --accent-light: #a29bfe;
@@ -101,81 +108,66 @@ try {
         --orange: #f97316;
       }
 
-      /* ── OVERRIDE global.css main constraint — fill 95%+ of viewport ── */
+      /* ── Wide container (keep 1900px, tighter padding) ── */
       .arena-container {
         width: 100%;
         max-width: min(1900px, 95vw);
         margin: 0 auto;
-        padding: 1.5em 1.5em 1.5em;
+        padding: 1em 1.25em 1em;
       }
 
-      @media (min-width: 1400px) {
-        .arena-container {
-          max-width: min(1800px, 93vw);
-          padding: 1.5em 2em 1.5em;
-        }
-      }
-      @media (min-width: 1800px) {
-        .arena-container {
-          max-width: min(1900px, 94vw);
-          padding: 2em 2.5em 2em;
-        }
-      }
-      @media (min-width: 2000px) {
-        .arena-container {
-          max-width: min(2000px, 95vw);
-          padding: 2em 3em 2em;
-        }
-      }
-
-      /* ── Hero ── */
+      /* ── Hero + stats consolidated into ONE compact block ── */
       .arena-hero {
-        margin-bottom: 1em;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.4em 1.5em;
+        padding-bottom: 0.55em;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 0.9em;
       }
       .arena-hero h1 {
         font-family: 'Atkinson Hyperlegible', sans-serif;
-        font-size: clamp(2rem, 3.5vw, 3rem);
+        font-size: clamp(1.45rem, 2.4vw, 1.9rem);
         font-weight: 700;
         letter-spacing: -0.03em;
-        line-height: 1.1;
-        margin: 0 0 0.2em;
+        line-height: 1.15;
+        margin: 0;
         color: #fff;
       }
       .arena-hero h1 span {
         color: var(--accent);
       }
       .arena-hero .subtitle {
-        font-size: clamp(0.9em, 1.1vw, 1.05em);
+        font-size: 0.82em;
         color: var(--text-dim);
-        margin: 0 0 0.6em;
-        line-height: 1.5;
-        max-width: 70ch;
+        margin: 0.15em 0 0;
+        line-height: 1.45;
+        max-width: 72ch;
       }
 
-      /* ── Stats bar: single-row compact with pipe separators ── */
+      /* ── Stats bar: inline, compact, pipe separators ── */
       .stats-bar {
         display: flex;
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
         align-items: center;
         gap: 0;
-        padding: 0.5em 0;
-        border-top: 1px solid var(--border);
-        border-bottom: 1px solid var(--border);
-        margin-bottom: 1em;
+        font-size: 0.74em;
+        color: var(--text-dim);
+        white-space: nowrap;
+        margin-left: auto;
       }
       .stat-item {
         display: inline-flex;
         align-items: center;
         gap: 0.3em;
-        font-size: 0.8em;
-        color: var(--text-dim);
-        white-space: nowrap;
       }
       .stat-item + .stat-item::before {
         content: '|';
         color: var(--border);
-        margin: 0 0.85em;
-        font-size: 0.85em;
+        margin: 0 0.7em;
+        font-size: 0.9em;
       }
       .stat-item strong {
         color: #fff;
@@ -183,75 +175,94 @@ try {
         font-variant-numeric: tabular-nums;
       }
 
-      /* ── Section headers (tighter gaps: 1em) ── */
+      /* ── Sections: minimal margins, small titles ── */
       .section {
-        margin-top: 1em;
+        margin-top: 0.9em;
       }
       .section-title {
         font-family: 'Atkinson Hyperlegible', sans-serif;
-        font-size: 1.2em;
+        font-size: 1.02em;
         font-weight: 600;
         color: #fff;
-        margin: 0 0 0.5em;
+        margin: 0 0 0.4em;
         letter-spacing: -0.02em;
       }
 
-      /* ── Impact row: single horizontal row using full width ── */
-      .impact-row {
-        display: flex;
-        gap: 0.6em;
-        margin-bottom: 1em;
+      /* ── Side-by-side data grid: Leaderboard | Model Pool (wide screens) ── */
+      .data-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.9em;
+        align-items: start;
       }
+      @media (min-width: 1400px) {
+        .data-grid {
+          grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+        }
+      }
+
+      /* ── Leaderboard layout: table + compact Arena Impact side card ── */
+      .lb-layout {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.8em;
+      }
+      @media (min-width: 1100px) {
+        .lb-layout {
+          grid-template-columns: minmax(0, 1fr) 235px;
+        }
+      }
+
+      /* ── Arena Impact: merged into Leaderboard as a compact side card ── */
       .impact-card {
-        flex: 1;
         background: var(--surface-1);
         border: 1px solid var(--border);
         border-radius: 8px;
-        padding: 0.7em 1em;
-        display: flex;
-        align-items: center;
-        gap: 0.75em;
+        padding: 0.55em 0.7em 0.45em;
+        align-self: start;
       }
-      .impact-card .impact-icon {
-        width: 36px;
-        height: 36px;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        background: var(--accent-glow);
-        color: var(--accent-light);
+      .impact-card .impact-head {
+        font-size: 0.62em;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-muted);
+        margin: 0 0 0.35em;
+        font-weight: 600;
       }
-      .impact-card .impact-body {
+      .impact-metric {
         display: flex;
-        flex-direction: column;
-        min-width: 0;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.5em;
+        padding: 0.3em 0;
+        border-top: 1px solid var(--border);
       }
-      .impact-card .impact-label {
-        font-size: 0.65em;
+      .impact-metric .impact-label {
+        font-size: 0.68em;
         color: var(--text-muted);
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 0.05em;
+        letter-spacing: 0.04em;
       }
-      .impact-card .impact-value {
-        font-size: 1.2em;
+      .impact-metric .impact-value {
+        font-size: 1em;
         font-weight: 700;
         color: #fff;
         font-variant-numeric: tabular-nums;
-        line-height: 1.3;
+        line-height: 1.2;
       }
-      .impact-card .impact-value.accent {
-        color: var(--accent);
+      .impact-metric .impact-value.accent { color: var(--accent-light); }
+      .impact-metric .impact-value.green { color: var(--green); }
+      .impact-metric .impact-delta {
+        font-size: 0.62em;
+        color: var(--text-muted);
+        display: block;
+        text-transform: none;
+        letter-spacing: 0;
+        font-weight: 400;
       }
-      .impact-card .impact-value.green {
-        color: var(--green);
-      }
-      .impact-card .impact-delta {
-        font-size: 0.7em;
-        color: var(--text-dim);
-        margin-top: 0.05em;
+      .impact-metric .impact-side {
+        text-align: right;
+        flex-shrink: 0;
       }
 
       /* ── Leaderboard table ── */
@@ -265,24 +276,24 @@ try {
       .arena-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 0.85em;
+        font-size: 0.78em;
       }
       .arena-table thead {
         background: var(--surface-1);
       }
       .arena-table th {
         text-align: left;
-        padding: 0.45em 0.75em;
+        padding: 0.35em 0.6em;
         font-weight: 600;
         color: var(--text-dim);
-        font-size: 0.78em;
+        font-size: 0.7em;
         text-transform: uppercase;
         letter-spacing: 0.04em;
         border-bottom: 1px solid var(--border);
         white-space: nowrap;
       }
       .arena-table td {
-        padding: 0.35em 0.75em;
+        padding: 0.28em 0.6em;
         border-bottom: 1px solid var(--border);
         color: var(--text);
         white-space: nowrap;
@@ -297,17 +308,8 @@ try {
       .arena-table .rank-cell {
         font-weight: 600;
         text-align: center;
-        width: 2em;
+        width: 1.8em;
         font-size: 0.95em;
-      }
-      .arena-table .model-cell {
-        font-weight: 600;
-        color: #fff;
-        min-width: 12ch;
-      }
-      .arena-table .provider-cell {
-        color: var(--text-dim);
-        min-width: 8ch;
       }
       .arena-table .model-provider-wrap {
         display: flex;
@@ -326,17 +328,17 @@ try {
         text-align: right;
         font-weight: 600;
         font-variant-numeric: tabular-nums;
-        min-width: 2.6em;
+        min-width: 2.4em;
       }
       .arena-table .score-bar-wrap {
         display: flex;
         align-items: center;
-        gap: 0.5em;
-        min-width: 100px;
+        gap: 0.45em;
+        min-width: 85px;
       }
       .arena-table .score-bar-bg {
         flex: 1;
-        height: 6px;
+        height: 5px;
         background: var(--border);
         border-radius: 3px;
         overflow: hidden;
@@ -345,7 +347,6 @@ try {
         height: 100%;
         background: linear-gradient(90deg, var(--accent), var(--accent-light));
         border-radius: 3px;
-        transition: width 0.3s ease;
       }
       .arena-table .matches-cell,
       .arena-table .wl-cell,
@@ -353,31 +354,135 @@ try {
         text-align: center;
         color: var(--text-dim);
       }
-      .arena-table .wl-cell .wins {
-        color: var(--green);
+      .arena-table .wl-cell .wins { color: var(--green); }
+      .arena-table .wl-cell .losses { color: var(--text-muted); }
+
+      /* ── Model Pool table (compact, with ROLE column) ── */
+      .pool-search {
+        width: 100%;
+        padding: 0.35em 0.6em;
+        background: var(--surface-1);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: #fff;
+        font-size: 0.75em;
+        margin-bottom: 0.4em;
+        outline: none;
+        transition: border-color 0.15s ease;
+        font-family: 'Atkinson Hyperlegible', sans-serif;
       }
-      .arena-table .wl-cell .losses {
+      .pool-search:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent-glow);
+      }
+      .pool-search::placeholder {
         color: var(--text-muted);
       }
+      .pool-table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface-2);
+      }
+      .pool-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.75em;
+      }
+      .pool-table thead {
+        background: var(--surface-1);
+      }
+      .pool-table th {
+        text-align: left;
+        padding: 0.35em 0.55em;
+        font-weight: 600;
+        color: var(--text-dim);
+        font-size: 0.7em;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border-bottom: 1px solid var(--border);
+      }
+      .pool-table td {
+        padding: 0.28em 0.55em;
+        border-bottom: 1px solid var(--border);
+        color: var(--text);
+      }
+      .pool-table tr:last-child td {
+        border-bottom: none;
+      }
+      .pool-table tr:hover td {
+        background: var(--surface-2);
+        filter: brightness(1.1);
+      }
+      .pool-table .model-name-cell {
+        font-weight: 500;
+        color: #fff;
+      }
+      .pool-table .family-cell {
+        color: var(--text-dim);
+      }
+      .pool-table .score-cell {
+        font-variant-numeric: tabular-nums;
+        color: var(--text);
+      }
+      .pool-table .no-score {
+        color: var(--text-muted);
+        font-style: italic;
+      }
+
+      /* ── Role badges (builder / judge / qa) ── */
+      .role-badge {
+        display: inline-block;
+        font-size: 0.62em;
+        font-weight: 600;
+        padding: 0.08em 0.4em;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        white-space: nowrap;
+      }
+      .role-builder { color: var(--accent-light); background: var(--accent-glow); }
+      .role-judge { color: var(--green); background: rgba(34, 197, 94, 0.12); }
+      .role-qa { color: var(--yellow); background: rgba(234, 179, 8, 0.12); }
+      .role-other { color: var(--text-dim); background: rgba(161, 161, 170, 0.1); }
+      .role-none { color: var(--text-muted); background: rgba(107, 107, 118, 0.1); }
+
+      /* ── Availability badges ── */
+      .avail-badge {
+        display: inline-block;
+        font-size: 0.62em;
+        font-weight: 600;
+        padding: 0.08em 0.4em;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        white-space: nowrap;
+      }
+      .avail-stable { color: var(--green); background: rgba(34, 197, 94, 0.12); }
+      .avail-degraded { color: var(--yellow); background: rgba(234, 179, 8, 0.12); }
+      .avail-unstable { color: var(--orange); background: rgba(249, 115, 22, 0.12); }
+      .avail-down { color: var(--red); background: rgba(239, 68, 68, 0.12); }
+      .avail-unknown { color: var(--text-muted); background: rgba(107, 107, 118, 0.1); }
 
       /* ── Empty state ── */
       .empty-state {
         text-align: center;
-        padding: 1.5em 1em;
+        padding: 1em 1em;
         color: var(--text-muted);
-        font-size: 0.9em;
+        font-size: 0.8em;
         border: 1px dashed var(--border);
         border-radius: 8px;
       }
       .empty-state p {
-        margin: 0.2em 0;
+        margin: 0.15em 0;
       }
 
-      /* ── Match History (compact summaries) ── */
+      /* ── Match History: tighter cards, inline score chips ── */
       .match-list {
         display: flex;
         flex-direction: column;
-        gap: 0.35em;
+        gap: 0.3em;
       }
       .match-item {
         border: 1px solid var(--border);
@@ -386,26 +491,27 @@ try {
         overflow: hidden;
       }
       .match-item summary {
-        padding: 0.5em 0.75em;
+        padding: 0.38em 0.6em;
         cursor: pointer;
         font-weight: 500;
         color: var(--text);
         display: flex;
         align-items: center;
-        gap: 0.6em;
+        gap: 0.5em;
         list-style: none;
+        font-size: 0.78em;
       }
       .match-item summary::-webkit-details-marker {
         display: none;
       }
+      .match-item[open] summary .match-arrow {
+        transform: rotate(90deg);
+      }
       .match-item summary .match-arrow {
-        font-size: 0.6em;
+        font-size: 0.55em;
         color: var(--accent);
         transition: transform 0.15s ease;
         flex-shrink: 0;
-      }
-      .match-item[open] summary .match-arrow {
-        transform: rotate(90deg);
       }
       .match-item summary .match-topic {
         flex: 1;
@@ -415,20 +521,20 @@ try {
         white-space: nowrap;
       }
       .match-item summary .match-type {
-        font-size: 0.6em;
+        font-size: 0.58em;
         text-transform: uppercase;
         letter-spacing: 0.04em;
         color: var(--accent-light);
         background: var(--accent-glow);
-        padding: 0.1em 0.4em;
+        padding: 0.08em 0.35em;
         border-radius: 4px;
         flex-shrink: 0;
       }
       .match-item summary .match-compact-info {
         display: flex;
         align-items: center;
-        gap: 0.6em;
-        font-size: 0.78em;
+        gap: 0.45em;
+        font-size: 0.72em;
         color: var(--text-dim);
         flex-shrink: 0;
       }
@@ -444,30 +550,66 @@ try {
         font-weight: 600;
         color: var(--accent-light);
       }
+      /* inline score chips */
+      .match-chips {
+        display: flex;
+        align-items: center;
+        gap: 0.3em;
+        flex-shrink: 0;
+      }
+      .score-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3em;
+        font-size: 0.7em;
+        font-variant-numeric: tabular-nums;
+        padding: 0.08em 0.4em;
+        border-radius: 999px;
+        background: var(--surface-2);
+        border: 1px solid var(--border-light);
+        color: var(--text-dim);
+        white-space: nowrap;
+      }
+      .score-chip.chip-winner {
+        color: var(--green);
+        border-color: rgba(34, 197, 94, 0.35);
+        background: rgba(34, 197, 94, 0.08);
+      }
+      .score-chip .chip-model {
+        max-width: 16ch;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .score-chip .chip-score {
+        font-weight: 700;
+        color: #fff;
+      }
+      .score-chip.chip-winner .chip-score { color: var(--green); }
+
       .match-item .match-detail {
-        padding: 0 0.75em 0.55em;
-        font-size: 0.82em;
+        padding: 0 0.6em 0.45em;
+        font-size: 0.74em;
         color: var(--text-dim);
         line-height: 1.5;
       }
       .match-item .match-detail .match-results-list {
         display: flex;
         flex-direction: column;
-        gap: 0.2em;
-        margin-top: 0.25em;
+        gap: 0.15em;
+        margin-top: 0.2em;
       }
       .match-item .match-detail .result-entry {
         display: flex;
         align-items: center;
         gap: 0.5em;
-        padding: 0.15em 0.4em;
+        padding: 0.12em 0.35em;
         border-radius: 4px;
       }
       .match-item .match-detail .result-entry.result-winner {
         background: rgba(34, 197, 94, 0.06);
       }
       .match-item .match-detail .result-entry .result-rank {
-        width: 1.6em;
+        width: 1.5em;
         text-align: center;
         flex-shrink: 0;
       }
@@ -487,199 +629,85 @@ try {
         color: var(--accent-light);
       }
       .match-item .match-detail .match-strengths {
-        margin-top: 0.3em;
+        margin-top: 0.25em;
       }
       .match-item .match-detail .match-strengths .ms-label {
-        font-size: 0.7em;
+        font-size: 0.62em;
         text-transform: uppercase;
         letter-spacing: 0.04em;
         color: var(--text-muted);
-        margin-bottom: 0.1em;
+        margin-bottom: 0.05em;
       }
       .match-item .match-detail .match-strengths ul {
         list-style: none;
         padding: 0;
-        margin: 0.1em 0;
+        margin: 0.05em 0;
       }
       .match-item .match-detail .match-strengths ul li {
-        padding: 0.08em 0;
+        padding: 0.05em 0;
         font-size: 0.9em;
       }
       .match-item .match-detail .match-strengths ul li::before {
-        content: '\\2713 ';
+        content: '\2713 ';
         color: var(--green);
         font-size: 0.8em;
       }
 
-      /* ── Model Pool table ── */
-      .pool-search {
-        width: 100%;
-        padding: 0.5em 0.75em;
-        background: var(--surface-1);
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        color: #fff;
-        font-size: 0.85em;
-        margin-bottom: 0.5em;
-        outline: none;
-        transition: border-color 0.15s ease;
-        font-family: 'Atkinson Hyperlegible', sans-serif;
-      }
-      .pool-search:focus {
-        border-color: var(--accent);
-        box-shadow: 0 0 0 2px var(--accent-glow);
-      }
-      .pool-search::placeholder {
-        color: var(--text-muted);
-      }
-
-      .pool-table-wrap {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        background: var(--surface-2);
-      }
-      .pool-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.82em;
-      }
-      .pool-table thead {
-        background: var(--surface-1);
-      }
-      .pool-table th {
-        text-align: left;
-        padding: 0.45em 0.65em;
-        font-weight: 600;
-        color: var(--text-dim);
-        font-size: 0.78em;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        border-bottom: 1px solid var(--border);
-      }
-      .pool-table td {
-        padding: 0.35em 0.65em;
-        border-bottom: 1px solid var(--border);
-        color: var(--text);
-      }
-      .pool-table tr:last-child td {
-        border-bottom: none;
-      }
-      .pool-table tr:hover td {
-        background: var(--surface-2);
-        filter: brightness(1.1);
-      }
-      .pool-table .provider-cell-group {
-        font-weight: 600;
-        color: var(--accent-light);
-        vertical-align: middle;
-      }
-      .pool-table .model-name-cell {
-        font-weight: 500;
-        color: #fff;
-      }
-      .pool-table .family-cell {
-        color: var(--text-dim);
-      }
-      .pool-table .score-cell {
-        font-variant-numeric: tabular-nums;
-        color: var(--text);
-      }
-      .pool-table .no-score {
-        color: var(--text-muted);
-        font-style: italic;
-      }
-
-      /* ── Availability badges ── */
-      .avail-badge {
-        display: inline-block;
-        font-size: 0.68em;
-        font-weight: 600;
-        padding: 0.1em 0.42em;
-        border-radius: 4px;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-      }
-      .avail-stable {
-        color: var(--green);
-        background: rgba(34, 197, 94, 0.12);
-      }
-      .avail-degraded {
-        color: var(--yellow);
-        background: rgba(234, 179, 8, 0.12);
-      }
-      .avail-unstable {
-        color: var(--orange);
-        background: rgba(249, 115, 22, 0.12);
-      }
-      .avail-down {
-        color: var(--red);
-        background: rgba(239, 68, 68, 0.12);
-      }
-      .avail-unknown {
-        color: var(--text-muted);
-        background: rgba(107, 107, 118, 0.1);
-      }
-
-      /* ── Process Feedback ── */
-      .feedback-section {
-        margin-top: 1.5em;
-      }
+      /* ── Process Feedback (compact) ── */
       .feedback-subtitle {
-        font-size: 0.82em;
+        font-size: 0.72em;
         color: var(--text-dim);
-        margin: -0.3em 0 0.8em;
+        margin: -0.2em 0 0.5em;
         line-height: 1.5;
       }
       .feedback-stats-bar {
         display: flex;
-        gap: 2em;
-        padding: 0.6em 0;
+        gap: 1.5em;
+        padding: 0.35em 0;
         border-top: 1px solid var(--border);
         border-bottom: 1px solid var(--border);
-        margin-bottom: 0.8em;
+        margin-bottom: 0.5em;
       }
       .feedback-stat { display: flex; flex-direction: column; gap: 0.05em; }
-      .feedback-stat-num { font-size: 1.1em; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
-      .feedback-stat-label { font-size: 0.72em; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+      .feedback-stat-num { font-size: 0.95em; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
+      .feedback-stat-label { font-size: 0.62em; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
       .recurring-issues {
         background: var(--surface-1);
         border: 1px solid var(--border);
         border-radius: 6px;
-        padding: 0.6em 0.8em;
-        margin-bottom: 0.8em;
-        font-size: 0.82em;
+        padding: 0.4em 0.6em;
+        margin-bottom: 0.5em;
+        font-size: 0.74em;
       }
       .recurring-issues strong { color: var(--text); }
-      .issues-list { display: flex; flex-wrap: wrap; gap: 0.4em; margin-top: 0.3em; }
+      .issues-list { display: flex; flex-wrap: wrap; gap: 0.3em; margin-top: 0.2em; }
       .issue-tag {
-        font-size: 0.78em;
-        padding: 0.15em 0.5em;
+        font-size: 0.7em;
+        padding: 0.12em 0.45em;
         border-radius: 4px;
         background: rgba(234, 179, 8, 0.1);
         color: var(--yellow);
         border: 1px solid rgba(234, 179, 8, 0.2);
       }
       .issue-tag em { font-style: normal; color: var(--text-dim); margin-left: 0.2em; }
-      .feedback-matches { display: flex; flex-direction: column; gap: 0.5em; }
+      .feedback-matches { display: flex; flex-direction: column; gap: 0.35em; }
       .feedback-match {
         border: 1px solid var(--border);
         border-radius: 6px;
         background: var(--surface-1);
-        padding: 0.6em 0.75em;
+        padding: 0.45em 0.6em;
       }
       .feedback-match-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 0.5em;
-        margin-bottom: 0.25em;
+        margin-bottom: 0.15em;
       }
-      .feedback-match-topic { font-size: 0.85em; font-weight: 600; color: #fff; }
+      .feedback-match-topic { font-size: 0.78em; font-weight: 600; color: #fff; }
       .feedback-match-status {
-        font-size: 0.65em;
-        padding: 0.12em 0.5em;
+        font-size: 0.58em;
+        padding: 0.1em 0.45em;
         border-radius: 999px;
         font-weight: 600;
         text-transform: uppercase;
@@ -688,10 +716,10 @@ try {
       }
       .status-clean { background: rgba(34, 197, 94, 0.15); color: var(--green); }
       .status-issues { background: rgba(239, 68, 68, 0.15); color: var(--red); }
-      .feedback-signals { display: flex; flex-wrap: wrap; gap: 0.3em; margin-bottom: 0.3em; }
+      .feedback-signals { display: flex; flex-wrap: wrap; gap: 0.25em; margin-bottom: 0.2em; }
       .signal-tag {
-        font-size: 0.7em;
-        padding: 0.1em 0.4em;
+        font-size: 0.64em;
+        padding: 0.08em 0.35em;
         border-radius: 3px;
         background: var(--surface-2);
         color: var(--text-dim);
@@ -701,10 +729,10 @@ try {
         list-style: none;
         padding: 0;
         margin: 0.1em 0;
-        font-size: 0.78em;
+        font-size: 0.72em;
       }
       .feedback-suggestions .suggestion {
-        padding: 0.1em 0;
+        padding: 0.08em 0;
         line-height: 1.5;
         color: var(--text-dim);
       }
@@ -713,10 +741,10 @@ try {
       .suggestion.medium .suggestion-sev { color: var(--yellow); }
       .suggestion.info .suggestion-sev { color: var(--text-muted); }
       .auto-brief {
-        margin-top: 0.3em;
-        font-size: 0.78em;
+        margin-top: 0.25em;
+        font-size: 0.72em;
         color: var(--text-dim);
-        padding: 0.3em 0.5em;
+        padding: 0.25em 0.45em;
         background: var(--surface-2);
         border-radius: 4px;
         border-left: 2px solid var(--accent);
@@ -725,41 +753,51 @@ try {
 
       /* ── Last Updated ── */
       .last-updated {
-        margin-top: 1.5em;
+        margin-top: 1em;
         text-align: center;
-        font-size: 0.72em;
+        font-size: 0.66em;
         color: var(--text-muted);
         border-top: 1px solid var(--border);
-        padding-top: 1em;
+        padding-top: 0.7em;
       }
       .last-updated strong {
         color: var(--text-dim);
         font-weight: 500;
       }
 
-      /* ── Responsive: Mobile ── */
+      /* ── Responsive ── */
+      @media (max-width: 1099px) {
+        .lb-layout {
+          grid-template-columns: 1fr;
+        }
+        .impact-card {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 0.5em;
+        }
+        .impact-card .impact-head {
+          grid-column: 1 / -1;
+          margin-bottom: 0;
+        }
+        .impact-metric {
+          border-top: none;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.1em;
+          padding: 0.15em 0.3em;
+        }
+      }
       @media (max-width: 720px) {
         .arena-container {
-          padding: 1em 0.75em 1em;
+          padding: 0.8em 0.7em 0.8em;
           max-width: 100%;
         }
+        .arena-hero {
+          flex-direction: column;
+          align-items: flex-start;
+        }
         .stats-bar {
-          flex-wrap: wrap;
-          gap: 0.2em;
-        }
-        .stat-item + .stat-item::before {
-          margin: 0 0.5em;
-        }
-        .impact-row {
-          flex-direction: column;
-        }
-        .arena-table th,
-        .arena-table td {
-          padding: 0.3em 0.5em;
-        }
-        .arena-table .model-provider-wrap {
-          flex-direction: column;
-          gap: 0.1em;
+          margin-left: 0;
         }
         .match-item summary {
           flex-wrap: wrap;
@@ -767,133 +805,18 @@ try {
         .match-item summary .match-compact-info {
           width: 100%;
           justify-content: flex-start;
-          padding-left: 1.4em;
+          padding-left: 1.1em;
         }
-        .pool-table th,
-        .pool-table td {
-          padding: 0.3em 0.5em;
-        }
-      }
-
-      /* ── Tablet ── */
-      @media (min-width: 720px) and (max-width: 1400px) {
-        .arena-container {
-          padding: 1.5em 1.25em 1.5em;
-        }
-        .impact-card {
-          padding: 0.65em 0.85em;
-        }
-      }
-
-      /* ── Widescreen: 1400px+ proportional scaling ── */
-      @media (min-width: 1400px) {
-        .arena-table td,
-        .arena-table th {
-          padding: 0.4em 0.9em;
-        }
-        .arena-table {
-          font-size: 0.88em;
+        .match-chips {
+          width: 100%;
+          padding-left: 1.1em;
+          flex-wrap: wrap;
         }
         .arena-table .score-bar-wrap {
-          min-width: 150px;
-        }
-        .pool-table td,
-        .pool-table th {
-          padding: 0.4em 0.9em;
+          min-width: 55px;
         }
         .impact-card {
-          padding: 0.8em 1.1em;
-        }
-        .impact-card .impact-value {
-          font-size: 1.3em;
-        }
-        .match-item summary {
-          padding: 0.55em 0.9em;
-        }
-        .stat-item {
-          font-size: 0.85em;
-        }
-        .section-title {
-          font-size: 1.3em;
-        }
-      }
-
-      /* ── Ultra-wide: 1800px+ amplify everything ── */
-      @media (min-width: 1800px) {
-        .arena-table .score-bar-wrap {
-          min-width: 200px;
-        }
-        .arena-table {
-          font-size: 0.92em;
-        }
-        .arena-table td,
-        .arena-table th {
-          padding: 0.45em 1em;
-        }
-        .arena-table .score-bar-bg {
-          height: 7px;
-        }
-        .pool-table {
-          font-size: 0.86em;
-        }
-        .pool-table td,
-        .pool-table th {
-          padding: 0.45em 1em;
-        }
-        .impact-card {
-          padding: 0.9em 1.3em;
-        }
-        .impact-card .impact-value {
-          font-size: 1.45em;
-        }
-        .impact-card .impact-icon {
-          width: 42px;
-          height: 42px;
-        }
-        .section-title {
-          font-size: 1.4em;
-        }
-        .section {
-          margin-top: 1.2em;
-        }
-        .stat-item {
-          font-size: 0.9em;
-        }
-        .match-item summary {
-          padding: 0.6em 1em;
-        }
-      }
-
-      /* ── Maximum: 2000px+ maximum scaling ── */
-      @media (min-width: 2000px) {
-        .arena-table .score-bar-wrap {
-          min-width: 280px;
-        }
-        .arena-table {
-          font-size: 0.96em;
-        }
-        .arena-table td,
-        .arena-table th {
-          padding: 0.5em 1.1em;
-        }
-        .arena-table .score-bar-bg {
-          height: 8px;
-        }
-        .pool-table {
-          font-size: 0.9em;
-        }
-        .impact-card .impact-value {
-          font-size: 1.6em;
-        }
-        .impact-card .impact-icon {
-          width: 48px;
-          height: 48px;
-        }
-        .section-title {
-          font-size: 1.5em;
-        }
-        .stat-item {
-          font-size: 0.95em;
+          grid-template-columns: 1fr;
         }
       }
     </style>
@@ -902,10 +825,12 @@ try {
     <Header />
     <main class="arena-container">
 
-      <!-- ── Hero ── -->
+      <!-- ── Hero + stats (one consolidated block) ── -->
       <section class="arena-hero">
-        <h1><span>Arena</span> — Model Battleground</h1>
-        <p class="subtitle">Comparing LLMs head-to-head on Hermes Agent content generation, design, and engineering tasks. Track scores, reliability, and match outcomes.</p>
+        <div>
+          <h1><span>Arena</span> — Model Battleground</h1>
+          <p class="subtitle">Comparing LLMs head-to-head on Hermes Agent content generation, design, and engineering tasks. Track scores, reliability, and match outcomes.</p>
+        </div>
         <div class="stats-bar">
           <span class="stat-item"><strong>{totalMatches}</strong> matches</span>
           <span class="stat-item"><strong>{totalModels}</strong> models</span>
@@ -914,92 +839,132 @@ try {
         </div>
       </section>
 
-      <!-- ── Arena Impact (full-width inline stats, single horizontal row) ── -->
-      <section class="section">
-        <h2 class="section-title">Arena Impact</h2>
-        <div class="impact-row">
-          <div class="impact-card">
-            <div class="impact-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5C7 4 7 7 7 7"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5C17 4 17 7 17 7"/><path d="M4 22h16"/><path d="M10 22V2h4v20"/></svg>
-            </div>
-            <div class="impact-body">
-              <div class="impact-label">Leader Avg</div>
-              <div class="impact-value accent">{leaderAvg > 0 ? leaderAvg.toFixed(2) : 'N/A'}</div>
-              <div class="impact-delta">Top 25% of ranked models</div>
-            </div>
-          </div>
-          <div class="impact-card">
-            <div class="impact-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-            </div>
-            <div class="impact-body">
-              <div class="impact-label">Field Avg</div>
-              <div class="impact-value">{fieldAvg > 0 ? fieldAvg.toFixed(2) : 'N/A'}</div>
-              <div class="impact-delta">All ranked models</div>
-            </div>
-          </div>
-          <div class="impact-card">
-            <div class="impact-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            </div>
-            <div class="impact-body">
-              <div class="impact-label">Gap Delta</div>
-              <div class="impact-value green">{gapDelta > 0 ? `+${gapDelta.toFixed(2)}` : (gapDelta === 0 ? '0.00' : gapDelta.toFixed(2))}</div>
-              <div class="impact-delta">Leader advantage over field</div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <!-- ── Data grid: Leaderboard (with Impact side card) | Model Pool ── -->
+      <div class="data-grid">
 
-      <!-- ── Leaderboard ── -->
-      <section class="section">
-        <h2 class="section-title">Leaderboard</h2>
-        {leaderboard.length > 0 ? (
-          <div class="arena-table-wrap">
-            <table class="arena-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Model</th>
-                  <th>Score</th>
-                  <th>Matches</th>
-                  <th>W/L</th>
-                  <th>Best</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leaderboard.map((entry, i) => (
+        <!-- ── Leaderboard + Arena Impact side card ── -->
+        <section class="section">
+          <h2 class="section-title">Leaderboard</h2>
+          <div class="lb-layout">
+            {leaderboard.length > 0 ? (
+              <div class="arena-table-wrap">
+                <table class="arena-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Model</th>
+                      <th>Score</th>
+                      <th>Matches</th>
+                      <th>W/L</th>
+                      <th>Best</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaderboard.map((entry, i) => (
+                      <tr>
+                        <td class="rank-cell">{i < 3 ? ['🥇', '🥈', '🥉'][i] : `#${i + 1}`}</td>
+                        <td class="model-provider-wrap">
+                          <span class="model-name">{entry.model}</span>
+                          {entry.provider && <span class="provider-tag">{entry.provider}</span>}
+                        </td>
+                        <td>
+                          <div class="score-bar-wrap">
+                            <span class="score-cell">{(entry.avgScore ?? 0).toFixed(1)}</span>
+                            <div class="score-bar-bg">
+                              <div class="score-bar-fill" style={`width: ${((entry.avgScore ?? 0) / 10) * 100}%`}></div>
+                            </div>
+                          </div>
+                        </td>
+                        <td class="matches-cell">{entry.matches ?? 0}</td>
+                        <td class="wl-cell"><span class="wins">{entry.wins ?? 0}</span>/<span class="losses">{entry.losses ?? 0}</span></td>
+                        <td class="best-cell">{(entry.bestScore ?? 0).toFixed(1)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div class="empty-state">
+                <p>No ranked models yet.</p>
+                <p>Leaderboard will populate once arena matches begin.</p>
+              </div>
+            )}
+
+            <!-- Arena Impact — compact side card merged into Leaderboard -->
+            <aside class="impact-card">
+              <h3 class="impact-head">Arena Impact</h3>
+              <div class="impact-metric">
+                <span class="impact-label">Leader Avg</span>
+                <span class="impact-side">
+                  <span class="impact-value accent">{leaderAvg > 0 ? leaderAvg.toFixed(2) : 'N/A'}</span>
+                  <span class="impact-delta">Top 25% of ranked</span>
+                </span>
+              </div>
+              <div class="impact-metric">
+                <span class="impact-label">Field Avg</span>
+                <span class="impact-side">
+                  <span class="impact-value">{fieldAvg > 0 ? fieldAvg.toFixed(2) : 'N/A'}</span>
+                  <span class="impact-delta">All ranked models</span>
+                </span>
+              </div>
+              <div class="impact-metric">
+                <span class="impact-label">Gap Delta</span>
+                <span class="impact-side">
+                  <span class="impact-value green">{gapDelta > 0 ? `+${gapDelta.toFixed(2)}` : (gapDelta === 0 ? '0.00' : gapDelta.toFixed(2))}</span>
+                  <span class="impact-delta">Leader advantage</span>
+                </span>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- ── Model Pool (searchable, compact table with ROLE column) ── -->
+        <section class="section">
+          <h2 class="section-title">Model Pool</h2>
+          <input type="text" class="pool-search" id="poolSearch" placeholder="Search models by name, provider, family, or role…" oninput="filterPool()" />
+          {model_pool.length > 0 ? (
+            <div class="pool-table-wrap">
+              <table class="pool-table" id="poolTable">
+                <thead>
                   <tr>
-                    <td class="rank-cell">{i < 3 ? ['🥇', '🥈', '🥉'][i] : `#${i + 1}`}</td>
-                    <td class="model-provider-wrap">
-                      <span class="model-name">{entry.model}</span>
-                      <span class="provider-tag">{entry.provider}</span>
-                    </td>
-                    <td>
-                      <div class="score-bar-wrap">
-                        <span class="score-cell">{entry.avgScore.toFixed(1)}</span>
-                        <div class="score-bar-bg">
-                          <div class="score-bar-fill" style={`width: ${(entry.avgScore / 10) * 100}%`}></div>
-                        </div>
-                      </div>
-                    </td>
-                    <td class="matches-cell">{entry.matches}</td>
-                    <td class="wl-cell"><span class="wins">{entry.wins}</span>/<span class="losses">{entry.losses}</span></td>
-                    <td class="best-cell">{entry.bestScore.toFixed(1)}</td>
+                    <th>Role</th>
+                    <th>Model</th>
+                    <th>Provider</th>
+                    <th>Family</th>
+                    <th>Score</th>
+                    <th>Availability</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div class="empty-state">
-            <p>No ranked models yet.</p>
-            <p>Leaderboard will populate once arena matches begin.</p>
-          </div>
-        )}
-      </section>
+                </thead>
+                <tbody>
+                  {model_pool.map(m => {
+                    const role = getRoleBadge(m.role);
+                    const badge = getAvailabilityBadge(m.model);
+                    return (
+                      <tr data-provider={m.provider ?? ''} data-model={m.model ?? ''} data-family={m.family ?? ''} data-role={m.role ?? ''}>
+                        <td><span class={`role-badge ${role.cls}`}>{role.label}</span></td>
+                        <td class="model-name-cell">{m.model}</td>
+                        <td class="family-cell">{m.provider}</td>
+                        <td class="family-cell">{m.family ?? '-'}</td>
+                        <td class="score-cell">
+                          {typeof m.benchmark_score === 'number' ? m.benchmark_score.toFixed(1) : <span class="no-score">--</span>}
+                        </td>
+                        <td><span class={`avail-badge ${badge.cls}`}>{badge.label}</span></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div class="empty-state">
+              <p>No models in pool.</p>
+            </div>
+          )}
+        </section>
 
-      <!-- ── Match History (collapsible details, compact summaries) ── -->
+      </div>
+
+      <!-- ── Match History (tight cards, inline score chips) ── -->
       <section class="section">
         <h2 class="section-title">Match History</h2>
         {localMatches.length > 0 ? (
@@ -1009,7 +974,15 @@ try {
                 <summary>
                   <span class="match-arrow">▶</span>
                   <span class="match-topic">{m.topic}</span>
-                  <span class="match-type">{m.type}</span>
+                  {m.type && <span class="match-type">{m.type}</span>}
+                  <span class="match-chips">
+                    {(m.results || []).slice().sort((a, b) => a.rank - b.rank).map(r => (
+                      <span class={`score-chip ${r.rank === 1 ? 'chip-winner' : ''}`}>
+                        <span class="chip-model">{r.model}</span>
+                        <span class="chip-score">{r.score.toFixed(1)}</span>
+                      </span>
+                    ))}
+                  </span>
                   <span class="match-compact-info">
                     {m.winner && <span class="match-winner">&#9878; {m.winner}</span>}
                     {m.date && <span class="match-date">{m.date}</span>}
@@ -1022,7 +995,7 @@ try {
                   {m.results && m.results.length > 0 && (
                     <div class="match-results-list">
                       <strong>Results:</strong>
-                      {m.results.sort((a, b) => a.rank - b.rank).map(r => (
+                      {m.results.slice().sort((a, b) => a.rank - b.rank).map(r => (
                         <div class={`result-entry ${r.rank === 1 ? 'result-winner' : ''}`}>
                           <span class="result-rank">{r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : `#${r.rank}`}</span>
                           <span class="result-model">{r.model}</span>
@@ -1054,53 +1027,8 @@ try {
         )}
       </section>
 
-      <!-- ── Model Pool (searchable table) ── -->
-      <section class="section">
-        <h2 class="section-title">Model Pool</h2>
-        <input type="text" class="pool-search" id="poolSearch" placeholder="Search models by name, provider, or family\u2026" oninput="filterPool()" />
-        {model_pool.length > 0 ? (
-          <div class="pool-table-wrap">
-            <table class="pool-table" id="poolTable">
-              <thead>
-                <tr>
-                  <th>Provider</th>
-                  <th>Model</th>
-                  <th>Family</th>
-                  <th>Score</th>
-                  <th>Availability</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(providerGroups).map(([provider, models]) => (
-                  models.map((m, idx) => {
-                    const badge = getAvailabilityBadge(m.model);
-                    return (
-                      <tr data-provider={provider} data-model={m.model} data-family={m.family ?? ''}>
-                        {idx === 0 && (
-                          <td class="provider-cell-group" rowspan={models.length}>{provider}</td>
-                        )}
-                        <td class="model-name-cell">{m.model}</td>
-                        <td class="family-cell">{m.family ?? '-'}</td>
-                        <td class="score-cell">
-                          {typeof m.benchmark_score === 'number' ? m.benchmark_score.toFixed(1) : <span class="no-score">--</span>}
-                        </td>
-                        <td><span class={`avail-badge ${badge.cls}`}>{badge.label}</span></td>
-                      </tr>
-                    );
-                  })
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div class="empty-state">
-            <p>No models in pool.</p>
-          </div>
-        )}
-      </section>
-
       <!-- ── Process Feedback ── -->
-      <section class="section feedback-section">
+      <section class="section">
         <h2 class="section-title">Process Feedback</h2>
         <p class="feedback-subtitle">Automated analysis from arena-process-feedback.py. Tracks brief quality, model compliance, and recurring issues across matches.</p>
 
@@ -1141,12 +1069,12 @@ try {
                       {fm.clean ? 'Clean' : 'Issues'}
                     </span>
                   </div>
-                  {fm.signals.length > 0 && (
+                  {fm.signals?.length > 0 && (
                     <div class="feedback-signals">
                       {fm.signals.map(s => <span class="signal-tag">{s}</span>)}
                     </div>
                   )}
-                  {fm.suggestions.length > 0 && (
+                  {fm.suggestions?.length > 0 && (
                     <ul class="feedback-suggestions">
                       {fm.suggestions.map(s => (
                         <li class={`suggestion ${s.severity}`}>
@@ -1190,10 +1118,12 @@ try {
           const provider = row.getAttribute('data-provider') || '';
           const model = row.getAttribute('data-model') || '';
           const family = row.getAttribute('data-family') || '';
+          const role = row.getAttribute('data-role') || '';
           const match = q === '' ||
             provider.toLowerCase().includes(q) ||
             model.toLowerCase().includes(q) ||
-            family.toLowerCase().includes(q);
+            family.toLowerCase().includes(q) ||
+            role.toLowerCase().includes(q);
           row.style.display = match ? '' : 'none';
         });
       }

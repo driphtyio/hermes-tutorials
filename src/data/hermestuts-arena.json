@@ -7,26 +7,6 @@
   },
   "model_pool": [
     {
-      "model": "gemma-4-31b",
-      "provider": "cerebras",
-      "family": "gemma",
-      "benchmark_score": 7.3,
-      "benchmark_weight": 0.73,
-      "reliability": 0.0,
-      "matches_played": 3,
-      "status": "pass"
-    },
-    {
-      "model": "gpt-oss-120b",
-      "provider": "cerebras",
-      "family": "gpt",
-      "benchmark_weight": 0.84,
-      "benchmark_score": 8.4,
-      "reliability": 0.0,
-      "matches_played": 4,
-      "status": "pass"
-    },
-    {
       "model": "deepseek-v4-flash",
       "provider": "deepseek",
       "family": "deepseek",
@@ -34,123 +14,8 @@
       "benchmark_score": 8.4,
       "reliability": 0.38,
       "matches_played": 22,
-      "status": "pass"
-    },
-    {
-      "model": "llama-3.1-8b-instant",
-      "provider": "groq",
-      "family": "llama",
-      "status": "pass"
-    },
-    {
-      "model": "llama-3.3-70b-versatile",
-      "provider": "groq",
-      "family": "llama",
-      "benchmark_weight": 0.79,
-      "benchmark_score": 7.9,
-      "reliability": 0.0,
-      "matches_played": 10,
-      "status": "pass"
-    },
-    {
-      "model": "mistral-large-latest",
-      "provider": "mistral",
-      "family": "mistral",
-      "benchmark_score": 8.5,
-      "benchmark_weight": 0.85,
-      "reliability": 0.5,
-      "matches_played": 8,
-      "status": "pass"
-    },
-    {
-      "model": "mistral-medium-latest",
-      "provider": "mistral",
-      "family": "mistral",
-      "benchmark_score": 8.0,
-      "benchmark_weight": 0.8,
-      "reliability": 0.0,
-      "matches_played": 1,
-      "status": "pass"
-    },
-    {
-      "model": "mistral-small-latest",
-      "provider": "mistral",
-      "family": "mistral",
-      "status": "pass"
-    },
-    {
-      "model": "gpt-5.5-instant-14k",
-      "provider": "nexum",
-      "family": "gpt",
-      "benchmark_score": 8.5,
-      "benchmark_weight": 0.85,
-      "reliability": 1.0,
-      "matches_played": 1,
-      "status": "pass"
-    },
-    {
-      "model": "qwen-3.6-plus",
-      "provider": "nexum",
-      "family": "qwen",
-      "benchmark_score": 7.6,
-      "benchmark_weight": 0.76,
-      "reliability": 0.0,
-      "matches_played": 3,
-      "status": "pass"
-    },
-    {
-      "model": "qwen-3.7-max",
-      "provider": "nexum",
-      "family": "qwen",
-      "benchmark_score": 8.6,
-      "benchmark_weight": 0.86,
-      "reliability": 0.18,
-      "matches_played": 11,
-      "status": "pass"
-    },
-    {
-      "model": "qwen-3.7-plus",
-      "provider": "nexum",
-      "family": "qwen",
-      "status": "pass"
-    },
-    {
-      "model": "xiaomi-mimo-2.5",
-      "provider": "nexum",
-      "family": "xiaomi",
-      "benchmark_weight": 0.78,
-      "benchmark_score": 7.8,
-      "reliability": 0.0,
-      "matches_played": 1,
-      "status": "pass"
-    },
-    {
-      "model": "cohere/north-mini-code:free",
-      "provider": "openrouter",
-      "family": "cohere",
-      "benchmark_score": 6.5,
-      "benchmark_weight": 0.65,
-      "reliability": 0.0,
-      "matches_played": 1,
-      "status": "pass"
-    },
-    {
-      "model": "google/gemma-4-31b-it:free",
-      "provider": "openrouter",
-      "family": "gemma",
-      "status": "pass"
-    },
-    {
-      "model": "nvidia/nemotron-3-super-120b-a12b:free",
-      "provider": "openrouter",
-      "family": "nvidia",
-      "status": "pass"
-    },
-    {
-      "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-      "provider": "openrouter",
-      "family": "nvidia",
-      "status": "pass"
+      "status": "pass",
+      "role": "builder"
     },
     {
       "model": "mimo-v2.5",
@@ -158,205 +23,8 @@
       "family": "xiaomi",
       "benchmark_weight": 0.936,
       "benchmark_score": 4.62,
-      "status": "pass"
-    },
-    {
-      "model": "nvidia/nemotron-3-nano-30b-a3b:free",
-      "provider": "openrouter",
-      "family": "nvidia",
-      "status": "pass"
-    },
-    {
-      "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-      "provider": "openrouter",
-      "family": "nvidia",
-      "status": "pass"
-    },
-    {
-      "model": "nvidia/nemotron-nano-12b-v2-vl:free",
-      "provider": "openrouter",
-      "family": "nvidia",
-      "status": "pass"
-    },
-    {
-      "model": "openai/gpt-oss-20b:free",
-      "provider": "openrouter",
-      "family": "gpt",
-      "status": "pass"
-    },
-    {
-      "model": "poolside/laguna-xs-2.1:free",
-      "provider": "openrouter",
-      "family": "poolside",
-      "status": "pass"
-    },
-    {
-      "model": "google/gemma-4-26b-a4b-it:free",
-      "provider": "openrouter",
-      "family": "gemma",
-      "status": "pass"
-    },
-    {
-      "model": "nvidia/nemotron-3.5-content-safety:free",
-      "provider": "openrouter",
-      "family": "nvidia",
-      "status": "pass"
-    },
-    {
-      "model": "qwen-3.5-plus",
-      "provider": "nexum",
-      "family": "qwen",
-      "status": "pass"
-    },
-    {
-      "model": "qwen-3.5-plus-thinking",
-      "provider": "nexum",
-      "family": "qwen",
-      "status": "pass"
-    },
-    {
-      "model": "qwen-3.6-plus-thinking",
-      "provider": "nexum",
-      "family": "qwen",
-      "status": "pass"
-    },
-    {
-      "model": "qwen-3.7-plus-thinking",
-      "provider": "nexum",
-      "family": "qwen",
-      "status": "pass"
-    },
-    {
-      "model": "qwen-3.6-max-preview",
-      "provider": "nexum",
-      "family": "qwen",
-      "status": "pass"
-    },
-    {
-      "model": "qwen-3.7-max-thinking",
-      "provider": "nexum",
-      "family": "qwen",
-      "status": "pass"
-    },
-    {
-      "model": "qwen-3.6-max-preview-thinking",
-      "provider": "nexum",
-      "family": "qwen",
-      "status": "pass"
-    },
-    {
-      "model": "qwen-3.5-omni-plus",
-      "provider": "nexum",
-      "family": "qwen",
-      "status": "pass"
-    },
-    {
-      "model": "deepseek-v4",
-      "provider": "nexum",
-      "family": "deepseek",
-      "benchmark_score": 9.0,
-      "benchmark_weight": 0.9,
-      "reliability": 1.0,
-      "matches_played": 1,
-      "status": "pass"
-    },
-    {
-      "model": "tencent/hy3:free",
-      "provider": "openrouter",
-      "family": "tencent",
-      "status": "pass"
-    },
-    {
-      "model": "stepfun/step-3.7-flash:free",
-      "provider": "nousresearch",
-      "family": "stepfun",
-      "status": "pass"
-    },
-    {
-      "model": "groq/compound-mini",
-      "provider": "groq",
-      "family": "compound",
-      "status": "pass"
-    },
-    {
-      "model": "groq/compound",
-      "provider": "groq",
-      "family": "compound",
-      "status": "pass"
-    },
-    {
-      "model": "qwen/qwen3-32b",
-      "provider": "groq",
-      "family": "qwen",
-      "status": "pass"
-    },
-    {
-      "model": "openai/gpt-oss-20b",
-      "provider": "groq",
-      "family": "gpt",
-      "status": "pass"
-    },
-    {
-      "model": "meta-llama/llama-4-scout-17b-16e-instruct",
-      "provider": "groq",
-      "family": "llama",
-      "status": "pass"
-    },
-    {
-      "model": "codestral-2508",
-      "provider": "mistral",
-      "family": "codestral",
-      "benchmark_score": 8.1,
-      "benchmark_weight": 0.81,
-      "reliability": 0.0,
-      "matches_played": 5,
-      "status": "pass"
-    },
-    {
-      "model": "devstral-2512",
-      "provider": "mistral",
-      "family": "devstral",
-      "status": "pass"
-    },
-    {
-      "model": "magistral-medium-2509",
-      "provider": "mistral",
-      "family": "magistral",
-      "status": "pass"
-    },
-    {
-      "model": "mistral-medium-2604",
-      "provider": "mistral",
-      "family": "mistral",
-      "status": "pass"
-    },
-    {
-      "model": "ministral-14b-2512",
-      "provider": "mistral",
-      "family": "ministral",
-      "status": "pass"
-    },
-    {
-      "model": "open-mistral-nemo-2407",
-      "provider": "mistral",
-      "family": "nemo",
-      "status": "pass"
-    },
-    {
-      "model": "nexum-router",
-      "provider": "nexum",
-      "family": "router",
-      "status": "pass"
-    },
-    {
-      "model": "nemotron-3-ultra-550b",
-      "provider": "openrouter",
-      "family": "nemotron",
-      "benchmark_score": 8.2,
-      "benchmark_weight": 0.82,
-      "reliability": 0.5,
-      "matches_played": 4,
-      "status": "pass"
+      "status": "pass",
+      "role": "builder"
     },
     {
       "model": "glm-5.2",
@@ -365,43 +33,22 @@
       "benchmark_score": 6.6,
       "benchmark_weight": 0.66,
       "matches_played": 6,
-      "status": "pass"
-    },
-    {
-      "model": "glm-5",
-      "provider": "zai",
-      "family": "glm",
-      "status": "pass"
-    },
-    {
-      "model": "glm-5-turbo",
-      "provider": "zai",
-      "family": "glm",
-      "status": "pass"
-    },
-    {
-      "model": "glm-5.1",
-      "provider": "zai",
-      "family": "glm",
-      "status": "pass"
-    },
-    {
-      "model": "mimo-v2.5-pro",
-      "provider": "xiaomi",
-      "family": "xiaomi",
-      "status": "pass"
+      "status": "pass",
+      "role": "qa"
     },
     {
       "model": "qwen3.7-flash",
       "provider": "openrouter",
       "family": "qwen",
-      "status": "pass"
+      "status": "pass",
+      "role": "judge"
     },
     {
-      "model": "poolside/laguna-s-2.1",
+      "model": "poolside-laguna-s-2.1",
       "provider": "openrouter",
       "family": "poolside",
-      "status": "pass"
+      "status": "pass",
+      "role": "builder"
     }
   ],
   "stability": {
@@ -1170,10 +817,10 @@
         },
         {
           "rank": 2,
-          "model": "deepseek-v4-flash",
-          "provider": "deepseek",
+          "model": "mimo-v2.5",
+          "provider": "xiaomi",
           "label": "A",
-          "score": 2.4,
+          "score": 8.8,
           "strengths": [
             "Well-structured and readable"
           ],
@@ -1185,7 +832,7 @@
           ]
         }
       ],
-      "winner": "B",
+      "winner": "mimo-v2.5",
       "winning_model": "deepseek-v4-flash",
       "qa": {
         "threshold": 8.0,
@@ -1287,7 +934,7 @@
           ]
         }
       ],
-      "winner": "A",
+      "winner": "deepseek-v4-flash",
       "winning_model": "deepseek-v4-flash",
       "qa": {
         "threshold": 8.0,
@@ -1375,7 +1022,7 @@
           ]
         }
       ],
-      "winner": "A",
+      "winner": "deepseek-v4-flash",
       "winning_model": "deepseek-v4-flash",
       "qa": {
         "threshold": 8.0,
@@ -1511,7 +1158,7 @@
           ]
         }
       ],
-      "winner": "B",
+      "winner": "mimo-v2.5",
       "winning_model": "mimo-v2.5",
       "qa": {
         "threshold": 8.0,
@@ -1533,30 +1180,22 @@
   "leaderboard": [
     {
       "model": "deepseek-v4-flash",
-      "avgScore": 7.57,
-      "wins": 6,
-      "losses": 1,
+      "avgScore": 8.43,
+      "wins": 4,
+      "losses": 2,
       "bestScore": 8.9,
-      "matches": 7
+      "matches": 6
     },
     {
       "model": "mimo-v2.5",
-      "avgScore": 8.48,
-      "wins": 1,
+      "avgScore": 8.56,
+      "wins": 2,
       "losses": 2,
       "bestScore": 9.3,
-      "matches": 3
+      "matches": 4
     },
     {
-      "model": "mimo-v2.5-pro",
-      "avgScore": 8.03,
-      "wins": 0,
-      "losses": 2,
-      "bestScore": 8.05,
-      "matches": 2
-    },
-    {
-      "model": "poolside/laguna-s-2.1",
+      "model": "poolside-laguna-s-2.1",
       "avgScore": 8.03,
       "wins": 0,
       "losses": 1,
