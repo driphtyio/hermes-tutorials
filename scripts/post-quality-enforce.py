@@ -32,7 +32,7 @@ def _get_frontmatter(content):
     lines = content.split("\n")
     if not lines[0].strip() == "---":
         return ""
-    for i in range(1, min(50, len(lines))):
+    for i in range(1, min(200, len(lines))):
         if lines[i].strip() == "---":
             return "\n".join(lines[1:i])
     return ""
