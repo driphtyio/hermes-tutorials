@@ -1,0 +1,159 @@
+---
+title: "Beginner's Guide to Hermes Voice Mode: Getting Started in 2026"
+description: "Hermes Voice Mode lets you talk to your AI agent hands-free — learn how to install dependencies, configure STT and TTS providers, and start your first voice conversation today."
+pubDate: "2026-08-07"
+tags: ["voice", "tutorial", "beginners", "configuration"]
+lastVerified: "2026-08-07"
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-voice-mode-1786100080.webp"
+---
+
+Hermes Voice Mode is ready to use today, and you can set it up in under an hour using free, local tools — no API keys required. Based on the official [Hermes voice mode documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/voice-mode), this guide walks you through the exact commands and configuration needed to talk to Hermes from your terminal, Telegram, or Discord. Whether you want hands-free coding assistance or a portable voice assistant on your phone, voice mode transforms how you interact with your agent. This review is based on official documentation and community reports — we did not run the tool hands-on.
+
+## How This Guide Was Built
+
+This guide is based on the official [Hermes Voice Mode feature documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/voice-mode) and the [practical voice mode guide](https://hermes-agent.nousresearch.com/docs/guides/use-voice-mode-with-hermes). We verified installation commands, STT and TTS provider lists, CLI slash commands, configuration options, and system dependency requirements against these sources. We did not test Discord voice channel integration or enterprise ElevenLabs setups hands-on — those sections describe documented behavior only. Last verified: August 2026.
+
+## What Is Hermes Voice Mode?
+
+Hermes Voice Mode enables hands-free, natural language interaction with your AI agent by converting your speech to text and reading the agent's responses aloud. As detailed in the official [voice mode feature page](https://hermes-agent.nousresearch.com/docs/user-guide/features/voice-mode), it supports three distinct experiences: an interactive microphone loop for the CLI, voice replies within Telegram and Discord chat, and a live bot that joins Discord voice channels. For a beginner, the CLI voice mode is the best starting point because it requires the fewest dependencies and no messaging platform setup.
+
+## Installing Voice Dependencies
+
+To enable voice mode, you must install specific Python extras and system-level packages before voice features become available. For CLI voice mode, run `cd ~/.hermes/hermes-agent && uv pip install -e ".[voice]"`; for messaging platforms, add the `.[messaging]` extra; and for premium TTS, add `.[tts-premium]`, according to the [official voice mode docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/voice-mode). On macOS, install system dependencies with `brew install portaudio ffmpeg opus` and `brew install espeak-ng`. On Ubuntu or Debian, use `sudo apt install portaudio19-dev ffmpeg libopus0` and `sudo apt install espeak-ng`.
+
+PortAudio handles microphone input and audio playback. Ffmpeg handles audio format conversion for TTS delivery. Opus powers the Discord voice codec. Espeak-ng is the phonemizer backend for local NeuTTS.
+
+## Starting Your First Voice Conversation
+
+Starting a voice conversation in the CLI takes three steps: launch Hermes, enable voice mode, and press the record key. Start Hermes with `hermes`, then type `/voice on` to enable voice mode, as shown in the [voice mode documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/voice-mode). Press Ctrl+B to start recording, speak naturally, and Hermes auto-stops after 3 seconds of silence, then automatically restarts recording for continuous conversation.
+
+The full command set:
+
+| Command | What it does |
+|---------|-------------|
+| `/voice` | Toggle voice mode on or off |
+| `/voice on` | Enable voice mode |
+| `/voice off` | Disable voice mode |
+| `/voice tts` | Toggle spoken TTS output |
+| `/voice status` | Show current voice state |
+
+To end the voice chat hands-free, say "stop" as an exact match (case-insensitive). Three consecutive silent recording cycles also end the chat automatically.
+
+## How Barge-In and Streaming TTS Work
+
+Hermes voice mode is full-duplex, meaning the microphone stays live during both generation and playback so you can interrupt the agent at any point. According to the [voice mode feature reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/voice-mode), barge-in lets you speak while the agent is thinking or talking — it cuts playback immediately and submits your interjection as the next message. Replies are spoken sentence-by-sentence as they are generated via streaming TTS, so you hear the response in real time rather than waiting for the full text. The system also includes a hallucination filter that catches 26 known Whisper phantom phrases like "Thank you for watching" before they reach the agent.
+
+## Choosing a Speech-to-Text Provider
+
+The STT provider transcribes your spoken words into text, and Hermes offers both free local and paid cloud options with automatic fallback from local to Groq to OpenAI. The local faster-whisper provider is the best default for beginners because it is free, requires no API key, and downloads roughly 150 MB of models on first use, per the [official voice mode docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/voice-mode). Model options range from tiny to large-v3.
+
+| Provider | Cost | Speed | Key Needed |
+|----------|------|-------|-----------|
+| Local (faster-whisper) | Free | Depends on CPU/GPU | No |
+| Groq | Free tier | Very fast (~0.5s) | `GROQ_API_KEY` |
+| OpenAI | Paid | Fast (~1s) | `VOICE_TOOLS_OPENAI_KEY` |
+| Mistral | Paid | Fast | Yes |
+| xAI | Paid | Fast | Yes |
+
+Provider priority with automatic fallback is local first, then Groq, then OpenAI.
+
+## Selecting a Text-to-Speech Provider
+
+Edge TTS is the recommended free default for text-to-speech, offering roughly 1-second latency, 322 voices across 74 languages, and the default voice en-US-AriaNeural with no API key required, as documented in the [voice mode guide](https://hermes-agent.nousresearch.com/docs/guides/use-voice-mode-with-hermes). For premium quality, ElevenLabs provides high-end voices at about 2-second latency but requires a paid plan and an `ELEVENLABS_API_KEY`. OpenAI TTS offers good quality at roughly 1.5-second latency using the gpt-4o-mini-tts model. NeuTTS is a free local option that runs entirely on your CPU.
+
+| Provider | Quality | Cost | Latency | Key Needed |
+|----------|---------|------|---------|-----------|
+| Edge TTS | Good | Free | ~1s | No |
+| ElevenLabs | Excellent | Paid | ~2s | `ELEVENLABS_API_KEY` |
+| OpenAI TTS | Good | Paid | ~1.5s | `VOICE_TOOLS_OPENAI_KEY` |
+| NeuTTS | Good | Free | CPU-dependent | No |
+
+The full provider list also includes minimax, mistral, gemini, xai, kittentts, and piper.
+
+## Configuring Voice in config.yaml
+
+The recommended beginner configuration uses local STT with the base model and free Edge TTS, which together cost nothing and need no API keys. Add this block to your `config.yaml`, as shown in the [official voice mode documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/voice-mode):
+
+```yaml
+voice:
+  record_key: "ctrl+b"
+  max_recording_seconds: 120
+  auto_tts: false
+  beep_enabled: true
+  silence_threshold: 200
+  silence_duration: 3.0
+stt:
+  provider: "local"
+  local:
+    model: "base"
+tts:
+  provider: "edge"
+  edge:
+    voice: "en-US-AriaNeural"
+```
+
+Key tuning tips for common issues:
+
+- **Too-sensitive silence detection** in noisy rooms: raise `silence_threshold` to 250 or higher
+- **Premature cutoff** if you pause between sentences: increase `silence_duration` to 4.0
+- **Ctrl+B conflicts** with tmux or terminal shortcuts: set `record_key: "ctrl+space"`
+- **Disable beeps**: set `beep_enabled: false`
+
+## Enabling Voice Replies in Telegram and Discord
+
+For voice replies in messaging platforms, start the gateway and toggle voice mode inside the chat itself. Start the gateway with `hermes gateway`, then use `/voice on` to get voice replies when you send voice messages, or `/voice tts` to get voice replies for all messages, per the [official voice mode docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/voice-mode). Three modes are available: off (text only), voice_only (speak only for voice-originating messages), and all (speak every reply). Telegram delivers voice as an Opus/OGG bubble that plays inline; Discord likewise delivers a native voice bubble. For broader messaging setup, see our [gateway setup guide](/blog/gateway-setup/).
+
+## Using Discord Voice Channels
+
+Discord voice channels offer the most immersive voice experience: the bot joins the voice channel, listens to users speaking, transcribes via Whisper, and responds verbally back in the channel, as described in the [voice mode feature page](https://hermes-agent.nousresearch.com/docs/user-guide/features/voice-mode). The bot needs Connect, Speak, and Use Voice Activity permissions, plus the Presence Intent and Message Content Intent (required), plus Server Members Intent if you use usernames in your allowlist.
+
+Commands to control the bot in a Discord text channel:
+
+| Command | Action |
+|---------|--------|
+| `/voice join` | Bot joins your current voice channel |
+| `/voice leave` | Bot disconnects from voice channel |
+| `/voice status` | Show connected channel and voice state |
+
+You must be in a voice channel before running `/voice join`. Only users in `DISCORD_ALLOWED_USERS` can interact via voice, and the bot pauses its listener while playing TTS to prevent echo feedback.
+
+## Troubleshooting Common Issues
+
+Most voice problems have straightforward fixes rooted in missing dependencies or misconfigured permissions, and the [official troubleshooting reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/voice-mode) covers the most frequent ones. "No audio device found" means PortAudio is missing — install it via Homebrew or apt. If the bot joins a Discord channel but hears nothing, check that your user ID is in `DISCORD_ALLOWED_USERS`, confirm the bot is not muted, and verify privileged intents and Connect/Speak permissions. If transcription works but no speech comes out, check your TTS provider config, API key validity, and ffmpeg installation. For garbled Whisper output, move to a quieter environment, raise `silence_threshold`, or try a different STT model.
+
+## Suggested First-Week Setup Path
+
+A gradual approach reduces debugging friction by isolating each layer before adding the next, as recommended in the [practical voice mode guide](https://hermes-agent.nousresearch.com/docs/guides/use-voice-mode-with-hermes):
+
+1. **Get text Hermes working** — verify the agent responds to text prompts normally
+2. **Run `hermes setup tts`** — enable voice support via the interactive wizard
+3. **Use CLI voice mode** with local STT and Edge TTS — both free, no API keys needed
+4. **Enable `/voice on` in Telegram or Discord** — get spoken replies on your phone
+5. **Try Discord VC mode last** — it requires the most configuration including bot permissions and privileged intents
+
+For more on Hermes configuration, see our [configuration deep dive](/blog/configuration-deep-dive/).
+
+## FAQ
+
+### Do I need a paid API key to use Hermes Voice Mode?
+
+No, you can use Hermes Voice Mode entirely free with local STT (faster-whisper) and Edge TTS, both of which require no API key, as confirmed in the [voice mode documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/voice-mode). Local STT downloads models on first use, and Edge TTS works out of the box. Paid providers like ElevenLabs or OpenAI TTS are optional upgrades for higher quality or lower latency.
+
+### How do I end a voice chat hands-free?
+
+Say "stop" as an exact match (case-insensitive, surrounding punctuation ignored) to end the voice chat without pressing any keys, as documented in the [official voice mode guide](https://hermes-agent.nousresearch.com/docs/guides/use-voice-mode-with-hermes). The match is deliberately strict, so saying "stop doing that and try X" still reaches the agent normally. Three consecutive silent recording cycles also end the chat automatically.
+
+### Can I interrupt the agent while it is speaking?
+
+Yes, Hermes voice mode supports full barge-in — speaking while the agent generates or plays its reply cuts playback immediately and submits your words as the next message. The microphone stays live from the moment you finish speaking until the reply has fully played, so you can interject at any point. This is configured via `voice.barge_in` in `config.yaml` and is enabled by default.
+
+## Where to Go Next
+
+Now that you have voice mode working, explore related topics:
+
+- Learn the full config file format in our [configuration deep dive](/blog/configuration-deep-dive/)
+- Set up messaging platforms in our [gateway setup guide](/blog/gateway-setup/)
+- Start from scratch with our [getting started guide](/blog/getting-started/)
+- Explore all available tools in the [Hermes tools reference](https://hermes-agent.nousresearch.com/docs/reference/tools-reference)
+
+

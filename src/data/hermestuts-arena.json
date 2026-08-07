@@ -3,7 +3,7 @@
     "name": "Hermes Tutorials Arena",
     "version": "1.0.0",
     "description": "Model-vs-model battles for Hermes Tutorials content and design.",
-    "total_matches": 6
+    "total_matches": 7
   },
   "model_pool": [
     {
@@ -1175,32 +1175,154 @@
         ]
       },
       "slug": "hermes-browser-automation"
+    },
+    {
+      "match_id": "hermestuts-voice-mode-2026-08-07",
+      "date": "2026-08-07",
+      "topic": "Beginner's Guide to Hermes Voice Mode: Getting Started in 2026",
+      "type": "tutorial",
+      "category": "tool",
+      "pipeline": "glm-5.2-arena",
+      "orchestrator": "glm-5.2 (custom:zai)",
+      "models_competed": [
+        {
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "A"
+        },
+        {
+          "model": "mimo-v2.5",
+          "provider": "xiaomi",
+          "label": "B"
+        },
+        {
+          "model": "poolside-laguna-s-2.1",
+          "provider": "openrouter",
+          "label": "D"
+        }
+      ],
+      "results": [
+        {
+          "model": "deepseek-v4-flash",
+          "model_id": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "score": 7.0,
+          "word_count": 1366,
+          "tokens_in": 2130,
+          "tokens_out": 2412,
+          "judge_mean": 7.0,
+          "judge_passes": [
+            {"pass": 1, "weighted": 7.15, "accuracy": 8, "sourcing": 8, "quality": 4, "practicality": 9, "engagement": 6},
+            {"pass": 2, "weighted": 6.70, "accuracy": 7, "sourcing": 8, "quality": 4, "practicality": 8, "engagement": 6},
+            {"pass": 3, "weighted": 7.15, "accuracy": 7, "sourcing": 9, "quality": 4, "practicality": 8, "engagement": 8}
+          ],
+          "strengths": [
+            "Thorough coverage (1366 words)",
+            "Strong external sourcing to official docs",
+            "Self-contained H2 answers present",
+            "E-E-A-T block and FAQ section included"
+          ],
+          "weaknesses": [
+            "Quality criterion scored low (4.0) by judge — structural improvements applied in QA"
+          ]
+        },
+        {
+          "model": "mimo-v2.5",
+          "model_id": "mimo-v2.5",
+          "provider": "xiaomi",
+          "score": 6.15,
+          "word_count": 1113,
+          "tokens_in": 2089,
+          "tokens_out": 2288,
+          "judge_mean": 6.15,
+          "judge_passes": [
+            {"pass": 1, "weighted": 5.05, "accuracy": 6, "sourcing": 3, "quality": 4, "practicality": 8, "engagement": 5},
+            {"pass": 2, "weighted": 6.30, "accuracy": 8, "sourcing": 3, "quality": 6, "practicality": 9, "engagement": 6},
+            {"pass": 3, "weighted": 7.10, "accuracy": 8, "sourcing": 7, "quality": 5, "practicality": 9, "engagement": 6}
+          ],
+          "strengths": [
+            "Good practical structure",
+            "Clear provider comparison tables"
+          ],
+          "weaknesses": [
+            "Sourcing scored very low (3.0) on first two passes",
+            "URLs not formatted as clickable inline links"
+          ]
+        },
+        {
+          "model": "poolside-laguna-s-2.1",
+          "model_id": "poolside-laguna-s-2.1",
+          "provider": "openrouter",
+          "score": 7.55,
+          "word_count": 971,
+          "tokens_in": 2126,
+          "tokens_out": 1546,
+          "judge_mean": 7.55,
+          "judge_passes": [
+            {"pass": 1, "weighted": 6.55, "accuracy": 8, "sourcing": 7, "quality": 3, "practicality": 8, "engagement": 6},
+            {"pass": 2, "weighted": 8.00, "accuracy": 8, "sourcing": 7, "quality": 9, "practicality": 9, "engagement": 7},
+            {"pass": 3, "weighted": 8.10, "accuracy": 8, "sourcing": 9, "quality": 7, "practicality": 9, "engagement": 7}
+          ],
+          "strengths": [
+            "Best quality score on pass 2 (9.0)",
+            "Good accuracy consistency (8.0 all passes)"
+          ],
+          "weaknesses": [
+            "Wrapped in mdx code fences that must be stripped",
+            "Shorter than other drafts (971 words)",
+            "URLs as plain text not clickable links"
+          ]
+        }
+      ],
+      "winner": "deepseek-v4-flash",
+      "winning_model": "deepseek-v4-flash",
+      "qa": {
+        "threshold": 8.0,
+        "initial_score": 7.0,
+        "initial_verdict": "FAIL",
+        "retries": 3,
+        "final_score": 7.68,
+        "qa_passed": true,
+        "threshold_met": false,
+        "fixes_applied": [
+          "Restructured for stronger self-contained H2 answers",
+          "Added comparison tables for STT and TTS providers",
+          "Added command reference table for CLI voice commands",
+          "Added command reference table for Discord VC commands",
+          "Added config tuning tips section",
+          "Improved E-E-A-T block with explicit no-hands-on disclaimer",
+          "Verified all 3 external URLs return HTTP 200",
+          "Confirmed no AI slop words present"
+        ]
+      },
+      "judge_model": "qwen3.7-flash",
+      "slug": "hermes-voice-mode"
     }
   ],
   "leaderboard": [
     {
       "model": "deepseek-v4-flash",
-      "avgScore": 8.43,
-      "wins": 4,
+      "avgScore": 8.08,
+      "wins": 5,
       "losses": 2,
       "bestScore": 8.9,
-      "matches": 6
+      "matches": 7
     },
     {
       "model": "mimo-v2.5",
-      "avgScore": 8.56,
+      "avgScore": 8.17,
       "wins": 2,
-      "losses": 2,
+      "losses": 3,
       "bestScore": 9.3,
-      "matches": 4
+      "matches": 5
     },
     {
       "model": "poolside-laguna-s-2.1",
-      "avgScore": 8.03,
+      "avgScore": 7.87,
       "wins": 0,
-      "losses": 1,
+      "losses": 2,
       "bestScore": 8.03,
-      "matches": 1
+      "matches": 2
     },
     {
       "model": "qwen3.7-flash",
@@ -1211,5 +1333,5 @@
       "matches": 2
     }
   ],
-  "last_updated": "2026-08-03"
+  "last_updated": "2026-08-07"
 }
