@@ -3,7 +3,7 @@
     "name": "Hermes Tutorials Arena",
     "version": "1.0.0",
     "description": "Model-vs-model battles for Hermes Tutorials content and design.",
-    "total_matches": 7
+    "total_matches": 8
   },
   "model_pool": [
     {
@@ -1297,32 +1297,136 @@
       },
       "judge_model": "qwen3.7-flash",
       "slug": "hermes-voice-mode"
+    },
+    {
+      "match_id": "hermestuts-herald-2026-08-08",
+      "date": "2026-08-08",
+      "topic": "Hermes Agent v0.20.0 The Herald Release: Voice, A2A Protocol, and Desktop Platform",
+      "type": "content",
+      "category": "news",
+      "pipeline": "cron-subagent-arena",
+      "orchestrator": "glm-5.2 (custom:zai)",
+      "models_competed": [
+        {
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "A"
+        },
+        {
+          "model": "mimo-v2.5",
+          "provider": "xiaomi",
+          "label": "B",
+          "note": "DNF — circuit breaker open for xiaomi provider"
+        },
+        {
+          "model": "poolside-laguna-s-2.1",
+          "provider": "openrouter",
+          "label": "D"
+        }
+      ],
+      "results": [
+        {
+          "model": "poolside-laguna-s-2.1",
+          "model_id": "poolside-laguna-s-2.1",
+          "provider": "openrouter",
+          "score": 9.07,
+          "word_count": 1049,
+          "tokens_in": 2245,
+          "tokens_out": 2151,
+          "judge_mean": 9.07,
+          "judge_passes": [
+            {"pass": 1, "weighted": 8.65, "accuracy": 9, "sourcing": 9, "quality": 9, "practicality": 8, "engagement": 7},
+            {"pass": 2, "weighted": 9.00, "accuracy": 10, "sourcing": 9, "quality": 8, "practicality": 9, "engagement": 8},
+            {"pass": 3, "weighted": 9.55, "accuracy": 10, "sourcing": 10, "quality": 10, "practicality": 9, "engagement": 7}
+          ],
+          "strengths": [
+            "Cleanest quality scores across all 3 passes (9, 8, 10)",
+            "Excellent accuracy consistency (9-10 across passes)",
+            "Self-contained answers under each H2"
+          ],
+          "weaknesses": [
+            "Used [Source: GitHub] instead of natural inline link anchor text (fixed in QA)"
+          ]
+        },
+        {
+          "model": "deepseek-v4-flash",
+          "model_id": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "score": 8.58,
+          "word_count": 1425,
+          "tokens_in": 2035,
+          "tokens_out": 2221,
+          "judge_mean": 8.58,
+          "judge_passes": [
+            {"pass": 1, "weighted": 9.25, "accuracy": 10, "sourcing": 10, "quality": 8, "practicality": 9, "engagement": 8},
+            {"pass": 2, "weighted": 8.50, "accuracy": 10, "sourcing": 9, "quality": 6, "practicality": 9, "engagement": 7},
+            {"pass": 3, "weighted": 8.00, "accuracy": 10, "sourcing": 9, "quality": 4, "practicality": 9, "engagement": 6}
+          ],
+          "strengths": [
+            "Longest draft (1425 words)",
+            "Perfect accuracy (10/10 all passes)",
+            "Good internal linking to sibling posts"
+          ],
+          "weaknesses": [
+            "Quality scores declined across passes (8→6→4) — structural issues"
+          ]
+        },
+        {
+          "model": "mimo-v2.5",
+          "model_id": "mimo-v2.5",
+          "provider": "xiaomi",
+          "score": 0.0,
+          "word_count": 0,
+          "note": "DNF — circuit breaker open for xiaomi provider"
+        }
+      ],
+      "winner": "poolside-laguna-s-2.1",
+      "winning_model": "poolside-laguna-s-2.1",
+      "qa": {
+        "threshold": 8.0,
+        "initial_score": 9.07,
+        "initial_verdict": "PASS",
+        "retries": 0,
+        "final_score": 9.07,
+        "qa_passed": true,
+        "threshold_met": true,
+        "fixes_applied": [
+          "Converted [Source: GitHub] citations to natural inline markdown links",
+          "Added internal links to sibling posts (quicksilver release, voice mode, parallel delegation)",
+          "Added lastVerified: 2026-08-08 to frontmatter",
+          "Shortened meta description to under 160 chars",
+          "Verified all 5 external URLs return HTTP 200",
+          "Added heroImage via gen-image-verified.sh (Lumenfall FLUX.1-schnell)"
+        ]
+      },
+      "judge_model": "qwen3.7-flash",
+      "slug": "2026-08-08-hermes-herald-release-v020"
     }
   ],
   "leaderboard": [
     {
       "model": "deepseek-v4-flash",
-      "avgScore": 8.08,
+      "avgScore": 8.17,
       "wins": 5,
-      "losses": 2,
+      "losses": 3,
       "bestScore": 8.9,
-      "matches": 7
+      "matches": 8
     },
     {
       "model": "mimo-v2.5",
       "avgScore": 8.17,
       "wins": 2,
-      "losses": 3,
+      "losses": 4,
       "bestScore": 9.3,
-      "matches": 5
+      "matches": 6
     },
     {
       "model": "poolside-laguna-s-2.1",
-      "avgScore": 7.87,
-      "wins": 0,
+      "avgScore": 8.45,
+      "wins": 1,
       "losses": 2,
-      "bestScore": 8.03,
-      "matches": 2
+      "bestScore": 9.07,
+      "matches": 3
     },
     {
       "model": "qwen3.7-flash",
@@ -1333,5 +1437,5 @@
       "matches": 2
     }
   ],
-  "last_updated": "2026-08-07"
+  "last_updated": "2026-08-08"
 }
