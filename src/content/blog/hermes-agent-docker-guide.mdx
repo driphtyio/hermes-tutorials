@@ -1,0 +1,95 @@
+---
+title: "How to Run Hermes Agent in Docker: A Beginner's Guide 2026"
+description: "This beginner guide walks you through the Hermes Agent Docker setup, showing you how to run this open-source AI agent in a container with persistent storage."
+pubDate: "2026-08-10"
+tags: ["docker", "hermes-agent", "self-hosting", "tutorial"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-docker-guide-1786353666.webp"
+lastVerified: "2026-08-10"
+---
+
+You installed Docker, pulled an image, ran a container, and then lost all your AI agent's data because you forgot a volume mount. Or worse, you have no idea what a volume mount is. Sound familiar? By the end of this guide, you will have Hermes Agent running in Docker in under 10 minutes, with persistent storage, a working conversation, and a clear upgrade path. No fluff, just commands.
+
+## How This Guide Was Built
+
+This guide is based on the official [Hermes Agent Docker documentation](https://hermes-agent.nousresearch.com/docs/user-guide/docker/), the [GitHub repository](https://github.com/NousResearch/hermes-agent), and the [Docker Hub image page](https://hub.docker.com/r/nousresearch/hermes-agent). The Docker commands, the image name `nousresearch/hermes-agent`, and the `/opt/data` volume mount were verified against these sources. Production multi-container orchestration was not tested. Last verified: August 2026.
+
+## What It Does
+
+Hermes Agent is an open-source AI agent by Nous Research that can execute tasks, run commands, and interact with tools. Docker runs it in an isolated container, bundled together and separated from your host system. This guide covers running Hermes Agent *inside* Docker using the official image, rather than Docker as a sandbox terminal backend.
+
+## Key Features
+
+The official image is a good fit for beginners because it bundles everything into one reproducible artifact. These are the features that matter most: an open-source codebase you can inspect, an official image on Docker Hub, persistent storage through a mounted volume, compose support, and multiple LLM providers.
+
+- **Open-source by Nous Research**: The full source code is available on [GitHub](https://github.com/NousResearch/hermes-agent), so you can inspect, modify, or contribute to it.
+- **Official Docker image**: The image is published as `nousresearch/hermes-agent` on Docker Hub, giving you a pre-built, versioned artifact to pull.
+- **Stateless image with persistent volume**: The container itself is ephemeral, but your data lives in the `/opt/data` volume. This means you can delete the container and your conversations and configuration survive.
+- **docker-compose support**: The official docs include a `docker-compose.yml` example for managing the agent with a single configuration file.
+- **s6-overlay auto-supervision**: In gateway mode, the image uses s6-overlay to keep the process alive and restart it if it crashes, reducing manual intervention.
+- **Multiple LLM providers**: You can configure the agent to use different model providers, not just one, as detailed in the [provider setup guide](https://hermes-tutorials.dev/blog/provider-setup/).
+
+## How Do I Get Started With Hermes Agent in Docker?
+
+Getting started takes seven steps, from installing Docker to upgrading a running gateway. Each step is a copy-paste command, so you can follow along without any prior Docker experience. Work through them in order, and you will have a working agent with persistent storage.
+
+1. **Prerequisites**: Install Docker on your machine. You need the Docker Engine and the Docker CLI. Check with `docker --version`. If you are on a VPS, ensure your user has permission to run Docker commands, or use `sudo`.
+
+2. **Create a data directory**: On your host, create a directory to hold your agent's data. Run `mkdir -p ~/.hermes`. This folder will be mounted into the container.
+
+3. **Run the setup command**: Execute the following to initialize the agent. This pulls the image and runs the interactive setup.
+   ```bash
+   docker run -it --rm -v ~/.hermes:/opt/data nousresearch/hermes-agent setup
+   ```
+   The `-it` flag makes it interactive, `--rm` removes the container after exit, and `-v` mounts your host directory to `/opt/data`. Follow the prompts to choose your LLM provider and enter your API key.
+
+4. **Start your first conversation**: After setup, run the same image without the `setup` command to start an interactive session.
+   ```bash
+   docker run -it --rm -v ~/.hermes:/opt/data nousresearch/hermes-agent
+   ```
+   You can now chat with the agent. Type a simple request like "What files are in my current directory?" to verify it works.
+
+5. **Verify persistence**: Exit the container, then run the previous command again. Your previous conversation history should be loaded from the `~/.hermes` directory.
+
+6. **Run a persistent gateway**: For a background service that stays up, use the gateway mode.
+   ```bash
+   docker run -d --name hermes --restart unless-stopped -v ~/.hermes:/opt/data -p 8642:8642 nousresearch/hermes-agent gateway run
+   ```
+   The `-d` flag detaches, `--restart unless-stopped` auto-restarts the container, and `-p 8642:8642` exposes the gateway port. See the [gateway setup guide](https://hermes-tutorials.dev/blog/gateway-setup/) for more on this mode.
+
+7. **Upgrade the agent**: To update, pull the latest image and recreate the container.
+   ```bash
+   docker pull nousresearch/hermes-agent
+   docker stop hermes && docker rm hermes
+   docker run -d --name hermes --restart unless-stopped -v ~/.hermes:/opt/data -p 8642:8642 nousresearch/hermes-agent gateway run
+   ```
+   Your data in `~/.hermes` survives the upgrade because it lives on the host volume.
+
+## Common Mistakes
+
+Most problems with the containerized setup come down to a handful of recurring mistakes. Each one below has a clear symptom and a simple fix. Read through the list once before you start, and come back to it whenever something behaves unexpectedly.
+
+- **Forgetting the volume mount**: If you run `docker run -it nousresearch/hermes-agent` without `-v ~/.hermes:/opt/data`, your data is written to the container's ephemeral filesystem. When the container exits, that data is gone. Always include the `-v` flag.
+- **Exposing the API port without auth**: The gateway port `8642` is an API endpoint. If you bind it to `0.0.0.0` without authentication, anyone can access it. The official docs recommend using a reverse proxy with authentication or a firewall. Do not expose it publicly on a VPS without protection.
+- **Wrong data directory permissions**: If your host directory has restrictive permissions, the container's user may not be able to write to it. Ensure your `~/.hermes` directory is owned by your user, or adjust permissions with `chmod` or `chown` so the container can write.
+- **Not using the --restart flag for gateway mode**: If you run the gateway without `--restart unless-stopped`, the container stops after a crash or a reboot and stays down. The flag ensures it comes back automatically.
+- **VPS browser console mangling docker run args**: When pasting long commands into a browser-based VPS console, line breaks or quotes can get mangled, breaking the command. Paste the command into a plain text editor first, then copy it into the console.
+
+## FAQ
+
+These are the questions readers ask most often when running Hermes Agent in Docker: licensing, host dependencies, and compose files. If your question is not answered here, the official documentation and the troubleshooting guide are good next stops for deeper answers.
+
+### Is the Hermes Agent Docker image free?
+
+Yes, the image is free to use. Hermes Agent is open-source under the MIT license, as stated in the [GitHub repository](https://github.com/NousResearch/hermes-agent). You only pay for the LLM API usage from your chosen provider, which is separate from the agent itself. Nothing about running the container itself costs money.
+
+### Do I need to install Node.js or Python on my host?
+
+No. The Docker image bundles all runtime dependencies, including Node.js and Python, inside the container. Your host only needs Docker. This is the primary benefit of the containerized setup, as the official [Docker documentation](https://hermes-agent.nousresearch.com/docs/user-guide/docker/) explains. You do not need to touch a package manager on the host at all.
+
+### Can I use docker-compose for Hermes Agent?
+
+Yes. The official [Docker documentation](https://hermes-agent.nousresearch.com/docs/user-guide/docker/) includes a sample `docker-compose.yml` file. It defines the service, the volume mount, and the port mapping. Using docker-compose simplifies managing the container, especially for gateway mode, because one file captures the whole configuration instead of a long `docker run` command.
+
+## Where to Go Next
+
+Now that you have the agent running, you can deepen your knowledge. Read the official [Hermes Agent Docker documentation](https://hermes-agent.nousresearch.com/docs/user-guide/docker/) for advanced configuration. Explore the [GitHub repository](https://github.com/NousResearch/hermes-agent) for the source code. For more tutorials, check out our [getting started guide](https://hermes-tutorials.dev/blog/getting-started/), the [CLI mastery guide](https://hermes-tutorials.dev/blog/cli-mastery/), or the [troubleshooting guide](https://hermes-tutorials.dev/blog/troubleshooting/) for common issues.

@@ -1,0 +1,93 @@
+---
+title: "Hermes Agent Herald Release Adds Voice Mode and A2A v1.0"
+description: "Hermes Agent v0.20.0 (Aug 3, 2026; 3,650+ commits; 650+ contributors) brought voice barge-in (PRs #69511/#73862/#74223), on-device wake words (PRs…"
+pubDate: 2026-08-08
+tags: ["Hermes Agent", "release notes", "A2A protocol", "voice mode"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/2026-08-08-hermes-herald-release-v020-1786183620.webp"
+lastVerified: 2026-08-08
+---
+
+Hermes Agent v0.20.0 "The Herald Release" arrived on August 3, 2026, bringing voice-first interaction, native A2A protocol support, and major desktop and CLI upgrades. With over 3,650 commits since the last release and 650+ contributors, this is one of the most substantial updates to date — building on the momentum from the [Quicksilver release](/blog/2026-07-20-hermes-quicksilver-release-v019/) just two weeks earlier.
+
+## How This Was Verified
+
+This report is based on the [official release notes on GitHub](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.3), [releasebot.io](https://releasebot.io/updates/nousresearch/hermes-agent), and community reporting from the-agent-report.com. The release date (August 3, 2026), commit and PR numbers, and full feature list were confirmed directly from the v2026.8.3 tag. Performance benchmarks beyond what is stated in the release notes were not independently verified. Last verified: August 2026.
+
+## Conversational Voice with Barge-In
+
+Hermes Agent now supports conversational voice with barge-in, letting users interrupt speech mid-sentence and resume naturally using streaming TTS that works clause-by-clause. The system detects silence intelligently and works across CLI, desktop, and gateway adapters, per the [official release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.3). This was implemented across PRs #69511, #73862, and #74223.
+
+## On-Device Wake Words
+
+Users can activate Hermes Agent with an open-vocabulary wake phrase like "hey Hermes," processed entirely on-device so no audio leaves the machine during standby. Multi-profile voice routing and hands-free session termination via "stop" are also supported. These features were added in PRs #70509, #73106, and #73933, according to the [release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.3). For setup details, see our [voice mode guide](/blog/hermes-voice-mode/).
+
+## Voice on Messaging Platforms
+
+Hermes Agent can now answer voice notes received on WhatsApp, Feishu, DingTalk, LINE, QQ, Photon, and Weixin by transcribing and responding automatically with platform-aware TTS replies. STT behavior is configurable, including gpt-transcribe support. Implementation details come from PRs #73515, #73508, and #73910 in the [release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.3). The [gateway setup guide](/gateway/) covers the underlying platform architecture.
+
+## A2A Protocol v1.0 Support
+
+The Herald release bundles a plugin implementing A2A protocol v1.0, letting Hermes discover, communicate with, and be controlled by other A2A-compatible agents over a standard wire protocol. This closes long-standing issue #514 and aligns with the [Linux Foundation-backed A2A standard](https://a2a-protocol.org/latest/announcing-1.0/) used by over 150 companies including Google, Microsoft, and Salesforce. See PR #77109 in the [release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.3) for integration specifics.
+
+## Signed Outbound Webhooks
+
+Developers can now receive signed lifecycle events — including session activity, turn completions, and tool usage — from Hermes Agent via outbound webhooks secured with HMAC signatures. This enables reliable event-driven integrations with CI pipelines, dashboards, or any HTTP-speaking service without polling. The feature was introduced in PR #69406, per the [official release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.3). Our [webhooks guide](/blog/hermes-webhooks-guide/) covers receiver setup.
+
+## Grounded Citations Skill
+
+A new grounded citations skill ensures every claim made by Hermes Agent is backed by verifiable sources, with quotes matched against actual page text rather than hallucinated. Fact-checking mode can validate documents or arbitrary assertions before sharing them. This functionality stems from PRs #71698 and #77104 and builds on the [skills system](/skills/), as documented in the [release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.3).
+
+## Desktop Becomes a Platform
+
+The desktop client now functions as a platform with versioned artifact cards featuring sandboxed live previews, a [plugin SDK](/plugins/) with Kanban as its founding plugin, global hotkeys, multiple windows, SSH remote backends, and a 60fps performance wave. These enhancements come from PRs #72345, #61173, #74413, and #72315, according to the [release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.3).
+
+## CLI Power-User Features
+
+Power users gain several CLI upgrades including `!command` for shell access, `/init` for AGENTS.md generation, `/diff`, `/context`, `/focus`, Ctrl+S prompt stashing, and `hermes import-agent` to migrate from Claude Code or Codex CLI setups. These were delivered through PRs #72257, #72178, #72240, and #72242, as documented in the [official release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.3).
+
+## Mid-Turn Redirects
+
+Hermes Agent now supports correcting or redirecting an agent mid-task without losing progress. The original prompt remains intact while new instructions are applied in-flight, preserving continuity and reducing rework. This was enabled by PRs #63104 and #72339, per the [release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.3). For more on steering agent workflows, see our guide on [parallel subagent delegation](/blog/hermes-parallel-subagent-delegation/).
+
+## Self-Healing Tools
+
+Tool execution has become more resilient with self-healing logic that handles truncated terminal output by spilling to files, detects already-applied patches, verifies file writes on disk, and probes near-miss matches during searches. The tool-calling iteration limit increased from 90 to 500. Implemented in PRs #77041 and #76998, as noted in the [release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.3). The [tools guide](/tools/) explains the underlying architecture.
+
+## Context Compression Overhaul
+
+Context management received a major overhaul with per-turn micro-compaction, guaranteed retention of the last N user messages, per-model thresholds, and ghost-skill defense mechanisms. These improvements help maintain relevance while reducing memory overhead, as described in PRs #70254 and #75345 in the [release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.3).
+
+## Performance Improvements
+
+Cold starts dropped from roughly 14 seconds to 1.8 seconds, update no-ops are 2–6 seconds faster, config reads are significantly quicker, and prompt caching now covers tool schemas on Anthropic-compatible backends. These optimizations were addressed in PRs #76032 and #71637, per the [official release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.3).
+
+## New Platform Integrations
+
+Hermes Agent adds Buzz — a Nostr-based messaging gateway from Block — as a bundled gateway option, modernizes its Vercel AI Gateway provider, and extends SSH remote backend support to desktop clients. These additions enhance platform reach and interoperability, as documented in PRs #73610 and #73761 of the [release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.3).
+
+## Smart Approvals System
+
+The smart approvals system now learns from past decisions to suggest allowlist entries, includes a consecutive-denial circuit breaker to prevent abuse, and adds approval gates for Docker and Podman operations. These changes improve security and workflow efficiency. Introduced in PRs #72259 and #72186, according to the [release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.3).
+
+## FAQ
+
+### What is the Hermes Agent Herald release?
+
+The Hermes Agent Herald release refers to version v0.20.0, officially released on August 3, 2026 by Nous Research. It introduces conversational voice mode, A2A protocol v1.0, signed webhooks, grounded citations, and significant desktop and CLI improvements. You can read the full changelog on the [official GitHub release page](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.3).
+
+### Is Hermes Agent open source?
+
+Yes, Hermes Agent is licensed under the MIT License and available as open-source software. The codebase is hosted on [GitHub](https://github.com/NousResearch/hermes-agent), where it has garnered over 227,000 stars as of August 2026. The [official documentation](https://hermes-agent.nousresearch.com/docs) covers installation and configuration.
+
+### How do I get started with voice mode in Hermes Agent?
+
+To use voice mode, ensure you are running v0.20.0 or later and enable it through your configuration settings. Voice features work in CLI, desktop, and supported gateway adapters. For detailed setup instructions, see our [voice mode guide](/blog/hermes-voice-mode/) or consult the [official documentation](https://hermes-agent.nousresearch.com/docs).
+
+{/* crosslinks */}
+
+## 📖 Related Reads
+
+- **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools, agents, and APIs
+- **[CodeIntel Log](https://codeintel.xyz/)** — code quality, debugging, and software engineering benchmarks
+
+*Cross-links automatically generated from Hermes Tutorials.*

@@ -3,7 +3,7 @@
     "name": "Hermes Tutorials Arena",
     "version": "1.0.0",
     "description": "Model-vs-model battles for Hermes Tutorials content and design.",
-    "total_matches": 8
+    "total_matches": 9
   },
   "model_pool": [
     {
@@ -1401,24 +1401,119 @@
       },
       "judge_model": "qwen3.7-flash",
       "slug": "2026-08-08-hermes-herald-release-v020"
+    },
+    {
+      "match_id": "her-docker-2026-08-10",
+      "date": "2026-08-10",
+      "topic": "How to Run Hermes Agent in Docker: A Beginner's Guide 2026",
+      "type": "tutorial",
+      "category": "tutorial",
+      "pipeline": "glm-5.2-subagent-arena",
+      "orchestrator": "glm-5.2 (custom:zai)",
+      "plan_model": "mimo-v2.5-pro",
+      "research_model": "deepseek-v4-flash",
+      "models_competed": [
+        {
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "A"
+        },
+        {
+          "model": "mimo-v2.5",
+          "provider": "xiaomi",
+          "label": "B"
+        },
+        {
+          "model": "poolside-laguna-s-2.1",
+          "provider": "openrouter",
+          "label": "D"
+        }
+      ],
+      "judges": [
+        {
+          "slot": "Judge",
+          "model": "qwen3.7-flash",
+          "provider": "openrouter"
+        }
+      ],
+      "results": [
+        {
+          "model": "deepseek-v4-flash",
+          "score": 8.37,
+          "weighted_score": 8.37,
+          "scores": {
+            "accuracy": 9.0,
+            "sourcing": 8.33,
+            "quality": 7.33,
+            "practicality": 9.0,
+            "engagement": 7.67
+          },
+          "word_count": 1265,
+          "strengths": [
+            "Highest judge score (8.37 mean)",
+            "Thorough (1265 words)",
+            "All 8 required sections present",
+            "Both mandated source URLs cited inline",
+            "FAQ with 3 questions, E-E-A-T block present"
+          ],
+          "weaknesses": [
+            "Quality score slightly variable across passes (6-8)"
+          ],
+          "rank": 1
+        },
+        {
+          "model": "mimo-v2.5",
+          "score": 8.03,
+          "weighted_score": 8.03,
+          "scores": {
+            "accuracy": 9.0,
+            "sourcing": 8.33,
+            "quality": 5.67,
+            "practicality": 9.0,
+            "engagement": 7.67
+          },
+          "word_count": 1006,
+          "strengths": [
+            "Passed 8.0 threshold",
+            "Accurate facts with verified sources"
+          ],
+          "weaknesses": [
+            "Quality score noisy across passes (4-8)"
+          ],
+          "rank": 2
+        },
+        {
+          "model": "poolside-laguna-s-2.1",
+          "score": 0.0,
+          "word_count": 0,
+          "error": "Circuit breaker open for openrouter - DNF",
+          "rank": 3,
+          "dnf": true
+        }
+      ],
+      "winner": "deepseek-v4-flash",
+      "winner_score": 8.37,
+      "threshold_met": true,
+      "judge_model": "qwen3.7-flash",
+      "slug": "hermes-agent-docker-guide"
     }
   ],
   "leaderboard": [
     {
       "model": "deepseek-v4-flash",
-      "avgScore": 8.17,
-      "wins": 5,
+      "avgScore": 8.24,
+      "wins": 6,
       "losses": 3,
       "bestScore": 8.9,
-      "matches": 8
+      "matches": 9
     },
     {
       "model": "mimo-v2.5",
-      "avgScore": 8.17,
+      "avgScore": 8.15,
       "wins": 2,
-      "losses": 4,
+      "losses": 5,
       "bestScore": 9.3,
-      "matches": 6
+      "matches": 7
     },
     {
       "model": "poolside-laguna-s-2.1",
