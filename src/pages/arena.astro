@@ -16,6 +16,10 @@ const totalProviders = [...new Set(model_pool.map(m => m.provider))].length;
 const rankedModels = leaderboard.length;
 const totalMatches = matches.length;
 
+// ── Role filters ──
+const researchModels = model_pool.filter(m => m.role === 'research');
+const plannerModels = model_pool.filter(m => m.role === 'planner');
+
 // ── Impact ──
 let leaderAvg = 0;
 let fieldAvg = 0;
@@ -55,6 +59,8 @@ function getRoleBadge(role) {
   if (r === 'builder') return { label: 'Builder', cls: 'role-builder' };
   if (r === 'judge') return { label: 'Judge', cls: 'role-judge' };
   if (r === 'qa') return { label: 'QA', cls: 'role-qa' };
+  if (r === 'research') return { label: 'Research', cls: 'role-research' };
+  if (r === 'planner') return { label: 'Planner', cls: 'role-planner' };
   return { label: String(role), cls: 'role-other' };
 }
 
@@ -445,8 +451,40 @@ try {
       .role-builder { color: var(--accent-light); background: var(--accent-glow); }
       .role-judge { color: var(--green); background: rgba(34, 197, 94, 0.12); }
       .role-qa { color: var(--yellow); background: rgba(234, 179, 8, 0.12); }
+      .role-research { color: var(--accent-light); background: rgba(162, 155, 254, 0.1); }
+      .role-planner { color: var(--orange); background: rgba(249, 115, 22, 0.12); }
       .role-other { color: var(--text-dim); background: rgba(161, 161, 170, 0.1); }
       .role-none { color: var(--text-muted); background: rgba(107, 107, 118, 0.1); }
+
+      /* ── Role model chips (research / planner sections) ── */
+      .role-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4em;
+      }
+      .role-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45em;
+        font-size: 0.74em;
+        padding: 0.28em 0.6em;
+        border-radius: 999px;
+        background: var(--surface-2);
+        border: 1px solid var(--border-light);
+        color: var(--text);
+        white-space: nowrap;
+      }
+      .role-chip .rc-emoji {
+        font-size: 0.95em;
+        line-height: 1;
+      }
+      .role-chip .rc-name {
+        font-weight: 600;
+        color: #fff;
+      }
+      .role-chip .rc-provider {
+        color: var(--text-muted);
+      }
 
       /* ── Availability badges ── */
       .avail-badge {
@@ -963,6 +1001,36 @@ try {
         </section>
 
       </div>
+
+      <!-- ── Research / Planner role sections ── -->
+      {researchModels.length > 0 && (
+        <section class="section" id="research-models">
+          <h2 class="section-title">🔬 Research Models</h2>
+          <div class="role-chips">
+            {researchModels.map(m => (
+              <span class="role-chip" title={`${m.model} · ${m.provider}`}>
+                <span class="rc-emoji">🔬</span>
+                <span class="rc-name">{m.model}</span>
+                <span class="rc-provider">{m.provider}</span>
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+      {plannerModels.length > 0 && (
+        <section class="section" id="planner-models">
+          <h2 class="section-title">📋 Planner Models</h2>
+          <div class="role-chips">
+            {plannerModels.map(m => (
+              <span class="role-chip" title={`${m.model} · ${m.provider}`}>
+                <span class="rc-emoji">📋</span>
+                <span class="rc-name">{m.model}</span>
+                <span class="rc-provider">{m.provider}</span>
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
 
       <!-- ── Match History (tight cards, inline score chips) ── -->
       <section class="section">

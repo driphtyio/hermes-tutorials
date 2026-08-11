@@ -49,6 +49,20 @@
       "family": "poolside",
       "status": "pass",
       "role": "builder"
+    },
+    {
+      "model": "openai/gpt-5.6-luna",
+      "provider": "openrouter",
+      "family": "openai",
+      "status": "pass",
+      "role": "research"
+    },
+    {
+      "model": "mimo-v2.5-pro",
+      "provider": "xiaomi",
+      "family": "xiaomi",
+      "status": "pass",
+      "role": "planner"
     }
   ],
   "stability": {
@@ -1532,5 +1546,5 @@
       "matches": 2
     }
   ],
-  "last_updated": "2026-08-08"
+  "last_updated": "2026-08-10"
 }
