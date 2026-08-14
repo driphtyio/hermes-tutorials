@@ -1,0 +1,101 @@
+---
+title: "Telegram Bot Setup for Hermes Agent: Chat From Your Phone"
+description: "Telegram makes starting with your AI agent simple. This beginner guide covers the full Hermes Agent Telegram bot setup, from BotFather to your first chat."
+pubDate: 2026-08-14
+tags: ["integration", "telegram", "gateway", "messaging", "beginner"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-telegram-integration-guide-1786741811.webp"
+lastVerified: "2026-08-14"
+---
+
+If you're wondering **how to connect your AI agent to Telegram**, this guide walks you through every step — from creating a bot with BotFather to receiving your first reply on your phone. Hermes Agent ships with a native Messaging Gateway adapter for Telegram, so you need zero custom code, no webhook server, and no paid services, per the [Hermes Telegram docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/telegram).
+
+## How This Guide Was Built
+
+This guide is based on the official [Hermes Agent documentation](https://hermes-agent.nousresearch.com/docs), the [Telegram Bot API docs](https://core.telegram.org/bots/api), and community reports — we did not run the tool hands-on. Every command, token format, and configuration option was cross-checked against the primary sources cited inline. Last verified: August 2026.
+
+## What You'll Build With This Telegram Guide
+
+This guide turns Hermes Agent into a Telegram bot you can message from any device. You will create a bot with BotFather, secure it with an allowlist, start the Messaging Gateway, and send your first prompt with no custom code. You need Hermes installed, a configured model provider, and a Telegram account, per the [Hermes Agent docs](https://hermes-agent.nousresearch.com/docs).
+
+## How Do I Connect My AI Agent to Telegram?
+
+Connecting Hermes Agent to Telegram requires three things — a bot API token from BotFather, your numeric user ID, and a gateway configuration command — per the [Hermes Telegram docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/telegram). The adapter uses long polling, so no public HTTPS endpoint, webhook server, or tunnel is needed; it is built on `python-telegram-bot` and pulls updates via `getUpdates` ([Telegram Bot API docs](https://core.telegram.org/bots/api)).
+
+### Create Your Bot With BotFather
+
+Open a chat with @BotFather, send `/newbot`, choose a display name, then pick a unique username ending in "bot." BotFather replies with your API token — a string like `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`. Copy it immediately and store it securely; use `/revoke` if you ever suspect a leak, per the [Telegram Bots docs](https://core.telegram.org/bots). Optionally polish your bot with `/setdescription`, `/setabouttext`, `/setuserpic`, and `/setcommands` (a recommended command set is `help`, `new`, `sethome`), per the [Hermes Telegram docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/telegram).
+
+### Find Your Telegram User ID
+
+Your numeric Telegram user ID is not your username. Open a chat with @userinfobot or @get_id_bot and send any message; each bot replies instantly with your numeric ID. You will enter this ID into Hermes' allowlist so only you can talk to your agent through the bot — it lives in the `TELEGRAM_ALLOWED_USERS` environment variable, per the [Hermes Telegram docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/telegram).
+
+### Configure the Hermes Messaging Gateway
+
+Run `hermes gateway setup` and follow the interactive wizard: select Telegram, paste your bot token, and enter your allowed user IDs. Alternatively, set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_ALLOWED_USERS` manually in `~/.hermes/.env`. Both routes produce the same result — the gateway denies all users by default, so only your allowlisted ID can interact, per the [Hermes Telegram docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/telegram) and the [Hermes Messaging Gateway docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging).
+
+## Starting Your Telegram Bot and Sending Your First Message
+
+To start your Telegram bot, run `hermes gateway` in your terminal — the bot comes online within seconds and you can send any text prompt to get a reply, per the [Hermes Messaging Gateway docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging). Slash commands like `/new`, `/model`, and `/status` manage conversations, models, and connection health.
+
+The full command set includes `/new`, `/model`, `/sethome`, `/status`, `/sessions`, `/background`, and `/voice`. The default command menu shows 60 commands, with a maximum of 100, and you can enable `status_indicator: true` to show Online/Offline next to the bot, per the [Hermes Messaging Gateway docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging).
+
+## Securing Your Telegram Bot With Allowlists
+
+The Hermes Gateway denies every Telegram user by default — only IDs in `TELEGRAM_ALLOWED_USERS` can interact, according to the [Hermes Messaging Gateway docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging). For ad-hoc access, DM pairing generates a one-time code (`hermes pairing approve telegram <code>`, expires in one hour). Admin and regular-user tiers gate which slash commands each person can run; `/whoami` reveals your tier.
+
+## Level Up: Voice Memos, Media Files, and Group Chats
+
+Your Telegram bot can handle voice memos, media files, and group chats. Send a voice memo and Hermes auto-transcribes it into a text prompt, while attached images and files are processed directly, per the [Hermes Telegram docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/telegram). In group chats, privacy mode is ON by default, so the bot sees only slash commands, @-mentions, and replies.
+
+To let the bot read all group messages, disable privacy via BotFather, then remove and re-add the bot to the group — or promote it to admin — per the [Telegram Bots docs](https://core.telegram.org/bots). When sending generated files, use `MEDIA:` paths; if running Hermes in Docker, ensure paths are host-visible, per the [Hermes Telegram docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/telegram).
+
+## Automating Telegram With Cron Jobs and Background Sessions
+
+Hermes' built-in cron scheduler ticks every 60 seconds and can deliver results directly into a Telegram chat, per the [Hermes Messaging Gateway docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging). Use `/background` to run long tasks while you keep chatting — one gateway process powers live chat, cron delivery, and voice. For more, see our guide on [scheduling cron jobs that deliver to Telegram](/blog/cron-job-patterns-2026/).
+
+## How Does the Telegram Bot API Work Behind the Scenes?
+
+The Telegram Bot API delivers updates two ways — `getUpdates` long polling or `setWebhook` HTTPS pushes — and Hermes uses long polling, so you need no public server, TLS certificate, or open port, per the [Telegram Bot API docs](https://core.telegram.org/bots/api). Updates are stored server-side for a maximum of 24 hours.
+
+Webhooks, if you build your own integration, require IPv4, specific subnets, ports 443/80/88/8443, and TLS 1.2+, per the [Telegram webhooks docs](https://core.telegram.org/bots/webhooks). Bot API 10.1 (June 2026) also added Rich Messages for streaming AI replies, per the [Telegram Bot API docs](https://core.telegram.org/bots/api).
+
+## Running Your Telegram Bot 24/7
+
+To keep your Telegram bot running around the clock, run `hermes gateway install` to create a systemd or launchd service that restarts the gateway on boot, per the [Hermes Telegram docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/telegram). You can check status anytime with `hermes gateway status`, and deploy to an inexpensive VPS for always-on access.
+
+The Telegram Bot Platform hosts more than ten million bots and is free for both users and developers, per the [Telegram Bots docs](https://core.telegram.org/bots). For a broader overview, see our [gateway setup quick start](/blog/gateway-setup/).
+
+## Troubleshooting Your Telegram Bot
+
+Most Telegram bot problems trace back to three causes: a wrong token or missing allowlist entry, privacy mode blocking group messages, or the gateway not running while stored updates expired, per the [Hermes Telegram docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/telegram). The table below pairs each symptom with its likely cause and fix.
+
+| Issue | Likely Cause | Fix |
+|---|---|---|
+| Bot stays silent | Wrong token or user ID not in allowlist | Verify `TELEGRAM_BOT_TOKEN` and `TELEGRAM_ALLOWED_USERS` in `~/.hermes/.env` |
+| Bot ignores group messages | Privacy mode is ON | Disable via BotFather → Group Privacy, then remove and re-add the bot |
+| No replies at all | Gateway not running or updates expired | Run `hermes gateway status`; updates are stored for a maximum of 24 hours ([Telegram Bot API docs](https://core.telegram.org/bots/api)), so restart promptly |
+
+## FAQ
+
+### How much does it cost to run a Telegram bot with Hermes Agent?
+
+Telegram is completely free for both users and developers, and the Bot Platform hosts more than ten million bots at no charge, per the [Telegram Bots docs](https://core.telegram.org/bots). You only pay for the compute where Hermes runs — your local machine or an inexpensive VPS. There is no per-message fee and no credit card required.
+
+### Can I use the same Telegram bot on multiple devices?
+
+Yes. Telegram syncs your chats across Android, iOS, desktop, and web automatically, so the bot is tied to your account, not a device, per the [Telegram Bots docs](https://core.telegram.org/bots). Your Hermes gateway runs in one place, but you can message it from any device where you're logged into Telegram. Your allowlisted user ID works from all of them.
+
+### Why does my Telegram bot ignore messages in group chats?
+
+Telegram bots have privacy mode ON by default, meaning the bot only sees slash commands, @-mentions, and replies — not every message, per the [Telegram Bots docs](https://core.telegram.org/bots). To fix it, disable privacy in BotFather under Bot Settings → Group Privacy. You must then remove the bot from the group and re-add it before the change takes effect.
+
+## Where to Go Next
+
+You've covered the setup basics. Go deeper with these related guides:
+
+- [Setting up the Messaging Gateway](/gateway/) — configure more platforms from one process.
+- Explore [voice mode](/blog/hermes-voice-mode/) — send voice memos and get spoken replies.
+- See [scheduling cron jobs that deliver to Telegram](/blog/cron-job-patterns-2026/) for recurring tasks.
+- [Available tool integrations](/tools/) — connect Hermes to your favorite services.
+- [Extending Hermes with plugins](/plugins/) — add new capabilities.
+- [Teaching Hermes new skills](/skills/) — train your agent for custom tasks.

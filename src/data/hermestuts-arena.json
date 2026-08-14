@@ -3,7 +3,7 @@
     "name": "Hermes Tutorials Arena",
     "version": "1.0.0",
     "description": "Model-vs-model battles for Hermes Tutorials content and design.",
-    "total_matches": 10
+    "total_matches": 11
   },
   "model_pool": [
     {
@@ -1854,32 +1854,231 @@
         ]
       },
       "slug": "hermes-github-automation-guide"
+    },
+    {
+      "match_id": "hermestuts-telegram-2026-08-14",
+      "date": "2026-08-14",
+      "topic": "Telegram Bot Setup for Hermes Agent: Chat From Your Phone (how to connect your AI agent to Telegram)",
+      "type": "tutorial",
+      "category": "integration",
+      "pipeline": "cron-subagent-arena",
+      "orchestrator": "deepseek-v4-flash (cron)",
+      "plan_model": "mimo-v2.5-pro",
+      "research_model": "deepseek-v4-flash",
+      "qa_model": "glm-5.2",
+      "models_competed": [
+        {
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "A"
+        },
+        {
+          "model": "mimo-v2.5",
+          "provider": "xiaomi",
+          "label": "B"
+        },
+        {
+          "model": "poolside-laguna-s-2.1",
+          "provider": "openrouter",
+          "label": "D"
+        }
+      ],
+      "results": [
+        {
+          "model": "deepseek-v4-flash",
+          "model_id": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "score": 9.45,
+          "weighted_score": 9.45,
+          "word_count": 1479,
+          "judge_mean": 9.45,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 8.95,
+              "accuracy": 9.0,
+              "sourcing": 10.0,
+              "quality": 8.0,
+              "practicality": 9.0,
+              "engagement": 8.0
+            },
+            {
+              "pass": 2,
+              "weighted": 9.7,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 9.0,
+              "practicality": 10.0,
+              "engagement": 9.0
+            },
+            {
+              "pass": 3,
+              "weighted": 9.7,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 9.0,
+              "practicality": 10.0,
+              "engagement": 9.0
+            }
+          ],
+          "strengths": [
+            "Highest judge mean (9.45)",
+            "Troubleshooting table covering top failure modes",
+            "All facts sourced from verified 200 URLs with descriptive anchors",
+            "Self-contained answer paragraph under every H2"
+          ],
+          "weaknesses": [],
+          "rank": 1
+        },
+        {
+          "model": "mimo-v2.5",
+          "model_id": "mimo-v2.5",
+          "provider": "xiaomi",
+          "score": 9.19,
+          "weighted_score": 9.19,
+          "word_count": 1284,
+          "judge_mean": 9.19,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 9.4,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 8.0,
+              "practicality": 10.0,
+              "engagement": 8.0
+            },
+            {
+              "pass": 2,
+              "weighted": 8.88,
+              "accuracy": 9.5,
+              "sourcing": 9.0,
+              "quality": 7.5,
+              "practicality": 9.5,
+              "engagement": 8.5
+            },
+            {
+              "pass": 3,
+              "weighted": 9.3,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 7.0,
+              "practicality": 10.0,
+              "engagement": 9.0
+            }
+          ],
+          "strengths": [
+            "Accurate, verified facts",
+            "Good inline citation density"
+          ],
+          "weaknesses": [
+            "Quality score noisy across passes (7.0-8.0)"
+          ],
+          "rank": 2
+        },
+        {
+          "model": "poolside-laguna-s-2.1",
+          "model_id": "poolside-laguna-s-2.1",
+          "provider": "openrouter",
+          "score": 8.75,
+          "weighted_score": 8.75,
+          "word_count": 1191,
+          "judge_mean": 8.75,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 8.1,
+              "accuracy": 9.0,
+              "sourcing": 9.0,
+              "quality": 5.0,
+              "practicality": 9.0,
+              "engagement": 8.0
+            },
+            {
+              "pass": 2,
+              "weighted": 9.5,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 8.0,
+              "practicality": 10.0,
+              "engagement": 9.0
+            },
+            {
+              "pass": 3,
+              "weighted": 8.65,
+              "accuracy": 9.0,
+              "sourcing": 10.0,
+              "quality": 7.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            }
+          ],
+          "strengths": [
+            "Accurate facts",
+            "Good sourcing on later passes"
+          ],
+          "weaknesses": [
+            "Quality noisy (5-8)",
+            "Internal link paths needed fixing (QA)"
+          ],
+          "rank": 3
+        }
+      ],
+      "winner": "deepseek-v4-flash",
+      "winner_score": 9.45,
+      "threshold_met": true,
+      "judge_model": "qwen3.7-flash",
+      "qa": {
+        "threshold": 8.0,
+        "initial_score": 9.45,
+        "initial_verdict": "PASS",
+        "retries": 0,
+        "final_score": 9.45,
+        "qa_passed": true,
+        "threshold_met": true,
+        "fixes_applied": [
+          "Meta description rewritten to 154 chars (was 177)",
+          "All bare [Source](url) citations replaced with descriptive anchor text",
+          "Removed non-allowlisted URL (install.sh) \u2014 only the 6 verified URLs remain",
+          "Added inline links in E-E-A-T block, preserved canonical honesty phrasing",
+          "Removed implied hands-on testing language (passive rephrase)",
+          "Removed duplicate 'How This Guide Was Built' section at end",
+          "Fixed internal links to real site structure (/blog/<slug>/ + hub pages)",
+          "Normalized every body H2 to open with 40-60 word self-contained answer",
+          "Added answer paragraph under Troubleshooting before the table",
+          "FAQ answers tightened to 40-60 words each",
+          "Removed HERO_IMAGE_PROMPT line",
+          "All 6 external URLs verified HTTP 200",
+          "AI-slop scan clean; no HTML comments; no numbered references"
+        ]
+      },
+      "slug": "hermes-telegram-integration-guide"
     }
   ],
   "leaderboard": [
     {
       "model": "deepseek-v4-flash",
-      "avgScore": 8.28,
-      "wins": 7,
+      "avgScore": 8.39,
+      "wins": 8,
       "losses": 3,
-      "bestScore": 8.9,
-      "matches": 10
+      "bestScore": 9.45,
+      "matches": 11
     },
     {
       "model": "mimo-v2.5",
-      "avgScore": 8.03,
+      "avgScore": 8.18,
       "wins": 2,
-      "losses": 5,
+      "losses": 6,
       "bestScore": 9.3,
-      "matches": 7
+      "matches": 8
     },
     {
       "model": "poolside-laguna-s-2.1",
-      "avgScore": 7.9,
+      "avgScore": 8.07,
       "wins": 1,
-      "losses": 3,
+      "losses": 4,
       "bestScore": 9.07,
-      "matches": 4
+      "matches": 5
     },
     {
       "model": "mimo-v2.5-pro",
