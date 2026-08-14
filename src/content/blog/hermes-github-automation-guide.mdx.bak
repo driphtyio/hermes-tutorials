@@ -1,0 +1,141 @@
+---
+title: "Automate GitHub with Hermes Agent"
+description: "Learn how to connect Hermes Agent to GitHub for automated pull request reviews, issue triage, and scheduled repo reports — with a staged, safe setup path."
+pubDate: 2026-08-14
+tags: ["integration", "github", "mcp", "cron", "automation"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-github-automation-guide-1786705794.webp"
+lastVerified: 2026-08-14
+---
+
+You can automate GitHub pull request reviews with Hermes Agent in under an hour by connecting it through a Model Context Protocol (MCP) server, and this guide walks through a staged setup that keeps write access off until you've verified read-only operations. The integration covers issue triage, PR review, CI failure summaries, and scheduled repo-health reports — all from your terminal or a cron job. You get a safe path from `hermes doctor` to automated daily reports without ever putting credentials in a prompt or committing them to a repo.
+
+## How This Guide Was Built
+
+This guide is based on the official Hermes Agent documentation, the GitHub integration page, and community reports — we did not run the tool hands-on. We verified the setup path (install → `hermes doctor` → `hermes chat -q "reply ok"` → `gh auth login`), the required token scopes (Contents, Issues, Pull Requests), the MCP test command (`hermes mcp test github`), and the cron pairing workflow (`hermes cron create` with `--workdir`). We did not test write actions against live repos — the write examples below follow the documented API contract but haven't been executed by us. Last verified: August 2026.
+
+## What This Integration Does
+
+Hermes Agent connects to GitHub through the official [GitHub integration page](https://hermes-agent.ai/integrations/github), giving you four core workflows: issue triage, PR review, Actions failure summaries, and scheduled repo-health reports. Each workflow runs through the same MCP connection, so once the server is up you can mix and match these tasks in a single chat session.
+
+## Prerequisites
+
+Before you start, you need Hermes Agent installed, GitHub authentication (CLI or token), Node.js for the MCP server, and a repository to automate. The [GitHub integration page](https://hermes-agent.ai/integrations/github) lists the same setup path: install, verify, authenticate, then connect. Skipping the Node.js check is the most common early failure, since `hermes mcp test github` needs `npx` to launch the server.
+
+- Hermes Agent installed (see the [official repo](https://github.com/NousResearch/hermes-agent) to verify you're on the right project)
+- GitHub CLI (`gh`) or a fine-grained Personal Access Token (PAT)
+- Node.js (for `npx`, which the MCP server uses)
+- A GitHub repository you own or can push to
+
+### Step 1 — Verify Your Hermes Installation
+
+Run these two commands from your terminal to confirm the agent is healthy:
+
+```bash
+hermes doctor
+hermes chat -q "reply ok"
+```
+
+`hermes doctor` checks your config, environment, and any existing MCP servers. The second command sends a minimal one-turn message — you should get a simple "ok" back. If either fails, fix the installation before proceeding; the GitHub MCP server won't load on a broken base.
+
+### Step 2 — Authenticate with GitHub
+
+GitHub no longer accepts passwords, so you need a token or the CLI. For local development, run:
+
+```bash
+gh auth login
+```
+
+That handles browser-based OAuth and stores credentials in your system keyring. For Docker, VPS, or cron contexts, create a fine-grained PAT with **Contents, Issues, and Pull Requests** scopes (read+write), or set up a GitHub App. Store that token in your Hermes config or env files — never in prompts, chat history, or committed files. The [Hermes Agent docs](https://hermes-agent.nousresearch.com/docs) show where to place env vars for your platform.
+
+### Step 3 — Connect the GitHub MCP Server
+
+Add the GitHub MCP server to your `config.yaml` under `mcp_servers`, or use the CLI shortcut:
+
+```bash
+hermes mcp add github
+hermes mcp test github
+```
+
+The test command verifies the server responds. Two common failures: an auth error means your token expired or lacks scopes, and a `command not found` for `npx` means Node.js isn't installed — check with `node -v` and `npx -v`. See our [MCP servers guide](/mcp-servers-guide) for a deeper walkthrough of the config format.
+
+### Step 4 — Smoke Test in Read-Only Mode
+
+Before enabling any write capability, ask Hermes to summarize exactly one item from your repo:
+
+```text
+Summarize issue #12 in this repo and suggest a triage label.
+```
+
+Or pick one open PR and ask for a summary of its diff. Or point at a failed Actions job and ask what broke. The point is to confirm the MCP connection can read your repo data correctly. If reads work, writes will follow the same path.
+
+### Step 5 — Enable Write Actions
+
+Once the read-only smoke test passes, you can grant write scopes (comments, labels, branches, issue creation). Two safe starting examples:
+
+```text
+Post a review comment on PR #45 noting that the test suite doesn't cover the new error path.
+Add the label "bug" to issue #12.
+```
+
+Keep the scope tight — a fine-grained PAT limited to one repo is safer than a broad account token. If a write fails, check token scopes before touching your model provider config.
+
+### Step 6 — Automate with Cron
+
+Pair Hermes with cron for recurring tasks:
+
+```bash
+hermes cron create "every 1d at 09:00" "Audit open PRs, summarize CI health, and post to #eng" --workdir /path/to/repo
+```
+
+The `--workdir` flag loads your repo's `AGENTS.md` conventions so the agent follows project rules automatically. Per the [Hermes cron docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron), workdir jobs run sequentially, and you can set a delivery target (Telegram, Discord, Slack, email, or a local file). For more scheduling patterns, see our [advanced cron patterns](/cron-job-patterns-2026).
+
+## How Do You Automate GitHub Pull Request Reviews with Hermes Agent?
+
+You automate GitHub pull request reviews with Hermes Agent by connecting it to your repo via the GitHub MCP server, then asking it to review PRs against your project's test commands and style conventions — the [GitHub integration page](https://hermes-agent.ai/integrations/github) documents this as a read-then-write workflow. Start with a single PR summary, verify the output, then enable comment posting.
+
+A typical review session looks like this:
+
+```text
+Review PR #58. Run the project's test command from the repo root, check the diff against the style guide in AGENTS.md, and post inline comments for any violations.
+```
+
+Hermes uses the `--workdir` conventions to know what "passing" means for your project — which test command to run, what linting rules apply, and what the definition of done is. The agent will read the diff, cross-reference the conventions, and draft comments. You approve the first few manually before letting it post directly. This pairs well with [parallel subagent delegation](/hermes-parallel-subagent-delegation) if you have multiple PRs to review at once.
+
+## Common Mistakes to Avoid
+
+Most GitHub automation failures come from environment drift and token scope problems, not from the agent itself. The [GitHub integration page](https://hermes-agent.ai/integrations/github) calls out the same traps: cron contexts have different PATHs, code search lags on new repos, and write failures usually mean scopes, not model issues. These five fixes cover the recurring problems.
+
+- **PATH or git auth differs in cron/gateway contexts** — cron and gateway environments often have a different PATH or no SSH agent loaded. Fix: check `gh auth status`, verify your PATH, confirm the repo is mounted, load your `~/.hermes` profile, and set `GITHUB_TOKEN` explicitly for non-interactive runs.
+- **GitHub code search indexing lags on new repos** — search may return stale or empty results for freshly created repos. Fix: fall back to the file tree and direct file reads instead of relying on search.
+- **PR comment writes fail → you change model provider** — a write failure is almost always a token scope problem, not a model problem. Fix: verify the PAT has Pull Requests write scope before swapping providers.
+- **Broad account tokens vs repo-scoped tokens** — a token with access to every repo is a liability. Fix: use fine-grained PATs limited to the repos you're automating.
+- **Credentials in prompts or committed files** — any token in a prompt or a committed `.env` is exposed. Fix: store credentials in Hermes config or env files only.
+
+## FAQ
+
+### What GitHub token scopes does Hermes Agent need?
+
+Hermes Agent needs a fine-grained PAT with **Contents, Issues, and Pull Requests** scopes at read+write level for full automation, per the [GitHub integration page](https://hermes-agent.ai/integrations/github). Read-only triage works with just read scopes, but comment posting, labeling, and branch operations require write access.
+
+### Can I run Hermes GitHub automation inside Docker?
+
+Yes — run Hermes in a container and mount your repo as a volume, then pass `GITHUB_TOKEN` as an environment variable. The [Hermes Agent docs](https://hermes-agent.nousresearch.com/docs) cover the container setup, and our [Docker guide](/hermes-agent-docker-guide) shows the full configuration for headless runs.
+
+### How do I debug a failing MCP connection?
+
+Run `hermes mcp test github` and read the output — it will show whether the failure is auth, network, or a missing binary. Check token expiry and scopes first, then verify Node.js with `node -v` and `npx -v`. The [Hermes Agent docs](https://hermes-agent.nousresearch.com/docs) list common MCP error codes and their fixes.
+
+## Where to Go Next
+
+Now that your GitHub automation is running, explore the [Hermes skills guide](/skills/) to teach the agent your team's review checklists, or read about [webhook triggers](/hermes-webhooks-guide) to react to PR events in real time. For more scheduling patterns, our [advanced cron patterns](/cron-job-patterns-2026) cover the cron side in depth.
+
+{/* crosslinks */}
+
+## 📖 Related Reads
+
+- **[ToolBrain](https://toolbrain.net/)** — tool reviews, LLM comparisons, and AI workflow guides
+- **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools, agents, and APIs
+- **[CodeIntel Log](https://codeintel.xyz/)** — code quality, debugging, and software engineering benchmarks
+- **[NiteAgent](https://niteagent.com/)** — AI agent development, frameworks, and production patterns
+
+*Cross-links automatically generated from Hermes Tutorials.*
