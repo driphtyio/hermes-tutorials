@@ -87,7 +87,7 @@ from langchain_core.tools import tool
 def weather_check(city: str) -> str:
     """Get current weather for a city."""
     import requests
-    return requests.get(f"https://api.weather.com/v1/location/{city}/observations").text
+    return requests.get(f"https://api.weather.com/{city}").text
 ```
 
 ```python
@@ -100,7 +100,7 @@ class WeatherCheckTool(BaseTool):
 
     def _run(self, city: str) -> str:
         import requests
-        return requests.get(f"https://api.weather.com/v1/location/{city}/observations").text
+        return requests.get(f"https://api.weather.com/{city}").text
 ```
 
 ## Deployment Options
@@ -192,15 +192,6 @@ All four are open source. All four have active communities. The right answer dep
 8. CrewAI Documentation. "Getting Started with Flows and Crews." https://docs.crewai.com
 
 {/* crosslinks */}
-
-## References
-
-[1] [Nous Research](https://github.com/NousResearch/hermes-agent)
-[2] [LangGraph](https://github.com/langchain-ai/langgraph)
-[3] [Pregel](https://research.google/pubs/pub37252/)
-[4] [Apache Beam](https://beam.apache.org/)
-[5] [NetworkX](https://networkx.org/documentation/latest/)
-[6] [CrewAI](https://github.com/crewAIInc/crewAI)
 
 ## 📖 Related Reads
 

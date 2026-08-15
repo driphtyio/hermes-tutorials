@@ -8,21 +8,6 @@
 
 This is an Astro static site deployed to Cloudflare Pages (MDX-based).
 
-## Content Focus
-
-Hermes Tutorials is for **developers running Hermes Agent**: step-by-step tutorials and integrations — configuration, skills authoring, cron jobs, MCP servers, plugins, tool building, and gateway setup. For people who want practical, working how-tos with code.
-
-### Audience
-**Who reads Hermes Tutorials:** Developers running Hermes Agent who want practical how-tos. They want step-by-step tutorials ("set this up end to end"), integration posts ("connect X to Hermes"), and skills authoring guides ("write a SKILL.md").
-
-### Content Types (in priority order)
-1. **Tutorials / Guides** — Step-by-step how-tos with working code
-2. **Tool / Build / Integration Posts** — Building tools and integrating Hermes with services
-3. **Skills Authoring** — Writing and maintaining SKILL.md files
-4. **News / Update Analysis** — What changed in Hermes, why it matters
-
-**NOT on Hermes Tutorials:** Generic AI news, tutorials for other agent frameworks.
-
 ## Commands
 
 - `npm run dev` — Start local dev server

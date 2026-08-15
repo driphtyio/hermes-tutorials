@@ -15,9 +15,6 @@ const topRated = skills.filter(s => s.rating >= 5).length;
 	<head>
 		<BaseHead title={`Skill Library — ${SITE_TITLE}`} description="Browse, search, and load Hermes Agent skills. 120+ skills across 19 categories with descriptions, guides, how-to instructions, and pitfalls." />
 		<style>
-			main { width: 100%; max-width: min(1800px, 90vw); margin: 0 auto; padding: 2.5em 1.5em 3em; }
-			.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 0.75em; margin: 1em 0 2em; }
-			.card { padding: 0.85em 1em; }
 			.card .section-title { font-size: 0.78em; font-weight: 600; color: var(--text-primary); margin: 0.6em 0 0.2em; }
 			.card .load-hint {
 				background: var(--bg); color: var(--accent-light); padding: 0.35em 0.7em;
@@ -85,31 +82,6 @@ const topRated = skills.filter(s => s.rating >= 5).length;
 			/* Skill name link */
 			.skill-name { text-decoration: none; color: inherit; transition: color 0.15s; }
 			.skill-name:hover { color: var(--accent-light); }
-		
-			/* ── Widescreen ── */
-			@media (min-width: 1200px) {
-				.card-grid { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
-			}
-			@media (min-width: 1440px) {
-				.card-grid { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 0.85em; }
-			}
-			@media (min-width: 1600px) {
-				.card-grid { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 0.85em; }
-			}
-			@media (min-width: 1800px) {
-				.card-grid { grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 0.9em; }
-			}
-			@media (min-width: 2000px) {
-				.card-grid { grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 0.9em; }
-				.card { padding: 0.95em 1.1em; }
-			}
-
-			/* ── Mobile ── */
-			@media (max-width: 720px) {
-				main { padding: 1.25em 1em 2em; }
-				.stats-bar { gap: 1.5em; flex-wrap: wrap; }
-				.stat-number { font-size: 1.2em; }
-			}
 		</style>
 	</head>
 	<body>

@@ -118,12 +118,19 @@ const breadcrumbSchema = {
 			}
 			.last-updated { font-style: italic; }
 
-			/* ── Description ── */
-			.post-desc {
-				font-size: 1.05em;
-				color: var(--text-secondary);
-				line-height: 1.6;
-				margin: 0 0 1em;
+			/* ── Hero Image ── */
+			.hero-image {
+				width: 100%;
+				margin-bottom: 2.5em;
+			}
+			.hero-image img {
+				display: block;
+				width: 100%;
+				height: auto;
+				aspect-ratio: 16 / 9;
+				object-fit: cover;
+				border-radius: var(--radius-lg);
+				box-shadow: var(--shadow-md);
 			}
 
 			/* ── Prose ── */
@@ -362,12 +369,9 @@ const breadcrumbSchema = {
 				letter-spacing: 0.06em;
 			}
 
-			/* ── Mobile ── */
-			@media (max-width: 720px) {
-				.post-header h1 { font-size: 2rem; }
-				.post-stats { font-size: 0.78em; gap: 0.25em 0.4em; }
-				.prose h2 { margin-top: 1.8em; padding-top: 0.3em; }
-			}
+						@media (max-width: 720px) {
+							.post-header h1 { font-size: 2rem; }
+						}
 		</style>
 	</head>
 	<body>
@@ -502,3 +506,4 @@ const breadcrumbSchema = {
 		</script>
 	</body>
 </html>
+/* deployment 1779804339 */
