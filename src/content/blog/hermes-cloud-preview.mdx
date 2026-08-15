@@ -1,0 +1,71 @@
+---
+title: "Hermes Cloud Preview: Deploy Your Agent in 60 Seconds"
+description: "Hermes Cloud is Nous Research's cloud for Hermes Agent, now in preview. Deploy an always-on agent from Nous Portal, connect channels, keep memory in cloud."
+pubDate: 2026-08-15
+tags: ["hermes-cloud", "news", "nous-portal", "preview"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-cloud-preview-1786822853.webp"
+lastVerified: "2026-08-15"
+---
+
+Hermes Cloud, Nous Research's managed home for Hermes Agent, is live in preview and already moving fast. Announced on [July 8, 2026](https://x.com/NousResearch/status/2074878754485043333), the service lets you spin up an always-on agent in roughly 60 seconds from [Nous Portal](https://portal.nousresearch.com/cloud), and the company says two clicks are all it takes to get your agent live. The momentum didn't stop there: on [July 10](https://x.com/NousResearch/status/2075675120442486931), the Hermes Desktop app began auto-discovering Cloud agents for anyone signed into Nous Portal, and an [August 14 fix (PR #86477)](https://github.com/NousResearch/hermes-agent/pull/86477) resolved a [cold-start bug](https://github.com/NousResearch/hermes-agent/issues/73495) that could hide Cloud agents until a Portal re-login. This report is based on official announcements, the product page, and public GitHub activity — we did not run Hermes Cloud hands-on.
+
+## How This Was Verified
+
+We reviewed the official [Nous Portal cloud product page](https://portal.nousresearch.com/cloud), the [July 8](https://x.com/NousResearch/status/2074878754485043333) and [July 10](https://x.com/NousResearch/status/2075675120442486931) announcement posts on X, the public [GitHub issue](https://github.com/NousResearch/hermes-agent/issues/73495) and [pull request](https://github.com/NousResearch/hermes-agent/pull/86477) tied to the August 14 cold-start fix, and the corroborating entry on [agentos.guide](https://agentos.guide/hermes-cloud). All feature, pricing, and timeline claims below trace directly to those sources.
+
+- Sources used: [Nous Portal Cloud](https://portal.nousresearch.com/cloud), [July 8 announcement](https://x.com/NousResearch/status/2074878754485043333), [July 10 announcement](https://x.com/NousResearch/status/2075675120442486931), [issue #73495](https://github.com/NousResearch/hermes-agent/issues/73495), [PR #86477](https://github.com/NousResearch/hermes-agent/pull/86477), [agentos.guide](https://agentos.guide/hermes-cloud)
+- What we verified (facts checked 2026-08-15): feature set, preview status, July 8 launch date, July 10 Desktop integration date, August 14 PR merge, issue #73495 and PR #86477 details, $10-minimum/subscription deploy requirement, $0-idle and storage-only pricing model
+- What we could not independently confirm: specific per-hour rates, exact instance sizes and server tiers, and the full contents of the Portal FAQ (partly behind a Cloudflare challenge). We did not run Hermes Cloud hands-on.
+Last verified: August 2026.
+
+## What is Hermes Cloud?
+
+Hermes Cloud is Nous Research's managed cloud for Hermes Agent, in preview inside [Nous Portal](https://portal.nousresearch.com/cloud), where the company says two clicks and 60 seconds later your agent is live. The [July 8, 2026 announcement on X](https://x.com/NousResearch/status/2074878754485043333) introduced the service as a one-click way to deploy an always-on agent. Preview status means features may shift as Nous refines the offering.
+
+Nous Portal acts as the single entry point for Hermes Agent, the Inference API, and Hermes Cloud, so a single account grants access to hundreds of models with tools included. Because everything lives behind one login, switching between local development, cloud deployment, and API inference feels like moving between tabs rather than juggling separate services. The preview label also signals that documentation is still catching up — there is no dedicated docs page for Hermes Cloud yet, and the Portal FAQ remains partially obscured by a Cloudflare challenge.
+
+## How does Hermes Cloud work?
+
+Hermes Cloud keeps your agent running 24/7, scaling to zero when idle so you pay only while it works, with natural-language scheduling and channels spanning Telegram, Discord, Slack, Email, and CLI, per the [product page](https://portal.nousresearch.com/cloud). Persistent memory lives with the agent, and each agent runs inside an isolated hardened sandbox, surviving restarts and sleeps without losing state.
+
+The cluster architecture breaks down into three responsibilities. First, deployment and scheduling keep the agent available around the clock while dynamically resizing compute based on activity. Second, channel connectors let your agent talk natively across Telegram, Discord, Slack, Email, and the CLI, turning a single agent into a cross-platform assistant. Third, sandboxing isolates each agent in its own hardened environment, which matters for safety when multiple users or tools interact with the same deployment. Memory persistence ties the experience together: because state lives with the agent, a cold start or scale-to-zero event does not wipe conversation history or tool context.
+
+## What does Hermes Cloud cost?
+
+Deploying an agent requires at least $10 in credits or an active subscription, per the [product page](https://portal.nousresearch.com/cloud). Idle periods scale to $0 and stopped agents drop to a storage-only rate with memory intact, so you are not billed for downtime and pausing preserves memory without compute charges.
+
+The billing model is simple in principle but opaque in practice: you pay only while the agent is actively working, idle time costs nothing, and stopping an agent reduces the bill to a storage-only rate that keeps memory available — the same model corroborated on [agentos.guide](https://agentos.guide/hermes-cloud). However, Nous has not yet published specific instance sizes or per-hour rates, and the Portal FAQ that would normally clarify tiers is partially behind a Cloudflare challenge. That missing detail is a real gap for teams budgeting deployment costs, even if the headline behavior — $0 when idle, storage-only when stopped — is clear enough to plan around.
+
+## Hermes Cloud on Desktop
+
+Hermes Desktop auto-discovers Cloud agents when signed into Nous Portal, a behavior introduced on [July 10, 2026](https://x.com/NousResearch/status/2075675120442486931). On August 14, 2026, [PR #86477](https://github.com/NousResearch/hermes-agent/pull/86477) fixed [issue #73495](https://github.com/NousResearch/hermes-agent/issues/73495), where a cold start could hide Cloud agents until a Portal re-login. The fix, merged by maintainer teknium1, surfaces newly provisioned agents in Desktop immediately.
+
+Before the fix, users who deployed a Cloud agent from Nous Portal could open Hermes Desktop and find the agent missing entirely until they re-authenticated with Portal — a confusing loop that made the always-on promise feel unreliable. The August 14 patch changes that by resolving the cold-start detection path, so a freshly deployed agent surfaces in Desktop within moments. For anyone following development, the issue and PR threads on GitHub show how tightly Desktop and Portal integration are being refined, and our [Hermes Desktop surface release post](/blog/2026-06-06-hermes-desktop-surface-release/) covers the broader surface changes arriving alongside this work.
+
+## How to try Hermes Cloud
+
+Sign into Nous Portal, open [portal.nousresearch.com/cloud](https://portal.nousresearch.com/cloud), pick a model and server size, then deploy. The Portal houses Hermes Agent, the Inference API, and Hermes Cloud behind one account, with hundreds of models and tools included. The [July 8 announcement](https://x.com/NousResearch/status/2074878754485043333) describes the flow as two clicks and 60 seconds later, your agent is live.
+
+The process breaks into a few concrete actions. First, create or sign into your Nous Portal account, which doubles as your gateway to the Inference API and local agent tooling. Next, navigate to the Cloud section and choose a base model from the catalog — hundreds of options are listed, with tools already wired in. Then select a server size, keeping in mind that hourly pricing scales with the choice even though exact rates are not yet published. Finally, click deploy and watch the agent provision; within about a minute it should be reachable across your chosen channels. For setup context, our [Hermes Agent getting started guide](/blog/getting-started/) and our [Nous Portal build log](/blog/portal-tool-gateway-build-log/) both walk through the surrounding ecosystem in more detail.
+
+## What is Hermes Cloud missing right now?
+
+Hermes Cloud remains in preview: there is no dedicated documentation page yet, instance sizes and per-hour rates are unpublished, and the Portal FAQ sits partly behind a Cloudflare challenge. The [product page](https://portal.nousresearch.com/cloud) confirms preview status and lists full features, but the supporting materials have not caught up.
+
+The most immediate gaps are documentation and pricing transparency. There is no standalone docs page for Hermes Cloud, so users rely on the product page and announcement posts for guidance. Instance sizes and per-hour rates are not yet listed, and the Portal FAQ that would normally fill those details is partially obscured by a Cloudflare challenge. That said, the [August 14 cold-start fix](https://github.com/NousResearch/hermes-agent/pull/86477) shows how quickly Nous is addressing real user pain points, which suggests the missing pieces are likely to arrive in the coming weeks rather than months.
+
+## FAQ
+
+Here are answers to the most common questions about getting started, pricing, and how Hermes Cloud compares to self-hosting.
+
+### Is Hermes Cloud free?
+
+Not to deploy. The [product page](https://portal.nousresearch.com/cloud) says deploying an agent requires at least $10 in credits or an active subscription. Idle periods scale to $0 and stopped agents drop to a storage-only rate that preserves memory, so you pay only while the agent actively works.
+
+### Can Hermes Cloud agents talk to Telegram or Discord?
+
+Yes, the [product page](https://portal.nousresearch.com/cloud) lists Telegram, Discord, Slack, Email, and CLI as supported channels, and persistent memory lives with the agent so conversations and tool context survive restarts and scale-to-zero events. A cloud-deployed agent keeps continuity across platforms without relying on local storage.
+
+### Is Hermes Cloud the same as self-hosting Hermes Agent?
+
+No. Hermes Cloud is a managed service with always-on operation and isolated hardened sandboxes per agent, according to the [product page](https://portal.nousresearch.com/cloud), whereas self-hosting keeps everything on your own hardware and your own responsibility. Our [self-hosting hub](/hosting/) covers that alternative path in detail.

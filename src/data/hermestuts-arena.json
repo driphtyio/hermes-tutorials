@@ -3,7 +3,7 @@
     "name": "Hermes Tutorials Arena",
     "version": "1.0.0",
     "description": "Model-vs-model battles for Hermes Tutorials content and design.",
-    "total_matches": 12
+    "total_matches": 13
   },
   "model_pool": [
     {
@@ -2219,16 +2219,189 @@
       "threshold_met": true,
       "judge_feedback": "All three drafts passed the 8.0 gate on 3-pass mean (deepseek 9.13, mimo 8.80, poolside 8.62). No fabrication-gate violations detected; verified-fact preamble prevented cutoff-based false negatives.",
       "date_range": "2026-08-10 to 2026-08-15"
+    },
+    {
+      "match_id": "hermestuts-hermes-cloud-2026-08-15",
+      "date": "2026-08-15",
+      "topic": "Hermes Cloud Preview \u2014 Nous Research's managed cloud for Hermes Agent (announced Jul 8 2026, Desktop auto-discovery Jul 10, cold-start fix PR #86477 merged Aug 14)",
+      "slug": "hermes-cloud-preview",
+      "type": "news",
+      "category": "feature",
+      "pipeline": "cron-subagent-arena",
+      "orchestrator": "deepseek-v4-flash (cron)",
+      "plan_model": "deepseek-v4-flash (fallback; mimo-v2.5-pro unavailable via delegation)",
+      "research_model": "deepseek-v4-flash (fallback; gpt-5.6-luna unavailable via delegation)",
+      "qa_model": "deepseek-v4-flash (fallback; glm-5.2 unavailable via delegation)",
+      "judge_model": "qwen3.7-flash (1 pass 429 fallback to deepseek-v4-flash-0731)",
+      "models_competed": [
+        {
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "A"
+        },
+        {
+          "model": "mimo-v2.5",
+          "provider": "xiaomi",
+          "label": "B"
+        },
+        {
+          "model": "poolside-laguna-s-2.1",
+          "provider": "openrouter",
+          "label": "D"
+        }
+      ],
+      "results": [
+        {
+          "model": "poolside-laguna-s-2.1",
+          "model_id": "poolside-laguna-s-2.1",
+          "provider": "openrouter",
+          "family": "poolside",
+          "score": 8.48,
+          "weighted_score": 8.48,
+          "word_count": 1592,
+          "judge_mean": 8.48,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 8.25,
+              "accuracy": 10.0,
+              "sourcing": 8.0,
+              "quality": 6.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            },
+            {
+              "pass": 2,
+              "weighted": 8.6,
+              "accuracy": 9.0,
+              "sourcing": 9.0,
+              "quality": 7.0,
+              "practicality": 9.0,
+              "engagement": 9.0
+            },
+            {
+              "pass": 3,
+              "weighted": 8.6,
+              "accuracy": 10.0,
+              "sourcing": 9.0,
+              "quality": 6.0,
+              "practicality": 9.0,
+              "engagement": 8.0
+            }
+          ],
+          "strengths": [],
+          "weaknesses": [],
+          "rank": 1
+        },
+        {
+          "model": "deepseek-v4-flash",
+          "model_id": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "family": "deepseek",
+          "score": 8.45,
+          "weighted_score": 8.45,
+          "word_count": 1548,
+          "judge_mean": 8.45,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 8.85,
+              "accuracy": 9.0,
+              "sourcing": 10.0,
+              "quality": 8.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            },
+            {
+              "pass": 2,
+              "weighted": 8.45,
+              "accuracy": 9.0,
+              "sourcing": 10.0,
+              "quality": 6.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            },
+            {
+              "pass": 3,
+              "weighted": 8.05,
+              "accuracy": 9.0,
+              "sourcing": 9.0,
+              "quality": 6.0,
+              "practicality": 8.0,
+              "engagement": 7.0
+            }
+          ],
+          "strengths": [],
+          "weaknesses": [],
+          "rank": 2
+        },
+        {
+          "model": "mimo-v2.5",
+          "model_id": "mimo-v2.5",
+          "provider": "xiaomi",
+          "family": "mimo",
+          "score": 8.05,
+          "weighted_score": 8.05,
+          "word_count": 1252,
+          "judge_mean": 8.05,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 7.55,
+              "accuracy": 9.0,
+              "sourcing": 9.0,
+              "quality": 4.0,
+              "practicality": 8.0,
+              "engagement": 6.0
+            },
+            {
+              "pass": 2,
+              "weighted": 8.05,
+              "accuracy": 9.0,
+              "sourcing": 9.0,
+              "quality": 6.0,
+              "practicality": 8.0,
+              "engagement": 7.0
+            },
+            {
+              "pass": 3,
+              "weighted": 8.55,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 5.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            }
+          ],
+          "strengths": [],
+          "weaknesses": [],
+          "rank": 3
+        }
+      ],
+      "winner": "poolside-laguna-s-2.1",
+      "threshold_met": true,
+      "judge_feedback": "Redo iteration 1: all three drafts passed the 8.0 gate on 3-pass mean (poolside 8.48, deepseek 8.45, mimo 8.05). First pass failed (7.67/7.75/7.78) on thin single-paragraph sections; revised brief enforced 40-60 word answer + body prose per H2. Verified-fact preamble prevented cutoff false-negatives. Fabrication gate: no implied hands-on testing; canonical honesty sentence present.",
+      "date_range": "2026-07-08 to 2026-08-15",
+      "fixes_applied": [
+        "All 6 external URLs verified HTTP 200 (portal 429 = Cloudflare challenge, page live)",
+        "Frontmatter lastVerified quoted string; meta 155 chars prose no numbers",
+        "HERO_IMAGE_PROMPT stripped; heroImage set from gen-image-verified.sh",
+        "E-E-A-T block bulleted (sources / verified / not confirmed / Last verified: August 2026)",
+        "All H2 + FAQ answers tightened to 40-60 words with inline sources",
+        "Removed unverified claims (free-to-start tier, GA phrasing)",
+        "Slop scan clean; no HTML comments; no numbered refs",
+        "Build fix: restored pre-merge src/pages/index.astro (broken merge at 2026-08-15 03:23 introduced stray </div> + undefined refIcons + duplicate section)"
+      ]
     }
   ],
   "leaderboard": [
     {
       "model": "deepseek-v4-flash",
       "provider": "deepseek",
-      "family": "",
-      "matches": 12,
+      "family": "deepseek",
+      "matches": 13,
       "wins": 9,
-      "losses": 3,
+      "losses": 4,
       "avgScore": 8.4,
       "bestScore": 9.4,
       "rank": 1
@@ -2236,10 +2409,10 @@
     {
       "model": "mimo-v2.5",
       "provider": "xiaomi",
-      "family": "",
-      "matches": 9,
+      "family": "mimo",
+      "matches": 10,
       "wins": 2,
-      "losses": 7,
+      "losses": 8,
       "avgScore": 8.2,
       "bestScore": 9.3,
       "rank": 2
@@ -2247,9 +2420,9 @@
     {
       "model": "poolside-laguna-s-2.1",
       "provider": "openrouter",
-      "family": "",
-      "matches": 6,
-      "wins": 1,
+      "family": "poolside",
+      "matches": 7,
+      "wins": 2,
       "losses": 5,
       "avgScore": 8.2,
       "bestScore": 9.1,
