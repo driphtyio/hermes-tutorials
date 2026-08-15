@@ -3,7 +3,7 @@
     "name": "Hermes Tutorials Arena",
     "version": "1.0.0",
     "description": "Model-vs-model battles for Hermes Tutorials content and design.",
-    "total_matches": 11
+    "total_matches": 12
   },
   "model_pool": [
     {
@@ -1146,7 +1146,7 @@
         },
         {
           "rank": 3,
-          "model": "poolside/laguna-s-2.1",
+          "model": "poolside-laguna-s-2.1",
           "provider": "openrouter",
           "label": "C",
           "score": 8.03,
@@ -1169,7 +1169,8 @@
             "Self-contained H2 answers only partial",
             "Wrapped in mdx code fences that must be stripped",
             "Technical/H2-heavy structure hurts beginner narrative flow"
-          ]
+          ],
+          "model_id": "poolside-laguna-s-2.1"
         }
       ],
       "winner": "mimo-v2.5",
@@ -2053,49 +2054,229 @@
         ]
       },
       "slug": "hermes-telegram-integration-guide"
+    },
+    {
+      "match_id": "hermestuts-browser-use-mode-2026-08-15",
+      "date": "2026-08-15",
+      "topic": "Hermes Agent Browser Use Mode Replaces 12 Browser Tools (new default browser harness in v0.20.1)",
+      "slug": "hermes-browser-use-mode",
+      "type": "news",
+      "category": "release",
+      "pipeline": "cron-subagent-arena",
+      "orchestrator": "deepseek-v4-flash (cron)",
+      "plan_model": "mimo-v2.5-pro",
+      "research_model": "deepseek-v4-flash",
+      "qa_model": "glm-5.2",
+      "judge_model": "qwen3.7-flash",
+      "models_competed": [
+        {
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "A"
+        },
+        {
+          "model": "mimo-v2.5",
+          "provider": "xiaomi",
+          "label": "B"
+        },
+        {
+          "model": "poolside-laguna-s-2.1",
+          "provider": "openrouter",
+          "label": "D"
+        }
+      ],
+      "results": [
+        {
+          "model": "deepseek-v4-flash",
+          "model_id": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "score": 9.13,
+          "weighted_score": 9.13,
+          "word_count": 838,
+          "judge_mean": 9.13,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 9.5,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 8.0,
+              "practicality": 10.0,
+              "engagement": 9.0
+            },
+            {
+              "pass": 2,
+              "weighted": 9.4,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 8.0,
+              "practicality": 10.0,
+              "engagement": 8.0
+            },
+            {
+              "pass": 3,
+              "weighted": 8.5,
+              "accuracy": 9.0,
+              "sourcing": 9.0,
+              "quality": 7.0,
+              "practicality": 9.0,
+              "engagement": 8.0
+            }
+          ],
+          "strengths": [
+            "Highest judge mean (9.13)",
+            "All facts sourced from verified 200 URLs with descriptive anchors",
+            "Self-contained answer paragraph under every H2",
+            "Canonical honesty phrasing present"
+          ],
+          "weaknesses": [],
+          "rank": 1
+        },
+        {
+          "model": "mimo-v2.5",
+          "model_id": "mimo-v2.5",
+          "provider": "xiaomi",
+          "score": 8.8,
+          "weighted_score": 8.8,
+          "word_count": 833,
+          "judge_mean": 8.8,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 8.05,
+              "accuracy": 9.0,
+              "sourcing": 8.0,
+              "quality": 6.0,
+              "practicality": 9.0,
+              "engagement": 8.0
+            },
+            {
+              "pass": 2,
+              "weighted": 8.85,
+              "accuracy": 10.0,
+              "sourcing": 9.0,
+              "quality": 7.0,
+              "practicality": 10.0,
+              "engagement": 7.0
+            },
+            {
+              "pass": 3,
+              "weighted": 9.5,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 8.0,
+              "practicality": 10.0,
+              "engagement": 9.0
+            }
+          ],
+          "strengths": [],
+          "weaknesses": [],
+          "rank": 2
+        },
+        {
+          "model": "poolside-laguna-s-2.1",
+          "model_id": "poolside-laguna-s-2.1",
+          "provider": "openrouter",
+          "score": 8.62,
+          "weighted_score": 8.62,
+          "word_count": 931,
+          "judge_mean": 8.62,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 9.2,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 7.0,
+              "practicality": 10.0,
+              "engagement": 8.0
+            },
+            {
+              "pass": 2,
+              "weighted": 8.05,
+              "accuracy": 9.0,
+              "sourcing": 8.0,
+              "quality": 7.0,
+              "practicality": 9.0,
+              "engagement": 6.0
+            },
+            {
+              "pass": 3,
+              "weighted": 8.6,
+              "accuracy": 9.0,
+              "sourcing": 9.0,
+              "quality": 8.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            }
+          ],
+          "strengths": [],
+          "weaknesses": [],
+          "rank": 3
+        }
+      ],
+      "winner": "deepseek-v4-flash",
+      "threshold_met": true,
+      "judge_feedback": "All three drafts passed the 8.0 gate on 3-pass mean (deepseek 9.13, mimo 8.80, poolside 8.62). No fabrication-gate violations detected; verified-fact preamble prevented cutoff-based false negatives.",
+      "date_range": "2026-08-10 to 2026-08-15"
     }
   ],
   "leaderboard": [
     {
       "model": "deepseek-v4-flash",
-      "avgScore": 8.39,
-      "wins": 8,
+      "provider": "deepseek",
+      "family": "",
+      "matches": 12,
+      "wins": 9,
       "losses": 3,
-      "bestScore": 9.45,
-      "matches": 11
+      "avgScore": 8.4,
+      "bestScore": 9.4,
+      "rank": 1
     },
     {
       "model": "mimo-v2.5",
-      "avgScore": 8.18,
+      "provider": "xiaomi",
+      "family": "",
+      "matches": 9,
       "wins": 2,
-      "losses": 6,
+      "losses": 7,
+      "avgScore": 8.2,
       "bestScore": 9.3,
-      "matches": 8
+      "rank": 2
     },
     {
       "model": "poolside-laguna-s-2.1",
-      "avgScore": 8.07,
+      "provider": "openrouter",
+      "family": "",
+      "matches": 6,
       "wins": 1,
-      "losses": 4,
-      "bestScore": 9.07,
-      "matches": 5
+      "losses": 5,
+      "avgScore": 8.2,
+      "bestScore": 9.1,
+      "rank": 3
     },
     {
       "model": "mimo-v2.5-pro",
-      "avgScore": 8.03,
+      "provider": "custom:xiaomi",
+      "family": "",
+      "matches": 2,
       "wins": 0,
       "losses": 2,
-      "bestScore": 8.05,
-      "matches": 2
+      "avgScore": 8.0,
+      "bestScore": 8.1,
+      "rank": 4
     },
     {
       "model": "qwen3.7-flash",
-      "avgScore": 6.78,
+      "provider": "openrouter",
+      "family": "",
+      "matches": 2,
       "wins": 0,
       "losses": 2,
-      "bestScore": 8.75,
-      "matches": 2
+      "avgScore": 6.8,
+      "bestScore": 8.8,
+      "rank": 5
     }
   ],
-  "last_updated": "2026-08-14"
+  "last_updated": "2026-08-15"
 }
