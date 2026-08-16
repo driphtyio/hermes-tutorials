@@ -29,6 +29,22 @@ Browser Use mode composes with every supported backend. Locally, it drives Chrom
 
 Browser Use mode is the default whenever `browser.backend` is unset and the Browser Use CLI is runnable. To turn it off, run `/browser use off` or set `browser.backend: "off"` in `~/.hermes/config.yaml`. To force it on, set `browser.backend: "browser-use"`. For the Browser Use cloud, authenticate with `browser-use auth login` or set the `BROWSER_USE_API_KEY` environment variable. If the CLI can't run, Hermes automatically falls back to the legacy built-in tools. See the [Hermes plugins](/plugins/) page for related configuration options.
 
+## Setup and Migrating from the 12 Built-in Tools
+
+If you are on the previous 12-tool set, the switch is a configuration change, not a code change. First install the Browser Use CLI: `pip install browser-use` or follow the [Browser Use installation guide](https://github.com/browser-use/browser-use). Then decide your backend in `~/.hermes/config.yaml`:
+
+```yaml
+# Force Browser Use mode (default when unset and CLI is runnable)
+browser:
+  backend: "browser-use"
+
+# Revert to the legacy built-in browser tools
+browser:
+  backend: "off"
+```
+
+Your existing `/browser` commands keep working — the built-in tools remain installed and are used automatically when the CLI is unavailable. The practical migration for most users is: install the CLI, restart Hermes, and verify with `/browser status` that the `browser_exec` tool is active. Full setup steps are in the [official browser docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/browser/#setup).
+
 ## What Security Model Does Browser Use Mode Use?
 
 Because `browser_exec` executes model-written Python directly, it is only offered to sessions that already have terminal access. This is a deliberate trust boundary: if the agent can already run arbitrary shell commands, granting browser-level Python execution adds no new privilege escalation surface. Locked-down sessions, such as those restricted to specific tools or sandboxes, keep the default built-in browser tools instead. This model is documented on the [official documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/browser/) page.
