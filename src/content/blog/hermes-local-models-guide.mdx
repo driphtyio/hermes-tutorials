@@ -1,0 +1,101 @@
+---
+title: "Beginner's Guide to Hermes Local Models 2026"
+description: "Learn to run Hermes Agent with local models using Ollama or llama.cpp, choose a tool-calling model, and fix setup mistakes so you can run fully offline today."
+pubDate: "2026-08-17"
+tags: ["hermes", "local-models", "ollama", "llamacpp", "beginner"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-local-models-guide-1786996993.webp"
+lastVerified: "2026-08-17"
+---
+
+This guide shows you how to run Hermes Agent with local models — fully offline, in about 10 minutes, for $0. The catch: pick your model by tool-calling support, not size. Hermes is an agentic framework that edits files, runs commands, and browses the web. A model without tool-call support can only chat, limiting its usefulness. To get started, consult the [official local Ollama setup guide](https://hermes-agent.nousresearch.com/docs/guides/local-ollama-setup).
+
+## How This Guide Was Built
+
+This guide synthesizes information from the official Hermes Agent documentation, provider pricing pages, and community reports. It is a compilation and summary, not a hands-on evaluation. We verified the existence and syntax of setup commands, listed hardware requirements, confirmed model availability, and checked pricing details.
+
+We did **not** run performance tests, benchmark token speeds, or evaluate real-world task success. All information was last verified in August 2026.
+
+## How do I run Hermes Agent with local models?
+
+Install Ollama, pull a tool-calling model like `gemma4:31b`, point Hermes at `http://localhost:11434/v1` as a custom endpoint, and run `hermes`. This uses the OpenAI-compatible API that Ollama provides. You can swap in a different model by changing the name after `ollama pull`, though only tool-calling models support agentic features. For a full walkthrough, see the [getting-started guide](/blog/getting-started/).
+
+## What are local models, and why would you care?
+
+Local inference means running the AI model on your own hardware. The core benefit is cost and privacy: each session costs $0.00 for API fees, with only minor electricity costs (roughly $0.01–$0.05 per session) compared to approximately $0.80 per session for a cloud model like Claude Sonnet (~$24/month).
+
+Your prompts, code, and data never leave your machine, which also enables completely offline operation. Learn more about the Ollama runtime at [ollama.com](https://ollama.com/).
+
+## Prerequisites: what hardware do you need?
+
+Minimum requirements depend on the model size. An 8 GB RAM system can run smaller 3B models. For the recommended `gemma4:31b` model, you need 24+ GB of RAM; 32+ GB is ideal. A GPU is not required, but an NVIDIA card with 8+ GB of VRAM significantly improves speed.
+
+On CPU-only, expect ~10 tokens/s for a 9B model and ~2-5 tokens/s for a 31B model (30–120 seconds per response). You will need ~20 GB of disk space for a 31B model. For slow local inference, set the environment variable `HERMES_API_TIMEOUT=1800` to prevent timeouts.
+
+## Step-by-step: setting up Ollama
+
+First, install Ollama with the one-line command: `curl -fsSL https://ollama.com/install.sh | sh`. Next, pull the recommended model: `ollama pull gemma4:31b`. Verify the model is available by running: `curl http://localhost:11434/api/tags` — this lists the models on your local Ollama server, confirming the pull worked.
+
+Then, configure Hermes. Run `hermes setup` and choose "Custom endpoint (self-hosted / VLLM / etc.)". When prompted, enter the URL `http://localhost:11434/v1` and leave the API key blank. Alternatively, edit the configuration file directly at `~/.hermes/config.yaml` with the following block:
+
+```yaml
+model:
+  default: gemma4:31b
+  provider: custom
+  base_url: http://localhost:11434/v1
+```
+
+Finally, start the agent by running `hermes`.
+
+## The #1 gotcha: context window (64K minimum)
+
+Hermes requires a model with a context window of at least 64,000 tokens to function correctly. Ollama's default context length is far lower — the official documentation lists both 2048 and 4096 in different places; the authoritative source is the [providers integration page](https://hermes-agent.nousresearch.com/docs/integrations/providers). You must increase this limit.
+
+The fixes are: launch Ollama with the environment variable `OLLAMA_CONTEXT_LENGTH=64000 ollama serve`, create a systemd override for the service, or use a Modelfile containing `PARAMETER num_ctx 64000`. **Important:** the context length **cannot** be set through the `/v1` API endpoint — this is the number one source of setup confusion.
+
+## The llama.cpp alternative
+
+You can also use the llama.cpp backend. Build it from source with: `cmake -B build && cmake --build build --config Release`. Then run the server: `./build/bin/llama-server --jinja -fa -c 64000 -ngl 99 -m models/<model>.gguf --port 8080 --host 0.0.0.0`. Point Hermes at this server with the same custom-endpoint flow, using `http://localhost:8080/v1` as the base URL.
+
+The `--jinja` flag is **REQUIRED** for tool calling. Without it, the model will print raw JSON like `{"name":"web_search"}` as text. GGUF model files come from [Hugging Face](https://huggingface.co/); the Q4_K_M quantization offers the best quality-to-memory balance. Find the code at the [llama.cpp repository](https://github.com/ggml-org/llama.cpp). For containerized deployment, see the [Hermes Docker guide](/blog/hermes-agent-docker-guide/).
+
+## Choosing a model: tool-calling beats size
+
+Per the [official providers documentation](https://hermes-agent.nousresearch.com/docs/integrations/providers), `gemma4:31b` (~20 GB, requires 24+ GB RAM) is the only local model with reliable tool calling. Models like `gemma2:27b`, `gemma2:9b`, and `llama3.2:3b` are **chat-only**. "Chat-only" means Hermes can converse with them, but agentic features like file editing, command execution, and web browsing will not work.
+
+When using llama.cpp, native tool calling is supported with Llama 3.x, Qwen 2.5 (including Coder), Hermes 2/3, Mistral, DeepSeek, and Functionary models, per the [llama.cpp repository](https://github.com/ggml-org/llama.cpp). Review the full [provider setup guide](/blog/provider-setup/).
+
+## What's still better with cloud models?
+
+Local models, especially smaller ones, can struggle with complex, multi-step reasoning and extensive codebase context. Cloud models generally win on these complex tasks, offer much larger context windows (100K to 1M tokens), and provide faster inference. Cloud fallback in Hermes is **OPTIONAL**, not required.
+
+You can configure it in your config.yaml like this: `fallback_providers: [{provider: openrouter, model: anthropic/claude-sonnet-4}]`. Hermes includes logic to auto-repair malformed tool calls and will attempt a fallback after 3 failures. See the [Hermes Cloud Preview post](/blog/hermes-cloud-preview/) for more.
+
+## Common mistakes
+
+These are the setup problems most often reported by users, roughly in order of how frequently they come up:
+
+- Setting the context window too low; Hermes requires 64K, and it **cannot** be set via the `/v1` API.
+- Forgetting the `--jinja` flag when running the llama.cpp server, breaking tool calling.
+- Choosing a chat-only model (like `gemma2:27b`) and wondering why tools don't fire.
+- Expecting responsive speeds for a 31B model on only 8 GB of RAM.
+- Assuming the `/v1` API endpoint can control the model's context length.
+
+Consult the [troubleshooting guide](/blog/troubleshooting/) for help.
+
+## FAQ
+
+### Does running Hermes locally cost anything?
+
+There is no API fee; the cost is $0.00 per session. You only pay for electricity, which typically ranges from 1 to 5 cents per session depending on your hardware and usage. This pricing model is highlighted by providers like [Ollama](https://ollama.com/).
+
+### Can I use a small model like llama3.2:3b?
+
+Yes, you can use it for basic chat conversations. However, as a chat-only model, it has no tool-calling capability. Agentic features like file editing and command execution will not work. Refer to the [local setup guide](https://hermes-agent.nousresearch.com/docs/guides/local-ollama-setup) for details.
+
+### Do I need a GPU?
+
+No, Hermes and Ollama can run on CPU-only systems. The experience will be significantly slower, with response times potentially taking over a minute for complex queries. Having an NVIDIA GPU with 8+ GB of VRAM provides a much smoother, interactive experience.
+
+## Where to go next
+
+Once your local agent is running, explore its capabilities. Begin with the [getting-started guide](/blog/getting-started/) for core usage. Extend functionality with the [plugins list](/blog/plugins-complete-list/). Automate browser tasks with [Hermes browser automation](/blog/hermes-browser-automation/). For connecting to cloud providers, see the [/providers/](/providers/) section. The Hermes Agent source code is available on the [GitHub repository](https://github.com/NousResearch/hermes-agent) under the MIT license.
