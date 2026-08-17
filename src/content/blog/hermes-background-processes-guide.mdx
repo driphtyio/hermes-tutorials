@@ -1,0 +1,108 @@
+---
+title: "Hermes Background Processes: Beginner's Guide"
+description: "Hermes Agent background processes let beginners run builds, servers, and tests without blocking chat, with manageable sessions, tools, and notifications."
+pubDate: 2026-08-17
+tags: [hermes-agent, background, tutorial, terminal, automation]
+heroImage: "placeholder"
+lastVerified: "2026-08-17"
+---
+
+You kick off a 10-minute test suite, and your chat freezes until it finishes. That is the classic beginner problem with long-running builds, servers, and tests. The verdict: use `terminal(background=true)`, save the `session_id`, and manage it with `process`. Add `notify_on_complete=true` when completion is enough. This guide separates terminal background processes, `/background` sessions, cronjobs, and delegation by durability and interaction model.
+
+> This guide is based on official documentation — we did not run the tool hands-on. Sources: [Hermes Agent tools documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools) and [Hermes Agent configuration documentation](https://hermes-agent.nousresearch.com/docs/user-guide/configuration). Verified against official documentation only; not tested. Last verified: August 2026.
+
+## How do you run a background process in Hermes Agent?
+
+You run a background process in Hermes Agent by calling `terminal` with `background=true`, which returns a `session_id` and `pid` that you save for later management, per the [official Hermes Agent tools docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools). This keeps your chat responsive while the build, server, or test command runs in the background.
+
+```python
+terminal(command="pytest -v tests/", background=true)
+# Returns: {"session_id": "proc_abc123", "pid": 12345}
+```
+
+Background execution returns control to chat immediately while the command continues in the background. The returned `session_id` is your handle for all subsequent process actions. For a broader look at available capabilities, see the [Hermes tools](/tools/) page.
+
+## How do you manage a running Hermes background process?
+
+You manage a running Hermes background process with the `process` tool, which accepts `list`, `poll`, `wait`, `log`, `kill`, `write`, `submit`, and `close` actions on the `session_id` returned by `terminal`, per the [official Hermes Agent tools docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools). Use `kill` to terminate a process and `log` to review its output.
+
+The available actions are:
+
+- `list` — show all running processes
+- `poll` — check status and new output
+- `wait` — block until done or timeout
+- `log` — full output with pagination
+- `kill` — terminate a process
+- `write` — send raw stdin data
+- `submit` — send data plus Enter (for prompts)
+- `close` — close stdin / send EOF
+
+## How do automatic completion notifications work in Hermes?
+
+Automatic completion notifications work by setting `notify_on_complete=true` with `background=true`, which sends a notification when the process finishes so you do not need to poll, per the [official Hermes Agent tools docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools). Alternatively, `watch_patterns` watches process output for configured patterns and can signal mid-run; the two options are mutually exclusive.
+
+The two options cannot be combined. `watch_patterns` is rate-limited to one notification per 15 seconds per process and is auto-disabled after three consecutive dropped windows, so it is best for long-lived servers or watchers that print a rare one-shot signal. Choose `notify_on_complete=true` when knowing the process finished is enough; choose `watch_patterns` when you need to react to output while it is still running.
+
+## When should you use the /background command in Hermes?
+
+You should use `/background <prompt>` when you want a separate, isolated agent session running in a daemon thread without blocking your main chat, per the [official Hermes Agent configuration docs](https://hermes-agent.nousresearch.com/docs/user-guide/configuration). Task IDs use the `bg_<timestamp>_<hash>` format, and background sessions are distinct from terminal background processes managed by `process`.
+
+Each `/background` task runs as an isolated agent session in a daemon thread, so it does not block your main conversation. It inherits your model, provider, toolsets, reasoning settings, and fallback configuration, and you can run several tasks at once with numbered IDs. Results appear as a panel in your terminal, and the sessions stay out of your main conversation history. This is distinct from terminal background processes: `/background` runs an agent on a prompt, while `terminal(background=true)` runs a shell command you manage with `process`.
+
+## How do gateway notifications affect Hermes background work?
+
+Gateway notifications for Hermes background work are controlled by `display.background_process_notifications`, which accepts `concise` (the default), `all`, `result`, `error`, or `off`, per the [official Hermes Agent configuration docs](https://hermes-agent.nousresearch.com/docs/user-guide/configuration). You can also set the `HERMES_BACKGROUND_NOTIFICATIONS` environment variable, for example `HERMES_BACKGROUND_NOTIFICATIONS=result`.
+
+`concise` sends a one-line status on completion; `all` adds running-output updates and the final raw output; `result` sends only the final raw-output completion message; `error` sends only final output on non-zero exit; `off` disables watcher messages. Results are delivered to the same chat or channel with `✅ Background task complete` or `❌ Background task failed` prefixes, and `display.bell_on_complete` can ring the terminal bell when a `/background` task finishes. For gateway-level details, see [gateway configuration](/gateway/).
+
+## When should you choose background terminal vs cronjob vs delegation?
+
+You should choose based on durability and interaction: terminal background for manageable, interactive commands; cronjob for work created with `cronjob(action='create')` that must be durable across restarts; delegation for process-local child tasks, per the [official cron docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) and [official delegation docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation). A Hermes restart leaves delegated children in an unknown state.
+
+| Option | Best for | Durability |
+|---|---|---|
+| Terminal background | Interactive, manageable commands | Session-scoped; Docker `container_persistent: true` survives across sessions |
+| Cronjob (`cronjob(action='create')`) | Work that must survive restarts | Durable across restarts |
+| Delegation | Process-local child tasks | Not durable; restart leaves child "unknown" |
+
+The boundary is clear: cronjobs survive restarts, delegation does not. See [cron job patterns](/blog/cron-job-patterns-2026/) and [parallel subagent delegation](/blog/hermes-parallel-subagent-delegation/) for deeper comparisons.
+
+## What shutdown and environment caveats matter for background processes?
+
+Shutdown and environment caveats matter because `pty=true` enables interactive CLI tools, while `close_terminal` only closes the read-only terminal tab and does not stop the process, per the [official Hermes Agent tools docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools). To actually stop a background process, you must use `process` with the `kill` action.
+
+With the Docker backend, `container_persistent: true` (the default) means background processes survive across sessions and Hermes processes because one long-lived container is reused, but a Docker daemon restart kills them. In the Vercel sandbox, background commands use the generic process flow while the sandbox is alive, but there is no detached-process recovery after cleanup or restart. Sessions with active background processes are never auto-reset, regardless of the reset policy (`none`, `idle`, `daily`, or `both`), per the [official Hermes Agent configuration docs](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
+
+## What are the most common mistakes with Hermes background processes?
+
+The most common mistakes with Hermes background processes come from confusing durability, using the wrong action, and ignoring notification features, per the [official Hermes Agent tools docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools) and [official Hermes Agent configuration docs](https://hermes-agent.nousresearch.com/docs/user-guide/configuration). The five traps below cover polling, closing instead of killing, mixing up session types, durability assumptions, and session auto-reset behavior.
+
+1. Polling continuously instead of using `notify_on_complete=true` when only final completion matters, per the [official Hermes Agent tools docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools).
+2. Using `close_terminal` or the wrong process action when the goal is to stop a process; closing the tab does not kill it, per the [official Hermes Agent tools docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools).
+3. Confusing `/background` agent sessions with terminal background processes managed by `process`, per the [official Hermes Agent configuration docs](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
+4. Assuming delegated work resumes after a Hermes restart; delegation is process-local, per the [official delegation docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation).
+5. Forgetting that sessions with active background processes are never auto-reset, per the [official Hermes Agent configuration docs](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
+
+## Frequently asked questions
+
+These frequently asked questions cover the durability, notification, and tool-selection questions beginners ask most about Hermes background processes, with answers drawn from the [official Hermes Agent tools docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools) and [official Hermes Agent configuration docs](https://hermes-agent.nousresearch.com/docs/user-guide/configuration). Each answer is self-contained so you can jump straight to your question.
+
+### Do Hermes background processes survive a restart?
+
+Survival depends on the mechanism. Cronjobs are durable across restarts, per the [official cron docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron). Delegation is process-local; a restart leaves child tasks unknown, per the [official delegation docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation). Docker persistent containers may survive depending on the daemon. Vercel sandbox has no detached-process recovery, per the [official Hermes Agent configuration docs](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
+
+### What is the difference between /background and terminal(background=true) in Hermes Agent?
+
+`/background` creates an isolated agent session in a daemon thread with no access to your current conversation history, per the [official Hermes Agent configuration docs](https://hermes-agent.nousresearch.com/docs/user-guide/configuration). `terminal(background=true)` runs a command in the background and returns a `session_id` and `pid` that you manage with `process`, per the [official Hermes Agent tools docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools).
+
+### Should I use a Hermes Agent cronjob or delegation for long-running research?
+
+Use a cronjob, created with `cronjob(action='create')`, for scheduled, recurring, or durable work that must survive restarts, per the [official cron docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron). Use delegation for process-local child tasks that do not need restart survival, per the [official delegation docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation); a restart leaves delegated children unknown.
+
+## Where should you go next?
+
+Where you should go next is the official documentation: the tools reference for terminal and process actions, and the configuration reference for notification settings, per the [official Hermes Agent tools docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools) and [official Hermes Agent configuration docs](https://hermes-agent.nousresearch.com/docs/user-guide/configuration). Then use the internal pages below to go deeper on each workflow.
+
+Browse the [projects](/projects/) page for related Hermes capabilities, and revisit the tools index, gateway settings, and the cron-versus-delegation comparisons linked throughout this guide when you are ready to go deeper.
+
+{/* crosslinks */}
