@@ -1,0 +1,139 @@
+---
+title: "Hermes Gateway Internals: Routing, Fallback, and Failover"
+description: "How the Hermes Agent gateway works — see how platform adapters route messages, authorize users, and fail over between AI providers so your session never dies."
+pubDate: 2026-08-17
+tags: ["hermes", "gateway", "internals", "deep-dive", "fallback", "providers"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-gateway-internals-deep-dive-1786963346.webp"
+lastVerified: "2026-08-17"
+---
+
+# Hermes Gateway Internals: Routing, Fallback, and Failover
+
+## How does the Hermes Agent gateway work?
+
+The Hermes Agent gateway is the always-on messaging bridge that connects chat platforms (Telegram, Discord, Slack) to the single platform-agnostic `AIAgent` core. It handles session routing, authorization, and provider failover so your conversation survives provider outages. Every message flows through two guard layers before reaching the agent, and fallback chains keep sessions alive when a model fails. This is the internals deep dive.
+
+## How This Guide Was Built
+
+This guide is based on the official Hermes Agent documentation — the [architecture overview](https://hermes-agent.nousresearch.com/docs/developer-guide/architecture), [gateway internals](https://hermes-agent.nousresearch.com/docs/developer-guide/gateway-internals), [provider runtime resolution](https://hermes-agent.nousresearch.com/docs/developer-guide/provider-runtime), and [fallback providers](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers) pages — all fetched live in August 2026. We verified the routing, authorization, and fallback behaviors described here against those pages and the [Hermes Agent source repository](https://github.com/NousResearch/hermes-agent). We did not run a live gateway deployment hands-on; configuration examples are based on the official documentation. Last verified: August 2026.
+
+## Session Keys: The Address Book of Every Conversation
+
+Every conversation in the Hermes gateway is identified by a session key with the format `agent:main:{platform}:{chat_type}:{chat_id}` — for example, `agent:main:telegram:private:123456789` — and you should never construct it manually; always use `build_session_key()` from the gateway internals documentation. The session key is the address book entry that lets the gateway route inbound messages to the correct `AIAgent` instance and maintain per-chat history, state, and memory. Because the key encodes platform, chat type, and chat ID, the same user on Telegram and Discord gets two distinct sessions, each with isolated context. The gateway stores these sessions in SQLite with FTS5 full-text search (via `gateway/session.py`), while the CLI uses `hermes_state.py` for the same purpose.
+
+## The Two-Level Message Guard
+
+The gateway implements a two-level message guard to prevent race conditions when commands arrive mid-turn. Level 1 is the base adapter check: it verifies the session is active, queues the incoming message, and sets an interrupt event so the running agent can pause. Level 2 is the gateway runner, which intercepts six control commands — `/stop`, `/new`, `/queue`, `/status`, `/approve`, `/deny` — and dispatches them inline, bypassing background tasks entirely to avoid race conditions. This means a `/stop` command never waits behind a long generation; it interrupts immediately at the runner level. The two-level design separates "is this session valid?" (adapter) from "is this a control command?" (runner), keeping the hot path fast and deterministic.
+
+```text
+Platform Message (Telegram/Discord/Slack)
+        │
+        ▼
+┌─────────────────────────────┐
+│  Level 1: Base Adapter      │
+│  - session active?          │
+│  - queue message            │
+│  - set interrupt event      │
+└─────────────────────────────┘
+        │
+        ▼
+┌─────────────────────────────┐
+│  Level 2: Gateway Runner    │
+│  - /stop /new /queue        │
+│  - /status /approve /deny   │
+│  - dispatch INLINE (no bg)  │
+└─────────────────────────────┘
+        │
+        ▼
+   AIAgent Core (run_agent.py)
+```
+
+## Authorization Order: Allowlist to DM Pairing to Default Deny
+
+The gateway authorizes every inbound message through a strict five-step order: per-platform allow-all flag → platform allowlist → DM pairing (via `/pair` with a pairing code, state persisted) → global allow-all → default deny. Each step short-circuits if it matches; if none match, the message is rejected. This layered approach means a platform can be wide open while a specific chat is locked down, or a global allow-all can be overridden by a per-platform deny. The pairing flow persists state, so a paired DM survives gateway restarts. This is the security boundary that keeps strangers out of your agent — and it is deliberate that the default is deny, not allow.
+
+## Provider Runtime Resolution
+
+Provider runtime resolution determines which model and provider the agent uses at execution time, and the precedence is strict: explicit CLI/runtime request → `config.yaml` model/provider → env vars → provider defaults/auto. The saved model choice in `config.yaml` is the source of truth — env vars and CLI flags override it, but if nothing is set, the provider's default kicks in. This resolution happens per-turn, not per-session, so a CLI flag on one message does not permanently change the conversation's model. The runtime also respects key isolation: `OPENROUTER_API_KEY` is only sent to `openrouter.ai`, `AI_GATEWAY_API_KEY` only to `ai-gateway.vercel.sh`, and `OPENAI_API_KEY` is used for custom endpoints plus fallback scenarios, per the [provider runtime documentation](https://hermes-agent.nousresearch.com/docs/developer-guide/provider-runtime). For the complete provider list and setup steps, see the [providers guide](https://hermes-tutorials.dev/providers/).
+
+## The Three API Modes
+
+Hermes supports three distinct API modes for talking to model providers: `chat_completions` (the OpenAI-compatible standard), `codex_responses` (OpenAI Codex's response API), and `anthropic_messages` (native Anthropic via `agent/anthropic_adapter.py`). The mode is selected at runtime based on the resolved provider and model — OpenRouter uses chat completions, Codex uses its response format, and Anthropic models use the native messages API. This abstraction means the fallback chain can switch between providers that speak different wire protocols without changing the agent's core logic; the adapter layer translates.
+
+## Fallback Trigger Points
+
+The fallback chain is a list of `(provider, model)` pairs tried in order, stored on the `AIAgent` instance with a `_fallback_activated` flag. The `_try_activate_fallback()` method fires from exactly three points in the retry loop, per the [provider runtime internals](https://hermes-agent.nousresearch.com/docs/developer-guide/provider-runtime):
+
+1. After max retries on invalid responses (garbage output, malformed JSON)
+2. On non-retryable client errors (HTTP 401, 403, 404)
+3. After max retries on transient errors (HTTP 429, 500, 502, 503)
+
+When activated, the fallback swaps the model, provider, base URL, API mode, and client in-place, resets the retry counter, and marks the session as one-shot — it will not cascade into a second fallback within the same turn.
+
+```text
+Primary (provider:model)
+        │
+        ▼
+   Retry loop
+        │
+        ├── invalid response → max retries → FALLBACK
+        ├── 401/403/404      → immediate   → FALLBACK
+        └── 429/500/502/503  → max retries → FALLBACK
+                                              │
+                                              ▼
+                              Swap model/provider/base_url/
+                              api_mode/client in-place
+                              Reset retry count
+                              Set _fallback_activated = true
+                                              │
+                                              ▼
+                                     Fallback (provider:model)
+```
+
+## Per-Turn Fallback Semantics
+
+Fallback is strictly per-turn: each new user message starts with the primary model restored, and fallback can activate at most once per turn — no cascading loops. There is one exception: if the primary's rate-limit reset time has not elapsed (Claude Max 5-hour blocks, Codex weekly limits), Hermes stays on fallback until the reset passes, per the [fallback providers guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers). This reset-awareness prevents the agent from hammering a provider that is hard-blocked. The cost is real: fallback resets the prompt cache (caches are keyed to model), so the next request re-reads history at full input price versus the ~75-90% discounted cached rate. In practice, a single fallback on a long conversation can cost more than the primary's transient error would have — but it keeps the session alive.
+
+## Credential Pools and Cross-Provider Fallback
+
+The resilience system has three layers: credential pools (rotating keys for the SAME provider, tried first) → primary model fallback (different provider:model) → auxiliary task fallback (independent resolution). You configure the middle layer via the `hermes fallback` CLI (`add`/`list`/`remove`/`clear`), which writes a top-level `fallback_providers:` list into `config.yaml`; the legacy `fallback_model` key is still honored. There are deliberately no env vars for the primary chain — the config file is the single source of truth. Here is an example config block:
+
+```yaml
+fallback_providers:
+  - provider: openrouter
+    model: anthropic/claude-sonnet-4
+  - provider: nous
+    model: nous-hermes-3
+```
+
+The auxiliary layer auto-detects providers in a fixed chain for text tasks: OpenRouter → Nous Portal → Custom endpoint → Codex OAuth → API-key providers (z.ai, Kimi, MiniMax, Xiaomi MiMo, Hugging Face, Anthropic) → give up. This chain is independent of the primary, so auxiliary tasks (summaries, titles) can succeed even when the main model is down.
+
+## Auxiliary Auto-Detection Chains
+
+The auxiliary auto-detection chain exists because not every task needs the primary model — background jobs, titles, and subagent calls can resolve independently. Credential pools rotate keys for the same provider, and adapters with unique credentials call `acquire_scoped_lock()`/`release_scoped_lock()` so two profiles cannot use the same bot token simultaneously. Session storage uses SQLite + FTS5, and the tool registry (`tools/registry.py`) self-registers 70+ tools across ~28 toolsets at import time — the full inventory lives in the [Hermes tools hub](https://hermes-tutorials.dev/tools/). Profile isolation is strict: each profile gets its own `HERMES_HOME`, config, memory, sessions, and gateway PID file (`~/.hermes/gateway.pid`), so running two profiles on one machine is safe. Fallback works across all surfaces: CLI, messaging gateway, subagent delegation (inherits the parent chain), cron jobs, and auxiliary tasks on `provider:auto`.
+
+## Putting It All Together
+
+A message entering the gateway travels: platform adapter → session key lookup → two-level guard → authorization order → provider resolution → agent execution with fallback chain armed. The gateway hooks (`gateway:startup`, `session:start/end/reset`, `agent:start/step/end`, `command:*`) let you observe or intercept every stage, with user hooks in `~/.hermes/hooks/` (`HOOK.yaml` + `handler.py`). Background maintenance (cron ticking, session expiry cleanup, memory flush, cache refresh) runs continuously, and `hermes gateway start/stop` manages the process via the profile-scoped PID file. The design principle is "platform-agnostic core": every entry point — CLI, gateway, ACP, batch runner, API server, Python library — funnels into the same `AIAgent` class, so fallback behavior is identical everywhere. For a practical setup walkthrough, see our [Hermes gateway setup guide](https://hermes-tutorials.dev/blog/gateway-setup/), and for containerized deployments, our [guide to running Hermes Agent in Docker](https://hermes-tutorials.dev/blog/hermes-agent-docker-guide/).
+
+## FAQ
+
+### What happens if my AI provider goes down?
+
+The fallback chain activates after retries are exhausted (or immediately on 401/403/404), swapping to the next `(provider, model)` pair for that turn. The next user message restores the primary model, unless the primary's rate-limit reset time has not elapsed — in which case Hermes stays on fallback until the reset passes.
+
+### How do I configure the fallback chain?
+
+Use the `hermes fallback` CLI (`add`, `list`, `remove`, `clear`) to manage the `fallback_providers:` list in `config.yaml`. There are no env vars for the primary chain — the config file is the source of truth.
+
+### Does fallback work in cron jobs and subagents?
+
+Yes. Subagent delegation inherits the parent's fallback chain, and cron jobs and auxiliary tasks on `provider:auto` use the independent auto-detection chain (OpenRouter → Nous Portal → Custom endpoint → Codex OAuth → API-key providers). For more on how tools execute within these tasks, see the [Hermes tools hub](https://hermes-tutorials.dev/tools/).
+
+{/* crosslinks */}
+
+## 📖 Related Reads
+
+- **[ToolBrain](https://toolbrain.net/)** — tool reviews, LLM comparisons, and AI workflow guides
+
+*Cross-links automatically generated from Hermes Tutorials.*
