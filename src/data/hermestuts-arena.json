@@ -3,7 +3,7 @@
     "name": "Hermes Tutorials Arena",
     "version": "1.0.0",
     "description": "Model-vs-model battles for Hermes Tutorials content and design.",
-    "total_matches": 16
+    "total_matches": 17
   },
   "model_pool": [
     {
@@ -2942,6 +2942,199 @@
         "verified": true,
         "notes": "All external URLs HTTP 200 (6/6); added missing Hugging Face link; stripped HERO_IMAGE_PROMPT + leading H1; no [N] refs, no HTML comments, no slop words; E-E-A-T block present; FAQ 3 question-H3s; meta description 157 chars no numbers; body 1182 words; heroImage generated via gen-image-verified.sh (Lumenfall) + verified live."
       }
+    },
+    {
+      "match_id": "hermestuts-hermes-vs-cline-2026-08-18",
+      "date": "2026-08-18",
+      "topic": "Hermes Agent vs Cline: Which AI Coding Agent Should Beginners Use in 2026? (head-to-head comparison, 10-row table, verdict per beginner persona)",
+      "slug": "hermes-agent-vs-cline-2026",
+      "type": "comparison",
+      "category": "comparison",
+      "pipeline": "cron-subagent-arena",
+      "orchestrator": "deepseek-v4-flash (cron)",
+      "plan_model": "mimo-v2.5-pro",
+      "research_model": "deepseek-v4-flash (delegation pinned; gpt-5.6-luna requested)",
+      "qa_model": "deepseek-v4-flash (delegation pinned; glm-5.2 requested)",
+      "judge_model": "qwen3.7-flash (multipass 3, verified-fact preamble)",
+      "models_competed": [
+        {
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "A"
+        },
+        {
+          "model": "mimo-v2.5",
+          "provider": "xiaomi",
+          "label": "B"
+        },
+        {
+          "model": "poolside-laguna-s-2.1",
+          "provider": "openrouter",
+          "label": "D"
+        }
+      ],
+      "results": [
+        {
+          "model": "mimo-v2.5",
+          "model_id": "mimo-v2.5",
+          "provider": "xiaomi",
+          "score": 8.98,
+          "weighted_score": 8.98,
+          "word_count": 1581,
+          "judge_mean": 8.98,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 8.95,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 7.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            },
+            {
+              "pass": 2,
+              "weighted": 8.85,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 7.0,
+              "practicality": 9.0,
+              "engagement": 6.0
+            },
+            {
+              "pass": 3,
+              "weighted": 9.15,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 8.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            }
+          ],
+          "strengths": [
+            "Highest judge mean (8.98) with 10/10 accuracy and sourcing on every pass",
+            "Complete structure: verdict-first opening, E-E-A-T block, 10-row table, question-shaped decision H2, FAQ, 5 internal links",
+            "Canonical honesty phrasing present; all external sources verified HTTP 200"
+          ],
+          "weaknesses": [
+            "Quality (7-8) and engagement (6-7) lower than accuracy/sourcing \u2014 some H2 answer paragraphs slightly over 60 words before QA trim"
+          ],
+          "rank": 1
+        },
+        {
+          "model": "poolside-laguna-s-2.1",
+          "model_id": "poolside-laguna-s-2.1",
+          "provider": "openrouter",
+          "score": 8.78,
+          "weighted_score": 8.78,
+          "word_count": 1152,
+          "judge_mean": 8.78,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 8.95,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 7.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            },
+            {
+              "pass": 2,
+              "weighted": 8.5,
+              "accuracy": 10.0,
+              "sourcing": 9.0,
+              "quality": 6.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            },
+            {
+              "pass": 3,
+              "weighted": 8.9,
+              "accuracy": 10.0,
+              "sourcing": 9.0,
+              "quality": 8.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            }
+          ],
+          "strengths": [
+            "Strong accuracy and sourcing (10s and 9s)",
+            "Concise (1152 words) with clean structure"
+          ],
+          "weaknesses": [],
+          "rank": 2
+        },
+        {
+          "model": "deepseek-v4-flash",
+          "model_id": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "score": 8.3,
+          "weighted_score": 8.3,
+          "word_count": 1418,
+          "judge_mean": 8.3,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 8.35,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 5.0,
+              "practicality": 9.0,
+              "engagement": 5.0
+            },
+            {
+              "pass": 2,
+              "weighted": 8.45,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 5.0,
+              "practicality": 9.0,
+              "engagement": 6.0
+            },
+            {
+              "pass": 3,
+              "weighted": 8.1,
+              "accuracy": 10.0,
+              "sourcing": 9.0,
+              "quality": 4.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            }
+          ],
+          "strengths": [
+            "Perfect accuracy (10s) and strong sourcing",
+            "Thorough (1418 words), full structure"
+          ],
+          "weaknesses": [
+            "Quality dipped to 4-5 on all passes (some answers bloated, longer paragraphs)",
+            "Judge flagged pass spread 0.35 (noisy-pass risk)"
+          ],
+          "rank": 3
+        }
+      ],
+      "winner": "mimo-v2.5",
+      "winner_score": 8.98,
+      "threshold_met": true,
+      "qa": {
+        "threshold": 8.0,
+        "initial_score": 8.98,
+        "initial_verdict": "PASS",
+        "retries": 0,
+        "final_score": 8.98,
+        "qa_passed": true,
+        "threshold_met": true,
+        "fixes_applied": [
+          "All 15 external URLs verified HTTP 200 via curl (none replaced)",
+          "ClinePass citation moved to docs.cline.bot/getting-started/clinepass (no longer listed on live pricing page); pricing phrasing updated to match live page (Open Source free + Enterprise custom only)",
+          "[Source: x](url) anchors normalized to descriptive text; zero numbered references",
+          "Decision H2 converted to question shape 'How Do You Choose Between Hermes Agent and Cline for Beginners?' (long-tail keyword verbatim)",
+          "Trimmed ~100 words (body 1581 -> 1483, <=1500); removed 2 'leverage' slop instances",
+          "Meta description written at 153 chars (prose, keyword front-loaded, no stats)",
+          "Frontmatter: quoted title/date strings, tags hyphenated, lastVerified added, placeholder heroImage (replaced with real R2 URL after gen-image-verified.sh)",
+          "HERO_IMAGE_PROMPT line stripped; no HTML comments; no 'In this section' phrasing"
+        ]
+      }
     }
   ],
   "leaderboard": [
@@ -2949,21 +3142,21 @@
       "model": "deepseek-v4-flash",
       "provider": "deepseek",
       "family": "",
-      "matches": 16,
+      "matches": 17,
       "wins": 10,
-      "losses": 6,
-      "avgScore": 8.45,
-      "bestScore": 9.45,
+      "losses": 7,
+      "avgScore": 8.4,
+      "bestScore": 9.4,
       "rank": 1
     },
     {
       "model": "mimo-v2.5",
       "provider": "xiaomi",
       "family": "",
-      "matches": 13,
-      "wins": 3,
+      "matches": 14,
+      "wins": 4,
       "losses": 10,
-      "avgScore": 8.33,
+      "avgScore": 8.4,
       "bestScore": 9.3,
       "rank": 2
     },
@@ -2971,11 +3164,11 @@
       "model": "poolside-laguna-s-2.1",
       "provider": "openrouter",
       "family": "",
-      "matches": 10,
+      "matches": 11,
       "wins": 3,
-      "losses": 7,
-      "avgScore": 8.33,
-      "bestScore": 9.07,
+      "losses": 8,
+      "avgScore": 8.4,
+      "bestScore": 9.1,
       "rank": 3
     },
     {
@@ -2985,8 +3178,8 @@
       "matches": 2,
       "wins": 0,
       "losses": 2,
-      "avgScore": 8.03,
-      "bestScore": 8.05,
+      "avgScore": 8.0,
+      "bestScore": 8.1,
       "rank": 4
     },
     {
@@ -2996,10 +3189,10 @@
       "matches": 2,
       "wins": 0,
       "losses": 2,
-      "avgScore": 6.78,
-      "bestScore": 8.75,
+      "avgScore": 6.8,
+      "bestScore": 8.8,
       "rank": 5
     }
   ],
-  "last_updated": "2026-08-17T00:00:00Z"
+  "last_updated": "2026-08-18"
 }
