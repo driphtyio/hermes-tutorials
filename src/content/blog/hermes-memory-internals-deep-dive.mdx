@@ -1,0 +1,93 @@
+---
+title: "Hermes Agent Memory: How Persistent Memory Actually Works"
+description: "How Hermes Agent memory works — from MEMORY.md and USER.md files to FTS5 session search — so you can tune persistent memory for your own workflows today."
+pubDate: 2026-08-20
+tags: [hermes, memory, deep-dive, internals, session-search]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-memory-internals-deep-dive-1787251404.webp"
+lastVerified: "2026-08-20"
+---
+
+# Hermes Agent Memory: How Persistent Memory Actually Works
+
+Hermes Agent memory uses a frozen-snapshot model: two files (MEMORY.md, USER.md) are injected into the system prompt once at session start and never change mid-session. This preserves the LLM's prefix cache for deterministic, cost-efficient performance, while writes to disk persist immediately for the next session.
+
+## How This Guide Was Built
+
+This guide synthesizes information from three primary sources: the official Hermes Agent documentation on [Persistent Memory](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory) and [Architecture](https://hermes-agent.nousresearch.com/docs/developer-guide/architecture), the vendor's [GitHub repository](https://github.com/NousResearch/hermes-agent), and our own [session search build log](https://hermes-tutorials.dev/blog/session-search-rebuild/). Verified facts include character limits, the frozen snapshot injection pattern, FTS5 session search performance, memory tool actions, and configuration keys. We did not run a live agent hands-on for this guide — behavior described is from the official documentation. Last verified: August 2026.
+
+## How does Hermes Agent memory work?
+
+Hermes Agent memory works by persisting curated notes to two plain-text files — `MEMORY.md` and `USER.md` — that are loaded into the system prompt as a frozen snapshot at the start of each new session, per the [Persistent Memory docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory).
+
+The system is built around two core files: `MEMORY.md` for the agent's personal notes (2,200 char limit) and `USER.md` for a user profile (1,375 char limit), stored in `~/.hermes/memories/`. At session start, these files are rendered into a header and injected into the context. This pattern is deliberately designed to preserve the LLM's prefix cache; the memory snapshot never changes once injected, ensuring deterministic context and optimal performance. Memory entries are separated by `§` symbols in the system prompt, and the agent can modify them using a dedicated memory tool.
+
+```text
+User message → Agent loop → Memory Tool (add/replace/remove)
+↓                            ↓
+~/.hermes/memories/MEMORY.md ← Writes persist immediately
+~/.hermes/memories/USER.md   ← Writes persist immediately
+↓
+Frozen system-prompt injection at NEXT session start
+
+Parallel Path:
+Agent → session_search tool → SQLite state.db (FTS5 full-text search)
+```
+
+Tool responses show the live file state, but these changes only appear in the agent's context (the system prompt) when a new session begins. The search functionality operates via a separate, automatic path using SQLite.
+
+## How Hermes Writes and Protects Memory
+
+Hermes writes memory through a dedicated tool with three actions — `add`, `replace`, and `remove` — protected by duplicate prevention, security scanning, and an optional approval gate, as documented in the [Persistent Memory docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory).
+
+The `replace` and `remove` actions use a unique substring matching via the `old_text` parameter; the tool returns an error if the substring is ambiguous. Duplicate prevention automatically rejects identical entries, and security scanning blocks prompt-injection or exfiltration patterns and invisible Unicode before anything is accepted. When a memory write would exceed the character limit, the `add` action fails with an error listing current entries and usage, forcing the agent to consolidate in the same turn. You can enable write approval via `memory.write_approval: true` in `~/.hermes/config.yaml`, which stages writes for review using `/memory pending`, `/memory approve <id>`, and `/memory reject <id>` commands.
+
+## How Hermes Searches Past Sessions
+
+Session search is a separate system from persistent memory, using a SQLite database with FTS5 full-text search over all CLI and messaging sessions, per the [Sessions docs](https://hermes-agent.nousresearch.com/docs/user-guide/sessions). Queries return actual messages from the database without LLM summarization or truncation, with performance around 20ms per query.
+
+Three calling shapes are available: discovery, scroll, and browse. The rebuild from an LLM-powered retrieval pipeline to SQLite FTS5 resulted in a 4,500x speed improvement, as documented in our [session search build log](https://hermes-tutorials.dev/blog/session-search-rebuild/). Persistent memory and session search serve different roles, as shown below:
+
+| Feature | Persistent Memory | Session Search |
+| :--- | :--- | :--- |
+| **Capacity** | ~1,300 tokens total | Unlimited |
+| **Speed** | Instant (in prompt) | ~20ms query |
+| **Token Cost** | In every prompt | Free on-demand |
+| **Use Case** | Curated, ongoing facts | Historical lookup |
+| **Management** | Manually curated by agent | Automatic |
+
+You can browse past sessions with the `hermes sessions list` command.
+
+## Memory Providers and Background Review
+
+Hermes supports eight external memory provider plugins — Honcho, OpenViking, Mem0, Hindsight, Holographic, RetainDB, ByteRover, and Supermemory — managed via `hermes memory setup` and `hermes memory status`, per the [Memory Providers docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory-providers).
+
+A background self-improvement review also runs after turns, saving memory entries or creating skills, and notifies you with a 💾 icon.
+
+This review is a consent-aware learning loop that can be configured to run on a cheaper model (via `auxiliary.background_review`) to reduce cost. The `/journey` command (aliases `/learning`, `/memory-graph`) lets you view, edit, or delete this learning timeline. Skill nodes can be archived and restored, while memory chunks are simply removed. Configure automatic post-turn reviews with `auxiliary.background_review.enabled: false` to disable them.
+
+## Common Mistakes When Working With Hermes Memory
+
+Most memory problems come from misunderstanding the frozen snapshot lifecycle. Fix these four patterns:
+
+- **Expecting mid-session updates to affect the agent:** Remember the frozen snapshot pattern. Writes persist to disk immediately but only appear in the agent's context at the start of the *next* session.
+- **Ignoring capacity errors:** When a write fails due to size, you must consolidate (merge with `replace`, drop stale with `remove`) in the same turn. A best practice is to consolidate proactively when usage exceeds 80%.
+- **Running two agents in one Hermes home:** Each profile gets its own `HERMES_HOME` and memory. Running two agents in the same home compounds entries into a state neither authored.
+- **Not configuring background review:** If left on the default (likely expensive) model, the background self-improvement loop can incur unnecessary costs. Consider configuring a cheaper model for this task.
+
+## FAQ
+
+### Does Hermes Agent read memory on every turn?
+
+No. Memory is injected once at session start as a frozen snapshot, and the agent never re-reads the files mid-session. This preserves the LLM's prefix cache and keeps context deterministic, per the [Persistent Memory docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory).
+
+### What happens when Hermes memory is full?
+
+When a write action would exceed the character limit (2,200 for MEMORY.md, 1,375 for USER.md), the tool returns an error listing the current entries and their usage. The agent must then decide which entries to consolidate (using `replace`) or remove (using `remove`) before the write can succeed in the same turn. Proactive consolidation above 80% capacity is a recommended best practice, per the [Persistent Memory docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory).
+
+### Can I use an external memory provider with Hermes?
+
+Yes, Hermes supports eight external memory provider plugins (e.g., Honcho, Mem0, RetainDB). You can manage them with the `hermes memory setup` and `hermes memory status` commands. These providers exist alongside the core two-file system, offering different trade-offs for capacity and persistence, per the [Memory Providers docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory-providers).
+
+## Where to Go Next
+
+For a hands-on look at configuring memory with profiles, see our [memory and profiles guide](https://hermes-tutorials.dev/blog/memory-profiles/). To understand the dramatic performance jump in session search, read the [session search build log](https://hermes-tutorials.dev/blog/session-search-rebuild/). The internal architecture is detailed in the official [Architecture docs](https://hermes-agent.nousresearch.com/docs/developer-guide/architecture), and the [GitHub repository](https://github.com/NousResearch/hermes-agent) provides the source code. For configuring the broader agent runtime, explore our [gateway internals deep dive](https://hermes-tutorials.dev/blog/hermes-gateway-internals-deep-dive/).
