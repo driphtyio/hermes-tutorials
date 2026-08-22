@@ -1,0 +1,58 @@
+---
+title: "Hermes Agent v0.20.5 adds keyless web search"
+description: "Hermes Agent v0.20.5 brings keyless web search, Bot Mode group threads, and CLI polish — learn what changed and how to update your installation today."
+pubDate: 2026-08-22
+tags: ["Hermes Agent", "release notes", "open source"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-v0205-release-1787426040.webp"
+lastVerified: 2026-08-22
+---
+
+On August 19, 2026, Nous Research released Hermes Agent v0.20.5, a substantial update that introduces zero-config web search, group-threaded Bot Mode conversations, and a wave of CLI improvements. The headline change is the new keyless web tier: fresh installs get working web search out of the box with zero API keys, per the [official GitHub release page](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.19).
+
+This release consolidates roughly 323 merged pull requests and 746 commits since v0.20.4, according to the [official release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.19). While the earlier [Herald v0.20.0 release](/blog/2026-08-08-hermes-herald-release-v020/) focused on voice mode and A2A, v0.20.5 shifts attention to accessibility, collaboration, and developer experience. The repository now sits at roughly 234,000 GitHub stars and 47,000 forks, per the [release page](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.19).
+
+## How This Was Verified
+
+This report is based on official release notes and documentation — we did not run the tool hands-on. Sources used include the [official GitHub release page for Hermes Agent v0.20.5](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.19) and the [official Hermes Agent documentation](https://hermes-agent.nousresearch.com/docs). We verified the release date, PR and commit counts, feature list, update and install commands, and star and fork counts directly against the GitHub release page, which returned HTTP 200. Performance claims such as paint-first hydration come from the release notes only and were not independently tested. Last verified: August 2026.
+
+## Keyless Web Tier
+
+Keyless web search works immediately on a fresh install — v0.20.5 rotates across five vendor backends with automatic ring failover, so search continues even if one provider goes down, with no API keys required, per the [official GitHub release page](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.19). This removes the biggest setup barrier for new users; teams that need dedicated capacity can bring their own keys through the [providers hub](/providers/).
+
+## Bot Mode Group Threads and Attachments
+
+Bot Mode now supports multi-user group-room threads, so teams can collaborate inside shared sessions with foldable conversation summaries, blob-face avatars, and drag-and-drop PDF and file attachments, per the [official release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.19). The update turns Bot Mode from a single-user assistant into a genuine collaboration surface for developers and researchers. For extension and wiring options, see the [plugins hub](/plugins/).
+
+## CLI Polish Wave
+
+The CLI received a usability pass with a fuzzy `/model` picker for faster model selection, a Ctrl+P command palette for quick access to slash commands, and a richer `/status` view with more runtime detail, per the [official GitHub release page](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.19). These changes reduce friction for power users who live in the terminal.
+
+## Execution Discipline and Runtime Guards
+
+Runtime stall guards were strengthened based on findings from Composio evaluations, so long-running tasks abort or retry stalled operations instead of hanging indefinitely, per the [official release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.19). The same window added `hermes worktree list/prune`, update receipts with fleet `--plan` verification, an opencode-free zero-auth provider, and multi-question clarify. It is a reliability-focused release under the hood.
+
+## Cron Jobs Gain Persistent Memory
+
+Cron jobs now keep persistent memory and support per-job reasoning effort, so scheduled agents remember context between runs and can be tuned for harder tasks, per the [official GitHub release page](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.19). This pairs with the scheduler hardening shipped in v0.20.3 and makes recurring automations noticeably more useful. See our [cron guide](/blog/cron-job-patterns-2026/) for patterns.
+
+## Desktop Performance Improvements
+
+The desktop app gets paint-first Bot Mode hydration — the UI renders immediately and populates asynchronously — plus compositor spinners and the React Compiler in both renderers for fewer re-renders, per the [official GitHub release page](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.19). Users on large conversations should notice smoother, more fluid sessions.
+
+## How do I update to Hermes Agent v0.20.5?
+
+Run `hermes update` in your terminal to upgrade an existing installation — the command handles the rest automatically. For a fresh install, use the official one-liner `curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash`, as documented in the [GitHub release](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.19). Full curated release notes will ship with v0.21.0. The [gateway hub](/gateway/) covers running multiple versions side by side.
+
+## FAQ
+
+### Do I need API keys for web search in v0.20.5?
+
+No — web search works immediately after install with zero API keys, using a free five-vendor rotation with automatic ring failover, per the [official GitHub release page](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.19). You can optionally configure your own keys later for higher rate limits, but nothing is required to start searching.
+
+### What is the difference between Hermes Agent v0.20.4 and v0.20.5?
+
+v0.20.5 is a large patch rollup of roughly 323 merged PRs and 746 commits, per the [official release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.19). Key additions include keyless web search, Bot Mode group threads and attachments, CLI polish, runtime stall guards, and desktop performance improvements from the React Compiler.
+
+### When will full curated release notes be available?
+
+Full curated release notes, including detailed changelogs and migration guidance, will ship with v0.21.0, as stated in the [official GitHub release page](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.19). Until then, the v0.20.5 release page is the authoritative source, with links to the full changelog and individual pull requests.
