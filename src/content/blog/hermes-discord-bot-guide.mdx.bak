@@ -1,0 +1,83 @@
+---
+title: "Beginner's Guide to Hermes Discord Bot 2026"
+description: "Hermes Agent, an open-source AI agent, connects to Discord via a gateway checking DISCORD_ALLOWED_USERS, then mention/free-response rules, then tools and…"
+pubDate: 2026-08-21
+tags: ["hermes-agent", "discord", "integration", "messaging"]
+heroImage: https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-discord-bot-guide-1787342984.webp
+lastVerified: 2026-08-21
+---
+
+Your bot connects but never replies — that's the #1 failure when connecting Hermes Agent to Discord. This guide walks you through the exact setup steps, environment variables, and permissions to get a working bot today.
+
+## How This Guide Was Built
+
+This review is based on official documentation, pricing pages, and community reports — we did not run the tool hands-on. We verified setup steps, environment variables, and permission requirements from the [Hermes Agent Discord docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/discord/) and the [Discord Developer Portal](https://discord.com/developers/applications). We did not test hands-on bot operation. Last verified: August 2026.
+
+## What Is Hermes Agent and Why Connect It to Discord?
+
+Hermes Agent is an open-source AI agent that brings your tools, memory, and slash commands into Discord. When you connect it, the gateway flow works like this: authorization checks `DISCORD_ALLOWED_USERS`, then mention or free-response rules, then session lookup, then full agent execution with tools, memory, and slash commands, then response delivery. DMs are always answered; server channels need an @mention by default. For a similar setup on another platform, see [our Telegram integration guide](https://hermes-tutorials.dev/blog/hermes-telegram-integration-guide/).
+
+## How to Connect Hermes Agent to Discord
+
+To connect Hermes Agent to Discord, create a Discord application, enable the required intents, copy your bot token, invite the bot to your server, and configure two environment variables — `DISCORD_BOT_TOKEN` and `DISCORD_ALLOWED_USERS` — as described in the [official Discord docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/discord/).
+
+**Step 1: Create a Discord application.** Go to the [Discord Developer Portal](https://discord.com/developers/applications), click New Application, name it, and click Create. Note your Application ID — you'll need it for the invite URL.
+
+**Step 2: Create the bot.** In the Bot tab, ensure Public Bot is ON and Require OAuth2 Code Grant is OFF, per the [Discord Developer Portal](https://discord.com/developers/applications).
+
+**Step 3: Enable Privileged Gateway Intents.** Turn ON both Server Members and Message Content. This is the #1 cause of broken bots: without Message Content Intent, the bot connects but cannot read what you type. Under 100 servers you can toggle freely; 100+ requires Discord verification.
+
+**Step 4: Get your bot token.** Click Reset Token, then copy the new token. It's shown only once — never commit it to Git.
+
+**Step 5: Create an invite URL.** In the Installation tab, use the Discord Provided Link with scopes `bot` and `applications.commands`. Alternatively, use the manual URL: `https://discord.com/oauth2/authorize?client_id=YOUR_APP_ID&scope=bot+applications.commands&permissions=274878286912`. The recommended permissions integer is 274878286912 (minimal: 117760). Required permissions: View Channels, Send Messages, Embed Links, Attach Files, Read Message History. Recommended: Send Messages in Threads, Add Reactions.
+
+**Step 6: Invite the bot to your server.** You need the Manage Server permission on the target server to complete the invite.
+
+**Step 7: Find your Discord User ID.** In Discord, go to Settings → Advanced → enable Developer Mode. Right-click your username → Copy User ID (e.g., 284102345871466496). Developer Mode also copies Channel and Server IDs.
+
+**Step 8: Configure Hermes.** Option A: run `hermes gateway setup`, select Discord, and paste your token and user ID. Option B: add `DISCORD_BOT_TOKEN` and `DISCORD_ALLOWED_USERS` (comma-separated for multiple) to `~/.hermes/.env`, then run `hermes gateway`. Your bot is online in seconds — test with a DM. See [the gateway overview](https://hermes-tutorials.dev/gateway/) for how the gateway routes messages.
+
+## Configuring Hermes Agent's Discord Behavior
+
+Hermes Agent's Discord behavior is controlled by environment variables with documented defaults in the [official Discord docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/discord/). Key variables: `DISCORD_REQUIRE_MENTION` (default `true`), `DISCORD_FREE_RESPONSE_CHANNELS` (empty), `DISCORD_ALLOWED_USERS` / `DISCORD_ALLOWED_ROLES` (without at least one, the gateway denies ALL users), `DISCORD_IGNORE_NO_MENTION` (`true`), `DISCORD_AUTO_THREAD` (`true`), `DISCORD_REACTIONS` (`true`), `DISCORD_ALLOWED_CHANNELS` / `DISCORD_IGNORED_CHANNELS` (empty), `DISCORD_HOME_CHANNEL` (for proactive messages like cron output), `DISCORD_HISTORY_BACKFILL` (`true`), `DISCORD_ALLOW_BOTS` (`"none"`), `DISCORD_ALLOW_MENTION_EVERYONE` (`false`), and `DISCORD_MAX_ATTACHMENT_BYTES` (`33554432` = 32 MiB). The `discord:` section in `~/.hermes/config.yaml` mirrors these; env vars win. Session isolation: `group_sessions_per_user` defaults to `true` (per-DM, per-thread, per-user sessions); set `false` for one shared room conversation with shared token costs. For deeper mechanics, see [our gateway internals deep dive](https://hermes-tutorials.dev/blog/hermes-gateway-internals-deep-dive/).
+
+## Troubleshooting Common Hermes Agent Discord Issues
+
+Most Hermes Agent Discord problems trace back to five configuration issues, and each has a documented fix. The most common is a bot that shows online but never replies — that almost always means the Message Content Intent is disabled. The other four are missing user IDs, missing permissions, disabled intents at startup, and shared session context.
+
+- **Online but never responds:** Message Content Intent is OFF — enable it in the [Discord Developer Portal](https://discord.com/developers/applications).
+- **"User not allowed":** `DISCORD_ALLOWED_USERS` is missing your ID.
+- **403 Forbidden:** missing permissions — re-invite with the integer 274878286912.
+- **PrivilegedIntentsRequired on startup:** intents not enabled in the portal.
+- **Shared context in channel:** set `group_sessions_per_user` to `true` per the [official docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/discord/).
+
+## Advanced Features
+
+Beyond basic messaging, Hermes Agent offers native slash commands (synced via `DISCORD_COMMAND_SYNC_POLICY` set to `"safe"`), an interactive model picker, inline `MEDIA:` tags for attachments, voice message transcription, forum channel support, and voice channel audio. These features are documented in the [official Hermes Agent Discord docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/discord/). For the full toolset, check [the tools hub](https://hermes-tutorials.dev/tools/).
+
+## FAQ
+
+### Is Hermes Agent's Discord bot free?
+
+Hermes Agent is open source, and Discord bots are free to create. You pay only for model API usage when the agent calls an external LLM. Setup requires no subscription — the gateway runs on your own machine, per the [official docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/discord/).
+
+### Can Hermes Agent respond without being @mentioned?
+
+Yes. Set `DISCORD_REQUIRE_MENTION=false` or add channel IDs to `DISCORD_FREE_RESPONSE_CHANNELS`. DMs are always answered regardless of these settings, as documented in the [official Discord docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/discord/).
+
+### How do I let other people use my Hermes Discord bot?
+
+Add user IDs to `DISCORD_ALLOWED_USERS` or role IDs to `DISCORD_ALLOWED_ROLES`. Without at least one of these, the gateway denies everyone, per the [official configuration docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/discord/).
+
+## Where to go next
+
+You've connected Hermes Agent to Discord — now explore the [gateway overview](https://hermes-tutorials.dev/gateway/) for architecture details, read [our gateway internals deep dive](https://hermes-tutorials.dev/blog/hermes-gateway-internals-deep-dive/) for session mechanics, or compare with [our Telegram integration guide](https://hermes-tutorials.dev/blog/hermes-telegram-integration-guide/). For advanced tooling, browse [the tools hub](https://hermes-tutorials.dev/tools/).
+
+{/* crosslinks */}
+
+## 📖 Related Reads
+
+- **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools, agents, and APIs
+- **[NiteAgent](https://niteagent.com/)** — AI agent development, frameworks, and production patterns
+
+*Cross-links automatically generated from Hermes Tutorials.*
