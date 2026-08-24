@@ -1,0 +1,84 @@
+---
+title: "Beginner's Guide to Hermes Agent's Arena: Compare AI Models"
+description: "Compare AI models with Hermes Agent — a beginner's guide to running the subagent arena, and letting a judge pick the best draft for your next project."
+pubDate: 2026-08-24
+tags: ["hermes-agent", "subagent-arena", "ai-comparison", "tutorial", "beginner"]
+heroImage: https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-subagent-arena-guide-1787601416.webp
+lastVerified: 2026-08-24
+---
+
+Learning how to compare AI models with Hermes Agent is straightforward once you understand the arena pipeline: three contenders write the same brief, a separate judge scores each draft, and the highest-scoring model wins. This guide walks you through every step so you can run your own comparisons with confidence.
+
+## How This Guide Was Built
+
+This guide is based on the official Hermes Agent documentation, the subagent-arena skill, and the pipeline scripts installed with Hermes — verified locally. We did not run a live arena match hands-on for this guide; the steps reflect the documented pipeline and the live arena page on this site. Last verified: August 2026.
+
+The goal is to give beginners a clear, reproducible path into the arena without requiring deep familiarity with every internal script. Everything here comes from the official Hermes Agent delegation docs, the GitHub repository, and the live arena results page.
+
+## What Is the Hermes Agent Subagent Arena?
+
+The Hermes Agent subagent arena runs an A/B/C comparison pipeline where three AI models independently write responses to the same brief, then a separate judge model scores each draft across accuracy, sourcing, quality, practicality, and engagement. The draft with a mean score of at least 8.0 is selected as the winner and published, while lower-scoring attempts are re-run up to three times before falling back to the best available result. You can see the live results on the [arena page](https://hermes-tutorials.dev/arena/) and learn the underlying pattern from the official [Compare Alternatives](https://hermes-agent.nousresearch.com/docs/guides/delegation-patterns) documentation.
+
+Built on the documented "Compare Alternatives" pattern, the arena lets you evaluate multiple approaches in parallel rather than sequentially, saving time and reducing bias. Each model works in isolation with its own context, and only the final summary enters the parent conversation.
+
+## How to Compare AI Models with Hermes Agent
+
+To compare AI models with Hermes Agent, you run a scripted pipeline that gives the same prompt to three contenders, judges each draft with a vision-language reasoning model, and selects the best result based on a mean score threshold. The process is designed to be reproducible, transparent, and extensible — you can swap models, adjust thresholds, and rerun matches at any time.
+
+### Step 1: Pick Your Contenders
+
+The typical builder lineup uses deepseek-v4-flash (DeepSeek), mimo-v2.5 (Xiaomi), and poolside/laguna-s-2.1 (Poolside via OpenRouter), all with 1-million-token context windows. You can customize the lineup by editing the `--models` array passed to `arena-direct-runner.py`, which accepts any provider the runner supports.
+
+### Step 2: Write an Unambiguous Brief
+
+A clear, unambiguous brief is critical because subagents know nothing about the parent conversation — everything must be passed via the goal and context fields. Include explicit constraints, must-include facts, and a must-not list so each model has the same target. Ambiguous briefs lead to inconsistent drafts that confuse the judge and produce unreliable scores.
+
+### Step 3: Run the Builders
+
+Run the builders using `arena-direct-runner.py` with a command like:
+
+```
+arena-direct-runner.py --prompt "..." --models '[{model,provider,family}...]' --match-id <id>
+```
+
+Because `delegate_task` cannot route to different providers, the runner calls each provider's API directly. Drafts land in `/tmp/arena-outputs/<match-id>/` for the next stage.
+
+### Step 4: Judge the Drafts
+
+Judge each draft using `tb-judge-multipass.py`:
+
+```
+tb-judge-multipass.py --file <draft> --passes 3
+```
+
+Qwen 3.7 Flash scores accuracy (30%), sourcing (25%), quality (20%), practicality (15%), and engagement (10%). A draft passes if its mean score is at least 8.0. If it falls short, the pipeline re-runs the draft up to three times, then ships the best-scoring version with `threshold_met: false` recorded.
+
+## Why Bother? What the Arena Gives You
+
+The arena gives you objectivity by running every model against the same brief with the same judge, eliminating subjective bias from manual evaluation. It also delivers parallel efficiency — three models write simultaneously instead of one after another — and reproducibility, since the entire pipeline is scripted and can be rerun at any time. When no draft meets the 8.0 threshold, the failure is recorded honestly rather than hidden, so you always know the real quality of each contender.
+
+For teams evaluating model performance, this means faster decisions with less guesswork. The scripted nature also makes it easy to integrate into CI/CD workflows or scheduled comparisons.
+
+## Common Mistakes Beginners Make
+
+Beginners often write ambiguous briefs that leave too much room for interpretation, causing drafts to diverge wildly and confuse the judge. Another frequent error is letting a single provider failure abort the entire run — instead, survivors should proceed while the failed model is retried or skipped. Some also trust a single judge pass, which introduces noise; always use the 3-pass mean. Finally, never leave the image-prompt placeholder that builders append to their drafts in a published post — the pipeline replaces it with a generated hero image.
+
+## FAQ
+
+### How much does it cost to compare AI models with Hermes Agent?
+
+The judge model, Qwen 3.7 Flash, is priced at $0.03 per million input tokens and $0.13 per million output tokens, as listed on its [OpenRouter page](https://openrouter.ai/qwen/qwen3.7-flash). Builder costs vary by provider, but the pipeline is designed for efficiency so that even repeated runs remain affordable.
+
+### Can I use my own models in the arena?
+
+Yes, you can use your own models by changing the `--models` array in `arena-direct-runner.py`. The runner supports any provider it is configured for, including deepseek, xiaomi, openrouter, and zai, giving you flexibility to test models from different ecosystems.
+
+### What happens if no model scores 8.0 or higher?
+
+If no model reaches the 8.0 threshold, the pipeline re-runs the draft up to three times. After the final attempt, it ships the best-scoring draft with `threshold_met: false` recorded, so quality issues are fixed rather than published as silent failures.
+
+## Where to Go Next
+
+From here, dive into the official [Hermes Agent delegation docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation) to understand how `delegate_task` spawns child agents with isolated context. Browse the [GitHub repo](https://github.com/NousResearch/hermes-agent) for the full source and configuration options, and explore related content like [our parallel subagent delegation guide](https://hermes-tutorials.dev/blog/hermes-parallel-subagent-delegation/) and [our skills system guide](https://hermes-tutorials.dev/blog/skills-system/) for deeper patterns.
+
+You can also check the [skills hub](https://hermes-tutorials.dev/skills/) for more arena-based workflows, the [tools hub](https://hermes-tutorials.dev/tools/) for runner scripts, and [our multi-agent setup guide](https://hermes-tutorials.dev/blog/multi-agent-setup/) for broader agent architecture advice.
