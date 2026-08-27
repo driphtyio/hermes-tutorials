@@ -3,7 +3,7 @@
     "name": "Hermes Tutorials Arena",
     "version": "1.0.0",
     "description": "Model-vs-model battles for Hermes Tutorials content and design.",
-    "total_matches": 21
+    "total_matches": 23
   },
   "model_pool": [
     {
@@ -517,7 +517,7 @@
         "last_failure": null
       }
     },
-    "last_updated": "2026-08-25"
+    "last_updated": "2026-08-27"
   },
   "matches": [
     {
@@ -4011,6 +4011,187 @@
         "verified": true,
         "notes": "Winner = poolside draft QA-filled. First judge pass without verified-fact preamble: all 3 drafts failed (means 6.05/4.87/5.17 \u2014 qwen3.7-flash training-cutoff penalty on real 2026 facts: Claude Fable 5, GPT-5.6 Luna, Composer 2.5, $20 pricing). Re-judged with [VERIFIED FACT CONTEXT] preamble (proven fix): poolside 8.18, deepseek 8.15, mimo 7.65. QA fill on winner: FAQ converted to question-shaped H3s; Where-to-Go-Next got real internal links; install method corrected to one-line installer/desktop/Docker; Cursor automation row corrected (Cloud Agents on paid tiers); stars updated 230K+ -> 236K+ (GitHub API 2026-08-25); 15 internal links (hubs + 3 sibling posts) + 13 external links all HTTP 200; desc 159 chars prose no stats; title 61 chars keyword-first; 1188 words; no [N], no HTML comments, no slop words, no HERO_IMAGE_PROMPT leakage; heroImage Lumenfall HTTP 200 image/jpeg. threshold_met true (poolside mean 8.18 >= 8.0)."
       }
+    },
+    {
+      "match_id": "hermestuts-subagent-arena-2026-08-27",
+      "date": "2026-08-27",
+      "topic": "Hermes Agent Tool System Internals: How Tools Load and Run (research deep-dive)",
+      "slug": "hermes-tool-registry-deep-dive",
+      "type": "research-deep-dive",
+      "category": "deep-dive",
+      "pipeline": "cron-subagent-arena",
+      "orchestrator": "deepseek-v4-flash (cron)",
+      "plan_model": "mimo-v2.5-pro (via arena-direct-runner call_model)",
+      "research_model": "cron orchestrator web research from primary sources (gpt-5.6-luna not routable via delegation)",
+      "qa_model": "deepseek-v4-flash (cron orchestrator QA pass)",
+      "judge_model": "qwen3.7-flash (multipass 3, mean-gated, verified-fact preamble)",
+      "models_competed": [
+        {
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "A"
+        },
+        {
+          "model": "mimo-v2.5",
+          "provider": "xiaomi",
+          "label": "B"
+        },
+        {
+          "model": "poolside/laguna-s-2.1",
+          "provider": "openrouter",
+          "label": "D"
+        }
+      ],
+      "results": [
+        {
+          "model": "mimo-v2.5",
+          "model_id": "mimo-v2.5",
+          "provider": "xiaomi",
+          "family": "mimo",
+          "score": 8.37,
+          "weighted_score": 8.37,
+          "word_count": 1148,
+          "judge_mean": 8.37,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 7.85,
+              "accuracy": 9.0,
+              "sourcing": 8.0,
+              "quality": 6.0,
+              "practicality": 9.0,
+              "engagement": 6.0
+            },
+            {
+              "pass": 2,
+              "weighted": 9.35,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 9.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            },
+            {
+              "pass": 3,
+              "weighted": 7.9,
+              "accuracy": 9.0,
+              "sourcing": 9.0,
+              "quality": 4.0,
+              "practicality": 9.0,
+              "engagement": 8.0
+            }
+          ],
+          "strengths": [
+            "Highest judge mean (8.37) with a 9.35 second pass",
+            "Accurate registry/dispatch coverage across passes"
+          ],
+          "weaknesses": [
+            "Quality criterion noisy across passes (4-9)",
+            "QA fill needed: H1 title, GitHub URL fix, heroImage timestamp"
+          ],
+          "rank": 1
+        },
+        {
+          "model": "deepseek-v4-flash",
+          "model_id": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "family": "deepseek",
+          "score": 8.28,
+          "weighted_score": 8.28,
+          "word_count": 1434,
+          "judge_mean": 8.28,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 8.3,
+              "accuracy": 9.0,
+              "sourcing": 9.0,
+              "quality": 6.0,
+              "practicality": 9.0,
+              "engagement": 8.0
+            },
+            {
+              "pass": 2,
+              "weighted": 8.15,
+              "accuracy": 9.0,
+              "sourcing": 8.0,
+              "quality": 7.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            },
+            {
+              "pass": 3,
+              "weighted": 8.4,
+              "accuracy": 9.0,
+              "sourcing": 9.0,
+              "quality": 7.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            }
+          ],
+          "strengths": [
+            "Consistent 8.15-8.40 across all passes",
+            "Thorough (1434 words)"
+          ],
+          "weaknesses": [
+            "Mean slightly below mimo winner"
+          ],
+          "rank": 2
+        },
+        {
+          "model": "poolside-laguna-s-2.1",
+          "model_id": "poolside-laguna-s-2.1",
+          "provider": "openrouter",
+          "family": "poolside",
+          "score": 7.98,
+          "weighted_score": 7.98,
+          "word_count": 1081,
+          "judge_mean": 7.98,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 8.1,
+              "accuracy": 9.0,
+              "sourcing": 9.0,
+              "quality": 5.0,
+              "practicality": 9.0,
+              "engagement": 8.0
+            },
+            {
+              "pass": 2,
+              "weighted": 8.4,
+              "accuracy": 9.0,
+              "sourcing": 9.0,
+              "quality": 7.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            },
+            {
+              "pass": 3,
+              "weighted": 7.45,
+              "accuracy": 9.0,
+              "sourcing": 8.0,
+              "quality": 4.0,
+              "practicality": 9.0,
+              "engagement": 6.0
+            }
+          ],
+          "strengths": [
+            "Clean structure, honest E-E-A-T block"
+          ],
+          "weaknesses": [
+            "Mean 7.98 below 8.0 gate by 0.02 (quality criterion 4-7 noise)"
+          ],
+          "rank": 3
+        }
+      ],
+      "winner": "mimo-v2.5",
+      "winner_score": 8.37,
+      "threshold_met": true,
+      "qa": {
+        "verified": true,
+        "notes": "Winner = mimo draft QA-filled by cron orchestrator. H1 title added; opening rewritten to front-load long-tail keyword; GitHub URL fixed https://github.com/NousResearch/hermes (404) -> hermes-agent; heroImage timestamp placeholder replaced with verified Lumenfall URL (HTTP 200 image/jpeg); desc 153 chars prose no stats; title 58 chars keyword-first; 1144 body words; inline links only (0 [N]); no HTML comments; no slop words; no HERO_IMAGE_PROMPT leak; 10 external links all HTTP 200; 5 internal links (1 hub + 4 siblings); FAQ 3 question-shaped H3s; E-E-A-T block present; self-contained answers under every H2. threshold_met true (mimo mean 8.37 >= 8.0)."
+      }
     }
   ],
   "leaderboard": [
@@ -4018,9 +4199,9 @@
       "model": "deepseek-v4-flash",
       "provider": "deepseek",
       "family": "deepseek",
-      "matches": 22,
+      "matches": 23,
       "wins": 11,
-      "losses": 11,
+      "losses": 12,
       "avgScore": 8.4,
       "bestScore": 9.4,
       "rank": 1
@@ -4029,8 +4210,8 @@
       "model": "mimo-v2.5",
       "provider": "xiaomi",
       "family": "mimo",
-      "matches": 19,
-      "wins": 5,
+      "matches": 20,
+      "wins": 6,
       "losses": 14,
       "avgScore": 8.3,
       "bestScore": 9.3,
@@ -4040,9 +4221,9 @@
       "model": "poolside-laguna-s-2.1",
       "provider": "openrouter",
       "family": "poolside",
-      "matches": 14,
+      "matches": 15,
       "wins": 4,
-      "losses": 10,
+      "losses": 11,
       "avgScore": 8.2,
       "bestScore": 9.1,
       "rank": 3
@@ -4081,6 +4262,6 @@
       "rank": 6
     }
   ],
-  "last_updated": "2026-08-25",
-  "total_matches": 22
+  "last_updated": "2026-08-27",
+  "total_matches": 23
 }

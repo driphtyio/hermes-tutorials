@@ -1,0 +1,101 @@
+---
+title: "Hermes Agent Tool System Internals: How Tools Load and Run"
+description: "Hermes Agent tool internals — how tools self-register, load on demand, and dispatch via the central registry, so you can extend and debug your own agent."
+pubDate: 2026-08-27
+tags: ["hermes", "deep-dive", "tools", "internals", "architecture"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-tool-registry-deep-dive-1787855823.webp"
+lastVerified: "2026-08-27"
+---
+
+# Hermes Agent Tool System Internals: How Tools Load and Run
+
+How do Hermes Agent tools load and run internally? You have to trace the lifecycle from self-registration to dispatch: a central registry that tools populate via AST-scanned imports, availability gating through `check_fn`, toolset resolution with dynamic schema patching, and a dispatch pipeline that handles async bridging and error wrapping. This architecture scales to 70+ tools across 28 toolsets while keeping the LLM's system prompt stable.
+
+## How This Guide Was Built
+
+This guide is based on the official Hermes Agent developer documentation ([tools runtime](https://hermes-agent.nousresearch.com/docs/developer-guide/tools-runtime), [architecture](https://hermes-agent.nousresearch.com/docs/developer-guide/architecture)), the [official tools user guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools), and the [Hermes GitHub repository](https://github.com/NousResearch/hermes-agent). We verified the registry registration fields, auto-discovery mechanism, check_fn gating, dispatch flow, approval patterns, and terminal backends from these sources. This analysis is not based on hands-on testing or modification of the Hermes source code; all described behaviors are derived from official documentation. Last verified: August 2026.
+
+## How do Hermes Agent tools load and run?
+
+Hermes Agent tools self-register into a central registry at import time via AST scans, then their schemas are filtered by availability and toolset requirements before being presented to the model. When called, the model's tool_call is routed through a dispatch pipeline that handles async bridging, error wrapping, and plugin hooks. ([Source](https://hermes-agent.nousresearch.com/docs/developer-guide/tools-runtime))
+
+## The Tool Registry: How Tools Self-Register
+
+Every tool module calls `registry.register(...)` at import, populating a `ToolEntry` with fields like `name`, `toolset`, `schema`, `handler`, `check_fn`, `requires_env`, `is_async`, `description`, and `emoji`. Shadowing a tool from a different toolset is rejected unless `override=True`, and plugin overrides require an explicit opt-in in `config.yaml` (`plugins.entries.<plugin_id>.allow_tool_override: true`). This creates a clear dependency chain.
+
+```text
+# File Dependency Chain (Source: architecture docs)
+tools/registry.py (no deps) <- tools/*.py (register at import) <- model_tools.py (imports registry) <- run_agent.py, cli.py
+```
+
+## Auto-Discovery: Finding 70+ Tools Without a Manual List
+
+`discover_builtin_tools()` in `model_tools.py` performs an AST scan of every file in the `tools/` directory, looking for top-level `registry.register()` calls and importing those modules automatically. There is no manual import list to maintain. Optional tool import errors are caught and logged, then MCP and plugin tools are discovered afterward. This system currently manages over 70 tools across 28 toolsets.
+
+```text
+# Auto-Discovery Flow (Source: tools-runtime docs)
+model_tools.py -> discover_builtin_tools() -> AST scan tools/*.py -> registry.register() calls -> Import modules -> MCP/Plugin discovery
+```
+
+## Availability Gating: How check_fn Hides Unavailable Tools
+
+The `check_fn` defined in each tool's registration runs during `get_definitions()`. This function tests for prerequisites like a present API key or a running service. Results are cached per call; any exception means the tool is unavailable (a fail-safe design). Unavailable tools are completely omitted from the schema list sent to the model, preventing invalid calls.
+
+## Toolset Resolution: Building the Schema List
+
+`model_tools.get_tool_definitions(enabled_toolsets, disabled_toolsets)` filters the available tools. An `enabled_toolsets` list acts as an allowlist, while `disabled_toolsets` acts as a blocklist. If neither is provided, all discovered tools are included. The schemas for complex tools like `execute_code` are dynamically patched to only reference tools that passed this filtering, preventing model hallucination of tools that are not actually available.
+
+## Dispatch: From Tool Call to Handler
+
+The full dispatch flow begins when the model emits a tool_call. The `handle_function_call()` in `run_agent.py` first checks for agent-loop tools (todo, memory, session_search, delegate_task) and handles them directly. Next, a plugin pre-hook is invoked. Then, `registry.dispatch()` performs the `ToolEntry` lookup and runs the handler, using async bridging (`_run_async()`) if `is_async` is true. The result string is returned, wrapped by a plugin post-hook. Errors are caught at two levels, ensuring the model always receives well-formed JSON. This is the execution half of the loop we cover in [our Hermes tool execution pipeline guide](https://hermes-tutorials.dev/blog/hermes-tool-execution-pipeline/).
+
+```text
+# Dispatch Flow Diagram (Source: tools-runtime docs)
+model tool_call -> run_agent.py -> handle_function_call()
+  -> [Agent-loop tool? -> handle directly]
+  -> Plugin pre_hook -> registry.dispatch()
+    -> ToolEntry lookup
+    -> Handler (async bridged via _run_async() if needed)
+    -> Result
+  -> Plugin post_hook -> return JSON to model
+```
+
+## On-Demand Tool Loading: The Deferred Catalog
+
+To keep the core system prompt lean and preserve LLM prefix-cache stability, approximately 61 additional tools are not included in the core prompt. The agent discovers them on demand by calling `tool_search` to find relevant tools, `tool_describe` to load a specific tool's full schema, and then `tool_call` to invoke it. This pattern scales functionality without polluting the primary context window, consistent with the prompt-stability design principle in the [architecture docs](https://hermes-agent.nousresearch.com/docs/developer-guide/architecture).
+
+## Safety: The Dangerous-Command Approval Flow
+
+Certain high-risk commands are intercepted by the `DANGEROUS_PATTERNS` approval flow. This system uses regex pairs to flag operations like recursive deletes (`rm -rf`), disk formatting (`mkfs`, `dd`), destructive SQL (`DROP TABLE`, `DELETE` without `WHERE`), and overwrites of critical system files (`/etc/`). Approvals are tracked per-session, and users can choose "allow permanently," which writes the command to `config.yaml`'s `command_allowlist`.
+
+## Runtime Environments: Where Tools Execute
+
+Hermes tools can execute in seven different runtime backends, each with distinct security and isolation properties: local, Docker, SSH, Singularity, Modal, Daytona, and Vercel Sandbox. The Docker backend is notable for using a single persistent container across the entire process, with hardened settings like a read-only root filesystem, dropped capabilities, and full namespace isolation, per the [tools user guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools).
+
+## Common Mistakes
+
+1. **Assuming all tools are always loaded:** Many are gated by `check_fn` or reserved in the deferred catalog, so a tool can be missing from a session without being broken.
+2. **Editing a non-existent import list:** Discovery is automatic via AST; manual imports are not the mechanism.
+3. **Assuming a silent `check_fn` failure:** An exception in `check_fn` means the tool is unavailable, not broken.
+4. **Forgetting plugin opt-in:** For a plugin to override a built-in tool, `allow_tool_override` must be set in its config.
+
+## FAQ
+
+### Are all Hermes tools loaded into every conversation?
+
+No. Tools are filtered at runtime. `check_fn` may hide unavailable tools, and enabled/disabled toolset lists further curate the schema. Additionally, ~61 tools reside in the deferred catalog, only loaded on demand. ([Source](https://hermes-agent.nousresearch.com/docs/developer-guide/tools-runtime))
+
+### How do I add a custom tool to Hermes?
+
+Place a Python module in the `tools/` directory that calls `registry.register()` at the top level. The auto-discovery AST scan will find it automatically. For plugins, register the tool via the plugin system and ensure `allow_tool_override` is configured if shadowing an existing tool. ([Source](https://hermes-agent.nousresearch.com/docs/developer-guide/tools-runtime))
+
+### Why does Hermes hide some tools in the system prompt?
+
+This is by design. The core prompt includes only a curated set of tools. Many others exist in a deferred catalog, accessible via `tool_search`. This approach maintains prompt stability for caching and keeps the model's immediate context manageable. ([Source](https://hermes-agent.nousresearch.com/docs/developer-guide/architecture))
+
+## Where to Go Next
+
+* For a broader toolset overview, explore our [Hermes tools guide](/tools/).
+* To extend the system, follow [our building-a-Hermes-plugin walkthrough](https://hermes-tutorials.dev/blog/building-hermes-plugin/).
+* For MCP integration details, see [our custom MCP server build guide](https://hermes-tutorials.dev/blog/build-custom-mcp-server/).
+* To adjust runtime behavior, read [our Hermes configuration deep dive](https://hermes-tutorials.dev/blog/configuration-deep-dive/).
