@@ -63,6 +63,13 @@
       "family": "xiaomi",
       "status": "pass",
       "role": "planner"
+    },
+    {
+      "model": "glm-5.3-flash",
+      "name": "GLM-5.3 Flash",
+      "role": "builder",
+      "provider": "zai",
+      "context_length": 1310720
     }
   ],
   "stability": {
