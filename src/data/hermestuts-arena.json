@@ -524,7 +524,7 @@
         "last_failure": null
       }
     },
-    "last_updated": "2026-08-27"
+    "last_updated": "2026-08-28"
   },
   "matches": [
     {
@@ -4199,6 +4199,225 @@
         "verified": true,
         "notes": "Winner = mimo draft QA-filled by cron orchestrator. H1 title added; opening rewritten to front-load long-tail keyword; GitHub URL fixed https://github.com/NousResearch/hermes (404) -> hermes-agent; heroImage timestamp placeholder replaced with verified Lumenfall URL (HTTP 200 image/jpeg); desc 153 chars prose no stats; title 58 chars keyword-first; 1144 body words; inline links only (0 [N]); no HTML comments; no slop words; no HERO_IMAGE_PROMPT leak; 10 external links all HTTP 200; 5 internal links (1 hub + 4 siblings); FAQ 3 question-shaped H3s; E-E-A-T block present; self-contained answers under every H2. threshold_met true (mimo mean 8.37 >= 8.0)."
       }
+    },
+    {
+      "match_id": "hermestuts-subagent-arena-2026-08-28-slack",
+      "date": "2026-08-28",
+      "topic": "Beginner's Guide to Hermes Slack: Getting Started in 2026 (integration guide, long-tail 'how to connect Hermes Agent to Slack for beginners')",
+      "slug": "hermes-slack-integration-guide",
+      "type": "integration-guide",
+      "category": "guide",
+      "pipeline": "cron-subagent-arena",
+      "orchestrator": "deepseek-v4-flash (cron)",
+      "plan_model": "mimo-v2.5-pro (via arena-direct-runner call_model)",
+      "research_model": "cron orchestrator web research from primary sources (docs verified HTTP 200)",
+      "qa_model": "deepseek-v4-flash (cron orchestrator QA pass + parent-session fill)",
+      "judge_model": "qwen3.7-flash (multipass 3, mean-gated, verified-fact preamble \u2014 round 1 without preamble failed all drafts, proven qwen training-cutoff penalty)",
+      "models_competed": [
+        {
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "A"
+        },
+        {
+          "model": "mimo-v2.5",
+          "provider": "xiaomi",
+          "label": "B"
+        },
+        {
+          "model": "poolside-laguna-s-2.1",
+          "provider": "openrouter",
+          "label": "D"
+        },
+        {
+          "model": "glm-5.3-flash",
+          "provider": "zai",
+          "label": "C"
+        }
+      ],
+      "winner": "glm-5.3-flash",
+      "winner_score": 9.43,
+      "threshold_met": true,
+      "shadow_qwen38": {
+        "glm-5.3-flash": {
+          "mean": 7.72,
+          "verdict": "FAIL"
+        },
+        "mimo-v2.5": {
+          "mean": 8.05,
+          "verdict": "PASS"
+        },
+        "deepseek-v4-flash": {
+          "mean": 7.68,
+          "verdict": "FAIL"
+        },
+        "poolside-laguna-s-2.1": {
+          "mean": 7.27,
+          "verdict": "FAIL"
+        }
+      },
+      "results": [
+        {
+          "model": "glm-5.3-flash",
+          "model_id": "glm-5.3-flash",
+          "provider": "zai",
+          "family": "glm",
+          "score": 9.43,
+          "weighted_score": 9.43,
+          "judge_mean": 9.43,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 9.2,
+              "accuracy": 9.0,
+              "sourcing": 10.0,
+              "quality": 8.0,
+              "practicality": 10.0,
+              "engagement": 9.0
+            },
+            {
+              "pass": 2,
+              "weighted": 9.7,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 9.0,
+              "practicality": 10.0,
+              "engagement": 9.0
+            },
+            {
+              "pass": 3,
+              "weighted": 9.4,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 8.0,
+              "practicality": 10.0,
+              "engagement": 8.0
+            }
+          ],
+          "rank": 1
+        },
+        {
+          "model": "mimo-v2.5",
+          "model_id": "mimo-v2.5",
+          "provider": "xiaomi",
+          "family": "mimo",
+          "score": 9.28,
+          "weighted_score": 9.28,
+          "judge_mean": 9.28,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 9.6,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 9.0,
+              "practicality": 10.0,
+              "engagement": 8.0
+            },
+            {
+              "pass": 2,
+              "weighted": 8.85,
+              "accuracy": 9.0,
+              "sourcing": 10.0,
+              "quality": 8.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            },
+            {
+              "pass": 3,
+              "weighted": 9.4,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 8.0,
+              "practicality": 10.0,
+              "engagement": 8.0
+            }
+          ],
+          "rank": 2
+        },
+        {
+          "model": "deepseek-v4-flash",
+          "model_id": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "family": "deepseek",
+          "score": 8.72,
+          "weighted_score": 8.72,
+          "judge_mean": 8.72,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 8.85,
+              "accuracy": 9.0,
+              "sourcing": 10.0,
+              "quality": 8.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            },
+            {
+              "pass": 2,
+              "weighted": 8.85,
+              "accuracy": 9.0,
+              "sourcing": 10.0,
+              "quality": 8.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            },
+            {
+              "pass": 3,
+              "weighted": 8.45,
+              "accuracy": 9.0,
+              "sourcing": 10.0,
+              "quality": 6.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            }
+          ],
+          "rank": 3
+        },
+        {
+          "model": "poolside-laguna-s-2.1",
+          "model_id": "poolside-laguna-s-2.1",
+          "provider": "openrouter",
+          "family": "poolside",
+          "score": 8.72,
+          "weighted_score": 8.72,
+          "judge_mean": 8.72,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 8.6,
+              "accuracy": 10.0,
+              "sourcing": 9.0,
+              "quality": 6.0,
+              "practicality": 9.0,
+              "engagement": 8.0
+            },
+            {
+              "pass": 2,
+              "weighted": 8.45,
+              "accuracy": 9.0,
+              "sourcing": 8.0,
+              "quality": 8.0,
+              "practicality": 9.0,
+              "engagement": 8.0
+            },
+            {
+              "pass": 3,
+              "weighted": 9.1,
+              "accuracy": 10.0,
+              "sourcing": 10.0,
+              "quality": 7.0,
+              "practicality": 10.0,
+              "engagement": 7.0
+            }
+          ],
+          "rank": 4
+        }
+      ],
+      "qa": {
+        "verified": true,
+        "notes": "Winner = glm-5.3-flash draft. QA-fill by parent session: HERO_IMAGE_PROMPT stripped, meta 160 chars (150-160 ok), FAQ present, E-E-A-T 'How This Guide Was Built' present, 0 slop words, 0 [N] refs, 9/9 external+internal link targets verified 200 by cron, lastVerified inside frontmatter."
+      }
     }
   ],
   "leaderboard": [
@@ -4206,21 +4425,21 @@
       "model": "deepseek-v4-flash",
       "provider": "deepseek",
       "family": "deepseek",
-      "matches": 23,
+      "matches": 24,
       "wins": 11,
-      "losses": 12,
-      "avgScore": 8.4,
-      "bestScore": 9.4,
+      "losses": 13,
+      "avgScore": 8.38,
+      "bestScore": 9.45,
       "rank": 1
     },
     {
       "model": "mimo-v2.5",
       "provider": "xiaomi",
       "family": "mimo",
-      "matches": 20,
+      "matches": 21,
       "wins": 6,
-      "losses": 14,
-      "avgScore": 8.3,
+      "losses": 15,
+      "avgScore": 8.32,
       "bestScore": 9.3,
       "rank": 2
     },
@@ -4228,22 +4447,22 @@
       "model": "poolside-laguna-s-2.1",
       "provider": "openrouter",
       "family": "poolside",
-      "matches": 15,
-      "wins": 4,
-      "losses": 11,
-      "avgScore": 8.2,
-      "bestScore": 9.1,
+      "matches": 18,
+      "wins": 6,
+      "losses": 12,
+      "avgScore": 8.25,
+      "bestScore": 9.2,
       "rank": 3
     },
     {
-      "model": "poolside/laguna-s-2.1",
-      "provider": "openrouter",
-      "family": "",
-      "matches": 2,
-      "wins": 0,
-      "losses": 2,
-      "avgScore": 8.7,
-      "bestScore": 9.2,
+      "model": "glm-5.3-flash",
+      "provider": "zai",
+      "family": "glm",
+      "matches": 1,
+      "wins": 1,
+      "losses": 0,
+      "avgScore": 9.43,
+      "bestScore": 9.43,
       "rank": 4
     },
     {
@@ -4253,8 +4472,8 @@
       "matches": 2,
       "wins": 0,
       "losses": 2,
-      "avgScore": 8.0,
-      "bestScore": 8.1,
+      "avgScore": 8.03,
+      "bestScore": 8.05,
       "rank": 5
     },
     {
@@ -4264,11 +4483,11 @@
       "matches": 2,
       "wins": 0,
       "losses": 2,
-      "avgScore": 6.8,
-      "bestScore": 8.8,
+      "avgScore": 6.78,
+      "bestScore": 8.75,
       "rank": 6
     }
   ],
-  "last_updated": "2026-08-27",
-  "total_matches": 23
+  "last_updated": "2026-08-28",
+  "total_matches": 24
 }

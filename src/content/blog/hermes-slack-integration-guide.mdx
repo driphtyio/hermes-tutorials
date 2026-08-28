@@ -1,0 +1,80 @@
+---
+title: "Beginner's Guide to Hermes Slack: Getting Started in 2026"
+description: "Hermes Agent connects to Slack as a gateway bot, letting your team chat with an AI assistant in channels and DMs through Socket Mode, with no public URL needed."
+pubDate: 2026-08-28
+tags: [hermes-agent, slack, integration, socket-mode, gateway, messaging]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-slack-integration-guide-1787954232.webp"
+lastVerified: 2026-08-28
+---
+
+If you have been wondering how to connect Hermes Agent to Slack for beginners, this walkthrough covers every step, from generating a Slack app manifest to starting the gateway. By the end, your team will be able to ping a friendly open-source assistant in channels and DMs, and it will reply with streaming answers, files, and more. The whole process uses Socket Mode, so you never expose a public URL.
+
+## How This Guide Was Built
+
+To write this guide we pulled from the [official Slack setup docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack), the [messaging gateway overview](https://hermes-agent.nousresearch.com/docs/user-guide/messaging), the [installation guide](https://hermes-agent.nousresearch.com/docs/getting-started/installation), and the [Slack API console](https://api.slack.com/apps). We verified the required token types, the full scope and event lists, the manifest generation command, and the Socket Mode architecture. This guide is based on official documentation, pricing pages, and community reports — we did not run the tool hands-on. Every command and configuration value below comes straight from those sources rather than memory. Last verified: August 2026.
+
+## What Is Hermes Agent and Why Use Slack?
+
+Hermes Agent is an open-source AI agent from Nous Research that you can run on your own machine and reach from the chat apps you already use, including Telegram, Discord, and Slack ([installation guide](https://hermes-agent.nousresearch.com/docs/getting-started/installation)). Slack works well as a gateway because so much team collaboration already happens there: you can ask questions in a DM, loop the bot into a channel thread, and share files, images, and even voice notes. The messaging layer supports threads, reactions, typing indicators, and streaming replies ([messaging overview](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)), so it feels like chatting with a colleague rather than poking a script. Prefer a different platform? The same agent pattern powers [our Telegram integration guide](/blog/hermes-telegram-integration-guide/) and [our Discord bot guide](/blog/hermes-discord-bot-guide/).
+
+## How Do You Connect Hermes Agent to Slack for Beginners?
+
+You create a Slack app from a generated manifest, install it to your workspace, paste two tokens into Hermes configuration, then start the gateway process. Everything runs over Socket Mode, an outbound WebSocket connection, so your laptop or home server stays behind its firewall with no public URL. The whole flow takes one terminal session, the Slack API console, and a config file. See the [Slack setup docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack) for the reference version.
+
+## Step-by-Step: Connect Hermes Agent to Slack
+
+Connecting Hermes Agent to Slack means five stages: generate a manifest, configure scopes and events, install the app, set environment variables, and start the gateway. Socket Mode carries all traffic over an outbound WebSocket, so no public URL is required even behind a firewall ([Slack setup docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack)). Each step below expands on that foundation.
+
+### Step 1: Generate the Slack App Manifest
+
+Hermes can write the entire Slack app definition for you. Run:
+
+```bash
+hermes slack manifest --agent-view --write
+```
+
+This creates `~/.hermes/slack-manifest.json` containing every scope, event subscription, and slash command the bot needs. Open [the Slack API console](https://api.slack.com/apps), click **Create New App**, choose **From an app manifest**, pick your workspace, and paste the file's contents. The manifest command means you never hand-edit JSON or risk a typo in a scope name — the generator outputs exactly what the [Slack setup docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack) describe. If you delete the file later, rerun the same command to regenerate it.
+
+### Step 2: Configure Scopes, Events, and the Messages Tab
+
+The generated manifest already includes everything, but it pays to verify the settings in the Slack console under **OAuth & Permissions** and **Event Subscriptions**. The [Slack setup docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack) list the required bot token scopes as `chat:write`, `app_mentions:read`, `channels:history`, `groups:history`, `im:history`, `im:read`, `im:write`, `mpim:history`, `mpim:read`, `users:read`, `files:read`, and `files:write`, plus optional `groups:read` and `assistant:write` (the latter powers an is-thinking status). Subscribe to the events `message.im`, `message.mpim`, `message.channels` (public channels), `message.groups` (private channels, recommended), and `app_mention`. Here is the number one pitfall: if `message.channels` or `message.groups` is missing, the bot answers in DMs but never in channels. Finally, open **App Home** and enable the Messages Tab — otherwise DMs fail with "Sending messages to this app has been turned off". Because the manifest command generates all of these automatically, treat this step as a checklist rather than data entry.
+
+### Step 3: Install the App and Copy Tokens
+
+In the Slack console, click **Install to Workspace** and approve the permissions prompt. Slack then shows a **Bot User OAuth Token** beginning with `xoxb-` — copy it immediately and keep it private. Whenever you change scopes or events, you must reinstall the app so Slack issues the updated permissions; skipping this is a classic source of mysterious permission errors. One historical note: classic Slack apps built on the RTM API were fully deprecated in March 2025, so Socket Mode is the only current path ([Slack setup docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack)).
+
+### Step 4: Configure Hermes
+
+Hermes reads its Slack credentials from `~/.hermes/.env`. Set three variables: `SLACK_BOT_TOKEN` (the `xoxb-` value from Step 3), `SLACK_APP_TOKEN` (an `xapp-` app-level token you create under **Basic Information** in the console), and `SLACK_ALLOWED_USERS`. That last one takes a comma-separated list of Slack Member IDs, which look like `U01ABC2DEF3` — real Member IDs, not display usernames ([Slack setup docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack)). If you would rather not edit files by hand, run `hermes gateway setup` for a guided prompt that writes the same values. Save the file, then move on to launching the gateway.
+
+### Step 5: Start the Gateway and Invite the Bot
+
+Launch the gateway in your terminal with `hermes gateway` for a foreground run, or install it as a service using `hermes gateway install` (add `sudo` for a system-wide service: `sudo hermes gateway install --system`). Then invite the bot into each channel you want it in with `/invite @Hermes Agent` — it never joins channels automatically ([Slack setup docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack)). After that, mention it and watch it reply.
+
+## Common Mistakes and Troubleshooting
+
+Most Slack gateway problems trace back to a handful of configuration slips ([Slack setup docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack)). If the bot answers in DMs but ignores channel messages, the `message.channels` or `message.groups` event subscription is missing — this is the single most reported setup issue. If DMs show "Sending messages to this app has been turned off", enable the Messages Tab under **App Home**. If you see permission errors after edits, remember scope and event changes require reinstalling the app to your workspace. Double-check that `SLACK_BOT_TOKEN` starts with `xoxb-` and `SLACK_APP_TOKEN` starts with `xapp-`, since swapping them is easy. Finally, confirm you invited the bot with `/invite @Hermes Agent` in each channel, and that `SLACK_ALLOWED_USERS` lists Member IDs, not usernames.
+
+## What Can the Slack Bot Do?
+
+Once connected, the Slack gateway is a full-featured front end for Hermes. It handles voice, images, and files alongside plain text, and it supports threads, reactions, typing indicators, and streaming responses ([messaging overview](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)). Built-in slash commands — `/btw`, `/stop`, `/new`, `/model`, `/help`, `/sethome`, and `/sessions` — let you manage conversations without leaving Slack ([Slack setup docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack)). If you add the optional `assistant:write` scope, the bot can display an is-thinking status while composing longer replies. Reactions and thread replies arrive in real time, so the conversation feels native to Slack.
+
+## FAQ
+
+These are the questions beginners ask most often about running Hermes Agent in Slack, with short self-contained answers drawn from the [Slack setup docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack). If your question is not here, the troubleshooting section above covers the most common failure modes, and the docs go deeper on gateway behavior.
+
+### Does Hermes Agent Need a Public URL to Work with Slack?
+
+No. Hermes uses Socket Mode, which keeps an outbound WebSocket connection open to Slack through the `slack-bolt` and `slack_sdk` libraries ([Slack setup docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack)). Because the connection is outbound, your machine can sit behind a firewall or NAT on a home network or laptop, and you never expose a port or configure TLS certificates.
+
+### Why Does My Bot Reply in DMs but Not in Channels?
+
+Almost always a missing event subscription. The bot needs the `message.channels` event for public channels and `message.groups` for private ones; without them it only hears direct messages. The [Slack setup docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack) flag this as the most common setup issue. Add the events, reinstall the app, and run `/invite @Hermes Agent` in the channel — the bot never joins automatically.
+
+### Can I Limit Who Is Allowed to Talk to the Bot?
+
+Yes. Add a `SLACK_ALLOWED_USERS` entry in `~/.hermes/.env` containing a comma-separated list of permitted Slack Member IDs — identifiers like `U01ABC2DEF3`, not display names ([Slack setup docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack)). Anyone outside the list is ignored by the gateway. You can find a Member ID in Slack by opening a profile and choosing to copy the member ID from the account menu.
+
+## Where to Go Next
+
+That is the full loop: manifest, scopes and events, tokens, environment file, gateway, invite. From here, explore [the messaging gateway docs](/gateway/) to see how the same bot config also drives Telegram and Discord, or read [our Telegram integration guide](/blog/hermes-telegram-integration-guide/) and [our Discord bot guide](/blog/hermes-discord-bot-guide/) for sibling setups. The [getting started guide](/blog/getting-started/) covers installing Hermes itself, and [/tools/](/tools/) lists everything the agent can reach.
