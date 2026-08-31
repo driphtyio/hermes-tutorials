@@ -1,0 +1,112 @@
+---
+title: "Hermes Agent Vision: Analyze & Paste Images"
+description: "Learn how to analyze images with Hermes Agent using the /paste command, configure a vision model, and avoid the clipboard and SSH pitfalls beginners hit."
+pubDate: 2026-08-31
+tags: [hermes-agent, vision, image-analysis, cli, tutorial, multimodal]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-vision-image-analysis-1788201074.webp"
+lastVerified: "2026-08-31"
+---
+
+If you're wondering how to analyze images with Hermes Agent, the answer starts with the `/paste` command and a properly configured vision model. The open-source agent from Nous Research accepts images as base64 `image_url` content blocks and saves them to `~/.hermes/images/` as timestamped PNGs. This tutorial walks through the complete workflow, from clipboard setup to model configuration.
+
+## How This Guide Was Built
+
+This guide draws from the official [Vision Features](https://hermes-agent.nousresearch.com/docs/user-guide/features/vision) documentation, the [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) reference, the [Tools Reference](https://hermes-agent.nousresearch.com/docs/reference/tools-reference), and the [Hermes Agent GitHub repository](https://github.com/NousResearch/hermes-agent). We verified config keys, CLI commands, platform support, and tool routing against these sources. We did not verify runtime behavior across every terminal emulator or clipboard implementation. This guide is based on official documentation, pricing pages, and community reports — we did not run the tool hands-on. Last verified: August 2026.
+
+## How Do I Analyze Images With Hermes Agent?
+
+You analyze images with Hermes Agent by attaching an image via the `/paste` CLI command or by sending a base64 `image_url` content block. Vision-capable models receive the actual pixels, while text-only models route through the `vision_analyze` auxiliary tool for description ([Vision Features](https://hermes-agent.nousresearch.com/docs/user-guide/features/vision)). The `/paste` command is the most reliable method for attaching images from your clipboard.
+
+```text
+# CLI usage
+/paste          # attach image from clipboard (most reliable method)
+```
+
+## How Does the /paste Command Work?
+
+The `/paste` command reads image data directly from the system clipboard, bypassing the layered paste flow that causes Ctrl+V and Cmd+V to silently fail when the clipboard contains only an image ([Vision Features](https://hermes-agent.nousresearch.com/docs/user-guide/features/vision)). Most terminals attempt text first, then OSC52, then image — a chain that breaks when no text representation exists.
+
+## What Are the Platform Requirements for Image Paste?
+
+Linux users need `xclip` for X11 or `wl-paste` for Wayland; check your session type with `echo $XDG_SESSION_TYPE` ([Vision Features](https://hermes-agent.nousresearch.com/docs/user-guide/features/vision)). macOS uses `osascript` natively, with optional `pngpaste` via Homebrew. WSL2 relies on `powershell.exe` and may need Pillow or ImageMagick for BMP-to-PNG conversion. Windows native requires no extra tools.
+
+```text
+# platform check
+echo $XDG_SESSION_TYPE   # "wayland" = Wayland, "x11" = X11
+```
+
+## How Do I Configure a Vision Model?
+
+Set an explicit vision-capable model in `~/.hermes/config.yaml` under `auxiliary.vision` to avoid routing images through an expensive main reasoning model ([Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)). For custom OpenAI-compatible endpoints, add `supports_vision: true` to send images natively.
+
+```yaml
+# ~/.hermes/config.yaml — auxiliary vision model (full reference block)
+auxiliary:
+  vision:
+    provider: "auto"           # "auto", "openrouter", "nous", "codex", "main", etc.
+    model: ""                  # e.g. "openai/gpt-4o", "google/gemini-2.5-flash"
+    base_url: ""               # Custom OpenAI-compatible endpoint (overrides provider)
+    api_key: ""                # API key for base_url (falls back to OPENAI_API_KEY)
+    timeout: 120               # seconds — LLM API call timeout; vision payloads need generous timeout
+    download_timeout: 30       # seconds — image HTTP download; increase for slow connections
+    max_concurrency: 8         # max concurrent image encode/resize bursts
+```
+
+```yaml
+# Custom vision-capable endpoint
+model:
+  provider: custom
+  # ...
+  supports_vision: true   # send images natively; otherwise vision_analyze pre-describes them
+```
+
+## What Is the vision_analyze Tool?
+
+When the main model lacks vision support, Hermes Agent uses the `vision_analyze` tool to describe images and injects the description as text ([Tools Reference](https://hermes-agent.nousresearch.com/docs/reference/tools-reference)). This tool is part of the "vision" toolset, included in the safe profile. It ensures image analysis works even with text-only models, though at reduced fidelity compared to native vision.
+
+## Common Mistakes and How to Avoid Them
+
+### Clipboard Holds Only an Image
+
+Ctrl+V or Cmd+V does nothing when your clipboard contains only an image with no text component. The terminal's layered paste flow can't find a text representation to insert. Use `/paste` instead, which reads image data directly from the system clipboard ([Vision Features](https://hermes-agent.nousresearch.com/docs/user-guide/features/vision)).
+
+### Pasting Images Over SSH
+
+Clipboard image paste silently fails over SSH because the remote session has no access to your local clipboard. Workarounds include uploading the file directly, providing a URL, using `ssh -X` for X11 forwarding, or sending the image through a messaging platform ([Vision Features](https://hermes-agent.nousresearch.com/docs/user-guide/features/vision)).
+
+### Missing Linux Clipboard Tool
+
+Without `xclip` (X11) or `wl-paste` (Wayland), Hermes Agent cannot read your clipboard. Check your session type with `echo $XDG_SESSION_TYPE`, then install the matching tool. X11 sessions need `xclip`, while Wayland sessions require `wl-paste` ([Vision Features](https://hermes-agent.nousresearch.com/docs/user-guide/features/vision)).
+
+### Text-Only Main Model With Auto Provider
+
+With `provider: "auto"`, vision requests route to your main model, which may be text-only and expensive ([Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)). Set an explicit cheap vision model like `google/gemini-2.5-flash` on OpenRouter in the `auxiliary.vision` block to ensure proper routing and cost control.
+
+### Slow Local Vision Models and Timeout Errors
+
+Default `timeout: 120` seconds and `download_timeout: 30` seconds may be too low for local vision models or slow connections ([Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)). Increase these values in the `auxiliary.vision` config block to prevent premature timeouts during image analysis.
+
+## FAQ
+
+### Can I paste images into Hermes Agent over SSH?
+
+No — clipboard image paste does not work over SSH because the remote session has no access to your local clipboard. Use file upload, a URL, `ssh -X` X11 forwarding, or send the image through a messaging platform instead ([Vision Features](https://hermes-agent.nousresearch.com/docs/user-guide/features/vision)).
+
+### Why does Ctrl+V not paste my image in Hermes Agent?
+
+Most terminals use a layered paste flow (text → OSC52 → image) that fails when the clipboard contains only an image with no text. Use the `/paste` command instead, which reads image data directly from the system clipboard ([Vision Features](https://hermes-agent.nousresearch.com/docs/user-guide/features/vision)).
+
+### How much does it cost to analyze images with Hermes Agent?
+
+Image analysis cost depends on the vision model configured in `auxiliary.vision`. With `provider: "auto"`, images route to your main model, which may be expensive. Set an explicit cheap model like `google/gemini-2.5-flash` on OpenRouter to control costs ([Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)).
+
+## Where to Go Next
+
+Now that you can analyze images, explore other Hermes Agent capabilities. Check out our [getting started with Hermes Agent](/blog/getting-started) guide, learn about [Hermes Agent voice mode](/blog/hermes-voice-mode), or see how [Hermes Agent browser use mode](/blog/hermes-browser-use-mode) handles web tasks. For local setups, our [running Hermes Agent with local models](/blog/hermes-local-models-guide) guide covers offline configuration. The [Hermes Agent tools](/tools/) reference and [supported LLM providers](/providers/) pages are also worth bookmarking.
+
+## 📖 Related Reads
+
+- [Getting started with Hermes Agent](/blog/getting-started)
+- [Hermes Agent voice mode](/blog/hermes-voice-mode)
+- [Hermes Agent browser use mode](/blog/hermes-browser-use-mode)
+- [Running Hermes Agent with local models](/blog/hermes-local-models-guide)
