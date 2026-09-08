@@ -1,0 +1,113 @@
+---
+title: "Beginner's Guide to Hermes WhatsApp: Getting Started in 2026"
+description: "Hermes WhatsApp for beginners: how to set up WhatsApp for Hermes Agent with simple walkthroughs of the built-in Baileys bridge and the official Cloud API."
+pubDate: 2026-09-07
+tags: [whatsapp, hermes whatsapp bridge, baileys, whatsapp business cloud api, tutorial]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-whatsapp-beginners-guide-2026-1788840138.webp"
+---
+
+Yes, you can chat with Hermes Agent from WhatsApp in minutes — and this guide shows exactly how to set up WhatsApp for Hermes Agent. The built-in Baileys bridge pairs with a QR scan, no Meta developer account needed. Prefer the official route? The WhatsApp Business Cloud API works too. Here's the fastest path to both.
+
+## How This Guide Was Built
+
+This guide is based on the official Hermes WhatsApp documentation, the setup wizards' documented behavior, and community reports — we did not run the integration hands-on. Every command, environment variable, and credential rule below comes from the [Hermes WhatsApp docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp), the [WhatsApp Cloud docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp-cloud), and Meta's own requirements at [business.facebook.com](https://business.facebook.com).
+
+## What the WhatsApp integration does
+
+Hermes Agent connects to WhatsApp through a built-in bridge that emulates WhatsApp Web, so you can message your agent like any other contact. Per the [official WhatsApp docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp), two adapters exist: the Baileys bridge, which links a personal WhatsApp account via QR scan, and the WhatsApp Business Cloud API, Meta's official interface with more setup but no ban risk.
+
+## How do I connect WhatsApp to Hermes Agent?
+
+Two commands and one QR scan stand between you and a working connection. Run `hermes whatsapp` from your terminal, pick a mode, and scan the code your phone shows — the [setup wizard](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp) handles the rest. Cloud API users follow a different path with `hermes whatsapp-cloud`. The steps below cover both.
+
+### Choose your path: Baileys bridge vs. Cloud API
+
+Both adapters ship with Hermes Agent. The [Baileys bridge](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp) links a personal WhatsApp account with zero Meta paperwork; the [WhatsApp Business Cloud API](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp-cloud) is Meta's official interface and trades extra setup for stability and no ban risk. Compare them before picking:
+
+| | Baileys bridge | WhatsApp Business Cloud API |
+|---|---|---|
+| Setup effort | One command plus a QR scan | Meta account, app, WABA, webhook |
+| Ban risk | Yes — unofficial WhatsApp Web emulation | None — official Meta interface |
+| Meta account needed | No | Yes ([business.facebook.com](https://business.facebook.com)) |
+| Best for | Personal assistants, fast testing | Production bots, business numbers |
+
+### Prerequisites
+
+- **Node.js v18+ and npm** — the bridge runs as a Node process, and per the [WhatsApp docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp) you don't need Chromium or Puppeteer.
+- **A phone with WhatsApp** for QR pairing — open **Settings → Linked Devices → Link a Device** when the wizard shows the code.
+- **A supported platform:** Linux, macOS, WSL2, Windows-native, or Android-Termux.
+
+### Set up the Baileys bridge
+
+Run `hermes whatsapp`, or run `hermes gateway setup` and pick WhatsApp from the gateway wizard ([WhatsApp docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp)). Choose a mode when prompted:
+
+- `bot` — connects a dedicated number that multiple people can message. Recommended for anything beyond a quick test.
+- `self-chat` — you message yourself on your own number, ideal for trying things out.
+
+Scan the QR code from your phone when it appears, then set your policy in `~/.hermes/.env`:
+
+| Variable | Example | Notes |
+|---|---|---|
+| `WHATSAPP_ENABLED` | `true` | Turns the bridge on |
+| `WHATSAPP_MODE` | `bot` | Or `self-chat` |
+| `WHATSAPP_ALLOWED_USERS` | `15551234567` | Comma-separated, country code, no `+`; use `*` for everyone, or set `WHATSAPP_ALLOW_ALL_USERS=true` |
+
+The [WhatsApp docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp) document every variable and both modes in full.
+
+### Set up the WhatsApp Business Cloud API
+
+The official path starts at Meta. Create a Meta Business account at [business.facebook.com](https://business.facebook.com), add a Meta app with the WhatsApp product, and link a WhatsApp Business Account (WABA) — the [Cloud API docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp-cloud) walk through each screen.
+
+Before running the wizard, gather the three credentials beginners most often get wrong:
+
+- **Phone Number ID** — a numeric identifier of 15–17 digits. It is *not* your phone number.
+- **Access Token** — starts with `EAA` and runs 100+ characters. Use a System User permanent token for production; temporary tokens expire after 24 hours.
+- **App Secret** — 32 characters of lowercase hex. It's required for webhook signature verification, and the [Cloud API docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp-cloud) state that inbound webhooks are refused with a 503 error without it.
+
+Meta also delivers messages to a public HTTPS webhook URL. A [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/) via `cloudflared` is a free option — no port forwarding, no domain required.
+
+Then run `hermes whatsapp-cloud`. The wizard validates each credential as you enter it ([Cloud API docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp-cloud)).
+
+One Meta rule to plan around: the 24-hour customer service window. Replies sent more than 24 hours after a user's last message must use pre-approved message templates. That restriction comes from Meta's platform, not from Hermes ([Cloud API docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp-cloud)).
+
+### Optional: voice messages
+
+Install `ffmpeg` and keep it on your PATH. With ffmpeg available, outbound voice messages render as native WhatsApp voice-note bubbles instead of MP3 attachments, per the [WhatsApp docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp).
+
+### Ban-risk mitigation and best practices
+
+The Baileys bridge works, but it's unofficial — treat these precautions from the [WhatsApp docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp) as mandatory:
+
+- Use a dedicated bot number: a free US Google Voice number, a prepaid SIM, or a VoIP line.
+- Send no bulk messages. Keep exchanges conversational, and never auto-message strangers.
+- WhatsApp Web protocol updates can temporarily break the bridge. The fix is to pull the latest Hermes version and re-pair.
+
+## FAQ
+
+Quick answers to the questions beginners ask most about the Hermes WhatsApp integration. Each one summarizes the official documentation rather than forum guesswork. If your question isn't covered here, the [WhatsApp docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp) and the [Cloud API docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp-cloud) go deeper on bridge modes, credentials, and Meta-side settings.
+
+### Do I need a Meta Business account?
+
+No — not for the Baileys bridge. It pairs with a regular personal WhatsApp account through a QR scan, so there's nothing to create on Meta's side. A Meta Business account at [business.facebook.com](https://business.facebook.com) is only required if you choose the WhatsApp Business Cloud API, along with a Meta app and a linked WhatsApp Business Account.
+
+### Will my WhatsApp account get banned?
+
+There's real risk on the Baileys path: it emulates WhatsApp Web, which isn't an approved use of a personal account. The [Hermes docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp) recommend a dedicated bot number — a free Google Voice number, a prepaid SIM, or VoIP — and conversational, low-volume messaging. The Cloud API carries no ban risk because Meta operates it officially.
+
+### Can I run both bridges at the same time?
+
+The documentation treats them as two independent adapters, each set up through its own wizard and configured with its own settings in `~/.hermes/.env`. A common community pattern is Baileys on a personal number for testing and the Cloud API on a production number. Confirm current behavior in the [WhatsApp docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp) before combining them.
+
+## Where to Go Next
+
+That covers how to set up WhatsApp for Hermes Agent from both paths. Next, browse the [tools library](/tools/), teach the agent new [skills](/skills/), extend it with [plugins](/plugins/), connect more channels through the [gateway](/gateway/), or swap in different [model providers](/providers/). Official references for today's setup are linked below.
+
+**Related guides:**
+
+- [Hermes Discord setup guide](/blog/hermes-discord-guide/)
+- [Hermes Telegram setup guide](/blog/hermes-telegram-guide/)
+
+**Official documentation:**
+
+- [Hermes WhatsApp docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp)
+- [Hermes WhatsApp Cloud docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp-cloud)

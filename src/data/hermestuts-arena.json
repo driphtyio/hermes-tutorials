@@ -848,7 +848,7 @@
             "Well-structured and readable"
           ],
           "weaknesses": [
-            "Fatally inaccurate \u2014 fabricated entire async_delegation toolset with 6 nonexistent tools",
+            "Fatally inaccurate — fabricated entire async_delegation toolset with 6 nonexistent tools",
             "Invented release date and GitHub issue reference",
             "Used TypeScript syntax for Python tool calls",
             "All code examples use non-existent API"
@@ -1275,7 +1275,7 @@
             "E-E-A-T block and FAQ section included"
           ],
           "weaknesses": [
-            "Quality criterion scored low (4.0) by judge \u2014 structural improvements applied in QA"
+            "Quality criterion scored low (4.0) by judge — structural improvements applied in QA"
           ]
         },
         {
@@ -1417,7 +1417,7 @@
           "model": "mimo-v2.5",
           "provider": "xiaomi",
           "label": "B",
-          "note": "DNF \u2014 circuit breaker open for xiaomi provider"
+          "note": "DNF — circuit breaker open for xiaomi provider"
         },
         {
           "model": "poolside-laguna-s-2.1",
@@ -1517,7 +1517,7 @@
             "Good internal linking to sibling posts"
           ],
           "weaknesses": [
-            "Quality scores declined across passes (8\u21926\u21924) \u2014 structural issues"
+            "Quality scores declined across passes (8→6→4) — structural issues"
           ]
         },
         {
@@ -1526,7 +1526,7 @@
           "provider": "xiaomi",
           "score": 0.0,
           "word_count": 0,
-          "note": "DNF \u2014 circuit breaker open for xiaomi provider"
+          "note": "DNF — circuit breaker open for xiaomi provider"
         }
       ],
       "winner": "poolside-laguna-s-2.1",
@@ -1749,7 +1749,7 @@
             "Self-contained answers added under every H2 in QA pass"
           ],
           "weaknesses": [
-            "Initial pass without verified-fact preamble scored 4.75 \u2014 needed judge preamble",
+            "Initial pass without verified-fact preamble scored 4.75 — needed judge preamble",
             "QA added answer paragraphs under Prerequisites and Common Mistakes"
           ],
           "rank": 1
@@ -1842,7 +1842,7 @@
             "Reasonable length"
           ],
           "weaknesses": [
-            "Sourcing score 4/10 \u2014 sparse inline citation links"
+            "Sourcing score 4/10 — sparse inline citation links"
           ],
           "rank": 3
         }
@@ -2055,7 +2055,7 @@
         "fixes_applied": [
           "Meta description rewritten to 154 chars (was 177)",
           "All bare [Source](url) citations replaced with descriptive anchor text",
-          "Removed non-allowlisted URL (install.sh) \u2014 only the 6 verified URLs remain",
+          "Removed non-allowlisted URL (install.sh) — only the 6 verified URLs remain",
           "Added inline links in E-E-A-T block, preserved canonical honesty phrasing",
           "Removed implied hands-on testing language (passive rephrase)",
           "Removed duplicate 'How This Guide Was Built' section at end",
@@ -2238,7 +2238,7 @@
     {
       "match_id": "hermestuts-hermes-cloud-2026-08-15",
       "date": "2026-08-15",
-      "topic": "Hermes Cloud Preview \u2014 Nous Research's managed cloud for Hermes Agent (announced Jul 8 2026, Desktop auto-discovery Jul 10, cold-start fix PR #86477 merged Aug 14)",
+      "topic": "Hermes Cloud Preview — Nous Research's managed cloud for Hermes Agent (announced Jul 8 2026, Desktop auto-discovery Jul 10, cold-start fix PR #86477 merged Aug 14)",
       "slug": "hermes-cloud-preview",
       "type": "news",
       "category": "feature",
@@ -2671,7 +2671,7 @@
             "Highest judge mean (8.57), tightest pass spread (8.20-8.90)",
             "Complete structure: verdict-first opening, E-E-A-T block, 2 ASCII diagrams, keyword H2, FAQ",
             "All 8 external sources verified HTTP 200; 5 internal links to live routes",
-            "Canonical honesty phrasing \u2014 no implied hands-on testing"
+            "Canonical honesty phrasing — no implied hands-on testing"
           ],
           "weaknesses": [],
           "rank": 1
@@ -2716,7 +2716,7 @@
           "strengths": [
             "Second-highest judge mean (8.53)",
             "Judge pass 3 fell back to deepseek-v4-flash-0731 after OpenRouter 429 (documented fallback)",
-            "Noisy pass 1 (quality 4.0) \u2014 flagged spread 2.15, mean still passed"
+            "Noisy pass 1 (quality 4.0) — flagged spread 2.15, mean still passed"
           ],
           "weaknesses": [
             "Judge pass spread 2.15 > 1.5 (noisy single pass)"
@@ -2780,15 +2780,15 @@
     {
       "match_id": "hermestuts-local-models-2026-08-17",
       "date": "2026-08-17",
-      "topic": "Beginner's Guide to Hermes Local Models 2026 (how to run Hermes Agent with local models \u2014 Ollama + llama.cpp setup for beginners)",
+      "topic": "Beginner's Guide to Hermes Local Models 2026 (how to run Hermes Agent with local models — Ollama + llama.cpp setup for beginners)",
       "slug": "hermes-local-models-guide",
       "type": "tutorial",
       "category": "tutorial",
       "pipeline": "cron-subagent-arena",
       "orchestrator": "deepseek-v4-flash (cron)",
-      "plan_model": "deepseek-v4-flash (delegation pin fallback \u2014 mimo-v2.5-pro not routable in cron)",
-      "research_model": "deepseek-v4-flash (delegation pin fallback \u2014 gpt-5.6-luna not routable in cron)",
-      "qa_model": "deepseek-v4-flash (delegation pin fallback \u2014 glm-5.2 not routable in cron)",
+      "plan_model": "deepseek-v4-flash (delegation pin fallback — mimo-v2.5-pro not routable in cron)",
+      "research_model": "deepseek-v4-flash (delegation pin fallback — gpt-5.6-luna not routable in cron)",
+      "qa_model": "deepseek-v4-flash (delegation pin fallback — glm-5.2 not routable in cron)",
       "judge_model": "qwen3.7-flash (deepseek-v4-flash-0731 fallback on 429)",
       "models_competed": [
         {
@@ -3032,7 +3032,7 @@
             "Canonical honesty phrasing present; all external sources verified HTTP 200"
           ],
           "weaknesses": [
-            "Quality (7-8) and engagement (6-7) lower than accuracy/sourcing \u2014 some H2 answer paragraphs slightly over 60 words before QA trim"
+            "Quality (7-8) and engagement (6-7) lower than accuracy/sourcing — some H2 answer paragraphs slightly over 60 words before QA trim"
           ],
           "rank": 1
         },
@@ -3225,8 +3225,8 @@
           ],
           "weaknesses": [
             "Quality criterion noisy (8/4/4 across passes)",
-            "FAQ Q1 opened with 'Yes' (contradicted frozen snapshot) and generic [Source] anchors \u2014 fixed in QA",
-            "Iteration 2 DNF (API timeout 60s on longer brief) \u2014 judged on iteration 1 draft"
+            "FAQ Q1 opened with 'Yes' (contradicted frozen snapshot) and generic [Source] anchors — fixed in QA",
+            "Iteration 2 DNF (API timeout 60s on longer brief) — judged on iteration 1 draft"
           ],
           "rank": 1
         },
@@ -3314,11 +3314,11 @@
             }
           ],
           "strengths": [
-            "Pass 1 scored 8.45 \u2014 best single pass of the match",
+            "Pass 1 scored 8.45 — best single pass of the match",
             "Iteration-2 rewrite fixed the iteration-1 frontmatter code-fence bug"
           ],
           "weaknesses": [
-            "Mixed judge: passes 2-3 fell back to deepseek-v4-flash-0731 after qwen 429s \u2014 pass spread 1.95 (noisy), mean unreliable",
+            "Mixed judge: passes 2-3 fell back to deepseek-v4-flash-0731 after qwen 429s — pass spread 1.95 (noisy), mean unreliable",
             "heroImage URL typo (placeack.co) required QA fix"
           ],
           "rank": 3
@@ -3329,7 +3329,7 @@
       "threshold_met": true,
       "qa": {
         "verified": true,
-        "notes": "All 9 external+internal URLs HTTP 200 (verified via script); winner QA-fixed from mimo r1 draft: FAQ Q1 corrected to 'No' (frozen snapshot), [Source] anchors made descriptive, 'Cured' typo fixed, H1 added, direct-answer under Memory Providers trimmed 62->42 words, Common Mistakes intro added; HERO_IMAGE_PROMPT stripped; zero [N] refs, zero HTML comments, zero slop words; E-E-A-T block present; FAQ 3 question-H3s; meta description 153 chars prose no stats; body 1259 words; heroImage generated via gen-image-verified.sh (Lumenfall, free) + verified. threshold_met false (winner mean 7.93 < 8.0; 2 redo rounds completed \u2014 mimo DNF iteration 2; shipped best-effort per user policy 2026-08-09)."
+        "notes": "All 9 external+internal URLs HTTP 200 (verified via script); winner QA-fixed from mimo r1 draft: FAQ Q1 corrected to 'No' (frozen snapshot), [Source] anchors made descriptive, 'Cured' typo fixed, H1 added, direct-answer under Memory Providers trimmed 62->42 words, Common Mistakes intro added; HERO_IMAGE_PROMPT stripped; zero [N] refs, zero HTML comments, zero slop words; E-E-A-T block present; FAQ 3 question-H3s; meta description 153 chars prose no stats; body 1259 words; heroImage generated via gen-image-verified.sh (Lumenfall, free) + verified. threshold_met false (winner mean 7.93 < 8.0; 2 redo rounds completed — mimo DNF iteration 2; shipped best-effort per user policy 2026-08-09)."
       }
     },
     {
@@ -3406,7 +3406,7 @@
           ],
           "weaknesses": [
             "Quality criterion noisy across passes (3/8/8); judge passes 2-3 used deepseek-v4-flash-0731 fallback after qwen 429",
-            "Pass spread 1.60 in r2 \u2014 judge noise, not content defect (QA verified every claim against official docs)"
+            "Pass spread 1.60 in r2 — judge noise, not content defect (QA verified every claim against official docs)"
           ],
           "rank": 1
         },
@@ -3508,7 +3508,7 @@
       "threshold_met": true,
       "qa": {
         "verified": true,
-        "notes": "All external links verified (Hermes Discord docs + Discord Developer Portal HTTP 200 via web_extract; docs page fetched full text). Winner = r2 deepseek draft QA-fixed: 'AI gateway' -> 'AI agent'; Troubleshooting H2 given a proper 40-60 word self-contained answer; removed unsourced 'no hidden fees' claim from r3 (r2 used instead); meta description 157 chars prose no stats; title 43 chars; body 976 words; 8 H2s incl. question-shaped 'How to Connect Hermes Agent to Discord' + FAQ with 3 question H3s; E-E-A-T 'How This Guide Was Built' block present with canonical honesty line; 8 internal + 12 external inline links (no [N], no HTML comments, no HERO_IMAGE_PROMPT, no slop words); heroImage generated via gen-image-verified.sh (Lumenfall free) + verified serving image/jpeg. threshold_met false (winner mean 7.43 < 8.0; 3 redo iterations completed per policy 2026-08-09 \u2014 r3 means 6.18-6.43 on near-identical content confirm qwen judge noise, spreads 1.6-2.8)."
+        "notes": "All external links verified (Hermes Discord docs + Discord Developer Portal HTTP 200 via web_extract; docs page fetched full text). Winner = r2 deepseek draft QA-fixed: 'AI gateway' -> 'AI agent'; Troubleshooting H2 given a proper 40-60 word self-contained answer; removed unsourced 'no hidden fees' claim from r3 (r2 used instead); meta description 157 chars prose no stats; title 43 chars; body 976 words; 8 H2s incl. question-shaped 'How to Connect Hermes Agent to Discord' + FAQ with 3 question H3s; E-E-A-T 'How This Guide Was Built' block present with canonical honesty line; 8 internal + 12 external inline links (no [N], no HTML comments, no HERO_IMAGE_PROMPT, no slop words); heroImage generated via gen-image-verified.sh (Lumenfall free) + verified serving image/jpeg. threshold_met false (winner mean 7.43 < 8.0; 3 redo iterations completed per policy 2026-08-09 — r3 means 6.18-6.43 on near-identical content confirm qwen judge noise, spreads 1.6-2.8)."
       }
     },
     {
@@ -3689,7 +3689,7 @@
     {
       "match_id": "hermestuts-subagent-arena-2026-08-24",
       "date": "2026-08-24",
-      "topic": "How to compare AI models with Hermes Agent \u2014 Beginner's Guide to Hermes Agent's Arena (subagent arena A/B/C pipeline tutorial)",
+      "topic": "How to compare AI models with Hermes Agent — Beginner's Guide to Hermes Agent's Arena (subagent arena A/B/C pipeline tutorial)",
       "slug": "hermes-subagent-arena-guide",
       "type": "tutorial",
       "category": "guide",
@@ -3851,7 +3851,7 @@
             "Highest judge mean (9.20); strong step-by-step coverage with inline code examples"
           ],
           "weaknesses": [
-            "Initial draft had a duplicate H2 and FAQ heading typo \u2014 fixed in QA fill"
+            "Initial draft had a duplicate H2 and FAQ heading typo — fixed in QA fill"
           ],
           "rank": 1
         }
@@ -4016,7 +4016,7 @@
       "threshold_met": true,
       "qa": {
         "verified": true,
-        "notes": "Winner = poolside draft QA-filled. First judge pass without verified-fact preamble: all 3 drafts failed (means 6.05/4.87/5.17 \u2014 qwen3.7-flash training-cutoff penalty on real 2026 facts: Claude Fable 5, GPT-5.6 Luna, Composer 2.5, $20 pricing). Re-judged with [VERIFIED FACT CONTEXT] preamble (proven fix): poolside 8.18, deepseek 8.15, mimo 7.65. QA fill on winner: FAQ converted to question-shaped H3s; Where-to-Go-Next got real internal links; install method corrected to one-line installer/desktop/Docker; Cursor automation row corrected (Cloud Agents on paid tiers); stars updated 230K+ -> 236K+ (GitHub API 2026-08-25); 15 internal links (hubs + 3 sibling posts) + 13 external links all HTTP 200; desc 159 chars prose no stats; title 61 chars keyword-first; 1188 words; no [N], no HTML comments, no slop words, no HERO_IMAGE_PROMPT leakage; heroImage Lumenfall HTTP 200 image/jpeg. threshold_met true (poolside mean 8.18 >= 8.0)."
+        "notes": "Winner = poolside draft QA-filled. First judge pass without verified-fact preamble: all 3 drafts failed (means 6.05/4.87/5.17 — qwen3.7-flash training-cutoff penalty on real 2026 facts: Claude Fable 5, GPT-5.6 Luna, Composer 2.5, $20 pricing). Re-judged with [VERIFIED FACT CONTEXT] preamble (proven fix): poolside 8.18, deepseek 8.15, mimo 7.65. QA fill on winner: FAQ converted to question-shaped H3s; Where-to-Go-Next got real internal links; install method corrected to one-line installer/desktop/Docker; Cursor automation row corrected (Cloud Agents on paid tiers); stars updated 230K+ -> 236K+ (GitHub API 2026-08-25); 15 internal links (hubs + 3 sibling posts) + 13 external links all HTTP 200; desc 159 chars prose no stats; title 61 chars keyword-first; 1188 words; no [N], no HTML comments, no slop words, no HERO_IMAGE_PROMPT leakage; heroImage Lumenfall HTTP 200 image/jpeg. threshold_met true (poolside mean 8.18 >= 8.0)."
       }
     },
     {
@@ -4212,7 +4212,7 @@
       "plan_model": "mimo-v2.5-pro (via arena-direct-runner call_model)",
       "research_model": "cron orchestrator web research from primary sources (docs verified HTTP 200)",
       "qa_model": "deepseek-v4-flash (cron orchestrator QA pass + parent-session fill)",
-      "judge_model": "qwen3.7-flash (multipass 3, mean-gated, verified-fact preamble \u2014 round 1 without preamble failed all drafts, proven qwen training-cutoff penalty)",
+      "judge_model": "qwen3.7-flash (multipass 3, mean-gated, verified-fact preamble — round 1 without preamble failed all drafts, proven qwen training-cutoff penalty)",
       "models_competed": [
         {
           "model": "deepseek-v4-flash",
@@ -4422,7 +4422,7 @@
     {
       "match_id": "hermestuts-vision-2026-08-31",
       "date": "2026-08-31",
-      "topic": "Hermes Agent Vision & Image Analysis: how to analyze images with Hermes Agent (CLI /paste command, vision_analyze tool, auxiliary.vision config, platform requirements, SSH gotchas) \u2014 Monday tutorial guide (Week rotation)",
+      "topic": "Hermes Agent Vision & Image Analysis: how to analyze images with Hermes Agent (CLI /paste command, vision_analyze tool, auxiliary.vision config, platform requirements, SSH gotchas) — Monday tutorial guide (Week rotation)",
       "slug": "hermes-agent-vision-image-analysis",
       "type": "tutorial",
       "category": "guide",
@@ -4497,7 +4497,7 @@
             "Selected as winner: QA-fixed and published; all config blocks verbatim from official docs; every claim traceable to a 200-verified source"
           ],
           "weaknesses": [
-            "qwen judge noisy (spread 2.10 on identical content); re-judge after QA link fixes regressed to 7.37 (noise, not content \u2014 content strictly improved)",
+            "qwen judge noisy (spread 2.10 on identical content); re-judge after QA link fixes regressed to 7.37 (noise, not content — content strictly improved)",
             "Mean 7.87 < 8.0 gate; threshold_met false"
           ],
           "rank": 1
@@ -4540,7 +4540,7 @@
             }
           ],
           "strengths": [
-            "Highest raw judge mean (7.90) with tightest spread (0.50) \u2014 most reliable score this match",
+            "Highest raw judge mean (7.90) with tightest spread (0.50) — most reliable score this match",
             "Correct /blog/ internal link paths from the start"
           ],
           "weaknesses": [
@@ -4636,7 +4636,7 @@
           ],
           "weaknesses": [
             "Over 1500-word cap (1544); noisiest judging (spread 2.45); pass 2 sourcing collapsed to 3.0",
-            "Lowest mean \u2014 not competitive this match"
+            "Lowest mean — not competitive this match"
           ],
           "rank": 4
         }
@@ -4646,7 +4646,239 @@
       "threshold_met": false,
       "qa": {
         "verified": true,
-        "notes": "Winner = deepseek-v4-flash draft QA-fixed: internal links converted from /posts/ to /blog/<slug>/ (10 internal links), HERO_IMAGE_PROMPT stripped, meta description extended 141->153 chars (150-160 prose, no stats), heroImage generated via gen-image-verified.sh (Lumenfall free) + verified serving HTTP 200 image/webp. All 4 external links curl-verified 200 (vision/configuration/tools-reference docs + GitHub repo). No slop words, no [N] refs, no HTML comments; title 43 chars (tool name in first 3 words); body 1027 words (800-1500); E-E-A-T 'How This Guide Was Built' block with canonical honesty line; question-shaped H2 present; FAQ with 3 question H3s. threshold_met FALSE (winner mean 7.87 < 8.0): mimo-v2.5 edged the judge mean (7.90 vs 7.87, within noise) but its draft wrapped frontmatter in ```yaml fences (build-breaking), so the clean deepseek draft shipped; 1 redo iteration executed (QA-fixed re-judge 7.37 \u2014 noise regression on identical content, documented qwen spread behavior); per policy 2026-08-09 redo budget, shipped best-effort with threshold_met: false."
+        "notes": "Winner = deepseek-v4-flash draft QA-fixed: internal links converted from /posts/ to /blog/<slug>/ (10 internal links), HERO_IMAGE_PROMPT stripped, meta description extended 141->153 chars (150-160 prose, no stats), heroImage generated via gen-image-verified.sh (Lumenfall free) + verified serving HTTP 200 image/webp. All 4 external links curl-verified 200 (vision/configuration/tools-reference docs + GitHub repo). No slop words, no [N] refs, no HTML comments; title 43 chars (tool name in first 3 words); body 1027 words (800-1500); E-E-A-T 'How This Guide Was Built' block with canonical honesty line; question-shaped H2 present; FAQ with 3 question H3s. threshold_met FALSE (winner mean 7.87 < 8.0): mimo-v2.5 edged the judge mean (7.90 vs 7.87, within noise) but its draft wrapped frontmatter in ```yaml fences (build-breaking), so the clean deepseek draft shipped; 1 redo iteration executed (QA-fixed re-judge 7.37 — noise regression on identical content, documented qwen spread behavior); per policy 2026-08-09 redo budget, shipped best-effort with threshold_met: false."
+      }
+    },
+    {
+      "match_id": "hermestuts-whatsapp-2026-09-07",
+      "date": "2026-09-07",
+      "topic": "Beginner's Guide to Hermes WhatsApp: Getting Started in 2026 (Baileys bridge + WhatsApp Business Cloud API setup) — Monday tutorial guide",
+      "slug": "hermes-whatsapp-beginners-guide-2026",
+      "type": "tutorial",
+      "category": "guide",
+      "pipeline": "cron-subagent-arena (manual resume after cron tool-cap + delegation timeout)",
+      "orchestrator": "glm-5.3-flash (hermes)",
+      "plan_model": "mimo-v2.5-pro (via arena-direct-runner call_model)",
+      "research_model": "deepseek-v4-flash (cron delegation pin)",
+      "qa_model": "deepseek-v4-flash (delegation pin, not glm-5.2)",
+      "judge_model": "qwen3.7-flash (multipass 3, mean-gated)",
+      "models_competed": [
+        {
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "A"
+        },
+        {
+          "model": "mimo-v2.5",
+          "provider": "xiaomi",
+          "label": "B"
+        },
+        {
+          "model": "glm-5.3-flash",
+          "provider": "zai",
+          "label": "C"
+        },
+        {
+          "model": "poolside-laguna-s-2.1",
+          "provider": "openrouter",
+          "label": "D"
+        }
+      ],
+      "results": [
+        {
+          "model": "glm-5.3-flash",
+          "model_id": "glm-5.3-flash",
+          "provider": "zai",
+          "score": 8.4,
+          "weighted_score": 8.4,
+          "word_count": 1234,
+          "judge_mean": 8.4,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 8.6,
+              "accuracy": 9.0,
+              "sourcing": 9.0,
+              "quality": 8.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            },
+            {
+              "pass": 2,
+              "weighted": 8.7,
+              "accuracy": 9.0,
+              "sourcing": 9.0,
+              "quality": 8.0,
+              "practicality": 9.0,
+              "engagement": 8.0
+            },
+            {
+              "pass": 3,
+              "weighted": 7.9,
+              "accuracy": 8.0,
+              "sourcing": 9.0,
+              "quality": 6.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            }
+          ],
+          "strengths": [
+            "Only draft to clear the 8.0 gate (R1 7.35 → R2 8.40 after prompt-refined redo)",
+            "Pure-qwen confirm judge 8.40 (3 clean passes, no fallback) on top of 8.57 mixed-fallback 2-pass mean — consistent across judges/passes",
+            "Verbatim honesty canon, dense inline citations, question-shaped H2, FAQ, clean frontmatter"
+          ],
+          "weaknesses": [
+            "R1 draft missed the gate like every builder; needed the round-2 redo"
+          ],
+          "rank": 1
+        },
+        {
+          "model": "mimo-v2.5",
+          "model_id": "mimo-v2.5",
+          "provider": "xiaomi",
+          "score": 7.98,
+          "weighted_score": 7.98,
+          "word_count": 1116,
+          "judge_mean": 7.98,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 7.85,
+              "accuracy": 8.0,
+              "sourcing": 6.0,
+              "quality": 9.0,
+              "practicality": 9.0,
+              "engagement": 8.0
+            },
+            {
+              "pass": 2,
+              "weighted": 7.8,
+              "accuracy": 8.0,
+              "sourcing": 9.0,
+              "quality": 6.0,
+              "practicality": 9.0,
+              "engagement": 6.0
+            },
+            {
+              "pass": 3,
+              "weighted": 8.3,
+              "accuracy": 8.0,
+              "sourcing": 9.0,
+              "quality": 8.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            }
+          ],
+          "strengths": [
+            "Most consistent builder across rounds (R1 7.87 → R2 7.98)",
+            "Strong practicality every pass"
+          ],
+          "weaknesses": [
+            "Mean stuck just under the gate in both rounds"
+          ],
+          "rank": 2
+        },
+        {
+          "model": "poolside-laguna-s-2.1",
+          "model_id": "poolside-laguna-s-2.1",
+          "provider": "openrouter",
+          "score": 7.87,
+          "weighted_score": 7.87,
+          "word_count": 1015,
+          "judge_mean": 7.87,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 8.5,
+              "accuracy": 8.0,
+              "sourcing": 9.0,
+              "quality": 9.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            },
+            {
+              "pass": 2,
+              "weighted": 7.85,
+              "accuracy": 8.0,
+              "sourcing": 8.0,
+              "quality": 7.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            },
+            {
+              "pass": 3,
+              "weighted": 7.25,
+              "accuracy": 8.0,
+              "sourcing": 7.0,
+              "quality": 6.0,
+              "practicality": 8.0,
+              "engagement": 7.0
+            }
+          ],
+          "strengths": [
+            "Biggest R1→R2 improvement (+0.35)",
+            "Pass-1 form is gate-worthy"
+          ],
+          "weaknesses": [
+            "Shortest draft (1015 words)",
+            "Quality dimension faded across passes"
+          ],
+          "rank": 3
+        },
+        {
+          "model": "deepseek-v4-flash",
+          "model_id": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "score": 7.75,
+          "weighted_score": 7.75,
+          "word_count": 1206,
+          "judge_mean": 7.75,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 7.4,
+              "accuracy": 8.0,
+              "sourcing": 9.0,
+              "quality": 4.0,
+              "practicality": 9.0,
+              "engagement": 6.0
+            },
+            {
+              "pass": 2,
+              "weighted": 8.3,
+              "accuracy": 8.0,
+              "sourcing": 9.0,
+              "quality": 8.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            },
+            {
+              "pass": 3,
+              "weighted": 7.55,
+              "accuracy": 7.0,
+              "sourcing": 8.0,
+              "quality": 7.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            }
+          ],
+          "strengths": [
+            "Sourcing solid (8-9 all passes)",
+            "Improved R1 7.55 → R2 7.75"
+          ],
+          "weaknesses": [
+            "Pass-1 quality collapsed to 4.0 — noisiest quality dimension",
+            "Lowest R2 mean"
+          ],
+          "rank": 4
+        }
+      ],
+      "winner": "glm-5.3-flash",
+      "winner_score": 8.4,
+      "threshold_met": true,
+      "qa": {
+        "verified": true,
+        "notes": "Round 1 (pure qwen3.7-flash, 3 passes each): all four drafts FAILED — deepseek 7.55, poolside 7.52, mimo 7.87, glm 7.35. Round 2 prompt-refined redo (per 2026-08-09 redo policy): deepseek 7.75, poolside 7.87, mimo 7.98, glm 8.57 PASS (2-pass mean; qwen 429s hit 3 of 4 drafts, fallback deepseek-0731 supplied both glm passes per documented fallback order). Because fallback-mixed means are noisy, glm was re-confirmed with a fresh pure-qwen 3-pass run: 8.60/8.70/7.90 = 8.40 PASS, zero fallbacks — this is the recorded score. Shipped draft: glm R2 (1234 words), QA-checked: honesty canon verbatim ('we did not run the integration hands-on'), no HTML comments, no [N] markers, HERO_IMAGE_PROMPT stripped (0 hits), heroImage added via gen-image-verified.sh (Lumenfall FLUX, exit-0 URL-200 gate) https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-whatsapp-beginners-guide-2026-1788840138.webp. History: cron ab2b7a0a375a died at tool cap post-plan; first resume delegation timed out mid-round-2-judge (drafts preserved); tail completed by orchestrator. Repo branch verified on main before commit (stale master checkout hazard found and fixed by cron run)."
       }
     }
   ],
@@ -4655,9 +4887,9 @@
       "model": "deepseek-v4-flash",
       "provider": "deepseek",
       "family": "deepseek",
-      "matches": 24,
+      "matches": 25,
       "wins": 11,
-      "losses": 13,
+      "losses": 14,
       "avgScore": 8.4,
       "bestScore": 9.4,
       "rank": 1
@@ -4666,9 +4898,9 @@
       "model": "mimo-v2.5",
       "provider": "xiaomi",
       "family": "mimo",
-      "matches": 21,
+      "matches": 22,
       "wins": 6,
-      "losses": 15,
+      "losses": 16,
       "avgScore": 8.3,
       "bestScore": 9.3,
       "rank": 2
@@ -4677,9 +4909,9 @@
       "model": "poolside-laguna-s-2.1",
       "provider": "openrouter",
       "family": "poolside",
-      "matches": 16,
+      "matches": 17,
       "wins": 4,
-      "losses": 12,
+      "losses": 13,
       "avgScore": 8.2,
       "bestScore": 9.1,
       "rank": 3
@@ -4688,10 +4920,10 @@
       "model": "glm-5.3-flash",
       "provider": "zai",
       "family": "glm",
-      "matches": 1,
-      "wins": 1,
+      "matches": 2,
+      "wins": 2,
       "losses": 0,
-      "avgScore": 9.4,
+      "avgScore": 8.9,
       "bestScore": 9.4,
       "rank": 4
     },
@@ -4729,6 +4961,6 @@
       "rank": 7
     }
   ],
-  "last_updated": "2026-08-31",
-  "total_matches": 25
+  "last_updated": "2026-09-07",
+  "total_matches": 26
 }
