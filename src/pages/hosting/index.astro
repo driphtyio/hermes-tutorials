@@ -1,136 +1,71 @@
 ---
-import BaseHead from '../../components/BaseHead.astro';
-import Footer from '../../components/Footer.astro';
-import Header from '../../components/Header.astro';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+import Reference from '../../layouts/Reference.astro';
 import { hosting, hostingCategories } from '../../data/hosting';
 
-const total = hosting.length;
-const freeCount = hosting.filter(h => h.price === '$0' || h.price === 'Free tier').length;
-const vpsCount = hosting.filter(h => h.category === 'vps').length;
-const selfCount = hosting.filter(h => h.category === 'selfhosted').length;
+const categories = hostingCategories.filter((c) => hosting.some((h) => h.category === c.id));
+
+const labelFor = (id: string) => {
+  const meta = hostingCategories.find((c) => c.id === id);
+  return meta ? `${meta.icon} ${meta.label}` : id;
+};
+
+const stats = [
+  { label: 'Total Options', value: hosting.length },
+  { label: 'VPS', value: hosting.filter((h) => h.category === 'vps').length },
+  { label: 'Self-Hosted', value: hosting.filter((h) => h.category === 'selfhosted').length },
+  { label: 'Free Options', value: hosting.filter((h) => h.category === 'free').length },
+];
+
+const description = `${hosting.length} ways to host Hermes Agent — VPS, self-hosted hardware, free tiers, and serverless. Reviews, specs, prices, and setup guides for every budget.`;
 ---
 
-<!doctype html>
-<html lang="en">
-	<head>
-		<BaseHead title={`Hosting — ${SITE_TITLE}`} description={`${total} hosting options for Hermes Agent — VPS, self-hosted hardware, free tiers, and serverless. Reviews, specs, prices, and setup guides.`} />
-		<style>
-			.badge-vps { background: rgba(108, 92, 231, 0.2); color: var(--accent-light); }
-			.badge-self { background: rgba(46, 125, 50, 0.2); color: #66bb6a; }
-			.badge-free { background: rgba(230, 81, 0, 0.2); color: #ffa726; }
-			.badge-serverless { background: rgba(33, 150, 243, 0.2); color: #42a5f5; }
-			.card .price-row { display: flex; align-items: baseline; gap: 0.4em; margin-bottom: 0.5em; flex-wrap: wrap; }
-			.card .price { font-size: 1.3em; font-weight: 700; color: #fff; }
-			.card .price-unit { font-size: 0.75em; color: var(--text-muted); }
-			.card .specs { font-size: 0.78em; color: var(--text-muted); margin-bottom: 0.5em; line-height: 1.5; }
-			.card .recommended { font-size: 0.82em; color: var(--text-secondary); margin-bottom: 0.6em; padding: 0.5em 0.7em; background: var(--bg-tertiary); border-radius: var(--radius-sm); border-left: 2px solid var(--accent); }
-			.card .lists { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5em; margin-bottom: 0.6em; }
-			.card .list-col { font-size: 0.75em; line-height: 1.5; }
-			.card .list-col .list-title { font-size: 0.7em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2em; display: block; }
-			.card .list-col .pro-title { color: #66bb6a; }
-			.card .list-col .con-title { color: #ef5350; }
-			.card .list-col ul { margin: 0; padding-left: 1em; color: var(--text-muted); }
-			.card .list-col li { margin-bottom: 0.15em; }
-			.card .howto { font-size: 0.78em; color: var(--text-secondary); margin-bottom: 0.5em; line-height: 1.5; }
-			.howto-label { font-size: 0.7em; font-weight: 600; color: #66bb6a; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.15em; }
-			@media (max-width: 720px) {
-				.card .lists { grid-template-columns: 1fr; }
-			}
-		</style>
-	</head>
-	<body>
-		<Header />
-		<main>
-			<div class="page-header">
-				<h1>Hosting Guide</h1>
-				<p class="subtitle">{total} ways to host Hermes Agent — {vpsCount} VPS providers, {selfCount} self-hosted options, {freeCount} free tiers. Reviews, specs, and setup guides for every budget.</p>
-			</div>
-
-			<div class="stats-bar">
-				<div class="stat-item"><div class="stat-number">{total}</div><div class="stat-label">Total Options</div></div>
-				<div class="stat-item"><div class="stat-number">{vpsCount}</div><div class="stat-label">VPS</div></div>
-				<div class="stat-item"><div class="stat-number">{selfCount}</div><div class="stat-label">Self-Hosted</div></div>
-				<div class="stat-item"><div class="stat-number">{freeCount}</div><div class="stat-label">Free Options</div></div>
-			</div>
-
-			<div class="search-box">
-				<input class="search-input" type="text" id="search" placeholder="Search hosting options..." />
-			</div>
-
-			<div class="filter-bar" id="filters">
-				<button class="filter-btn active" data-cat="all">All</button>
-				{hostingCategories.map(cat => (
-					<button class="filter-btn" data-cat={cat.id}>{cat.icon} {cat.label}</button>
-				))}
-			</div>
-
-			<div class="card-grid" id="hostGrid">
-				{hosting.map(h => (
-					<div class="card" data-category={h.category} data-name={h.name.toLowerCase()} data-desc={h.description.toLowerCase()}>
-						<div class="category-label">{hostingCategories.find(c => c.id === h.category)?.icon} {hostingCategories.find(c => c.id === h.category)?.label}</div>
-						<div class="top-row">
-							<div class="name-row">
-								<h2>{h.name}</h2>
-								<span class={`badge badge-${h.category === 'free' ? 'free' : h.category === 'selfhosted' ? 'self' : h.category === 'serverless' ? 'serverless' : 'vps'}`}>{h.type}</span>
-							</div>
-							{h.rating > 0 && <div class="rating">{'★'.repeat(h.rating)}{'☆'.repeat(5 - h.rating)}</div>}
-						</div>
-						<div class="price-row">
-							<span class="price">{h.price}</span>
-							<span class="price-unit">{h.priceUnit}</span>
-						</div>
-						<p>{h.description}</p>
-						<div class="specs"><strong>Specs:</strong> {h.specs}</div>
-						<div class="recommended">🎯 <strong>Best for:</strong> {h.recommendedFor}</div>
-						<div class="lists">
-							<div class="list-col">
-								<span class="list-title pro-title">Pros</span>
-								<ul>{h.pros.map(p => <li>{p}</li>)}</ul>
-							</div>
-							<div class="list-col">
-								<span class="list-title con-title">Cons</span>
-								<ul>{h.cons.map(c => <li>{c}</li>)}</ul>
-							</div>
-						</div>
-						<div class="howto">
-							<div class="howto-label">Setup guide</div>
-							{h.setupGuide}
-						</div>
-					</div>
-				))}
-			</div>
-
-			<div class="empty-state" id="emptyState">
-				<div class="emoji">🔍</div>
-				<p>No hosting options match your search. Try a different filter or keyword.</p>
-			</div>
-		</main>
-		<Footer />
-
-		<script>
-			const search = document.getElementById('search');
-			const filterBtns = document.querySelectorAll('.filter-btn');
-			const cards = document.querySelectorAll('.card');
-			const emptyState = document.getElementById('emptyState');
-			let activeCategory = 'all';
-			function filterCards() {
-				const query = search.value.toLowerCase();
-				let visible = 0;
-				cards.forEach(card => {
-					const cat = card.dataset.category;
-					const name = card.dataset.name;
-					const desc = card.dataset.desc;
-					const matchesCat = activeCategory === 'all' || cat === activeCategory;
-					const matchesSearch = !query || name.includes(query) || desc.includes(query);
-					card.style.display = matchesCat && matchesSearch ? '' : 'none';
-					if (matchesCat && matchesSearch) visible++;
-				});
-				emptyState.style.display = visible === 0 ? '' : 'none';
-			}
-			function setCategory(cat) { activeCategory = cat; filterBtns.forEach(b => b.classList.toggle('active', b.dataset.cat === cat)); filterCards(); }
-			filterBtns.forEach(btn => btn.addEventListener('click', () => setCategory(btn.dataset.cat)));
-			search.addEventListener('input', filterCards);
-		</script>
-	</body>
-</html>
+<Reference
+  title="Hosting"
+  description={description}
+  categories={categories}
+  stats={stats}
+  count={hosting.length}
+  searchPlaceholder="Search hosting options…"
+>
+  {hosting.map((h) => (
+    <article
+      class="card"
+      data-card
+      data-category={h.category}
+      data-name={h.name.toLowerCase()}
+      data-desc={h.description.toLowerCase()}
+    >
+      <div class="category-label">{labelFor(h.category)}</div>
+      <div class="card-head">
+        <h3>{h.name}</h3>
+        <span class="badge badge-neutral">{h.type}</span>
+      </div>
+      <div class="badge-group">
+        {h.rating >= 5 && <span class="badge badge-recommended">★ Recommended</span>}
+      </div>
+      {h.rating > 0 && <div class="rating">{'★'.repeat(h.rating)}{'☆'.repeat(5 - h.rating)}</div>}
+      <div class="price-row">
+        <span class="price">{h.price}</span>
+        <span class="price-unit">{h.priceUnit}</span>
+      </div>
+      <p>{h.description}</p>
+      <div class="spec-line"><strong>Specs:</strong> {h.specs}</div>
+      <div class="best-for">🎯 <strong>Best for:</strong> {h.recommendedFor}</div>
+      <div class="proscons">
+        <div class="proscons-col">
+          <span class="proscons-title pros-title">Pros</span>
+          <ul>{h.pros.map((p) => <li>{p}</li>)}</ul>
+        </div>
+        <div class="proscons-col">
+          <span class="proscons-title cons-title">Cons</span>
+          <ul>{h.cons.map((c) => <li>{c}</li>)}</ul>
+        </div>
+      </div>
+      <div class="build-block">
+        <span class="section-label">Setup guide</span>
+        {h.setupGuide}
+      </div>
+      <div class="code-line">{h.hermesInstall}</div>
+    </article>
+  ))}
+</Reference>

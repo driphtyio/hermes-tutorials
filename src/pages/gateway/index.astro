@@ -1,137 +1,72 @@
 ---
-import BaseHead from '../../components/BaseHead.astro';
-import Footer from '../../components/Footer.astro';
-import Header from '../../components/Header.astro';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+import Reference from '../../layouts/Reference.astro';
 import { platforms, gatewayCategories } from '../../data/gateway';
 
-const total = platforms.length;
-const builtin = platforms.filter(p => p.type === 'built-in').length;
-const plugin = total - builtin;
-const voiceSupport = platforms.filter(p => p.features.includes('Voice')).length;
+const categories = gatewayCategories.filter((c) => platforms.some((p) => p.category === c.id));
+
+const labelFor = (id: string) => {
+  const meta = gatewayCategories.find((c) => c.id === id);
+  return meta ? `${meta.icon} ${meta.label}` : id;
+};
+
+const stats = [
+  { label: 'Total Platforms', value: platforms.length },
+  { label: 'Categories', value: categories.length },
+  { label: 'Built-in', value: platforms.filter((p) => p.type === 'built-in').length },
+  { label: 'Top Rated ★4+', value: platforms.filter((p) => p.rating >= 4).length },
+];
+
+const description = `${platforms.length} messaging platforms across ${categories.length} categories — built-in and plugin gateways for Telegram, Discord, Slack, email, SMS, and more.`;
 ---
 
-<!doctype html>
-<html lang="en">
-	<head>
-		<BaseHead title={`Messaging Gateway — ${SITE_TITLE}`} description={`Browse ${total} Hermes Agent messaging gateway platforms across ${gatewayCategories.length} categories with reviews, setup guides, and feature comparisons.`} />
-		<style>
-			.badge-builtin { background: rgba(46, 125, 50, 0.2); color: #66bb6a; }
-			.badge-plugin { background: rgba(230, 81, 0, 0.2); color: #ffa726; }
-			.card .features-row { display: flex; flex-wrap: wrap; gap: 0.3em; margin-bottom: 0.5em; }
-			.feature-tag {
-				font-size: 0.68em; padding: 0.15em 0.5em; border-radius: 4px;
-				background: rgba(108, 92, 231, 0.1); color: var(--accent-light);
-				border: 1px solid rgba(108, 92, 231, 0.2);
-			}
-			.card .details { font-size: 0.78em; color: var(--text-muted); margin-bottom: 0.5em; line-height: 1.6; }
-			.card .details strong { color: var(--text-secondary); }
-			.card .howto { font-size: 0.78em; color: var(--text-secondary); margin-bottom: 0.5em; line-height: 1.5; }
-			.howto-label {
-				font-size: 0.7em; font-weight: 600; color: #66bb6a; text-transform: uppercase;
-				letter-spacing: 0.05em; margin-bottom: 0.2em;
-			}
-			.card .pitfall {
-				font-size: 0.75em; color: var(--text-muted); padding: 0.5em 0.7em;
-				border-left: 2px solid rgba(239, 83, 80, 0.4);
-				background: rgba(239, 83, 80, 0.04); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-			}
-			.card .pitfall::before { content: '⚠️ '; }
-		</style>
-	</head>
-	<body>
-		<Header />
-		<main>
-			<div class="page-header">
-				<h1>Messaging Gateway</h1>
-				<p class="subtitle">{total} messaging platforms across {gatewayCategories.length} categories — {builtin} built-in, {plugin} plugins. {voiceSupport} support voice.</p>
-			</div>
-
-			<div class="stats-bar">
-				<div class="stat-item"><div class="stat-number">{total}</div><div class="stat-label">Total Platforms</div></div>
-				<div class="stat-item"><div class="stat-number">{gatewayCategories.length}</div><div class="stat-label">Categories</div></div>
-				<div class="stat-item"><div class="stat-number">{builtin}</div><div class="stat-label">Built-in</div></div>
-				<div class="stat-item"><div class="stat-number">{platforms.filter(p => p.rating >= 4).length}</div><div class="stat-label">Top Rated ★4+</div></div>
-			</div>
-
-			<div class="search-box">
-				<input class="search-input" type="text" id="search" placeholder="Search platforms..." />
-			</div>
-
-			<div class="filter-bar" id="filters">
-				<button class="filter-btn active" data-cat="all">All</button>
-				{gatewayCategories.map(cat => (
-					<button class="filter-btn" data-cat={cat.id}>{cat.icon} {cat.label}</button>
-				))}
-			</div>
-
-			<div class="card-grid" id="platformGrid">
-				{platforms.map(p => (
-					<div class="card" data-category={p.category} data-name={p.name.toLowerCase()} data-desc={p.description.toLowerCase()}>
-						<div class="category-label">{gatewayCategories.find(c => c.id === p.category)?.icon} {gatewayCategories.find(c => c.id === p.category)?.label}</div>
-						<div class="top-row">
-							<div class="name-row">
-								<h2>{p.name}</h2>
-								<span class={`badge badge-${p.type}`}>{p.type === 'built-in' ? 'Built-in' : 'Plugin'}</span>
-							</div>
-							{p.rating > 0 && <div class="rating">{'★'.repeat(p.rating)}{'☆'.repeat(5 - p.rating)}</div>}
-						</div>
-						<p>{p.description}</p>
-						{p.features.length > 0 && (
-							<div class="features-row">
-								{p.features.map(f => <span class="feature-tag">{f}</span>)}
-							</div>
-						)}
-						<div class="howto">
-							<div class="howto-label">Setup guide</div>
-							{p.setupGuide}
-						</div>
-						<div class="details">
-							<strong>Auth:</strong> {p.auth}<br />
-							{p.configVars.length > 0 && <><strong>Env vars:</strong> {p.configVars.join(', ')}</>}
-						</div>
-						<div class="pitfall">{p.pitfalls}</div>
-					</div>
-				))}
-			</div>
-
-			<div class="empty-state" id="emptyState">
-				<div class="emoji">🔍</div>
-				<p>No platforms match your search. Try a different filter or keyword.</p>
-			</div>
-		</main>
-		<Footer />
-
-		<script>
-			const search = document.getElementById('search');
-			const filterBtns = document.querySelectorAll('.filter-btn');
-			const cards = document.querySelectorAll('.card');
-			const emptyState = document.getElementById('emptyState');
-			let activeCategory = 'all';
-
-			function filterCards() {
-				const query = search.value.toLowerCase();
-				let visible = 0;
-				cards.forEach(card => {
-					const cat = card.dataset.category;
-					const name = card.dataset.name;
-					const desc = card.dataset.desc;
-					const matchesCat = activeCategory === 'all' || cat === activeCategory;
-					const matchesSearch = !query || name.includes(query) || desc.includes(query);
-					card.style.display = matchesCat && matchesSearch ? '' : 'none';
-					if (matchesCat && matchesSearch) visible++;
-				});
-				emptyState.style.display = visible === 0 ? '' : 'none';
-			}
-
-			function setCategory(cat) {
-				activeCategory = cat;
-				filterBtns.forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
-				filterCards();
-			}
-
-			filterBtns.forEach(btn => btn.addEventListener('click', () => setCategory(btn.dataset.cat)));
-			search.addEventListener('input', filterCards);
-		</script>
-	</body>
-</html>
+<Reference
+  title="Messaging Gateway"
+  description={description}
+  categories={categories}
+  stats={stats}
+  count={platforms.length}
+  searchPlaceholder="Search platforms…"
+>
+  {platforms.map((p) => (
+    <article
+      class="card"
+      data-card
+      data-category={p.category}
+      data-name={p.name.toLowerCase()}
+      data-desc={p.description.toLowerCase()}
+    >
+      <div class="category-label">{labelFor(p.category)}</div>
+      <div class="card-head">
+        <h3>{p.name}</h3>
+        <span class={`badge badge-${p.type}`}>{p.type === 'built-in' ? 'Built-in' : 'Plugin'}</span>
+      </div>
+      {p.rating > 0 && <div class="rating">{'★'.repeat(p.rating)}{'☆'.repeat(5 - p.rating)}</div>}
+      <p>{p.description}</p>
+      {p.features.length > 0 && (
+        <div class="chip-row">
+          {p.features.map((f) => <span class="chip">{f}</span>)}
+        </div>
+      )}
+      <div class="details-line">
+        <div><strong>Auth:</strong> {p.auth}</div>
+        {p.configVars.length > 0 && (
+          <div><strong>Env vars:</strong> {p.configVars.join(', ')}</div>
+        )}
+      </div>
+      {p.pitfalls && <div class="pitfall">{p.pitfalls}</div>}
+      <button
+        class="toggle-btn"
+        type="button"
+        data-toggle
+        data-target={`setup-${p.id}`}
+        data-show-label="▼ Setup guide"
+        data-hide-label="▲ Setup guide"
+      >▼ Setup guide</button>
+      <div class="collapsible" id={`setup-${p.id}`}>
+        <div class="collapsible-inner">
+          <div class="guide-text">{p.setupGuide}</div>
+        </div>
+      </div>
+    </article>
+  ))}
+</Reference>

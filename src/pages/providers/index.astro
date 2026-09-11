@@ -1,132 +1,86 @@
 ---
-import BaseHead from '../../components/BaseHead.astro';
-import Footer from '../../components/Footer.astro';
-import Header from '../../components/Header.astro';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+import Reference from '../../layouts/Reference.astro';
 import { providers, providerCategories } from '../../data/providers';
 
-const total = providers.length;
-const freeCount = providers.filter(p => p.freeTier.toLowerCase().includes('yes')).length;
-const localCount = providers.filter(p => p.category === 'local').length;
+const isFree = (tier: string) => tier.toLowerCase().includes('yes');
+
+const categories = providerCategories.filter((c) => providers.some((p) => p.category === c.id));
+
+const labelFor = (id: string) => {
+  const meta = providerCategories.find((c) => c.id === id);
+  return meta ? `${meta.icon} ${meta.label}` : id;
+};
+
+const badgeLabel = (id: string) =>
+  id === 'api' ? 'API' : id === 'local' ? 'Local' : id === 'oauth' ? 'OAuth' : id;
+
+const stats = [
+  { label: 'Total Providers', value: providers.length },
+  { label: 'Free Tier Available', value: providers.filter((p) => isFree(p.freeTier)).length },
+  { label: 'Top Rated ★4+', value: providers.filter((p) => p.rating >= 4).length },
+  { label: 'Local / Free', value: providers.filter((p) => p.category === 'local').length },
+];
+
+const description = `${providers.length} LLM providers for Hermes Agent — API services, local inference, and OAuth platforms. Reviews, pricing, models, and setup guides.`;
 ---
 
-<!doctype html>
-<html lang="en">
-	<head>
-		<BaseHead title={`Providers — ${SITE_TITLE}`} description={`${total} LLM providers for Hermes Agent — API services, local inference, and OAuth platforms. Reviews, pricing, models, and setup guides.`} />
-		<style>
-			.badge-api { background: rgba(108, 92, 231, 0.2); color: var(--accent-light); }
-			.badge-local { background: rgba(46, 125, 50, 0.2); color: #66bb6a; }
-			.badge-oauth { background: rgba(33, 150, 243, 0.2); color: #42a5f5; }
-			.card .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4em; margin-bottom: 0.6em; }
-			.card .info-item { font-size: 0.78em; color: var(--text-muted); line-height: 1.4; }
-			.card .info-item .info-label { font-size: 0.7em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); display: block; margin-bottom: 0.1em; }
-			.card .info-item.full { grid-column: 1 / -1; }
-			.card .free-badge { display: inline-block; font-size: 0.65em; padding: 0.1em 0.4em; border-radius: 3px; background: rgba(46, 125, 50, 0.3); color: #66bb6a; font-weight: 600; }
-			.card .lists { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5em; margin-bottom: 0.5em; }
-			.card .list-col { font-size: 0.75em; line-height: 1.5; }
-			.card .list-col .list-title { font-size: 0.7em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2em; display: block; }
-			.card .list-col .pro-title { color: #66bb6a; }
-			.card .list-col .con-title { color: #ef5350; }
-			.card .list-col ul { margin: 0; padding-left: 1em; color: var(--text-muted); }
-			.card .list-col li { margin-bottom: 0.15em; }
-			.card .howto { font-size: 0.78em; color: var(--text-secondary); line-height: 1.5; padding: 0.5em 0.7em; background: var(--bg-tertiary); border-radius: var(--radius-sm); border-left: 2px solid var(--accent); }
-			.howto-label { font-size: 0.7em; font-weight: 600; color: var(--accent-light); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.15em; }
-			@media (max-width: 720px) {
-				.card .lists { grid-template-columns: 1fr; }
-				.card .info-grid { grid-template-columns: 1fr; }
-			}
-		</style>
-	</head>
-	<body>
-		<Header />
-		<main>
-			<div class="page-header">
-				<h1>LLM Providers</h1>
-				<p class="subtitle">{total} providers for Hermes Agent — {freeCount} with free tiers, {localCount} local options. Reviews, pricing, models, and setup guides.</p>
-			</div>
-
-			<div class="stats-bar">
-				<div class="stat-item"><div class="stat-number">{total}</div><div class="stat-label">Total Providers</div></div>
-				<div class="stat-item"><div class="stat-number">{freeCount}</div><div class="stat-label">Free Tier Available</div></div>
-				<div class="stat-item"><div class="stat-number">{providers.filter(p => p.rating >= 4).length}</div><div class="stat-label">Top Rated ★4+</div></div>
-				<div class="stat-item"><div class="stat-number">{localCount}</div><div class="stat-label">Local / Free</div></div>
-			</div>
-
-			<div class="search-box">
-				<input class="search-input" type="text" id="search" placeholder="Search providers..." />
-			</div>
-
-			<div class="filter-bar" id="filters">
-				<button class="filter-btn active" data-cat="all">All</button>
-				{providerCategories.map(cat => (
-					<button class="filter-btn" data-cat={cat.id}>{cat.icon} {cat.label}</button>
-				))}
-			</div>
-
-			<div class="card-grid" id="providerGrid">
-				{providers.map(p => (
-					<div class="card" data-category={p.category} data-name={p.name.toLowerCase()} data-desc={p.description.toLowerCase()}>
-						<div class="category-label">{providerCategories.find(c => c.id === p.category)?.icon} {providerCategories.find(c => c.id === p.category)?.label}</div>
-						<div class="top-row">
-							<div class="name-row">
-								<h2>{p.name}</h2>
-								<span class={`badge badge-${p.category}`}>{p.category === 'api' ? 'API' : p.category === 'local' ? 'Local' : 'OAuth'}</span>
-							</div>
-							{p.rating > 0 && <div class="rating">{'★'.repeat(p.rating)}{'☆'.repeat(5 - p.rating)}</div>}
-						</div>
-						<p>{p.description}</p>
-						<div class="info-grid">
-							<div class="info-item"><span class="info-label">Models</span>{p.models}</div>
-							<div class="info-item"><span class="info-label">Pricing</span>{p.pricing}</div>
-							<div class="info-item full"><span class="info-label">Best for</span>{p.bestFor}</div>
-							<div class="info-item full"><span class="info-label">Free tier</span>{p.freeTier.includes('Yes') ? <span class="free-badge">✅ Free tier</span> : <span>{p.freeTier}</span>}</div>
-						</div>
-						<div class="lists">
-							<div class="list-col">
-								<span class="list-title pro-title">Pros</span>
-								<ul>{p.pros.map(pr => <li>{pr}</li>)}</ul>
-							</div>
-							<div class="list-col">
-								<span class="list-title con-title">Cons</span>
-								<ul>{p.cons.map(c => <li>{c}</li>)}</ul>
-							</div>
-						</div>
-						<div class="howto">
-							<div class="howto-label">Setup guide</div>
-							{p.setupGuide}
-						</div>
-					</div>
-				))}
-			</div>
-
-			<div class="empty-state" id="emptyState">
-				<div class="emoji">🔍</div>
-				<p>No providers match your search. Try a different filter or keyword.</p>
-			</div>
-		</main>
-		<Footer />
-
-		<script>
-			const search = document.getElementById('search');
-			const filterBtns = document.querySelectorAll('.filter-btn');
-			const cards = document.querySelectorAll('.card');
-			const emptyState = document.getElementById('emptyState');
-			let activeCategory = 'all';
-			function filterCards() {
-				const query = search.value.toLowerCase(); let visible = 0;
-				cards.forEach(card => {
-					const cat = card.dataset.category; const name = card.dataset.name; const desc = card.dataset.desc;
-					const matchesCat = activeCategory === 'all' || cat === activeCategory;
-					const matchesSearch = !query || name.includes(query) || desc.includes(query);
-					card.style.display = matchesCat && matchesSearch ? '' : 'none';
-					if (matchesCat && matchesSearch) visible++;
-				});
-				emptyState.style.display = visible === 0 ? '' : 'none';
-			}
-			function setCategory(cat) { activeCategory = cat; filterBtns.forEach(b => b.classList.toggle('active', b.dataset.cat === cat)); filterCards(); }
-			filterBtns.forEach(btn => btn.addEventListener('click', () => setCategory(btn.dataset.cat)));
-			search.addEventListener('input', filterCards);
-		</script>
-	</body>
-</html>
+<Reference
+  title="Providers"
+  description={description}
+  categories={categories}
+  stats={stats}
+  count={providers.length}
+  searchPlaceholder="Search providers…"
+>
+  {providers.map((p) => (
+    <article
+      class="card"
+      data-card
+      data-category={p.category}
+      data-name={p.name.toLowerCase()}
+      data-desc={p.description.toLowerCase()}
+    >
+      <div class="category-label">{labelFor(p.category)}</div>
+      <div class="card-head">
+        <h3>{p.name}</h3>
+        <span class="badge badge-accent">{badgeLabel(p.category)}</span>
+      </div>
+      {p.rating > 0 && <div class="rating">{'★'.repeat(p.rating)}{'☆'.repeat(5 - p.rating)}</div>}
+      <p>{p.description}</p>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Models</span>{p.models}
+        </div>
+        <div class="info-item">
+          <span class="info-label">Pricing</span>{p.pricing}
+        </div>
+        <div class="info-item full">
+          <span class="info-label">Best for</span>{p.bestFor}
+        </div>
+        <div class="info-item full">
+          <span class="info-label">Free tier</span>
+          {isFree(p.freeTier) ? <span class="badge badge-free">✅ Free tier</span> : <span>{p.freeTier}</span>}
+        </div>
+        {p.configVars.length > 0 && (
+          <div class="info-item full">
+            <span class="info-label">Config vars</span>{p.configVars.join(', ')}
+          </div>
+        )}
+      </div>
+      <div class="proscons">
+        <div class="proscons-col">
+          <span class="proscons-title pros-title">Pros</span>
+          <ul>{p.pros.map((pr) => <li>{pr}</li>)}</ul>
+        </div>
+        <div class="proscons-col">
+          <span class="proscons-title cons-title">Cons</span>
+          <ul>{p.cons.map((c) => <li>{c}</li>)}</ul>
+        </div>
+      </div>
+      <div class="build-block">
+        <span class="section-label">Setup guide</span>
+        {p.setupGuide}
+      </div>
+    </article>
+  ))}
+</Reference>

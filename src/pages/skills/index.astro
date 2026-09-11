@@ -1,270 +1,77 @@
 ---
-import BaseHead from '../../components/BaseHead.astro';
-import Footer from '../../components/Footer.astro';
-import Header from '../../components/Header.astro';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+import Reference from '../../layouts/Reference.astro';
 import { skills, skillCategories } from '../../data/skills';
 
-const totalSkills = skills.length;
-const totalCategories = skillCategories.length;
-const topRated = skills.filter(s => s.rating >= 5).length;
+const categories = skillCategories.filter((c) => skills.some((s) => s.category === c.id));
+
+const labelFor = (id: string) => {
+  const meta = skillCategories.find((c) => c.id === id);
+  return meta ? `${meta.icon} ${meta.label}` : id;
+};
+
+const stats = [
+  { label: 'Total Skills', value: skills.length },
+  { label: 'Categories', value: categories.length },
+  { label: 'Top Rated ★5', value: skills.filter((s) => s.rating >= 5).length },
+  { label: '★4+ Skills', value: skills.filter((s) => s.rating >= 4).length },
+];
+
+const description = `Browse, search, and load reusable skills for Hermes Agent. ${skills.length} skills across ${categories.length} categories — each with a guide, how-to, and pitfalls.`;
 ---
 
-<!doctype html>
-<html lang="en">
-	<head>
-		<BaseHead title={`Skill Library — ${SITE_TITLE}`} description="Browse, search, and load Hermes Agent skills. 120+ skills across 19 categories with descriptions, guides, how-to instructions, and pitfalls." />
-		<style>
-			.card .section-title { font-size: 0.78em; font-weight: 600; color: var(--text-primary); margin: 0.6em 0 0.2em; }
-			.card .load-hint {
-				background: var(--bg); color: var(--accent-light); padding: 0.35em 0.7em;
-				border-radius: var(--radius-sm); font-size: 0.78em; font-family: var(--font-mono);
-				user-select: all; border: 1px solid var(--border); display: inline-block; margin-bottom: 0.5em;
-			}
-			.guide-text {
-				font-size: 0.78em; color: var(--text-secondary); line-height: 1.6;
-				border-left: 2px solid var(--accent); padding-left: 0.7em; margin: 0.2em 0;
-			}
-			.howto-text {
-				font-size: 0.78em; color: var(--text-secondary); line-height: 1.6;
-				border-left: 2px solid #4fc3f7; padding-left: 0.7em; margin: 0.2em 0;
-			}
-			.pitfalls-text {
-				font-size: 0.78em; color: #ef9a9a; line-height: 1.6;
-				border-left: 2px solid #e53935; padding-left: 0.7em; margin: 0.2em 0;
-			}
-			.collapsible-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
-			.collapsible-content.open { max-height: 1000px; }
-			.expand-btn {
-				background: transparent; border: 1px solid var(--border); color: var(--text-muted);
-				border-radius: var(--radius-sm); font-size: 0.75em; padding: 0.25em 0.6em;
-				cursor: pointer; margin-top: 0.4em; transition: all 0.15s ease; font-family: inherit;
-				align-self: flex-start;
-			}
-			.expand-btn:hover { border-color: var(--accent); color: #fff; }
-			.card .extra-tip {
-				font-size: 0.75em; color: var(--text-muted); margin-top: 0.4em;
-				font-family: var(--font-mono);
-			}
-
-			/* Badges */
-			.badge-group { display: flex; gap: 0.35em; flex-wrap: wrap; margin: 0.4em 0; }
-			.badge {
-				display: inline-flex; align-items: center; gap: 0.2em;
-				padding: 0.15em 0.45em; border-radius: var(--radius-sm);
-				font-size: 0.7em; font-weight: 500; line-height: 1.4;
-			}
-			.badge-featured {
-				background: rgba(255, 215, 0, 0.12); color: #ffd700;
-				border: 1px solid rgba(255, 215, 0, 0.3);
-			}
-			.badge-version {
-				background: rgba(129, 199, 132, 0.12); color: #81c784;
-				border: 1px solid rgba(129, 199, 132, 0.25);
-			}
-			.badge-requires {
-				background: rgba(79, 195, 247, 0.1); color: #4fc3f7;
-				border: 1px solid rgba(79, 195, 247, 0.2);
-			}
-
-			/* Controls row */
-			.controls-row { display: flex; gap: 1em; align-items: flex-start; flex-wrap: wrap; margin: 1em 0; }
-			.search-box { flex: 1; min-width: 200px; }
-			.sort-box { display: flex; align-items: center; gap: 0.5em; }
-			.sort-box label { font-size: 0.85em; color: var(--text-muted); white-space: nowrap; }
-			.sort-select {
-				background: var(--bg); color: var(--text-primary); border: 1px solid var(--border);
-				border-radius: var(--radius-sm); padding: 0.4em 0.6em; font-size: 0.85em;
-				font-family: inherit; cursor: pointer;
-			}
-			.sort-select:hover { border-color: var(--accent); }
-
-			/* Skill name link */
-			.skill-name { text-decoration: none; color: inherit; transition: color 0.15s; }
-			.skill-name:hover { color: var(--accent-light); }
-		</style>
-	</head>
-	<body>
-		<Header />
-		<main>
-			<div class="page-header">
-				<h1>Skill Library</h1>
-				<p class="subtitle">Browse, search, and load reusable skills for Hermes Agent. {topRated} top-rated ★5 skills across {skillCategories.length} categories. Each skill includes a guide, how-to, and pitfalls.</p>
-			</div>
-
-			<div class="stats-bar">
-				<div class="stat-item"><div class="stat-number">{totalSkills}</div><div class="stat-label">Total Skills</div></div>
-				<div class="stat-item"><div class="stat-number">{skillCategories.length}</div><div class="stat-label">Categories</div></div>
-				<div class="stat-item"><div class="stat-number">{topRated}</div><div class="stat-label">Top Rated ★5</div></div>
-				<div class="stat-item"><div class="stat-number">{skills.filter(s => s.rating >= 4).length}</div><div class="stat-label">★4+ Skills</div></div>
-			</div>
-
-			<div class="controls-row">
-				<div class="search-box">
-					<input class="search-input" type="text" id="search" placeholder="Search skills..." />
-				</div>
-				<div class="sort-box">
-					<label for="sort">Sort:</label>
-					<select class="sort-select" id="sort">
-						<option value="rating-desc">⭐ Rating (High→Low)</option>
-						<option value="name-asc">🔤 Name (A→Z)</option>
-						<option value="name-desc">🔤 Name (Z→A)</option>
-					</select>
-				</div>
-			</div>
-
-			<div class="filter-bar" id="filters">
-				<button class="filter-btn active" data-cat="all">All</button>
-				{skillCategories.map(cat => (
-					<button class="filter-btn" data-cat={cat.id}>
-						{cat.icon} {cat.label}
-					</button>
-				))}
-			</div>
-
-			<div class="card-grid" id="skillGrid">
-				{skills.map((s, i) => {
-					const cat = skillCategories.find(c => c.id === s.category);
-					return (
-					<div class="card" data-category={s.category} data-rating={s.rating} data-name={s.name.toLowerCase()} data-desc={s.description.toLowerCase()}>
-						<div class="category-label">{cat?.icon} {cat?.label}</div>
-						<div class="top-row">
-							<div class="name-row">
-								<a href={`/skills/${s.id}/`} class="skill-name"><h2>{s.name}</h2></a>
-							</div>
-							{s.rating > 0 && <div class="rating">{'★'.repeat(s.rating)}{'☆'.repeat(5 - s.rating)}</div>}
-						</div>
-						<p>{s.description}</p>
-
-						{(s.isFeatured || s.version || s.requires) && (
-						<div class="badge-group">
-							{s.isFeatured && <span class="badge badge-featured">★ Featured</span>}
-							{s.version && <span class="badge badge-version">v{s.version}</span>}
-							{s.requires?.bins && <span class="badge badge-requires">🔧 {s.requires.bins.join(', ')}</span>}
-						</div>
-						)}
-
-						<div class="load-hint">skill_view("{s.id}")</div>
-
-						<div class="collapsible-content" id={`details-${i}`}>
-							<div class="section-title">📖 Guide</div>
-							<div class="guide-text">{s.guide}</div>
-
-							<div class="section-title">🔧 How To</div>
-							<div class="howto-text">{s.howto}</div>
-
-							<div class="section-title">⚠️ Pitfalls</div>
-							<div class="pitfalls-text">{s.pitfalls}</div>
-						</div>
-
-						<button class="expand-btn" data-index={i}>▼ Show Details</button>
-						<div class="extra-tip">{s.id}</div>
-					</div>
-					);
-				})}
-			</div>
-
-			<div class="empty-state" id="emptyState">
-				<div class="emoji">🔍</div>
-				<p>No skills match your search. Try a different filter or keyword.</p>
-			</div>
-		</main>
-		<Footer />
-
-		<script>
-			const search = document.getElementById('search');
-			const filterBtns = document.querySelectorAll('.filter-btn');
-			const cards = document.querySelectorAll('.card');
-			const emptyState = document.getElementById('emptyState');
-			const expandBtns = document.querySelectorAll('.expand-btn');
-			const sortSelect = document.getElementById('sort');
-
-			let activeCategory = 'all';
-
-			function getUrlParams() {
-				const p = new URLSearchParams(window.location.search);
-				return { q: p.get('q') || '', cat: p.get('cat') || 'all', sort: p.get('sort') || 'rating-desc' };
-			}
-
-			function setUrlParams(q, cat, sort) {
-				const p = new URLSearchParams();
-				if (q) p.set('q', q);
-				if (cat && cat !== 'all') p.set('cat', cat);
-				if (sort && sort !== 'rating-desc') p.set('sort', sort);
-				const qs = p.toString();
-				const url = qs ? window.location.pathname + '?' + qs : window.location.pathname;
-				window.history.replaceState({}, '', url);
-			}
-
-			function sortCards(cardsArray, method) {
-				const grid = document.getElementById('skillGrid');
-				const sorted = [...cardsArray];
-				switch (method) {
-					case 'rating-desc': sorted.sort((a, b) => parseFloat(b.dataset.rating) - parseFloat(a.dataset.rating)); break;
-					case 'name-asc': sorted.sort((a, b) => a.dataset.name.localeCompare(b.dataset.name)); break;
-					case 'name-desc': sorted.sort((a, b) => b.dataset.name.localeCompare(a.dataset.name)); break;
-				}
-				sorted.forEach(c => grid.appendChild(c));
-			}
-
-			function filterSkills() {
-				const query = search.value.toLowerCase();
-				const sortMethod = sortSelect.value;
-				let visible = 0;
-				const visibleCards = [];
-				cards.forEach(card => {
-					const cat = card.dataset.category;
-					const name = card.dataset.name;
-					const desc = card.dataset.desc;
-					const matchesCat = activeCategory === 'all' || cat === activeCategory;
-					const matchesSearch = !query || name.includes(query) || desc.includes(query);
-					const show = matchesCat && matchesSearch;
-					card.style.display = show ? '' : 'none';
-					if (show) { visible++; visibleCards.push(card); }
-				});
-				emptyState.style.display = visible === 0 ? '' : 'none';
-				sortCards(visibleCards, sortMethod);
-			}
-
-			function setCategory(cat) {
-				activeCategory = cat;
-				filterBtns.forEach(b => {
-					b.classList.toggle('active', b.dataset.cat === cat);
-				});
-				filterSkills();
-				setUrlParams(search.value, activeCategory, sortSelect.value);
-			}
-
-			// Init from URL params
-			const params = getUrlParams();
-			if (params.q) { search.value = params.q; }
-			if (params.sort) { sortSelect.value = params.sort; }
-			if (params.cat && params.cat !== 'all') {
-				setCategory(params.cat);
-			}
-
-			filterBtns.forEach(btn => {
-				btn.addEventListener('click', () => setCategory(btn.dataset.cat));
-			});
-
-			search.addEventListener('input', () => {
-				filterSkills();
-				setUrlParams(search.value, activeCategory, sortSelect.value);
-			});
-
-			sortSelect.addEventListener('change', () => {
-				filterSkills();
-				setUrlParams(search.value, activeCategory, sortSelect.value);
-			});
-
-			expandBtns.forEach(btn => {
-				btn.addEventListener('click', () => {
-					const index = btn.dataset.index;
-					const content = document.getElementById(`details-${index}`);
-					const isOpen = content.classList.toggle('open');
-					btn.textContent = isOpen ? '▲ Hide Details' : '▼ Show Details';
-				});
-			});
-		</script>
-	</body>
-</html>
+<Reference
+  title="Skill Library"
+  description={description}
+  categories={categories}
+  stats={stats}
+  count={skills.length}
+  searchPlaceholder="Search skills…"
+>
+  {skills.map((s) => (
+    <article
+      class="card"
+      data-card
+      data-category={s.category}
+      data-name={s.name.toLowerCase()}
+      data-desc={s.description.toLowerCase()}
+    >
+      <div class="category-label">{labelFor(s.category)}</div>
+      <div class="card-head">
+        <h3><a class="skill-name" href={`/skills/${s.id}/`}>{s.name}</a></h3>
+      </div>
+      {s.rating > 0 && <div class="rating">{'★'.repeat(s.rating)}{'☆'.repeat(5 - s.rating)}</div>}
+      <p>{s.description}</p>
+      {(s.isFeatured || s.version || s.requires) && (
+        <div class="badge-group">
+          {s.isFeatured && <span class="badge badge-featured">★ Featured</span>}
+          {s.version && <span class="badge badge-version">v{s.version}</span>}
+          {s.requires?.bins && <span class="badge badge-requires">🔧 {s.requires.bins.join(', ')}</span>}
+          {s.requires?.env && <span class="badge badge-requires">🔑 {s.requires.env.join(', ')}</span>}
+          {s.requires?.config && <span class="badge badge-requires">⚙️ {s.requires.config.join(', ')}</span>}
+        </div>
+      )}
+      <div class="load-hint">skill_view("{s.id}")</div>
+      <button
+        class="toggle-btn"
+        type="button"
+        data-toggle
+        data-target={`details-${s.id}`}
+        data-show-label="▼ Show Details"
+        data-hide-label="▲ Hide Details"
+      >▼ Show Details</button>
+      <div class="collapsible" id={`details-${s.id}`}>
+        <div class="collapsible-inner">
+          <div class="section-title">📖 Guide</div>
+          <div class="guide-text">{s.guide}</div>
+          <div class="section-title">🔧 How To</div>
+          <div class="howto-text">{s.howto}</div>
+          <div class="section-title">⚠️ Pitfalls</div>
+          <div class="pitfalls-text">{s.pitfalls}</div>
+          {s.requires?.config && (
+            <div class="details-line"><strong>Config:</strong> {s.requires.config.join(', ')}</div>
+          )}
+        </div>
+      </div>
+    </article>
+  ))}
+</Reference>

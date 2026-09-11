@@ -1,0 +1,282 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { SITE_TITLE } from '../consts';
+
+interface Category {
+  id: string;
+  label: string;
+  icon: string;
+}
+
+interface Stat {
+  label: string;
+  value: number | string;
+}
+
+interface Props {
+  title: string;
+  description: string;
+  categories?: Category[];
+  stats?: Stat[];
+  count?: number;
+  searchPlaceholder?: string;
+}
+
+const {
+  title,
+  description,
+  categories = [],
+  stats = [],
+  count = 0,
+  searchPlaceholder = 'Search by name or description…',
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <BaseHead title={`${title} — ${SITE_TITLE}`} description={description} />
+    <style>
+      /* Shell + controls (elements live in this layout → scoped) */
+      .ref-main { padding: 2rem 1rem 4rem; min-height: 50vh; }
+      .ref-container { max-width: min(1400px, 94vw); margin: 0 auto; }
+      .page-header { padding: 1.25rem 0 0.5rem; }
+      .page-header h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); color: var(--text-primary); margin-bottom: 0.3rem; }
+      .page-header .subtitle { color: var(--text-secondary); font-size: 1rem; max-width: 720px; margin: 0 auto; }
+      .stats-bar { gap: 2rem; margin: 1.25rem 0 0.75rem; }
+      .ref-controls { display: flex; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap; margin: 0.25rem 0 1.25rem; }
+      .ref-controls .search-box { position: relative; flex: 0 1 440px; max-width: 440px; margin: 0; }
+      .search-icon { position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
+      .ref-controls .search-input { padding-left: 2.4rem; }
+      .ref-count { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; }
+      .filter-bar { gap: 0.5rem; margin: 0 0 1.5rem; }
+      .filter-btn { display: inline-flex; align-items: center; gap: 0.35rem; }
+      .filter-bar .filter-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+      /* active pill stays accent-tinted (overrides the global white pill) */
+      .ref-container .filter-bar .filter-btn.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent-light); }
+      .card-grid { margin-top: 0; }
+
+      /* Cards are emitted by pages through <slot /> — everything below must be :global */
+      :global(.card .card-head) { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.3rem; }
+      :global(.card .card-head h3) { margin: 0; font-size: 1.02rem; font-weight: 600; }
+      :global(.card .skill-name) { color: inherit; text-decoration: none; }
+      :global(.card .skill-name:hover) { color: var(--accent-light); }
+
+      /* Badges: shape comes from global.css, colour from here.
+         Purple/neutral for informational badges … */
+      :global(.badge-accent),
+      :global(.card .badge-free),
+      :global(.card .badge-recommended),
+      :global(.card .badge-featured) { background: var(--accent-glow); color: var(--accent-light); }
+      :global(.badge-neutral),
+      :global(.card .badge-version),
+      :global(.card .badge-requires) { background: var(--bg-tertiary); color: var(--text-muted); }
+      /* … semantic green/amber/red ONLY for difficulty + status badges */
+      :global(.card .badge-beginner),
+      :global(.card .badge-on),
+      :global(.card .badge-built-in),
+      :global(.card .badge-bundled) { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+      :global(.card .badge-intermediate),
+      :global(.card .badge-off),
+      :global(.card .badge-plugin),
+      :global(.card .badge-community) { background: rgba(234, 179, 8, 0.15); color: #eab308; }
+      :global(.card .badge-advanced),
+      :global(.card .badge-request) { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+      :global(.card .badge-group) { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0 0 0.5rem; }
+
+      :global(.meta-row) { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0 0 0.5rem; }
+      :global(.meta-tag) { font-family: var(--font-mono); font-size: 0.72rem; padding: 0.15rem 0.55rem; border-radius: 999px; background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text-secondary); }
+      :global(.chip-row) { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0 0 0.55rem; }
+      :global(.chip) { font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px; background: rgba(108, 92, 231, 0.1); color: var(--accent-light); border: 1px solid rgba(108, 92, 231, 0.2); }
+      :global(.chip-muted) { background: rgba(255, 255, 255, 0.04); color: var(--text-muted); border-color: var(--border); }
+      :global(.build-block),
+      :global(.guide-block),
+      :global(.best-for) { font-size: 0.78rem; line-height: 1.55; color: var(--text-secondary); background: var(--bg-tertiary); border-radius: var(--radius-sm); border-left: 2px solid var(--accent); padding: 0.55rem 0.75rem; margin: 0 0 0.55rem; }
+      :global(.section-label) { display: block; font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem; color: var(--accent-light); }
+      :global(.tools-line) { font-size: 0.76rem; color: var(--text-muted); margin: 0 0 0.55rem; }
+      :global(.spec-line) { font-size: 0.76rem; color: var(--text-muted); line-height: 1.5; margin: 0 0 0.55rem; }
+      :global(.details-line) { font-size: 0.76rem; color: var(--text-muted); line-height: 1.6; margin: 0 0 0.5rem; }
+      :global(.details-line strong) { color: var(--text-secondary); }
+      :global(.code-line) { font-family: var(--font-mono); font-size: 0.73rem; line-height: 1.5; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.4rem 0.65rem; color: var(--text-secondary); white-space: pre-wrap; word-break: break-word; margin: 0.2rem 0 0; }
+
+      :global(.price-row) { display: flex; align-items: baseline; gap: 0.45rem; flex-wrap: wrap; margin: 0 0 0.5rem; }
+      :global(.price) { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 700; color: var(--text-primary); }
+      :global(.price-unit) { font-size: 0.75rem; color: var(--text-muted); }
+
+      :global(.info-grid) { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem 0.9rem; margin: 0 0 0.6rem; }
+      :global(.info-item) { font-size: 0.76rem; color: var(--text-muted); line-height: 1.45; }
+      :global(.info-item.full) { grid-column: 1 / -1; }
+      :global(.info-label) { display: block; font-size: 0.66rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); margin-bottom: 0.1rem; }
+
+      :global(.proscons) { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 0 0 0.6rem; }
+      :global(.proscons-col) { font-size: 0.74rem; line-height: 1.5; }
+      :global(.proscons-col ul) { margin: 0; padding-left: 1rem; color: var(--text-muted); }
+      :global(.proscons-col li) { margin-bottom: 0.15rem; }
+      :global(.proscons-title) { display: block; font-size: 0.66rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem; }
+      :global(.pros-title) { color: var(--accent-light); }
+      :global(.cons-title) { color: var(--text-muted); }
+
+      :global(.pitfall) { font-size: 0.75rem; color: var(--text-muted); line-height: 1.55; padding: 0.5rem 0.7rem; border-left: 2px solid rgba(239, 68, 68, 0.5); background: rgba(239, 68, 68, 0.05); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; margin: 0.3rem 0 0.5rem; }
+      :global(.pitfall::before) { content: '⚠️ '; }
+
+      :global(.toggle-btn) { align-self: flex-start; background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: var(--radius-sm); font-family: inherit; font-size: 0.75rem; padding: 0.25rem 0.65rem; cursor: pointer; transition: border-color 0.15s ease, color 0.15s ease; }
+      :global(.toggle-btn:hover) { border-color: var(--accent); color: var(--text-primary); }
+      :global(.collapsible) { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+      :global(.collapsible.open) { max-height: 2400px; }
+      :global(.collapsible-inner) { padding-top: 0.55rem; }
+      :global(.section-title) { font-size: 0.74rem; font-weight: 600; color: var(--text-primary); margin: 0.5rem 0 0.2rem; }
+      :global(.guide-text),
+      :global(.howto-text),
+      :global(.pitfalls-text) { font-size: 0.78rem; line-height: 1.6; padding-left: 0.7rem; }
+      :global(.guide-text) { color: var(--text-secondary); border-left: 2px solid var(--accent); }
+      :global(.howto-text) { color: var(--text-secondary); border-left: 2px solid var(--accent-light); }
+      :global(.pitfalls-text) { color: var(--text-muted); border-left: 2px solid rgba(239, 68, 68, 0.5); }
+      :global(.load-hint) { display: inline-block; background: var(--bg-tertiary); color: var(--accent-light); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 0.74rem; padding: 0.3rem 0.6rem; margin: 0 0 0.5rem; user-select: all; }
+
+      :global(.install-row) { display: flex; align-items: center; gap: 0.4rem; margin: 0 0 0.5rem; }
+      :global(.install-cmd) { flex: 1; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 0.75rem; padding: 0.35rem 0.65rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      :global(.copy-btn) { background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); padding: 0.35rem 0.7rem; font-family: inherit; font-size: 0.74rem; cursor: pointer; white-space: nowrap; transition: background 0.15s ease; }
+      :global(.copy-btn:hover) { background: var(--accent-dark); }
+      :global(.copy-btn.copied) { background: var(--accent-light); color: var(--bg); }
+      :global(.actions) { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.25rem 0 0.5rem; }
+      :global(.action-link) { font-size: 0.76rem; color: var(--accent-light); }
+      :global(.action-link:hover) { text-decoration: underline; }
+
+      @media (max-width: 720px) {
+        .ref-controls { flex-direction: column; }
+        :global(.info-grid) { grid-template-columns: 1fr; }
+        :global(.proscons) { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <Header />
+    <main class="ref-main">
+      <div class="ref-container">
+        <div class="page-header">
+          <h1>{title}</h1>
+          <p class="subtitle">{description}</p>
+        </div>
+
+        {stats.length > 0 && (
+          <div class="stats-bar">
+            {stats.map((s) => (
+              <div class="stat-item">
+                <div class="stat-number">{s.value}</div>
+                <div class="stat-label">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div class="ref-controls">
+          <div class="search-box">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input class="search-input" type="text" id="search" placeholder={searchPlaceholder} autocomplete="off" />
+          </div>
+          <span class="ref-count" id="stats-count">{count} items</span>
+        </div>
+
+        <div class="filter-bar" id="filters" aria-label="Filter by category">
+          <button class="filter-btn active" data-cat="all" type="button">🌐 All</button>
+          {categories.map((cat) => (
+            <button class="filter-btn" data-cat={cat.id} type="button">{cat.icon} {cat.label}</button>
+          ))}
+        </div>
+
+        <div class="card-grid" id="grid">
+          <slot />
+        </div>
+
+        <div class="empty-state" id="emptyState">
+          <div class="emoji">🔍</div>
+          <p>No results found. Try a different search or filter.</p>
+        </div>
+      </div>
+    </main>
+    <Footer />
+
+    <script is:inline>
+      (function () {
+        var grid = document.getElementById('grid');
+        if (!grid) return;
+        var cards = Array.prototype.slice.call(grid.querySelectorAll('[data-card]'));
+        var total = cards.length;
+        var searchEl = document.getElementById('search');
+        var countEl = document.getElementById('stats-count');
+        var emptyEl = document.getElementById('emptyState');
+        var btns = Array.prototype.slice.call(document.querySelectorAll('.filter-btn'));
+        var active = 'all';
+
+        function apply() {
+          var q = searchEl && searchEl.value ? searchEl.value.toLowerCase().trim() : '';
+          var n = 0;
+          cards.forEach(function (c) {
+            var cat = c.getAttribute('data-category') || '';
+            var name = (c.getAttribute('data-name') || '').toLowerCase();
+            var desc = (c.getAttribute('data-desc') || '').toLowerCase();
+            var ok = (active === 'all' || cat === active) &&
+              (!q || name.indexOf(q) !== -1 || desc.indexOf(q) !== -1);
+            c.style.display = ok ? '' : 'none';
+            if (ok) n++;
+          });
+          if (countEl) countEl.textContent = n + ' / ' + total + ' items';
+          if (emptyEl) emptyEl.style.display = n === 0 ? '' : 'none';
+          grid.style.display = n === 0 ? 'none' : '';
+        }
+
+        btns.forEach(function (b) {
+          b.addEventListener('click', function () {
+            btns.forEach(function (x) { x.classList.remove('active'); });
+            b.classList.add('active');
+            active = b.getAttribute('data-cat') || 'all';
+            apply();
+          });
+        });
+        if (searchEl) searchEl.addEventListener('input', apply);
+
+        /* Delegated extras: collapsible toggles + copy-to-clipboard */
+        document.addEventListener('click', function (ev) {
+          var t = ev.target;
+          if (!t || !t.closest) return;
+
+          var toggle = t.closest('[data-toggle]');
+          if (toggle) {
+            var tid = toggle.getAttribute('data-target');
+            var tel = tid ? document.getElementById(tid) : null;
+            if (tel) {
+              var open = !tel.classList.contains('open');
+              tel.classList.toggle('open', open);
+              var show = toggle.getAttribute('data-show-label') || 'Show details';
+              var hide = toggle.getAttribute('data-hide-label') || 'Hide details';
+              toggle.textContent = open ? hide : show;
+            }
+            return;
+          }
+
+          var copy = t.closest('.copy-btn');
+          if (copy) {
+            var text = copy.getAttribute('data-copy') || '';
+            if (text && navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(text).then(function () {
+                copy.textContent = 'Copied!';
+                copy.classList.add('copied');
+                setTimeout(function () {
+                  copy.textContent = 'Copy';
+                  copy.classList.remove('copied');
+                }, 1800);
+              });
+            }
+          }
+        });
+
+        apply();
+      })();
+    </script>
+  </body>
+</html>
