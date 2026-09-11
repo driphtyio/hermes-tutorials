@@ -1,0 +1,509 @@
+---
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import FormattedDate from '../components/FormattedDate.astro';
+import Header from '../components/Header.astro';
+
+interface Props {
+	post: CollectionEntry<'blog'>;
+	readingTime: number;
+}
+
+const { post, readingTime } = Astro.props;
+const { title, description, pubDate, updatedDate, heroImage, tags, author, keywords } = post.data;
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+
+const articleSchema = {
+	'@context': 'https://schema.org',
+	'@type': 'Article',
+	headline: title,
+	description,
+	author: { '@type': 'Person', name: author },
+	publisher: {
+		'@type': 'Organization', name: 'Hermes Agent Tutorials',
+		logo: { '@type': 'ImageObject', url: new URL('/favicon.svg', Astro.site).toString() },
+	},
+	datePublished: pubDate.toISOString(),
+	...(updatedDate && { dateModified: updatedDate.toISOString() }),
+	mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalURL.toString() },
+	...(tags.length > 0 && { keywords: tags.join(', ') }),
+	wordCount: readingTime * 200,
+	timeRequired: `PT${readingTime}M`,
+};
+
+const breadcrumbSchema = {
+	'@context': 'https://schema.org',
+	'@type': 'BreadcrumbList',
+	itemListElement: [
+		{ '@type': 'ListItem', position: 1, name: 'Tutorials', item: new URL('/blog', Astro.site).toString() },
+		{ '@type': 'ListItem', position: 2, name: title, item: canonicalURL.toString() },
+	],
+};
+---
+
+<html lang="en">
+	<head>
+		<BaseHead
+			title={`${title} — Hermes Agent Tutorials`}
+			description={description}
+			image={heroImage}
+			type="article"
+			pubDate={pubDate}
+			updatedDate={updatedDate}
+			tags={tags}
+			keywords={keywords}
+		/>
+		<script type="application/ld+json" set:html={JSON.stringify(articleSchema)} />
+		<script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+		<style is:global>
+			/* ── Hero Image ── */
+			.hero-image {
+				width: 100%;
+				margin-bottom: 1.25em;
+			}
+			.hero-image img {
+				display: block;
+				width: 100%;
+				height: auto;
+				max-height: 280px;
+				object-fit: cover;
+				border-radius: var(--radius-lg);
+				box-shadow: var(--shadow-md);
+			}
+
+			/* ── Article Body ── */
+			.article-body {
+				max-width: 1000px;
+				margin: 0 auto;
+			}
+
+			/* ── Post Header ── */
+			.post-header {
+				margin-bottom: 1.25em;
+			}
+			.post-header h1 {
+				font-size: 2.8rem;
+				font-weight: 700;
+				letter-spacing: -0.03em;
+				line-height: 1.1;
+				margin: 0 0 0.3em;
+			}
+
+			/* ── One-line stats bar: author · date · reading time · tags ── */
+			.post-stats {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				gap: 0.3em 0.6em;
+				color: var(--text-muted);
+				font-size: 0.84em;
+				margin-bottom: 0.6em;
+			}
+			.post-stats .sep { opacity: 0.3; }
+			.post-stats .tag-link {
+				display: inline-block;
+				padding: 0.06em 0.45em;
+				font-size: 0.80em;
+				color: var(--accent-light);
+				border: 1px solid var(--border-light);
+				border-radius: var(--radius-sm);
+				text-decoration: none;
+				transition: border-color 0.15s, color 0.15s;
+			}
+			.post-stats .tag-link:hover {
+				border-color: var(--accent);
+				color: var(--accent-light);
+			}
+			.last-updated { font-style: italic; }
+
+			/* ── Hero Image ── */
+			.hero-image {
+				width: 100%;
+				margin-bottom: 2.5em;
+			}
+			.hero-image img {
+				display: block;
+				width: 100%;
+				height: auto;
+				aspect-ratio: 16 / 9;
+				object-fit: cover;
+				border-radius: var(--radius-lg);
+				box-shadow: var(--shadow-md);
+			}
+
+			/* ── Prose ── */
+			.prose {
+				color: var(--text-primary);
+			}
+			.prose h2 {
+				margin-top: 2.5em;
+				position: relative;
+				padding-top: 0.5em;
+				border-top: 1px solid var(--border);
+			}
+			.prose h2:first-of-type {
+				border-top: none;
+				margin-top: 1.5em;
+			}
+			.prose h3 {
+				margin-top: 1.2em;
+				position: relative;
+			}
+			.prose p { margin-bottom: 1.2em; line-height: 1.8; }
+
+			/* ── Widescreen: wider prose, better space use ── */
+			@media (min-width: 1440px) {
+				.article-body {
+					max-width: 1200px;
+				}
+				.prose {
+					font-size: 1.05rem;
+				}
+				.prose h2 {
+					margin-top: 3em;
+				}
+			}
+
+			/* ── Code blocks: label bar + copy button ── */
+			.prose pre {
+				position: relative;
+				padding-top: 2.5em;
+				margin: 1.5em 0;
+			}
+			.prose pre::before {
+				content: attr(data-lang) "▸ Code";
+				position: absolute;
+				top: 0;
+				left: 0;
+				right: 0;
+				padding: 0.4em 1em;
+				font-size: 0.72em;
+				font-family: var(--font-sans);
+				color: var(--text-muted);
+				background: rgba(255,255,255,0.03);
+				border-bottom: 1px solid var(--border);
+				border-radius: var(--radius-md) var(--radius-md) 0 0;
+				text-transform: uppercase;
+				letter-spacing: 0.04em;
+			}
+			.copy-btn {
+				position: absolute;
+				top: 0.3em;
+				right: 0.5em;
+				padding: 0.2em 0.6em;
+				font-size: 0.7em;
+				font-family: var(--font-sans);
+				color: var(--text-muted);
+				background: transparent;
+				border: 1px solid var(--border-light);
+				border-radius: 4px;
+				cursor: pointer;
+				transition: color 0.15s, border-color 0.15s;
+				z-index: 2;
+			}
+			.copy-btn:hover {
+				color: var(--accent-light);
+				border-color: var(--accent);
+			}
+			.copy-btn.copied {
+				color: #10b981;
+				border-color: #10b981;
+			}
+
+			/* ── Blockquotes as callout cards ── */
+			.prose blockquote {
+				position: relative;
+				border-left: 3px solid var(--accent);
+				padding: 1em 1.25em 1em 2.5em;
+				margin: 1.5em 0;
+				font-size: 0.93em;
+				color: var(--text-secondary);
+				background: rgba(108, 92, 231, 0.06);
+				border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+			}
+			.prose blockquote::before {
+				content: "💡";
+				position: absolute;
+				left: 0.7em;
+				top: 0.9em;
+				font-size: 1em;
+			}
+			.prose blockquote p { margin-bottom: 0; }
+
+			/* ── Callout variants via blockquote content prefix ── */
+			.prose blockquote:has(strong:first-child) {
+				border-left-color: #f59e0b;
+				background: rgba(245, 158, 11, 0.06);
+			}
+			.prose blockquote:has(strong:first-child)::before {
+				content: "⚠️";
+			}
+			.prose blockquote:has(strong:first-child) strong:first-child {
+				color: #f59e0b;
+				text-transform: uppercase;
+				font-size: 0.72em;
+				letter-spacing: 0.06em;
+			}
+
+			/* ── Tables: responsive card-like on narrow, wider on desktop ── */
+			.prose table {
+				font-size: 0.88em;
+				margin: 1.5em 0;
+				border-collapse: collapse;
+				width: 100%;
+			}
+			.prose th {
+				background: var(--bg-secondary);
+				color: #fff;
+				font-weight: 600;
+				padding: 0.6em 0.8em;
+				text-align: left;
+				border-bottom: 2px solid var(--border);
+			}
+			.prose td {
+				padding: 0.6em 0.8em;
+				border-bottom: 1px solid var(--border);
+			}
+			.prose tr:hover td {
+				background: rgba(255,255,255,0.02);
+			}
+			@media (max-width: 720px) {
+				.prose table {
+					display: block;
+					overflow-x: auto;
+					-webkit-overflow-scrolling: touch;
+				}
+			}
+
+			/* ── Inline code ── */
+			.prose code {
+				font-family: var(--font-mono);
+				font-size: 0.85em;
+				padding: 0.15em 0.4em;
+				background: rgba(255,255,255,0.06);
+				border-radius: 4px;
+				color: var(--text-primary);
+			}
+
+			/* ── Horizontal rules as visual section markers ── */
+			.prose hr {
+				border: none;
+				height: 1px;
+				background: linear-gradient(to right, var(--border), transparent);
+				margin: 2.5em 0;
+			}
+
+			/* ── Description / quick-ref sections ── */
+			.prose p > code:only-child {
+				display: inline-block;
+			}
+
+			/* ── Lists ── */
+			.prose ul, .prose ol {
+				padding-left: 1.5em;
+				margin-bottom: 1.2em;
+			}
+			.prose li {
+				margin-bottom: 0.3em;
+				line-height: 1.7;
+			}
+
+			/* ── Heading Permalink # icons ── */
+			.heading-permalink {
+				opacity: 0;
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				width: 24px;
+				height: 24px;
+				margin-left: 0.3em;
+				color: var(--text-muted);
+				text-decoration: none;
+				border-radius: 4px;
+				transition: opacity 0.15s, color 0.15s, background 0.15s;
+				vertical-align: middle;
+				position: relative;
+			}
+			.prose h2:hover .heading-permalink,
+			.prose h3:hover .heading-permalink {
+				opacity: 1;
+			}
+			.heading-permalink:hover {
+				color: var(--accent-light);
+				background: var(--bg-tertiary);
+			}
+			.heading-permalink[data-copied="true"]::after {
+				content: "Copied!";
+				position: absolute;
+				top: -1.8em;
+				left: 50%;
+				transform: translateX(-50%);
+				font-size: 0.65em;
+				background: var(--bg);
+				color: var(--accent-light);
+				padding: 0.2em 0.5em;
+				border-radius: 4px;
+				border: 1px solid var(--border);
+				white-space: nowrap;
+				font-family: var(--font-sans);
+				font-weight: 500;
+			}
+
+			/* ── TLDR Callout ── */
+			.tldr-block {
+				background: var(--bg-secondary);
+				border: 1px solid var(--border);
+				border-left: 3px solid var(--accent);
+				border-radius: var(--radius-md);
+				padding: 0.85em 1.15em;
+				margin: 1em 0;
+				font-size: 0.92em;
+				color: var(--text-secondary);
+			}
+			.tldr-block strong:first-child {
+				color: var(--accent-light);
+				text-transform: uppercase;
+				font-size: 0.70em;
+				letter-spacing: 0.06em;
+			}
+
+						@media (max-width: 720px) {
+							.post-header h1 { font-size: 2rem; }
+						}
+		</style>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<article itemscope itemtype="https://schema.org/Article">
+				<meta itemprop="author" content={author} />
+				<meta itemprop="datePublished" content={pubDate.toISOString()} />
+				{updatedDate && <meta itemprop="dateModified" content={updatedDate.toISOString()} />}
+
+				{heroImage && (
+					<div class="hero-image">
+						<Image width={1020} height={510} src={heroImage} alt={`Hero image for ${title}`} itemprop="image" />
+					</div>
+				)}
+
+				<div class="article-body">
+					<div class="post-header">
+						<h1 itemprop="headline">{title}</h1>
+
+						<div class="post-stats">
+							<span>By {author}</span><span class="sep">·</span>
+							<FormattedDate date={pubDate} /><span class="sep">·</span>
+							<span>{readingTime} min read</span>
+							{updatedDate && <><span class="sep">·</span><span class="last-updated">Updated <FormattedDate date={updatedDate} /></span></>}
+							{tags.length > 0 && <><span class="sep">·</span>{tags.map(tag => <a class="tag-link" href={`/tags/${tag}`}>{tag}</a>)}</>}
+						</div>
+
+						<p class="post-desc" itemprop="description">{description}</p>
+					</div>
+
+					<div class="prose">
+						<slot />
+					</div>
+				</div>
+			</article>
+		</main>
+		<Footer />
+
+		<script is:inline>
+			(function () {
+				'use strict';
+
+				/* ── Permalink (#) icons for headings ── */
+				var prose = document.querySelector('.prose');
+				if (!prose) return;
+
+				var headings = prose.querySelectorAll('h2, h3');
+
+				headings.forEach(function (h, i) {
+					if (!h.id) {
+						var text = (h.textContent || '')
+							.trim()
+							.toLowerCase()
+							.replace(/[^a-z0-9]+/g, '-')
+							.replace(/^-|-$/g, '');
+						h.id = text || ('heading-' + i);
+					}
+				});
+
+				var permalinkSvg =
+					'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+						'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>' +
+						'<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>' +
+					'</svg>';
+
+				headings.forEach(function (h) {
+					var link = document.createElement('a');
+					link.className = 'heading-permalink';
+					link.href = '#' + h.id;
+					link.setAttribute('aria-label', 'Copy link to this section');
+					link.innerHTML = permalinkSvg;
+
+					link.addEventListener('click', function (e) {
+						e.preventDefault();
+						var url = window.location.origin + window.location.pathname + '#' + h.id;
+						navigator.clipboard.writeText(url).then(function () {
+							link.setAttribute('data-copied', 'true');
+							setTimeout(function () { link.removeAttribute('data-copied'); }, 1500);
+						}).catch(function () {
+							window.history.replaceState(null, '', '#' + h.id);
+						});
+					});
+
+					h.appendChild(link);
+				});
+
+				/* ── Copy buttons on code blocks ── */
+				prose.querySelectorAll('pre').forEach(function (pre) {
+					if (pre.querySelector('.copy-btn')) return;
+					var btn = document.createElement('button');
+					btn.className = 'copy-btn';
+					btn.textContent = 'Copy';
+					btn.addEventListener('click', function () {
+						var code = pre.querySelector('code');
+						var text = code ? code.textContent : pre.textContent;
+						navigator.clipboard.writeText(text).then(function () {
+							btn.textContent = 'Copied!';
+							btn.classList.add('copied');
+							setTimeout(function () {
+								btn.textContent = 'Copy';
+								btn.classList.remove('copied');
+							}, 2000);
+						});
+					});
+					pre.style.position = 'relative';
+					pre.appendChild(btn);
+
+					/* ── Detect language for label ── */
+					var code = pre.querySelector('code');
+					if (code) {
+						var cls = Array.from(code.classList);
+						var lang = cls.find(function(c) { return c.startsWith('language-'); });
+						if (lang) {
+							pre.setAttribute('data-lang', lang.replace('language-', ''));
+						}
+					}
+				});
+
+				if (window.location.hash) {
+					var hashId = window.location.hash.slice(1);
+					var hashTarget = document.getElementById(hashId);
+					if (hashTarget) {
+						setTimeout(function () {
+							var navHeight = 80;
+							var pos = hashTarget.getBoundingClientRect().top + window.pageYOffset - navHeight;
+							window.scrollTo({ top: pos, behavior: 'instant' });
+						}, 100);
+					}
+				}
+			})();
+		</script>
+	</body>
+</html>
+/* deployment 1779804339 */
