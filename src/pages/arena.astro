@@ -973,8 +973,8 @@ try {
         <h2 class="section-title">Match History</h2>
         {localMatches.length > 0 ? (
           <div class="match-list">
-            {localMatches.map(m => (
-              <details class="match-item">
+            {[...localMatches].sort((a, b) => String(b.date).localeCompare(String(a.date))).map((m, mi) => (
+              <details class="match-item" open={mi === 0}>
                 <summary>
                   <span class="match-arrow">▶</span>
                   <span class="match-topic">{m.topic}</span>
