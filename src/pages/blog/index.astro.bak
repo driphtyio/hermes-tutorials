@@ -1,0 +1,59 @@
+---
+import { getCollection } from 'astro:content';
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import FormattedDate from '../../components/FormattedDate.astro';
+import Header from '../../components/Header.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+
+const posts = (await getCollection('blog')).sort(
+	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+
+const collectionSchema = {
+	'@context': 'https://schema.org',
+	'@type': 'CollectionPage',
+	name: `Tutorials — ${SITE_TITLE}`,
+	description: SITE_DESCRIPTION,
+	url: new URL('/blog', Astro.site).toString(),
+	mainEntity: {
+		'@type': 'ItemList',
+		itemListElement: posts.map((post, i) => ({
+			'@type': 'ListItem', position: i + 1,
+			url: new URL(`/blog/${post.id}/`, Astro.site).toString(),
+		})),
+	},
+};
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title={`Tutorials — ${SITE_TITLE}`} description={`${posts.length} hands-on guides covering Hermes Agent setup, CLI, providers, gateway, plugins, skills, hosting, and troubleshooting.`} />
+		<script type="application/ld+json" set:html={JSON.stringify(collectionSchema)} />
+	</head>
+	<body>
+		<Header />
+		<main>
+			<div class="page-header">
+				<h1>All Tutorials</h1>
+				<p class="subtitle">{posts.length} guides covering every aspect of Hermes Agent</p>
+			</div>
+			<div class="card-grid">
+				{posts.map((post) => (
+					<a class="card" href={`/blog/${post.id}/`} style="text-decoration:none;color:inherit;cursor:pointer;">
+						<div class="top-row" style="margin-bottom:0.5em;">
+							<h2>{post.data.title}</h2>
+						</div>
+						<div class="category-label">
+							<FormattedDate date={post.data.pubDate} />
+							{post.data.tags.length > 0 && <span> &middot; {post.data.tags.slice(0, 3).join(', ')}</span>}
+						</div>
+						<p>{post.data.description}</p>
+					</a>
+				))}
+			</div>
+		</main>
+		<Footer />
+	</body>
+</html>
