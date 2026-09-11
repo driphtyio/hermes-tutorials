@@ -54,24 +54,32 @@ const refIcons = [
 	refIcon('<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>'),
 ];
 
-// ── Feature cards data ──
+// ── Feature cards data (updated 2026-09-10: verified counts from src/data/*.ts, v0.21.1 context) ──
 const features = [
-	{ label: 'Getting Started', desc: 'Install, configure, and run your first Hermes session.', href: '/blog/getting-started/' },
+	{ label: 'Getting Started', desc: 'Install v0.21+ in 60 seconds and run your first Hermes session.', href: '/blog/getting-started/' },
 	{ label: 'Commands', desc: 'Complete CLI reference — every command and flag.', href: '/blog/commands-reference/' },
-	{ label: 'Providers', desc: 'Set up OpenRouter, local models, credential pools.', href: '/blog/provider-setup/' },
-	{ label: 'Gateway', desc: 'Run Hermes on Telegram, Discord, and Slack.', href: '/blog/gateway-setup/' },
-	{ label: 'Plugins', desc: 'Browse 55+ plugins across 9 categories.', href: '/plugins/' },
-	{ label: 'Tools', desc: 'Complete reference for all 26 Hermes tools.', href: '/tools/' },
-	{ label: 'Memory', desc: 'Persistence, profiles, and voice interaction.', href: '/blog/memory-profiles/' },
-	{ label: 'Multi-Agent', desc: 'Parallel agents, worktree mode, delegation.', href: '/blog/multi-agent-setup/' },
-	{ label: 'Automation', desc: 'Cron, MCP, and autonomous pipelines.', href: '/blog/advanced-automation/' },
-	{ label: 'Troubleshooting', desc: 'Fix common issues with hermes doctor.', href: '/blog/troubleshooting/' },
+	{ label: 'Providers', desc: '20+ providers — OpenRouter, local models, credential pools.', href: '/blog/provider-setup/' },
+	{ label: 'Gateway', desc: 'Run Hermes on Telegram, Discord, Slack, iMessage, and WhatsApp.', href: '/blog/gateway-setup/' },
+	{ label: 'Plugins', desc: 'Browse 50 plugins — searchable and filterable.', href: '/plugins/' },
+	{ label: 'Tools', desc: 'Complete reference for all 39 Hermes tools.', href: '/tools/' },
+	{ label: 'Memory', desc: 'Profiles, persistent context, and session search.', href: '/blog/memory-profiles/' },
+	{ label: 'Multi-Agent', desc: 'Parallel delegation, worktree mode, kanban dispatch.', href: '/blog/multi-agent-setup/' },
+	{ label: 'Automation', desc: 'Cron with memory, MCP servers, and webhooks.', href: '/blog/advanced-automation/' },
+	{ label: 'Troubleshooting', desc: 'Fix common issues with hermes doctor and /diagnose.', href: '/blog/troubleshooting/' },
+];
+
+// ── What's new strip (verified 2026-09-10) ──
+const whatsNew = [
+	{ label: 'v0.21.1 — latest release', href: '/changelog/' },
+	{ label: 'Bot Mode is here', href: '/changelog/' },
+	{ label: '75 skills documented', href: '/skills/' },
+	{ label: '244k★ on GitHub', href: 'https://github.com/nousresearch/hermes-agent' },
 ];
 
 // ── Reference catalogs data (no emoji ── using SVG icons in template) ──
 const refCatalogs = [
-	{ name: 'Plugin Marketplace', desc: '55+ plugins across 9 categories — search, filter, install.', href: '/plugins/' },
-	{ name: 'Tools Reference', desc: '26 tools across 6 categories — capabilities, pitfalls, config.', href: '/tools/' },
+	{ name: 'Plugin Marketplace', desc: '50 plugins — search, filter, install.', href: '/plugins/' },
+	{ name: 'Tools Reference', desc: '39 tools — capabilities, pitfalls, config.', href: '/tools/' },
 	{ name: 'Messaging Gateway', desc: 'Telegram, Discord, Slack, iMessage, and more.', href: '/gateway/' },
 	{ name: 'Hosting', desc: 'Self-host, desktop app, Docker, and cloud deployments.', href: '/hosting/' },
 	{ name: 'Providers', desc: '20+ LLM providers — OpenRouter, local, Anthropic, OpenAI.', href: '/providers/' },
@@ -381,6 +389,29 @@ const refCatalogs = [
 				.home-wrap { --home-max-w: 1500px; }
 				.features { grid-template-columns: repeat(5, 1fr); }
 			}
+
+			/* ── What's new chip strip ── */
+			.whats-new {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.5em;
+				margin: 1em 0 1.5em;
+			}
+			.wn-chip {
+				display: inline-block;
+				padding: 0.32em 0.85em;
+				font-size: 0.82em;
+				color: var(--accent-light);
+				background: rgba(108, 92, 231, 0.08);
+				border: 1px solid var(--border-light);
+				border-radius: 999px;
+				text-decoration: none;
+				transition: border-color 0.15s, background 0.15s;
+			}
+			.wn-chip:hover {
+				border-color: var(--accent);
+				background: rgba(108, 92, 231, 0.14);
+			}
 		</style>
 	</head>
 	<body>
@@ -397,6 +428,11 @@ const refCatalogs = [
 				</section>
 
 				<h2 class="section-title">Quick Start Guides</h2>
+				<div class="whats-new" aria-label="What's new">
+					{whatsNew.map((chip) => (
+						<a class="wn-chip" href={chip.href}>{chip.label}</a>
+					))}
+				</div>
 				<div class="features">
 					{features.map((f, i) => (
 						<a class="feature-card" href={f.href}>
