@@ -7,574 +7,717 @@ import FormattedDate from '../components/FormattedDate.astro';
 import Header from '../components/Header.astro';
 
 interface Props {
-	post: CollectionEntry<'blog'>;
-	readingTime: number;
+  post: CollectionEntry<'blog'>;
+  readingTime: number;
 }
 
 const { post, readingTime } = Astro.props;
 const { title, description, pubDate, updatedDate, heroImage, tags, author, keywords } = post.data;
-const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
 const articleSchema = {
-	'@context': 'https://schema.org',
-	'@type': 'Article',
-	headline: title,
-	description,
-	author: { '@type': 'Person', name: author },
-	publisher: {
-		'@type': 'Organization', name: 'Hermes Agent Tutorials',
-		logo: { '@type': 'ImageObject', url: new URL('/favicon.svg', Astro.site).toString() },
-	},
-	datePublished: pubDate.toISOString(),
-	...(updatedDate && { dateModified: updatedDate.toISOString() }),
-	mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalURL.toString() },
-	...(tags.length > 0 && { keywords: tags.join(', ') }),
-	wordCount: readingTime * 200,
-	timeRequired: `PT${readingTime}M`,
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: title,
+  description: description,
+  datePublished: pubDate.toISOString(),
+  dateModified: (updatedDate || pubDate).toISOString(),
+  author: {
+    '@type': 'Person',
+    name: author,
+  },
+  keywords: keywords ? keywords.join(', ') : tags.join(', '),
+  image: heroImage ? heroImage.src : undefined,
 };
 
 const breadcrumbSchema = {
-	'@context': 'https://schema.org',
-	'@type': 'BreadcrumbList',
-	itemListElement: [
-		{ '@type': 'ListItem', position: 1, name: 'Tutorials', item: new URL('/blog', Astro.site).toString() },
-		{ '@type': 'ListItem', position: 2, name: title, item: canonicalURL.toString() },
-	],
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Tutorials',
+      item: 'https://hermes-tutorials.dev/blog',
+    },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: title,
+      item: `https://hermes-tutorials.dev/blog/${post.slug}`,
+    },
+  ],
 };
 ---
 
+<!doctype html>
 <html lang="en">
-	<head>
-		<BaseHead
-			title={`${title} — Hermes Agent Tutorials`}
-			description={description}
-			image={heroImage}
-			type="article"
-			pubDate={pubDate}
-			updatedDate={updatedDate}
-			tags={tags}
-			keywords={keywords}
-		/>
-		<script type="application/ld+json" set:html={JSON.stringify(articleSchema)} />
-		<script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
-		<style>
-			/* ════════════════════════════════════════════
-			   BlogPost.deepseek-v4 — TOC Sidebar + Widescreen
-			   ════════════════════════════════════════════ */
+  <head>
+    <BaseHead title={title} description={description} />
+    <script type="application/ld+json" set:html={JSON.stringify(articleSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+  </head>
+  <body>
+    <Header />
+    <main>
+      <nav class="breadcrumbs">
+        <a href="/blog">Tutorials</a>
+        <span class="sep">›</span>
+        <span>{title}</span>
+      </nav>
+      <div class="blog-layout">
+        <aside class="sidebar" id="sidebar">
+          <div class="sidebar-header">
+            <span class="sidebar-title">On This Page</span>
+            <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle table of contents">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+          </div>
+          <nav class="toc-nav">
+            <ul id="toc-list"></ul>
+          </nav>
+        </aside>
+        <article>
+          {heroImage && (
+            <Image
+              width={1020}
+              height={510}
+              src={heroImage}
+              alt={title}
+              class="hero-image"
+            />
+          )}
+          <div class="post-header">
+            <h1>{title}</h1>
+            <div class="stats-bar">
+              <span class="author">{author}</span>
+              <span class="sep">·</span>
+              <FormattedDate date={pubDate} />
+              {updatedDate && (
+                <>
+                  <span class="sep">·</span>
+                  <span class="updated">Updated <FormattedDate date={updatedDate} /></span>
+                </>
+              )}
+              <span class="sep">·</span>
+              <span class="reading-time">{readingTime} min read</span>
+              {tags.length > 0 && (
+                <>
+                  <span class="sep">·</span>
+                  <span class="tags">
+                    {tags.map((tag) => (
+                      <a href={`/tags/${tag}`} class="tag-link">{tag}</a>
+                    ))}
+                  </span>
+                </>
+              )}
+            </div>
+            {description && <p class="post-desc">{description}</p>}
+          </div>
+          <div class="prose">
+            <slot />
+          </div>
+        </article>
+      </div>
+    </main>
+    <button class="back-up-top" id="back-up-top" aria-label="Back to top">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="19" x2="12" y2="5"></line>
+        <polyline points="5 12 12 5 19 12"></polyline>
+      </svg>
+    </button>
+    <Footer />
 
-			/* ── Escape the 860px global content-width ── */
-			main {
-				width: 100% !important;
-				margin: 0 auto;
-				padding: 1.25em 2em 3em;
-			}
+    <script is:inline>
+      (function () {
+        var navHeight = 64;
 
-			/* ── Breadcrumbs ── */
-			.breadcrumbs {
-				max-width: min(1800px, 90vw);
-				margin: 0 auto;
-				padding: 0.6em 2em 0;
-				font-size: 0.80em;
-				color: var(--text-muted);
-			}
-			.breadcrumbs a { color: var(--text-muted); }
-			.breadcrumbs a:hover { color: var(--accent-light); }
-			.breadcrumbs .sep { margin: 0 0.4em; color: var(--border-light); }
+        // ---------- Permalinks + copy ----------
+        function slugify(text) {
+          return text
+            .toLowerCase()
+            .replace(/[^\w\s-]/g, '')
+            .trim()
+            .replace(/\s+/g, '-');
+        }
 
-			/* ── Flex Layout: sidebar + article ── */
-			.blog-layout {
-				display: flex;
-				gap: 2em;
-				max-width: 1800px;
-				margin: 0 auto;
-				align-items: flex-start;
-			}
+        var headings = document.querySelectorAll('.prose h2, .prose h3');
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = slugify(heading.textContent || '');
+          }
+          var link = document.createElement('a');
+          link.className = 'permalink';
+          link.href = '#' + heading.id;
+          link.setAttribute('aria-label', 'Permalink to ' + heading.textContent);
+          link.innerHTML =
+            '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>';
+          link.addEventListener('click', function (e) {
+            e.preventDefault();
+            history.pushState(null, '', '#' + heading.id);
+            var copyIcon =
+              '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+            link.innerHTML = copyIcon;
+            if (navigator.clipboard) {
+              navigator.clipboard.writeText(window.location.href).catch(function () {});
+            }
+            setTimeout(function () {
+              link.innerHTML =
+                '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>';
+            }, 1500);
+          });
+          heading.appendChild(link);
+        });
 
-			/* ── Sidebar ── */
-			.sidebar {
-				position: sticky;
-				top: var(--nav-height);
-				flex-shrink: 0;
-				width: 240px;
-				overflow: hidden;
-				align-self: flex-start;
-				max-height: calc(100vh - var(--nav-height) - 2em);
-				transition: max-height 0.35s ease;
-			}
-			.sidebar.collapsed {
-				max-height: 40px;
-			}
-			.sidebar-inner {
-				padding: 1.25em 0 2em;
-			}
+        // ---------- Code block copy buttons ----------
+        document.querySelectorAll('.prose pre').forEach(function (pre) {
+          var btn = document.createElement('button');
+          btn.className = 'copy-btn';
+          btn.setAttribute('aria-label', 'Copy code');
+          btn.textContent = 'Copy';
+          btn.addEventListener('click', function () {
+            var code = pre.querySelector('code');
+            var text = code ? code.textContent : pre.textContent;
+            if (navigator.clipboard) {
+              navigator.clipboard.writeText(text || '').then(function () {
+                btn.textContent = 'Copied!';
+                setTimeout(function () {
+                  btn.textContent = 'Copy';
+                }, 1500);
+              });
+            }
+          });
+          pre.style.position = 'relative';
+          pre.appendChild(btn);
+        });
 
-			/* ── TOC Header ── */
-			.toc-header {
-				display: flex;
-				align-items: center;
-				justify-content: space-between;
-				margin-bottom: 0.75em;
-				padding-right: 0.25em;
-			}
-			.toc-header-label {
-				font-size: 0.75em;
-				font-weight: 600;
-				text-transform: uppercase;
-				letter-spacing: 0.06em;
-				color: var(--text-muted);
-			}
-			.toc-toggle {
-				display: inline-flex;
-				align-items: center;
-				justify-content: center;
-				width: 24px;
-				height: 24px;
-				padding: 0;
-				border: none;
-				background: transparent;
-				color: var(--text-muted);
-				cursor: pointer;
-				border-radius: 4px;
-				transition: color 0.15s, transform 0.3s ease, background 0.15s;
-			}
-			.toc-toggle:hover {
-				color: var(--accent-light);
-				background: var(--bg-tertiary);
-			}
-			.sidebar.collapsed .toc-toggle {
-				transform: rotate(-90deg);
-			}
+        // ---------- Hash-target scroll ----------
+        if (window.location.hash) {
+          var target = document.getElementById(window.location.hash.slice(1));
+          if (target) {
+            setTimeout(function () {
+              target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+          }
+        }
 
-			/* ── TOC Nav ── */
-			.toc-nav {
-				font-size: 0.82em;
-				line-height: 1.5;
-			}
-			.toc-nav ul {
-				list-style: none;
-				margin: 0;
-				padding: 0;
-			}
-			.toc-item a {
-				display: block;
-				padding: 0.35em 0.5em 0.35em 0;
-				color: var(--text-secondary);
-				text-decoration: none;
-				border-radius: 4px;
-				transition: color 0.15s, background 0.15s;
-				border-left: 2px solid transparent;
-				overflow: hidden;
-				text-overflow: ellipsis;
-				white-space: nowrap;
-			}
-			.toc-item a:hover {
-				color: var(--accent-light);
-				background: var(--bg-tertiary);
-			}
-			.toc-item a.active {
-				color: var(--accent-light);
-				border-left-color: var(--accent);
-				background: rgba(108, 92, 231, 0.08);
-				font-weight: 500;
-			}
-			.toc-item.toc-h3 {
-				padding-left: 1em;
-			}
-			.toc-item.toc-h3 a {
-				font-size: 0.92em;
-				color: var(--text-muted);
-			}
-			.toc-item.toc-h3 a.active {
-				color: var(--accent-light);
-			}
+        // ---------- TOC build ----------
+        var tocList = document.getElementById('toc-list');
+        var tocHeadings = document.querySelectorAll('.prose h2, .prose h3');
+        if (tocList) {
+          tocHeadings.forEach(function (heading) {
+            var li = document.createElement('li');
+            li.className = 'toc-item toc-' + heading.tagName.toLowerCase();
+            var a = document.createElement('a');
+            a.href = '#' + heading.id;
+            a.textContent = heading.textContent.replace(/#$/, '').trim();
+            a.addEventListener('click', function (e) {
+              e.preventDefault();
+              var target = document.getElementById(heading.id);
+              if (target) {
+                var top = target.getBoundingClientRect().top + window.pageYOffset - navHeight - 16;
+                window.scrollTo({ top: top, behavior: 'smooth' });
+                history.pushState(null, '', '#' + heading.id);
+              }
+            });
+            li.appendChild(a);
+            tocList.appendChild(li);
+          });
+        }
 
-			/* ── Hero Image (full-bleed within article, not constrained by prose) ── */
-			.hero-image {
-				width: 100%;
-				margin-bottom: 1.25em;
-			}
-			.hero-image img {
-				display: block;
-				width: 100%;
-				height: auto;
-				max-height: 280px;
-				object-fit: cover;
-				border-radius: var(--radius-lg);
-				box-shadow: var(--shadow-md);
-			}
+        // ---------- IntersectionObserver scroll-spy ----------
+        var tocLinks = tocList ? tocList.querySelectorAll('a') : [];
+        if (tocHeadings.length && tocLinks.length) {
+          var visible = new Map();
+          var observer = new IntersectionObserver(
+            function (entries) {
+              entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                  visible.set(entry.target.id, entry.boundingClientRect.top);
+                } else {
+                  visible.delete(entry.target.id);
+                }
+              });
+              var topMost = null;
+              var topMostTop = Infinity;
+              visible.forEach(function (top, id) {
+                if (top < topMostTop) {
+                  topMostTop = top;
+                  topMost = id;
+                }
+              });
+              if (!topMost) {
+                tocHeadings.forEach(function (h) {
+                  var rect = h.getBoundingClientRect();
+                  if (rect.top < navHeight + 80) {
+                    topMost = h.id;
+                  }
+                });
+              }
+              tocLinks.forEach(function (a) {
+                if (a.getAttribute('href') === '#' + topMost) {
+                  a.classList.add('active');
+                  var sidebar = document.getElementById('sidebar');
+                  if (sidebar) {
+                    var linkRect = a.getBoundingClientRect();
+                    var sidebarRect = sidebar.getBoundingClientRect();
+                    if (linkRect.top < sidebarRect.top || linkRect.bottom > sidebarRect.bottom) {
+                      a.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    }
+                  }
+                } else {
+                  a.classList.remove('active');
+                }
+              });
+            },
+            { rootMargin: '-' + (navHeight + 20) + 'px 0px -70% 0px', threshold: 0 }
+          );
+          tocHeadings.forEach(function (h) {
+            observer.observe(h);
+          });
+        }
 
-			/* ── Constrained body: title, stats, prose at readable line-length ── */
-			.article-body {
-				max-width: 1000px;
-			}
+        // ---------- Sidebar collapse toggle ----------
+        var sidebar = document.getElementById('sidebar');
+        var sidebarToggle = document.getElementById('sidebar-toggle');
+        if (sidebarToggle && sidebar) {
+          sidebarToggle.addEventListener('click', function () {
+            sidebar.classList.toggle('collapsed');
+          });
+        }
 
-			/* ── Post Header ── */
-			.post-header {
-				margin-bottom: 1.25em;
-			}
-			.post-header h1 {
-				font-size: 2.8rem;
-				font-weight: 700;
-				letter-spacing: -0.03em;
-				line-height: 1.1;
-				margin: 0 0 0.3em;
-			}
+        // ---------- Back-up-top ----------
+        var backUpTop = document.getElementById('back-up-top');
+        if (backUpTop) {
+          function checkScroll() {
+            if (window.pageYOffset > 400) {
+              backUpTop.classList.add('visible');
+            } else {
+              backUpTop.classList.remove('visible');
+            }
+          }
+          window.addEventListener('scroll', checkScroll, { passive: true });
+          checkScroll();
+          backUpTop.addEventListener('click', function () {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          });
+        }
+      })();
+    </script>
 
-			/* ── One-line stats bar: author · date · reading time · tags ── */
-			.post-stats {
-				display: flex;
-				flex-wrap: wrap;
-				align-items: center;
-				gap: 0.3em 0.6em;
-				color: var(--text-muted);
-				font-size: 0.84em;
-				margin-bottom: 0.6em;
-			}
-			.post-stats .sep { opacity: 0.3; }
-			.post-stats .tag-link {
-				display: inline-block;
-				padding: 0.06em 0.45em;
-				font-size: 0.80em;
-				color: var(--accent-light);
-				border: 1px solid var(--border-light);
-				border-radius: var(--radius-sm);
-				text-decoration: none;
-				transition: border-color 0.15s, color 0.15s;
-			}
-			.post-stats .tag-link:hover {
-				border-color: var(--accent);
-				color: var(--accent-light);
-			}
-			.last-updated { font-style: italic; }
+    <style>
+      :root {
+        --canvas: #0a0a0b;
+        --bg-secondary: #121214;
+        --accent: #6c5ce7;
+        --accent-glow: rgba(108, 92, 231, 0.25);
+        --text: #e8e8ea;
+        --text-muted: #8a8a93;
+        --border: #1f1f23;
+        --border-light: #2a2a30;
+        --nav-height: 64px;
+      }
 
-			/* ── Description ── */
-			.post-desc {
-				font-size: 1.05em;
-				color: var(--text-secondary);
-				line-height: 1.6;
-				margin: 0 0 1em;
-			}
+      * {
+        box-sizing: border-box;
+      }
 
-			/* ── Prose ── */
-			.prose {
-				color: var(--text-primary);
-			}
-			.prose h2 { margin-top: 2em; }
-			.prose h3 { margin-top: 1.2em; }
-			.prose p { margin-bottom: 1.2em; line-height: 1.8; }
+      body {
+        background: var(--canvas);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        margin: 0;
+        line-height: 1.7;
+      }
 
-			/* ── Heading Permalink ── */
-			.heading-permalink {
-				opacity: 0;
-				display: inline-flex;
-				align-items: center;
-				justify-content: center;
-				width: 24px;
-				height: 24px;
-				margin-left: 0.3em;
-				color: var(--text-muted);
-				text-decoration: none;
-				border-radius: 4px;
-				transition: opacity 0.15s, color 0.15s, background 0.15s;
-				vertical-align: middle;
-				position: relative;
-			}
-			.prose h2:hover .heading-permalink,
-			.prose h3:hover .heading-permalink {
-				opacity: 1;
-			}
-			.heading-permalink:hover {
-				color: var(--accent-light);
-				background: var(--bg-tertiary);
-			}
-			.heading-permalink[data-copied="true"]::after {
-				content: "Copied!";
-				position: absolute;
-				top: -1.8em;
-				left: 50%;
-				transform: translateX(-50%);
-				font-size: 0.65em;
-				background: var(--bg);
-				color: var(--accent-light);
-				padding: 0.2em 0.5em;
-				border-radius: 4px;
-				border: 1px solid var(--border);
-				white-space: nowrap;
-				font-family: var(--font-sans);
-				font-weight: 500;
-			}
+      main {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
 
-			/* ── TLDR Callout (compact aside) ── */
-			.tldr-block {
-				background: var(--bg-secondary);
-				border: 1px solid var(--border);
-				border-left: 3px solid var(--accent);
-				border-radius: var(--radius-md);
-				padding: 0.85em 1.15em;
-				margin: 1em 0;
-				font-size: 0.92em;
-				color: var(--text-secondary);
-			}
-			.tldr-block strong:first-child {
-				color: var(--accent-light);
-				text-transform: uppercase;
-				font-size: 0.70em;
-				letter-spacing: 0.06em;
-			}
+      /* ---------- Breadcrumbs ---------- */
+      .breadcrumbs {
+        padding: 24px 0 8px;
+        font-size: 0.875rem;
+        color: var(--text-muted);
+      }
+      .breadcrumbs a {
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: color 0.2s ease;
+      }
+      .breadcrumbs a:hover {
+        color: var(--accent);
+      }
+      .breadcrumbs .sep {
+        margin: 0 8px;
+        color: var(--text-muted);
+        opacity: 0.6;
+      }
 
-			/* ── Widescreen Breakpoint Ladder ── */
-			@media (min-width: 1200px) {
-				main { max-width: min(1080px, 90vw); }
-			}
-			@media (min-width: 1440px) {
-				main {
-					max-width: none;
-					padding: 1.25em 2.5em 3em;
-				}
-			}
-			@media (min-width: 1600px) {
-				main { padding: 1.25em 3em 3em; }
-			}
-			@media (min-width: 1800px) {
-				main { padding: 1.25em 3em 3em; }
-			}
-			@media (min-width: 2000px) {
-				main { padding: 1.25em 3em 3em; }
-			}
+      /* ---------- Layout ---------- */
+      .blog-layout {
+        display: flex;
+        gap: 40px;
+        align-items: flex-start;
+        padding-bottom: 80px;
+      }
 
-			/* ── Responsive: below 1440px hide sidebar, single column ── */
-			@media (max-width: 1439px) {
-				.sidebar {
-					display: none;
-				}
-				.blog-layout {
-					display: block;
-				}
-				.article-body {
-					max-width: 1000px;
-					margin: 0 auto;
-				}
-			}
+      /* ---------- Sidebar / TOC ---------- */
+      .sidebar {
+        position: sticky;
+        top: calc(var(--nav-height) + 24px);
+        width: 240px;
+        flex-shrink: 0;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-right: 1px solid var(--border-light);
+        border-radius: 12px;
+        padding: 16px;
+        max-height: calc(100vh - var(--nav-height) - 48px);
+        overflow-y: auto;
+        overflow-x: hidden;
+        transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+      }
+      .sidebar.collapsed .toc-nav {
+        display: none;
+      }
+      .sidebar.collapsed {
+        padding-bottom: 16px;
+      }
+      .sidebar-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .sidebar-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+      }
+      .sidebar-toggle {
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        transition: color 0.2s ease, transform 0.3s ease, background 0.2s ease;
+      }
+      .sidebar-toggle:hover {
+        color: var(--accent);
+        background: rgba(108, 92, 231, 0.08);
+      }
+      .sidebar.collapsed .sidebar-toggle {
+        transform: rotate(-90deg);
+      }
+      .toc-nav ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .toc-item {
+        margin: 0;
+      }
+      .toc-item a {
+        display: block;
+        padding: 6px 10px;
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+        text-decoration: none;
+        border-left: 2px solid transparent;
+        border-radius: 0 4px 4px 0;
+        transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        line-height: 1.4;
+      }
+      .toc-item a:hover {
+        color: var(--text);
+      }
+      .toc-item a.active {
+        color: var(--accent);
+        border-left-color: var(--accent);
+        background: rgba(108, 92, 231, 0.08);
+        font-weight: 500;
+      }
+      .toc-h3 a {
+        padding-left: 22px;
+        font-size: 0.78125rem;
+      }
 
-			/* ── Mobile ── */
-			@media (max-width: 720px) {
-				main { padding: 0.75em 1em 2em; }
-				.breadcrumbs { padding: 0.4em 1em 0; }
-				.post-header h1 { font-size: 2rem; }
-				.post-stats { font-size: 0.78em; gap: 0.25em 0.4em; }
-			}
-		/* ── Back-up-top floating button ── */
-			.back-up-top {
-				position: fixed;
-				bottom: 2rem;
-				left: 2rem;
-				width: 40px;
-				height: 40px;
-				border-radius: 50%;
-				border: 1px solid var(--border-light);
-				background: var(--bg-secondary);
-				color: var(--text-muted);
-				cursor: pointer;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				opacity: 0;
-				transform: scale(0.85);
-				transition: opacity 0.25s ease, transform 0.25s ease, color 0.15s, border-color 0.15s;
-				z-index: 50;
-				pointer-events: none;
-			}
-			.back-up-top.visible {
-				opacity: 1;
-				transform: scale(1);
-				pointer-events: auto;
-			}
-			.back-up-top:hover {
-				color: var(--accent-light);
-				border-color: var(--accent);
-			}
+      /* ---------- Article ---------- */
+      article {
+        flex: 1;
+        max-width: 1000px;
+        min-width: 0;
+      }
 
-			@media (max-width: 720px) {
-				.back-up-top {
-					bottom: 1.5rem;
-					left: 1.5rem;
-					width: 36px;
-					height: 36px;
-				}
-			}
-		</style>
-	</head>
-	<body>
-		<Header />
-		<nav class="breadcrumbs" aria-label="Breadcrumb">
-			<a href="/blog">Tutorials</a><span class="sep">›</span>
-			<span style="color: var(--text-secondary)">{title}</span>
-		</nav>
-		<main>
-			<div class="blog-layout">
-				<aside class="sidebar" id="sidebar" aria-label="Table of contents">
-					<div class="sidebar-inner">
-						<div class="toc-header">
-							<span class="toc-header-label">On This Page</span>
-							<button class="toc-toggle" id="tocToggle" aria-label="Toggle table of contents" type="button">
-								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-									<polyline points="6 9 12 15 18 9"/>
-								</svg>
-							</button>
-						</div>
-						<nav class="toc-nav" aria-label="Section navigation">
-							<ul id="toc-list"></ul>
-						</nav>
-					</div>
-				</aside>
-				<article itemscope itemtype="https://schema.org/Article">
-					<meta itemprop="author" content={author} />
-					<meta itemprop="datePublished" content={pubDate.toISOString()} />
-					{updatedDate && <meta itemprop="dateModified" content={updatedDate.toISOString()} />}
+      .hero-image {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 16 / 9;
+        object-fit: cover;
+        border-radius: 12px;
+        margin-bottom: 32px;
+      }
 
-					{heroImage && (
-						<div class="hero-image">
-							<Image width={1020} height={510} src={heroImage} alt={`Hero image for ${title}`} itemprop="image" />
-						</div>
-					)}
+      .post-header {
+        margin-bottom: 40px;
+      }
+      .post-header h1 {
+        font-size: 2.5rem;
+        line-height: 1.2;
+        margin: 0 0 16px;
+        letter-spacing: -0.02em;
+      }
+      .stats-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        margin-bottom: 16px;
+      }
+      .stats-bar .sep {
+        opacity: 0.5;
+      }
+      .tag-link {
+        color: var(--accent);
+        text-decoration: none;
+        font-size: 0.8125rem;
+        transition: opacity 0.2s ease;
+      }
+      .tag-link:hover {
+        opacity: 0.75;
+      }
+      .tags {
+        display: inline-flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .post-desc {
+        font-size: 1.125rem;
+        color: var(--text-muted);
+        line-height: 1.6;
+        margin: 0;
+      }
 
-					<div class="article-body">
-						<div class="post-header">
-							<h1 itemprop="headline">{title}</h1>
+      /* ---------- Prose ---------- */
+      .prose {
+        font-size: 1.0625rem;
+        line-height: 1.75;
+      }
+      .prose h2 {
+        font-size: 1.75rem;
+        margin: 48px 0 20px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+        letter-spacing: -0.01em;
+        position: relative;
+        scroll-margin-top: calc(var(--nav-height) + 24px);
+      }
+      .prose h3 {
+        font-size: 1.375rem;
+        margin: 36px 0 16px;
+        letter-spacing: -0.01em;
+        position: relative;
+        scroll-margin-top: calc(var(--nav-height) + 24px);
+      }
+      .prose h2 .permalink,
+      .prose h3 .permalink {
+        display: inline-flex;
+        align-items: center;
+        margin-left: 8px;
+        color: var(--text-muted);
+        opacity: 0;
+        text-decoration: none;
+        transition: opacity 0.2s ease, color 0.2s ease;
+        vertical-align: middle;
+      }
+      .prose h2:hover .permalink,
+      .prose h3:hover .permalink {
+        opacity: 1;
+      }
+      .prose h2 .permalink:hover,
+      .prose h3 .permalink:hover {
+        color: var(--accent);
+      }
+      .prose p {
+        margin: 0 0 20px;
+      }
+      .prose a {
+        color: var(--accent);
+        text-decoration: none;
+        border-bottom: 1px solid rgba(108, 92, 231, 0.3);
+        transition: border-color 0.2s ease;
+      }
+      .prose a:hover {
+        border-bottom-color: var(--accent);
+      }
+      .prose ul,
+      .prose ol {
+        margin: 0 0 20px;
+        padding-left: 24px;
+      }
+      .prose li {
+        margin-bottom: 8px;
+      }
+      .prose blockquote {
+        margin: 24px 0;
+        padding: 16px 20px;
+        background: var(--bg-secondary);
+        border-left: 3px solid var(--accent);
+        border-radius: 0 8px 8px 0;
+        color: var(--text-muted);
+      }
+      .prose blockquote p:last-child {
+        margin-bottom: 0;
+      }
+      .prose code {
+        font-family: 'SF Mono', Menlo, Consolas, monospace;
+        font-size: 0.875em;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+      .prose pre {
+        margin: 24px 0;
+        padding: 20px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow-x: auto;
+      }
+      .prose pre code {
+        background: transparent;
+        border: none;
+        padding: 0;
+        font-size: 0.875rem;
+        line-height: 1.6;
+      }
+      .prose .copy-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: var(--canvas);
+        border: 1px solid var(--border-light);
+        color: var(--text-muted);
+        font-size: 0.75rem;
+        padding: 4px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: color 0.2s ease, border-color 0.2s ease;
+      }
+      .prose .copy-btn:hover {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+      .prose table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 24px 0;
+        font-size: 0.9375rem;
+      }
+      .prose th,
+      .prose td {
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        text-align: left;
+      }
+      .prose th {
+        background: var(--bg-secondary);
+        font-weight: 600;
+      }
+      .prose hr {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 40px 0;
+      }
+      .prose .tldr {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-light);
+        border-left: 3px solid var(--accent);
+        border-radius: 0 8px 8px 0;
+        padding: 16px 20px;
+        margin: 24px 0;
+      }
 
-							<div class="post-stats">
-								<span>By {author}</span><span class="sep">·</span>
-								<FormattedDate date={pubDate} /><span class="sep">·</span>
-								<span>{readingTime} min read</span>
-								{updatedDate && <><span class="sep">·</span><span class="last-updated">Updated <FormattedDate date={updatedDate} /></span></>}
-								{tags.length > 0 && <><span class="sep">·</span>{tags.map(tag => <a class="tag-link" href={`/tags/${tag}`}>{tag}</a>)}</>}
-							</div>
+      /* ---------- Back-up-top ---------- */
+      .back-up-top {
+        position: fixed;
+        bottom: 24px;
+        left: 24px;
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-light);
+        border-radius: 50%;
+        color: var(--text-muted);
+        cursor: pointer;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(8px);
+        transition: opacity 0.3s ease, transform 0.3s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        z-index: 50;
+      }
+      .back-up-top.visible {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+      }
+      .back-up-top:hover {
+        color: var(--accent);
+        border-color: var(--accent);
+        box-shadow: 0 0 16px var(--accent-glow);
+      }
 
-							<p class="post-desc" itemprop="description">{description}</p>
-						</div>
+      /* ---------- Responsive ---------- */
+      @media (max-width: 1023px) {
+        .blog-layout {
+          flex-direction: column;
+          gap: 24px;
+        }
+        .sidebar {
+          position: relative;
+          top: 0;
+          width: 100%;
+          max-height: none;
+          border-right: 1px solid var(--border);
+        }
+        .sidebar.collapsed .toc-nav {
+          display: none;
+        }
+        .post-header h1 {
+          font-size: 1.875rem;
+        }
+        .hero-image {
+          max-height: 280px;
+        }
+        .back-up-top {
+          width: 36px;
+          height: 36px;
+          bottom: 16px;
+          left: 16px;
+        }
+      }
 
-						<div class="prose">
-							<slot />
-						</div>
-					</div>
-				</article>
-			</div>
-		</main>
-		<Footer />
-
-		<script is:inline>
-					(function () {
-						'use strict';
-
-						/* ── Back-up-top floating button ── */
-						var backBtn = document.createElement('button');
-						backBtn.className = 'back-up-top';
-						backBtn.setAttribute('aria-label', 'Back to top');
-						backBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>';
-						backBtn.addEventListener('click', function () {
-							window.scrollTo({ top: 0, behavior: 'smooth' });
-						});
-						document.body.appendChild(backBtn);
-						window.addEventListener('scroll', function () {
-							backBtn.classList.toggle('visible', window.scrollY > 400);
-						});
-
-						/* ── Permalink (#) icons for headings ── */
-				const headingSelector = '.prose h2, .prose h3';
-				const headings = document.querySelectorAll(headingSelector);
-
-				const permalinkSvg =
-					'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-						'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>' +
-						'<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>' +
-					'</svg>';
-
-				headings.forEach(function (h) {
-					if (!h.id) {
-						h.id = h.textContent
-							.toLowerCase()
-							.replace(/[^a-z0-9]+/g, '-')
-							.replace(/^-|-$/g, '');
-					}
-
-					var link = document.createElement('a');
-					link.className = 'heading-permalink';
-					link.href = '#' + h.id;
-					link.setAttribute('aria-label', 'Link to this section');
-					link.innerHTML = permalinkSvg;
-
-					link.addEventListener('click', function (e) {
-						e.preventDefault();
-						var url = window.location.origin + window.location.pathname + '#' + h.id;
-						navigator.clipboard.writeText(url).then(function () {
-							link.setAttribute('data-copied', 'true');
-							setTimeout(function () { link.removeAttribute('data-copied'); }, 1500);
-						}).catch(function () {
-							/* fallback: update hash silently */
-							window.history.replaceState(null, '', '#' + h.id);
-						});
-					});
-
-					h.appendChild(link);
-				});
-
-				/* ── Table of Contents ── */
-				var tocList = document.getElementById('toc-list');
-				if (tocList && headings.length > 0) {
-					var tocItems = [];
-					headings.forEach(function (h) {
-						var tag = h.tagName.toLowerCase();
-						var item = document.createElement('li');
-						item.className = 'toc-item toc-' + tag;
-						var a = document.createElement('a');
-						a.href = '#' + h.id;
-						a.textContent = h.textContent.replace(/#$/, '').trim();
-						item.appendChild(a);
-						tocItems.push({ el: item, tag: tag, id: h.id, anchor: a });
-						tocList.appendChild(item);
-					});
-
-					/* ── IntersectionObserver Scrollspy ── */
-					var activeLink = null;
-					var headingMap = {};
-					headings.forEach(function (h) {
-						headingMap[h.id] = h;
-					});
-
-					var observer = new IntersectionObserver(function (entries) {
-						var visible = entries.filter(function (e) { return e.isIntersecting; });
-						if (visible.length === 0) return;
-						/* pick the topmost visible heading */
-						var top = visible.reduce(function (best, e) {
-							return e.boundingClientRect.top < best.boundingClientRect.top ? e : best;
-						});
-						var id = top.target.id;
-						/* find corresponding TOC anchor */
-						for (var i = 0; i < tocItems.length; i++) {
-							if (tocItems[i].id === id) {
-								if (activeLink) activeLink.classList.remove('active');
-								tocItems[i].anchor.classList.add('active');
-								activeLink = tocItems[i].anchor;
-								break;
-							}
-						}
-					}, {
-						rootMargin: '-80px 0px -60% 0px',
-						threshold: 0,
-					});
-
-					headings.forEach(function (h) { observer.observe(h); });
-				}
-
-				/* ── Sidebar Collapse Toggle ── */
-				var sidebar = document.getElementById('sidebar');
-				var toggleBtn = document.getElementById('tocToggle');
-				if (sidebar && toggleBtn) {
-					toggleBtn.addEventListener('click', function () {
-						sidebar.classList.toggle('collapsed');
-					});
-				}
-			})();
-		</script>
-	</body>
+      @media (min-width: 1024px) {
+        .sidebar.collapsed {
+          width: 240px;
+        }
+      }
+    </style>
+  </body>
 </html>
