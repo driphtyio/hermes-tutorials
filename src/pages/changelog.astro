@@ -1,0 +1,141 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { SITE_TITLE } from '../consts';
+import { changelog, type ChangelogEntry } from '../data/changelog';
+
+const total = changelog.length;
+const codenamed = changelog.filter(e => e.codename).length;
+const latest = changelog[0];
+const span = `${changelog[changelog.length - 1].date} → ${latest.date}`;
+
+// Group by month for the timeline
+const byMonth = new Map<string, ChangelogEntry[]>();
+for (const e of changelog) {
+  const key = e.date.slice(0, 7);
+  if (!byMonth.has(key)) byMonth.set(key, []);
+  byMonth.get(key)!.push(e);
+}
+const months = [...byMonth.keys()].sort((a, b) => b.localeCompare(a));
+
+const description = `Every Hermes Agent release — ${total} tagged versions from ${span}, with codenames, highlights, and links to our deep-dive guides.`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <BaseHead title={`Changelog — ${SITE_TITLE}`} description={description} />
+    <style>
+      .cl-wrap { max-width: min(1000px, 94vw); margin: 0 auto; }
+      .page-header { text-align: center; padding: 2em 0 1em; }
+      .page-header h1 { font-size: 2.8rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.3em; }
+      .page-header .subtitle { color: var(--text-secondary); max-width: 640px; margin: 0 auto; }
+      .stats-bar { display: flex; justify-content: center; gap: 2.5em; margin: 1.5em 0; flex-wrap: wrap; }
+      .stat-number { font-size: 1.6rem; font-weight: 700; color: var(--accent-light); }
+      .stat-label { font-size: 0.8em; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+      .latest-hero {
+        border: 1px solid var(--border-light); border-radius: var(--radius-md);
+        background: linear-gradient(180deg, rgba(108,92,231,0.08), rgba(18,18,20,0.4));
+        padding: 1.4em 1.6em; margin: 1.5em 0 2.5em;
+      }
+      .latest-hero .lh-head { display: flex; align-items: baseline; gap: 0.8em; flex-wrap: wrap; }
+      .latest-hero h2 { margin: 0; font-size: 1.4rem; }
+      .codename { color: var(--accent-light); font-weight: 600; }
+      .lh-date { color: var(--text-muted); font-size: 0.85em; }
+      .latest-hero p { color: var(--text-secondary); font-size: 0.92em; line-height: 1.6; }
+      .latest-hero .lh-links { display: flex; gap: 1em; flex-wrap: wrap; margin-top: 0.6em; }
+
+      .month-h { font-size: 1.15rem; color: var(--accent-light); margin: 2.2em 0 0.8em; letter-spacing: 0.02em; }
+
+      .rel { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-secondary); margin-bottom: 0.8em; transition: border-color 0.15s ease; }
+      .rel:hover { border-color: var(--border-hover); }
+      .rel summary { cursor: pointer; padding: 0.9em 1.2em; display: flex; align-items: center; gap: 0.8em; flex-wrap: wrap; list-style: none; }
+      .rel summary::-webkit-details-marker { display: none; }
+      .rel .r-arrow { color: var(--text-muted); font-size: 0.75em; transition: transform 0.15s ease; }
+      .rel[open] .r-arrow { transform: rotate(90deg); }
+      .rel .r-ver { font-family: var(--font-mono); font-weight: 600; color: var(--text-primary); min-width: 5.5em; }
+      .rel .r-codename { color: var(--accent-light); font-size: 0.88em; font-weight: 600; }
+      .rel .r-date { margin-left: auto; color: var(--text-muted); font-size: 0.82em; font-family: var(--font-mono); }
+
+      .rel-body { padding: 0.2em 1.4em 1.2em; border-top: 1px solid var(--border); }
+      .rel-body .r-summary { color: var(--text-secondary); font-size: 0.88em; line-height: 1.6; margin: 0.9em 0; }
+      .rel-body h4 { font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); margin: 1em 0 0.5em; }
+      .rel-body ul { margin: 0; padding-left: 1.2em; }
+      .rel-body li { color: var(--text-secondary); font-size: 0.87em; line-height: 1.55; margin-bottom: 0.4em; }
+      .rel-body li::marker { color: var(--accent); }
+
+      .link-row { display: flex; gap: 0.6em 1.2em; flex-wrap: wrap; margin-top: 0.9em; padding-top: 0.8em; border-top: 1px dashed var(--border); }
+      .link-row a { font-size: 0.82em; color: var(--accent-light); text-decoration: none; }
+      .link-row a:hover { text-decoration: underline; }
+      .link-row .lr-label { color: var(--text-muted); font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.06em; margin-right: 0.2em; }
+    </style>
+  </head>
+  <body>
+    <Header />
+    <main>
+      <div class="cl-wrap">
+        <div class="page-header">
+          <h1>Hermes Agent Changelog</h1>
+          <p class="subtitle">Every tagged release of Hermes Agent — {total} versions, {codenamed} with codenames — distilled from the official release notes, with guides for the features they shipped.</p>
+        </div>
+
+        <div class="stats-bar">
+          <div><div class="stat-number">{total}</div><div class="stat-label">Releases</div></div>
+          <div><div class="stat-number">{codenamed}</div><div class="stat-label">Codenames</div></div>
+          <div><div class="stat-number">{months.length}</div><div class="stat-label">Months</div></div>
+        </div>
+
+        <div class="latest-hero">
+          <div class="lh-head">
+            <span class="codename">LATEST</span>
+            <h2>{latest.version}</h2>
+            {latest.codename && <span class="codename">{latest.codename}</span>}
+            <span class="lh-date">{latest.date}</span>
+          </div>
+          <p>{latest.summary}</p>
+          <div class="lh-links">
+            <a href={latest.url}>Release notes on GitHub ↗</a>
+            {latest.compare && <a href={latest.compare}>Full diff ↗</a>}
+            {latest.links.map(l => <a href={l.url}>{l.label} →</a>)}
+          </div>
+        </div>
+
+        {months.map(mo => (
+          <div>
+            <h3 class="month-h">{new Date(mo + '-02').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h3>
+            {byMonth.get(mo)!.map(e => (
+              <details class="rel">
+                <summary>
+                  <span class="r-arrow">▶</span>
+                  <span class="r-ver">{e.version}</span>
+                  {e.codename && <span class="r-codename">{e.codename}</span>}
+                  <span class="r-date">{e.date}</span>
+                </summary>
+                <div class="rel-body">
+                  {e.summary && <p class="r-summary">{e.summary}</p>}
+                  {e.highlights.length > 0 && (
+                    <div>
+                      <h4>Highlights</h4>
+                      <ul>
+                        {e.highlights.map(h => <li set:html={h} />)}
+                      </ul>
+                    </div>
+                  )}
+                  <div class="link-row">
+                    <span class="lr-label">Links</span>
+                    <a href={e.url}>GitHub release notes ↗</a>
+                    {e.compare && <a href={e.compare}>Full diff ↗</a>}
+                    {e.links.map(l => <a href={l.url}>{l.label} →</a>)}
+                  </div>
+                </div>
+              </details>
+            ))}
+          </div>
+        ))}
+      </div>
+    </main>
+    <Footer />
+  </body>
+</html>
