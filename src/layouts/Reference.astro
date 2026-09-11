@@ -22,6 +22,7 @@ interface Props {
   stats?: Stat[];
   count?: number;
   searchPlaceholder?: string;
+  sortable?: boolean;
 }
 
 const {
@@ -31,6 +32,7 @@ const {
   stats = [],
   count = 0,
   searchPlaceholder = 'Search by name or description…',
+  sortable = false,
 } = Astro.props;
 ---
 
@@ -50,6 +52,10 @@ const {
       .ref-controls .search-box { position: relative; flex: 0 1 440px; max-width: 440px; margin: 0; }
       .search-icon { position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
       .ref-controls .search-input { padding-left: 2.4rem; }
+      .sort-box { display: flex; align-items: center; gap: 0.5rem; }
+      .sort-box label { font-size: 0.85rem; color: var(--text-muted); white-space: nowrap; }
+      .sort-select { background: var(--bg); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.4rem 0.6rem; font-size: 0.85rem; font-family: inherit; cursor: pointer; }
+      .sort-select:hover { border-color: var(--accent); }
       .ref-count { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; }
       .filter-bar { gap: 0.5rem; margin: 0 0 1.5rem; }
       .filter-btn { display: inline-flex; align-items: center; gap: 0.35rem; }
@@ -179,6 +185,16 @@ const {
             </svg>
             <input class="search-input" type="text" id="search" placeholder={searchPlaceholder} autocomplete="off" />
           </div>
+          {sortable && (
+            <div class="sort-box">
+              <label for="sort">Sort:</label>
+              <select class="sort-select" id="sort">
+                <option value="rating-desc">⭐ Rating (High→Low)</option>
+                <option value="name-asc">🔤 Name (A→Z)</option>
+                <option value="name-desc">🔤 Name (Z→A)</option>
+              </select>
+            </div>
+          )}
           <span class="ref-count" id="stats-count">{count} items</span>
         </div>
 
@@ -212,10 +228,41 @@ const {
         var emptyEl = document.getElementById('emptyState');
         var btns = Array.prototype.slice.call(document.querySelectorAll('.filter-btn'));
         var active = 'all';
+        var sortEl = document.getElementById('sort');
+        var sortable = !!sortEl;
 
-        function apply() {
+        function getUrlParams() {
+          var p = new URLSearchParams(window.location.search);
+          return { q: p.get('q') || '', cat: p.get('cat') || 'all', sort: p.get('sort') || 'rating-desc' };
+        }
+        function setUrlParams(q, cat, sort) {
+          var p = new URLSearchParams();
+          if (q) p.set('q', q);
+          if (cat && cat !== 'all') p.set('cat', cat);
+          if (sort && sort !== 'rating-desc') p.set('sort', sort);
+          var qs = p.toString();
+          window.history.replaceState({}, '', qs ? window.location.pathname + '?' + qs : window.location.pathname);
+        }
+        function sortCards(visibleCards, method) {
+          var sorted = visibleCards.slice(0);
+          if (method === 'name-asc') sorted.sort(function (a, b) { return (a.getAttribute('data-name') || '').localeCompare(b.getAttribute('data-name') || ''); });
+          else if (method === 'name-desc') sorted.sort(function (a, b) { return (b.getAttribute('data-name') || '').localeCompare(a.getAttribute('data-name') || ''); });
+          else sorted.sort(function (a, b) { return parseFloat(b.getAttribute('data-rating') || '0') - parseFloat(a.getAttribute('data-rating') || '0'); });
+          sorted.forEach(function (c) { grid.appendChild(c); });
+        }
+
+        var urlq = getUrlParams();
+        if (searchEl && urlq.q) searchEl.value = urlq.q;
+        if (urlq.cat && urlq.cat !== 'all') {
+          var match = btns.filter(function (b) { return b.getAttribute('data-cat') === urlq.cat; })[0];
+          if (match) { btns.forEach(function (x) { x.classList.remove('active'); }); match.classList.add('active'); active = urlq.cat; }
+        }
+        if (sortable && urlq.sort) sortEl.value = urlq.sort;
+
+        function apply(pushUrl) {
           var q = searchEl && searchEl.value ? searchEl.value.toLowerCase().trim() : '';
           var n = 0;
+          var visibleCards = [];
           cards.forEach(function (c) {
             var cat = c.getAttribute('data-category') || '';
             var name = (c.getAttribute('data-name') || '').toLowerCase();
@@ -223,11 +270,13 @@ const {
             var ok = (active === 'all' || cat === active) &&
               (!q || name.indexOf(q) !== -1 || desc.indexOf(q) !== -1);
             c.style.display = ok ? '' : 'none';
-            if (ok) n++;
+            if (ok) { n++; visibleCards.push(c); }
           });
           if (countEl) countEl.textContent = n + ' / ' + total + ' items';
           if (emptyEl) emptyEl.style.display = n === 0 ? '' : 'none';
           grid.style.display = n === 0 ? 'none' : '';
+          if (sortable) sortCards(visibleCards, sortEl.value);
+          if (pushUrl) setUrlParams(searchEl && searchEl.value ? searchEl.value.trim() : '', active, sortable ? sortEl.value : 'rating-desc');
         }
 
         btns.forEach(function (b) {
@@ -235,10 +284,11 @@ const {
             btns.forEach(function (x) { x.classList.remove('active'); });
             b.classList.add('active');
             active = b.getAttribute('data-cat') || 'all';
-            apply();
+            apply(true);
           });
         });
-        if (searchEl) searchEl.addEventListener('input', apply);
+        if (searchEl) searchEl.addEventListener('input', function () { apply(true); });
+        if (sortable) sortEl.addEventListener('change', function () { apply(true); });
 
         /* Delegated extras: collapsible toggles + copy-to-clipboard */
         document.addEventListener('click', function (ev) {

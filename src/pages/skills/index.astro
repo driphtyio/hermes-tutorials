@@ -26,6 +26,7 @@ const description = `Browse, search, and load reusable skills for Hermes Agent. 
   stats={stats}
   count={skills.length}
   searchPlaceholder="Search skills…"
+  sortable
 >
   {skills.map((s) => (
     <article
@@ -34,6 +35,7 @@ const description = `Browse, search, and load reusable skills for Hermes Agent. 
       data-category={s.category}
       data-name={s.name.toLowerCase()}
       data-desc={s.description.toLowerCase()}
+      data-rating={s.rating}
     >
       <div class="category-label">{labelFor(s.category)}</div>
       <div class="card-head">
