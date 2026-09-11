@@ -311,7 +311,7 @@ export const projects: Project[] = [
 		timeEstimate: '10 min',
 		whatYouBuild: 'An OpenAI-compatible API endpoint that any app can integrate with — Cursor, Open WebUI, custom frontends, IDE plugins.',
 		toolsNeeded: ['Hermes Agent', 'API Server', 'VPS or always-on machine'],
-		guide: 'Set `API_SERVER_ENABLED=true` → `hermes gateway start` → API is available at http://localhost:8686/v1. Point any OpenAI-compatible client at it. Configure CORS, API key auth, and host settings as needed.',
+		guide: 'Set `API_SERVER_ENABLED=true` → `hermes gateway start` → API is available at http://localhost:8642/v1. Point any OpenAI-compatible client at it. Configure CORS, API key auth, and host settings as needed.',
 		useCases: ['Open WebUI integration', 'Cursor plugin', 'Custom frontend', 'CI/CD integration'],
 	},
 	{

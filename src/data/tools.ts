@@ -16,11 +16,11 @@ export const tools: HermesTool[] = [
 		id: 'terminal',
 		name: 'Terminal',
 		category: 'core',
-		description: 'Execute shell commands, manage background processes, run scripts. The primary way Hermes interacts with your system. Supports local, Docker, SSH, and Modal backends.',
+		description: 'Execute shell commands, manage background processes, run scripts. The primary way Hermes interacts with your system. Ships two tools (terminal and process) and supports seven backends: local, docker, ssh, modal, daytona, vercel_sandbox, and singularity.',
 		rating: 5,
 		defaultEnabled: true,
 		requiresEnv: [],
-		capabilities: ['Shell execution', 'Process management', 'PTY mode', 'Multi-backend (local/docker/ssh/modal)'],
+		capabilities: ['Shell execution', 'Background process management (process tool)', 'PTY mode', 'Seven backends (local/docker/ssh/modal/daytona/vercel_sandbox/singularity)', 'Desktop-GUI pane tools in desktop sessions'],
 		pitfalls: 'PTY mode has \\r vs \\n issues with prompt_toolkit apps. Prefer tmux for interactive spawning.',
 	},
 	{
@@ -65,7 +65,7 @@ export const tools: HermesTool[] = [
 		defaultEnabled: true,
 		requiresEnv: [],
 		capabilities: ['Fact storage/retrieval', 'User preference learning', 'Cross-session persistence', 'Pluggable backends'],
-		pitfalls: 'Memory is bounded (~2KB). Old entries are evicted when full. Cloud backends need API keys.',
+		pitfalls: 'Cloud memory backends need API keys. The built-in store is local SQLite and needs no setup.',
 	},
 	{
 		id: 'session_search',
@@ -82,12 +82,12 @@ export const tools: HermesTool[] = [
 		id: 'delegation',
 		name: 'Delegation',
 		category: 'core',
-		description: 'Spawn subagents with isolated contexts and terminal sessions. Supports parallel batch execution (up to 3 concurrent children).',
+		description: 'Spawn subagents with isolated contexts and terminal sessions. Supports parallel batch execution (up to 10 concurrent children, 250 iterations) with live steering, early stop, and partial-result return.',
 		rating: 4,
 		defaultEnabled: true,
 		requiresEnv: [],
-		capabilities: ['Subagent spawning', 'Parallel batch execution', 'Isolated context/terminal', 'Leaf and orchestrator roles'],
-		pitfalls: 'Not durable — children are cancelled if parent is interrupted. Use cron jobs or background terminal for persistent work.',
+		capabilities: ['Subagent spawning', 'Parallel batch execution (10 concurrent children)', 'Isolated context/terminal', 'Live steering and early stop', 'Partial results on interruption', 'Leaf and orchestrator roles'],
+		pitfalls: 'Children are not durable across a parent restart, though v0.21 returns partial results when a parent is interrupted. Use cron jobs or background terminal for persistent work.',
 	},
 	{
 		id: 'cronjob',
@@ -97,7 +97,7 @@ export const tools: HermesTool[] = [
 		rating: 5,
 		defaultEnabled: true,
 		requiresEnv: [],
-		capabilities: ['Scheduled execution', 'Per-job model override', 'Script pre-run', 'Multi-platform delivery', 'Watchdog pattern (no_agent)'],
+		capabilities: ['Scheduled execution', 'Per-job model override', 'Script pre-run', 'Multi-platform delivery', 'Watchdog pattern (no_agent)', 'Persistent memory and continuity=true carry-over', 'Per-job notepad', 'Monitor mode'],
 		pitfalls: 'Schedule format: duration (30m), cron (0 9 * * *), or ISO. "every sunday" phrases not supported.',
 	},
 	{
@@ -163,7 +163,7 @@ export const tools: HermesTool[] = [
 		id: 'image_gen',
 		name: 'Image Generation',
 		category: 'media',
-		description: 'AI image generation via multiple backends. Supports OpenAI gpt-image-2, xAI Grok-Imagine, and more via plugins.',
+		description: 'AI image generation via multiple backends. Backends include OpenAI (GPT Image 2 / 2.5), xAI Grok-Imagine, FAL, Krea, DeepInfra, OpenRouter + Nous Portal, and Meta AI.',
 		rating: 4,
 		defaultEnabled: false,
 		requiresEnv: ['OPENAI_API_KEY or XAI_API_KEY'],
@@ -185,7 +185,7 @@ export const tools: HermesTool[] = [
 		id: 'tts',
 		name: 'Text-to-Speech',
 		category: 'media',
-		description: 'Convert text to spoken audio. Supports Edge TTS (free, default), ElevenLabs, OpenAI, MiniMax, Mistral, and local NeuTTS.',
+		description: 'Convert text to spoken audio. STT/TTS providers are local, groq, openai, mistral, xai, elevenlabs, and deepinfra, plus Edge TTS as the free default.',
 		rating: 4,
 		defaultEnabled: true,
 		requiresEnv: ['Provider-dependent'],
@@ -243,28 +243,16 @@ export const tools: HermesTool[] = [
 
 	// ── AI / ML ──
 	{
-		id: 'rl',
-		name: 'Reinforcement Learning',
-		category: 'ai',
-		description: 'Reinforcement learning tools for training and evaluating AI models. Off by default — niche use case for ML researchers.',
-		rating: 2,
-		defaultEnabled: false,
-		requiresEnv: ['ML framework dependencies'],
-		capabilities: ['RL training loops', 'Model evaluation'],
-		pitfalls: 'Experimental. Not recommended for general use.',
-	},
-	{
 		id: 'moa',
 		name: 'Mixture of Agents',
 		category: 'ai',
-		description: 'Mixture of Agents pattern — runs multiple model instances in parallel and aggregates their outputs for improved quality. Off by default.',
+		description: 'Mixture of Agents is a model-picker provider/preset, not a toolset: configure it with hermes moa configure and pick the preset from the model picker.',
 		rating: 3,
 		defaultEnabled: false,
-		requiresEnv: ['Multiple API keys'],
-		capabilities: ['Parallel model inference', 'Output aggregation', 'Quality improvement'],
-		pitfalls: 'Token cost multiplies by number of agents. Experimental feature.',
+		requiresEnv: ['Multiple provider credentials'],
+		capabilities: ['Parallel model inference', 'Output aggregation', 'Appears as a preset in the model picker'],
+		pitfalls: 'Token cost multiplies by the number of agents in the ensemble.',
 	},
-
 	// ── Developer Tools ──
 	{
 		id: 'debugging',
@@ -345,6 +333,78 @@ export const tools: HermesTool[] = [
 		capabilities: ['Group member queries', '@mention support', 'Group information'],
 		pitfalls: 'China-specific platform. Requires Yuanbao account.',
 	},
+	// ── Consolidated Core Additions ──
+	{
+		id: 'computer_use',
+		name: 'Computer Use',
+		category: 'automation',
+		description: 'Background desktop control via cua-driver. Takes screenshots and performs click, drag, type, list_apps, and focus_app actions without stealing the cursor or focus. Works with any tool-capable model on macOS, Windows, and Linux; requires cua-driver on PATH.',
+		rating: 4,
+		defaultEnabled: false,
+		requiresEnv: ['cua-driver on PATH'],
+		capabilities: ['Background desktop control', 'Screenshot capture', 'Click, drag, and type', 'list_apps / focus_app', 'Does not steal cursor or focus'],
+		pitfalls: 'Requires cua-driver on PATH. Background control means the user keeps working, so verify state before acting.',
+	},
+
+	{
+		id: 'x_search',
+		name: 'X Search',
+		category: 'web',
+		description: 'Read-only public X discovery via the xAI-built-in x_search Responses tool. For authenticated X API reads and account actions use the xurl skill instead.',
+		rating: 3,
+		defaultEnabled: false,
+		requiresEnv: ['XAI_API_KEY or xAI Grok OAuth'],
+		capabilities: ['Public X post and thread search', 'Read-only discovery', 'Off by default'],
+		pitfalls: 'Off by default; opt in via hermes tools. Schema is only registered when xAI credentials (SuperGrok OAuth or XAI_API_KEY) are configured.',
+	},
+
+	{
+		id: 'project',
+		name: 'Projects',
+		category: 'core',
+		description: 'Create, list, and switch desktop Projects - named multi-folder workspaces. GUI and desktop sessions only.',
+		rating: 3,
+		defaultEnabled: false,
+		requiresEnv: [],
+		capabilities: ['project_create', 'project_list', 'project_switch', 'Named multi-folder workspaces'],
+		pitfalls: 'Only registered in GUI and desktop sessions.',
+	},
+
+	{
+		id: 'desktop_ui',
+		name: 'Desktop UI',
+		category: 'automation',
+		description: 'Twelve desktop-GUI tools for driving the Hermes desktop app: read_terminal, close_terminal, open_preview, close_preview, read_preview, drive_preview, annotate_preview, read_window_below, focus_pane, react_to_message, tour, and tip.',
+		rating: 3,
+		defaultEnabled: false,
+		requiresEnv: [],
+		capabilities: ['read_terminal / close_terminal', 'open_preview / close_preview / read_preview', 'drive_preview / annotate_preview', 'read_window_below', 'focus_pane', 'react_to_message', 'tour and tip'],
+		pitfalls: 'Only registered in desktop-app sessions, so these tools are absent from CLI, gateway, and API-server toolsets.',
+	},
+
+	{
+		id: 'video_gen',
+		name: 'Video Generation',
+		category: 'media',
+		description: 'Text-to-video and image-to-video via plugin-registered backends (xAI Grok-Imagine, FAL.ai Veo 3.1 / Pixverse v6 / Kling O3). Pass image_url to animate an image; omit it for text-to-video.',
+		rating: 3,
+		defaultEnabled: false,
+		requiresEnv: ['XAI_API_KEY or FAL_KEY'],
+		capabilities: ['video_generate', 'xai_video_edit', 'xai_video_extend', 'Text-to-video', 'Image-to-video', 'Provider-specific edit/extend gated on xAI Imagine credentials'],
+		pitfalls: 'xai_video_edit and xai_video_extend are gated on xAI Imagine credentials. Expensive API costs.',
+	},
+
+	{
+		id: 'process',
+		name: 'Background Processes',
+		category: 'core',
+		description: 'Manage background processes started by the terminal tool - poll, wait, read logs, write to stdin, and kill. Part of the terminal toolset, which ships both terminal and process.',
+		rating: 4,
+		defaultEnabled: true,
+		requiresEnv: [],
+		capabilities: ['Background process polling', 'Blocking wait with timeout', 'Full log retrieval', 'Write/submit stdin', 'Kill process'],
+		pitfalls: 'Background processes are lost if the host restarts. Use tmux for long-lived interactive sessions.',
+	},
 ];
 
 export const toolCategories: { id: HermesTool['category']; label: string; icon: string; description: string }[] = [
@@ -356,4 +416,5 @@ export const toolCategories: { id: HermesTool['category']; label: string; icon: 
 	{ id: 'ai', label: 'AI / ML', icon: '🧠', description: 'Advanced AI/ML capabilities (experimental)' },
 	{ id: 'dev', label: 'Developer', icon: '🔧', description: 'Debugging, introspection, and safe mode' },
 	{ id: 'integration', label: 'Integrations', icon: '🔗', description: 'Third-party service integrations' },
+
 ];
