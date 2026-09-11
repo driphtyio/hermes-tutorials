@@ -94,7 +94,7 @@ const description = `Every Hermes Agent release — ${total} tagged versions fro
             {latest.codename && <span class="codename">{latest.codename}</span>}
             <span class="lh-date">{latest.date}</span>
           </div>
-          <p>{latest.summary}</p>
+          <p set:html={latest.summary} />
           <div class="lh-links">
             <a href={latest.url}>Release notes on GitHub ↗</a>
             {latest.compare && <a href={latest.compare}>Full diff ↗</a>}
@@ -114,7 +114,7 @@ const description = `Every Hermes Agent release — ${total} tagged versions fro
                   <span class="r-date">{e.date}</span>
                 </summary>
                 <div class="rel-body">
-                  {e.summary && <p class="r-summary">{e.summary}</p>}
+                  {e.summary && <p class="r-summary" set:html={e.summary} />}
                   {e.highlights.length > 0 && (
                     <div>
                       <h4>Highlights</h4>
