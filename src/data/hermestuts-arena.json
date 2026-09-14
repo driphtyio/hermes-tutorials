@@ -524,7 +524,7 @@
         "last_failure": null
       }
     },
-    "last_updated": "2026-09-07"
+    "last_updated": "2026-09-14"
   },
   "matches": [
     {
@@ -4008,6 +4008,246 @@
         "verified": true,
         "notes": "Round 1 (pure qwen3.7-flash, 3 passes each): all four drafts FAILED \u2014 deepseek 7.55, poolside 7.52, mimo 7.87, glm 7.35. Round 2 prompt-refined redo (per 2026-08-09 redo policy): deepseek 7.75, poolside 7.87, mimo 7.98, glm 8.57 PASS (2-pass mean; qwen 429s hit 3 of 4 drafts, fallback deepseek-0731 supplied both glm passes per documented fallback order). Because fallback-mixed means are noisy, glm was re-confirmed with a fresh pure-qwen 3-pass run: 8.60/8.70/7.90 = 8.40 PASS, zero fallbacks \u2014 this is the recorded score. Shipped draft: glm R2 (1234 words), QA-checked: honesty canon verbatim ('we did not run the integration hands-on'), no HTML comments, no [N] markers, HERO_IMAGE_PROMPT stripped (0 hits), heroImage added via gen-image-verified.sh (Lumenfall FLUX, exit-0 URL-200 gate) https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-whatsapp-beginners-guide-2026-1788840138.webp. History: cron ab2b7a0a375a died at tool cap post-plan; first resume delegation timed out mid-round-2-judge (drafts preserved); tail completed by orchestrator. Repo branch verified on main before commit (stale master checkout hazard found and fixed by cron run)."
       }
+    },
+    {
+      "match_id": "hermestuts-web-dashboard-2026-09-14",
+      "date": "2026-09-14",
+      "topic": "Hermes Agent Web Dashboard beginner setup guide (long-tail 'hermes agent web dashboard') \u2014 Monday tutorial guide; source = official dashboard docs + CLI reference + install/platform/Nous Portal docs, all HTTP 200 verified 2026-09-14",
+      "slug": "hermes-agent-web-dashboard-guide",
+      "type": "tutorial",
+      "category": "guide",
+      "pipeline": "cron-subagent-arena (A/B/C/D via arena-direct-runner call_model; weekly Monday tutorial slot)",
+      "orchestrator": "deepseek-v4-flash (hermes cron)",
+      "plan_model": "mimo-v2.5-pro (via arena-direct-runner call_model, timeout=420; 10,939-char plan returned with tokens_out=2805)",
+      "research_model": "deepseek-v4-flash (cron delegation pin \u2014 gpt-5.6-luna not routable via delegation; web_extract/Firecrawl unavailable so research fetched docs pages with urllib)",
+      "qa_model": "deepseek-v4-flash (delegation pin, not glm-5.2) + orchestrator live URL/link checks",
+      "judge_model": "qwen3.7-flash (multipass 3, mean-gated; one glm pass fell back to deepseek-v4-flash-0731 on a 429)",
+      "models_competed": [
+        {
+          "model": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "label": "A"
+        },
+        {
+          "model": "mimo-v2.5",
+          "provider": "xiaomi",
+          "label": "B"
+        },
+        {
+          "model": "glm-5.3-flash",
+          "provider": "zai",
+          "label": "C"
+        },
+        {
+          "model": "poolside-laguna-s-2.1",
+          "provider": "openrouter",
+          "label": "D"
+        }
+      ],
+      "results": [
+        {
+          "model": "deepseek-v4-flash",
+          "model_id": "deepseek-v4-flash",
+          "provider": "deepseek",
+          "score": 8.35,
+          "weighted_score": 8.35,
+          "word_count": 1328,
+          "judge_mean": 8.35,
+          "rank": 1,
+          "winner": true,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 8.7,
+              "accuracy": 9.0,
+              "sourcing": 9.0,
+              "quality": 8.0,
+              "practicality": 9.0,
+              "engagement": 8.0
+            },
+            {
+              "pass": 2,
+              "weighted": 8.55,
+              "accuracy": 9.0,
+              "sourcing": 8.0,
+              "quality": 8.0,
+              "practicality": 9.0,
+              "engagement": 9.0
+            },
+            {
+              "pass": 3,
+              "weighted": 7.8,
+              "accuracy": 9.0,
+              "sourcing": 9.0,
+              "quality": 3.0,
+              "practicality": 9.0,
+              "engagement": 9.0
+            }
+          ],
+          "strengths": [
+            "Highest stable mean of the three full-plan drafts (8.35, spread 0.90 across 3 pure-qwen passes)",
+            "Densest sourcing: 14 links to the official docs host plus Tailscale KB, all HTTP 200 verified",
+            "Full requirement coverage: question-shaped H2, 40-60 word H2 leads, FAQ with 3 question H3s, E-E-A-T block, Common mistakes, hub + sibling internal links"
+          ],
+          "weaknesses": [
+            "One pass self-contradicted on Quality (3.0) \u2014 qwen noise, same draft"
+          ]
+        },
+        {
+          "model": "glm-5.3-flash",
+          "model_id": "glm-5.3-flash",
+          "provider": "zai",
+          "score": 8.72,
+          "weighted_score": 8.72,
+          "word_count": 1149,
+          "judge_mean": 8.72,
+          "rank": 2,
+          "winner": false,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 8.55,
+              "accuracy": 9.0,
+              "sourcing": 8.0,
+              "quality": 9.0,
+              "practicality": 9.0,
+              "engagement": 7.0,
+              "judge": "deepseek-v4-flash-0731 fallback (qwen 429)"
+            },
+            {
+              "pass": 2,
+              "weighted": 7.95,
+              "accuracy": 9.0,
+              "sourcing": 10.0,
+              "quality": 4.0,
+              "practicality": 9.0,
+              "engagement": 6.0,
+              "judge": "qwen3.7-flash"
+            },
+            {
+              "pass": 3,
+              "weighted": 9.65,
+              "accuracy": 10.0,
+              "sourcing": 9.0,
+              "quality": 10.0,
+              "practicality": 10.0,
+              "engagement": 9.0,
+              "judge": "qwen3.7-flash"
+            }
+          ],
+          "status": "scored_not_shipped",
+          "strengths": [
+            "Only builder to be rescued from the documented zai stall: the full-plan brief (11.5K chars) returned no draft after 420s x2, then a 3.2K-char condensed standalone brief returned 1,149 words in 269s",
+            "Clean structure, honest E-E-A-T block, FAQ present"
+          ],
+          "weaknesses": [
+            "Judge mean flagged UNRELIABLE by the multipass tool (spread 1.70 > 1.5) with one pass on a fallback judge \u2014 a clean pure-qwen re-judge was launched in-session",
+            "Built from a condensed brief, not the full planner plan, so its score is not comparable like-for-like",
+            "Fewest citations of the four drafts (3 external doc links, no docs-heavy sourcing)",
+            "Not shipped: the shipped draft is deepseek's (already QA-hardened at record time)"
+          ]
+        },
+        {
+          "model": "mimo-v2.5",
+          "model_id": "mimo-v2.5",
+          "provider": "xiaomi",
+          "score": 7.92,
+          "weighted_score": 7.92,
+          "word_count": 1451,
+          "judge_mean": 7.92,
+          "rank": 3,
+          "winner": false,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 7.35,
+              "accuracy": 8.0,
+              "sourcing": 9.0,
+              "quality": 4.0,
+              "practicality": 8.0,
+              "engagement": 7.0
+            },
+            {
+              "pass": 2,
+              "weighted": 7.7,
+              "accuracy": 8.0,
+              "sourcing": 9.0,
+              "quality": 5.0,
+              "practicality": 9.0,
+              "engagement": 7.0
+            },
+            {
+              "pass": 3,
+              "weighted": 8.7,
+              "accuracy": 9.0,
+              "sourcing": 9.0,
+              "quality": 8.0,
+              "practicality": 9.0,
+              "engagement": 8.0
+            }
+          ],
+          "strengths": [
+            "Longest draft (1,451 words), strong sourcing, 3 clean pure-qwen passes"
+          ],
+          "weaknesses": [
+            "Mean below the 8.0 gate; no internal hub/sibling links; one malformed Nous Portal URL (missing /docs/) found in QA review"
+          ]
+        },
+        {
+          "model": "poolside-laguna-s-2.1",
+          "model_id": "poolside-laguna-s-2.1",
+          "provider": "openrouter",
+          "score": 6.7,
+          "weighted_score": 6.7,
+          "word_count": 1573,
+          "judge_mean": 6.7,
+          "rank": 4,
+          "winner": false,
+          "judge_passes": [
+            {
+              "pass": 1,
+              "weighted": 6.1,
+              "accuracy": 9.0,
+              "sourcing": 4.0,
+              "quality": 3.0,
+              "practicality": 8.0,
+              "engagement": 6.0
+            },
+            {
+              "pass": 2,
+              "weighted": 6.85,
+              "accuracy": 9.0,
+              "sourcing": 4.0,
+              "quality": 5.0,
+              "practicality": 9.0,
+              "engagement": 8.0
+            },
+            {
+              "pass": 3,
+              "weighted": 7.15,
+              "accuracy": 9.0,
+              "sourcing": 6.0,
+              "quality": 4.0,
+              "practicality": 9.0,
+              "engagement": 8.0
+            }
+          ],
+          "strengths": [
+            "Longest raw draft (1,573 words), full outline followed"
+          ],
+          "weaknesses": [
+            "Zero inline citation links \u2014 no markdown links at all, hence the 4-6 sourcing scores; below the gate"
+          ]
+        }
+      ],
+      "winner": "deepseek-v4-flash",
+      "winner_score": 8.35,
+      "threshold_met": true,
+      "judge_note": "3 drafts from the full planner plan judged with 3 pure-qwen passes each: deepseek 8.70/8.55/7.80 = 8.35 PASS, mimo 7.35/7.70/8.70 = 7.92 FAIL, poolside 6.10/6.85/7.15 = 6.70 FAIL. glm-5.3-flash stalled twice on the 11.5K-char full brief (420s x2, no draft) and was rescued with a 3.2K-char condensed standalone brief (1,149 words in 269s) \u2014 a deliberate, documented mitigation, so its scores are not a like-for-like comparison.",
+      "qa": {
+        "verified": true,
+        "notes": "Winner: deepseek-v4-flash 8.35 (stable, 3 pure-qwen passes, spread 0.90). Shipped draft = deepseek's, hardened before recording: (1) redaction-artifact check \u2014 the `Authorization: Bearer <API_TOKEN>` placeholder was verified byte-for-byte by code-point dump (a `***` reading in tool output is display-layer redaction, not file content; backtick count even at 102); (2) the draft's trailing Nous Portal URL pointed at /integrations/nous-portal which 404s \u2014 retargeted to /docs/integrations/nous-portal (HTTP 200); (3) mis-pointed internal anchors fixed \u2014 'Hermes configuration deep dive' now /blog/configuration-deep-dive/, troubleshooting now /blog/troubleshooting/, gateway setup now /blog/gateway-setup/ (all live 200), alongside /hosting/, /providers/, /skills/ hub links; (4) meta description set to 157 chars, prose, no numerals. Independent QA delegation (deepseek-v4-flash, delegation pin \u2014 zai unavailable for long prompts) re-verified all 10 checklist items, live-fetched the dashboard docs + CLI reference, confirmed every load-bearing claim (command, 127.0.0.1:9119 default, --port/--host/--no-open/--isolated/--insecure, `uv pip install -e \".[web,pty]\"`, tab list, fail-closed auth gate, /reload, REST endpoints, `hermes serve`), removed the one unsupported term ('OIDC' \u2014 docs name password + OAuth only), added the E-E-A-T freshness line, and added/trimmed H2 lead paragraphs to the 40-60 word rule. Final: 1,357 words, 8 unique external URLs all HTTP 200, 6 internal links all resolving, no [N] references, no HTML comments, no HERO_IMAGE_PROMPT, no anti-slop terms, no implied hands-on testing. heroImage generated with gen-image-verified.sh (Lumenfall chain) and verified HTTP 200 (image/jpeg, 441,772 bytes). HONESTY CAVEAT ON GLM: glm's standalone condensed-brief draft scored a NOISY 8.72 (tool warning: spread 1.70 > 1.5, one pass on fallback judge deepseek-v4-flash-0731) \u2014 not treated as the winner because (a) the tool flagged the mean untrustworthy and a clean pure-qwen re-judge was launched, and (b) its draft was built from a shortened brief and had not passed QA at record time. Leaderboard winner = the shipped draft."
+      }
     }
   ],
   "leaderboard": [
@@ -4015,8 +4255,8 @@
       "model": "deepseek-v4-flash",
       "provider": "deepseek",
       "family": "deepseek",
-      "matches": 18,
-      "wins": 6,
+      "matches": 19,
+      "wins": 7,
       "losses": 12,
       "avgScore": 8.4,
       "bestScore": 9.4,
@@ -4026,10 +4266,10 @@
       "model": "mimo-v2.5",
       "provider": "xiaomi",
       "family": "mimo",
-      "matches": 17,
+      "matches": 18,
       "wins": 4,
-      "losses": 13,
-      "avgScore": 8.4,
+      "losses": 14,
+      "avgScore": 8.3,
       "bestScore": 9.3,
       "rank": 2
     },
@@ -4037,10 +4277,10 @@
       "model": "poolside-laguna-s-2.1",
       "provider": "openrouter",
       "family": "poolside",
-      "matches": 15,
+      "matches": 16,
       "wins": 4,
-      "losses": 11,
-      "avgScore": 8.2,
+      "losses": 12,
+      "avgScore": 8.1,
       "bestScore": 9.1,
       "rank": 3
     },
@@ -4048,10 +4288,10 @@
       "model": "glm-5.3-flash",
       "provider": "zai",
       "family": "glm",
-      "matches": 2,
+      "matches": 3,
       "wins": 2,
-      "losses": 0,
-      "avgScore": 8.9,
+      "losses": 1,
+      "avgScore": 8.8,
       "bestScore": 9.4,
       "rank": 4
     },
@@ -4067,6 +4307,6 @@
       "rank": 5
     }
   ],
-  "last_updated": "2026-09-07",
-  "total_matches": 19
+  "last_updated": "2026-09-14",
+  "total_matches": 20
 }
