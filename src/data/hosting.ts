@@ -190,6 +190,7 @@ export const hosting: HostingOption[] = [
 		cons: ['Slightly slower network than Hetzner', 'Support response times vary', 'Bare metal is expensive'],
 		hermesInstall: 'Standard install. Use the location closest to your LLM provider API endpoint for lowest latency.',
 		url: 'https://api.vultr.com/v2/plans',
+		affiliateUrl: 'https://www.vultr.com/?ref=9923068-9J',
 		docsUrl: 'https://hermes-agent.nousresearch.com/docs',
 		lastVerified: '2026-09-10',
 	},
