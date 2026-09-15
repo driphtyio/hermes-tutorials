@@ -151,7 +151,7 @@ export const hosting: HostingOption[] = [
 		cons: ['More expensive than Hetzner', '1GB RAM at $6 vs 4GB at €5.49 on Hetzner', 'Transfer overage costs', 'No ARM option'],
 		hermesInstall: 'Standard install. `curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash` works on all plans.',
 		url: 'https://www.digitalocean.com/pricing/droplets',
-		affiliateUrl: 'https://www.awin1.com/cread.php?awinmid=123996&awinaffid=3086343&clickref=hermes-tutorials-hosting&ued=https%3A%2F%2Fwww.digitalocean.com%2Fpricing%2Fdroplets',
+		affiliateUrl: 'https://tidd.ly/4ra6bCK',
 		docsUrl: 'https://hermes-agent.nousresearch.com/docs',
 		lastVerified: '2026-09-10',
 	},
