@@ -66,6 +66,14 @@ const description = `${hosting.length} ways to host Hermes Agent — VPS, self-h
         {h.setupGuide}
       </div>
       <div class="code-line">{h.hermesInstall}</div>
+      {h.affiliateUrl && (
+        <div class="affiliate-block">
+          <span class="affiliate-disclosure">We earn commissions when you shop through the links below.</span>
+          <a class="affiliate-cta" href={h.affiliateUrl} target="_blank" rel="sponsored noopener">
+            View plans at {h.name.split(' ')[0]} →
+          </a>
+        </div>
+      )}
     </article>
   ))}
 </Reference>

@@ -143,6 +143,10 @@ const {
 
       :global(.install-row) { display: flex; align-items: center; gap: 0.4rem; margin: 0 0 0.5rem; }
       :global(.install-cmd) { flex: 1; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 0.75rem; padding: 0.35rem 0.65rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      :global(.affiliate-block) { margin-top: 0.55rem; padding-top: 0.55rem; border-top: 1px dashed var(--border); display: flex; flex-direction: column; gap: 0.35rem; }
+      :global(.affiliate-disclosure) { font-size: 0.68rem; color: var(--text-muted); line-height: 1.4; }
+      :global(.affiliate-cta) { display: inline-block; align-self: flex-start; font-size: 0.78rem; font-weight: 600; color: var(--accent-light); background: var(--accent-glow); border: 1px solid var(--accent); border-radius: var(--radius-sm); padding: 0.35rem 0.75rem; text-decoration: none; transition: background 0.15s ease; }
+      :global(.affiliate-cta:hover) { background: var(--accent); color: #fff; }
       :global(.copy-btn) { background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); padding: 0.35rem 0.7rem; font-family: inherit; font-size: 0.74rem; cursor: pointer; white-space: nowrap; transition: background 0.15s ease; }
       :global(.copy-btn:hover) { background: var(--accent-dark); }
       :global(.copy-btn.copied) { background: var(--accent-light); color: var(--bg); }
