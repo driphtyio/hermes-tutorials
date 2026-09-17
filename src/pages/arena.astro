@@ -1001,7 +1001,7 @@ try {
                       <strong>Results:</strong>
                       {m.results.slice().sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity)).map(r => (
                         <div class={`result-entry ${r.rank === 1 ? 'result-winner' : ''}`}>
-                          <span class="result-rank">{r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : `#${r.rank}`}</span>
+                          <span class="result-rank">{r.status === 'failed' || r.status === 'dnf' ? 'Failed' : r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : (r.rank != null ? `#${r.rank}` : '—')}</span>
                           <span class="result-model">{r.model}</span>
                           <span class="result-provider">{r.provider}</span>
                           <span class="result-score">{r.score != null ? `${r.score.toFixed(1)}/10` : '—'}</span>
