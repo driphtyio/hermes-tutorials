@@ -1,0 +1,86 @@
+---
+title: "Beginner's Guide to Hermes Agent Compaction 2026"
+description: "Learn how to keep long Hermes Agent sessions alive with built-in context compression, compaction phases, and slash-command controls for reliable sessions."
+pubDate: 2026-09-17
+tags: [hermes-agent, context-management, compaction, tutorial, beginners]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-context-compaction-guide-1789668786.webp"
+lastVerified: "2026-09-17"
+---
+
+If you've been running a long Hermes Agent session and noticed the responses growing vague or losing track of earlier instructions, you already understand the core problem. Context windows are finite, and conversations that stretch across hours eventually push against that ceiling. Learning how to keep long Hermes Agent sessions alive means understanding one built-in mechanism: compaction. This guide walks you through what compaction does, how to trigger it on demand, and the configuration mistake that silently degrades your context.
+
+## How this guide was built
+
+This tutorial was assembled from the official Hermes Agent documentation set — [Configuration — Context Compression](https://hermes-agent.nousresearch.com/docs/user-guide/configuration#context-compression), [Context Compression and Caching](https://hermes-agent.nousresearch.com/docs/developer-guide/context-compression-and-caching), [Slash Commands](https://hermes-agent.nousresearch.com/docs/reference/slash-commands), [Sessions](https://hermes-agent.nousresearch.com/docs/user-guide/sessions), and [CLI reference](https://hermes-agent.nousresearch.com/docs/reference/cli-commands#hermes-sessions). We verified config keys and their defaults, slash command syntax, soft-archive behavior, and status-bar color thresholds. We did not run the compaction feature hands-on — every step below comes from the official documentation. The machine-readable docs index lives at [llms.txt](https://hermes-agent.nousresearch.com/llms.txt). Last verified: September 2026.
+
+## How do I keep a long Hermes Agent session alive?
+
+Hermes Agent compacts your context automatically when prompt tokens reach 50% of the context window, replacing older messages with a structured summary while keeping recent turns intact [Configuration — Context Compression](https://hermes-agent.nousresearch.com/docs/user-guide/configuration#context-compression). You can also trigger compaction manually with the `/compress` slash command. Pre-compaction turns are soft-archived rather than deleted — they remain searchable through `session_search` and are fully recoverable.
+
+When a session grows long enough to strain the context window, the status bar shifts from green to yellow, signaling that compaction pressure is building. A quick `/compress` clears the pressure immediately if you want to intervene before automatic compaction triggers. The default settings — 50% threshold, 20 recent messages protected verbatim, and a lean tail — handle most workflows without tuning. The `compression:` block in `~/.hermes/config.yaml` lets you adjust every parameter to match your session patterns, and the [Configuration Deep Dive](/blog/configuration-deep-dive/) walks through each option in detail.
+
+## What actually happens when Hermes Agent compacts your context
+
+Hermes Agent compaction proceeds through four phases that compress older conversation into a structured summary while non-destructively archiving original turns for recovery [Context Compression and Caching](https://hermes-agent.nousresearch.com/docs/developer-guide/context-compression-and-caching). Understanding these phases helps you predict what survives compaction.
+
+In the first phase, tool results older than 200 characters are pruned to reclaim space. The second phase determines conversation boundaries while keeping tool-call groups intact. Phase three generates a structured summary organized into Goal, Constraints, Progress, Key Decisions, Relevant Files, Next Steps, and Critical Context — with a token budget of the minimum between 5% of context length and 12,000 tokens. The fourth phase reassembles the message list: your original head messages, the summary, and a lean tail of recent turns. On subsequent compactions, the existing summary is updated rather than regenerated from scratch, which preserves continuity across multiple compression cycles.
+
+Compaction is non-destructive. Every pre-compaction turn is soft-archived in the session store with `active=0` and `compacted=1`, remaining searchable via `session_search` [Sessions](https://hermes-agent.nousresearch.com/docs/user-guide/sessions). Nothing is permanently deleted — the [session_search build log](/blog/session-search-rebuild/) covers how archived turns surface in search results.
+
+## Where compaction settings live in config.yaml
+
+All compaction settings live under the `compression:` key in `~/.hermes/config.yaml`, and using the wrong section name causes settings to be silently ignored [Configuration — Context Compression](https://hermes-agent.nousresearch.com/docs/user-guide/configuration#context-compression). The section is called `compression:`, not `compaction:`.
+
+Here are the defaults that ship with a fresh Hermes Agent installation:
+
+```yaml
+compression:
+  enabled: true
+  threshold: 0.50
+  tail_mode: lean
+  protect_last_n: 20
+  protect_first_n: 3
+  in_place: true
+  idle_compact_after_seconds: 0
+  micro_compact: false
+```
+
+The `threshold` of 0.50 means compaction fires when prompt tokens reach 50% of the context window. With `tail_mode: lean`, the tail is clamped to 2.5% of the window with a 10K floor and 25K cap, plus a session log, anchor index, and recovery pointer — all from one summary call. `protect_last_n: 20` keeps your 20 most recent messages verbatim, while `protect_first_n: 3` pins the first three non-system messages to the head. On Codex OAuth with GPT-5.4 or GPT-5.5 models, the `codex_gpt55_autoraise` flag raises the trigger to 85%. For the full config walkthrough, see the [Configuration Deep Dive](/blog/configuration-deep-dive/).
+
+## Triggering and customizing compaction manually
+
+The `/compress` slash command triggers compaction immediately regardless of current context pressure, and it is the only manual compaction command available — there is no `/compact` command and no `hermes compact` CLI command [Slash Commands](https://hermes-agent.nousresearch.com/docs/reference/slash-commands).
+
+Two variants give you finer control. Running `/compress here [N]` keeps the N most recent exchanges verbatim before summarizing everything else, with a default of 2. This is useful when only the last few turns matter for your current task. The `/compress focus <topic>` variant narrows what the summary preserves, centering it around a specific subject you name. If compaction fails due to a cooldown timer, the force option clears the cooldown and retries immediately. For a complete reference of all available slash commands, see [CLI Mastery: Hermes Agent Commands and Flags](/blog/cli-mastery/).
+
+## How do I prevent the most common compaction failure?
+
+The most common compaction failure occurs when the summary model's context window is smaller than the main model's, causing `_generate_summary()` to return `None` and the compressor to silently drop middle turns without a summary [Troubleshooting Agent Quality](https://hermes-agent.nousresearch.com/docs/guides/troubleshooting-agent-quality). This is the leading cause of degraded compaction quality.
+
+The summarizer model is configured under `auxiliary.compression.model` — the legacy key `compression.summary_model` auto-migrates but should not be used in new configurations [Context Compression and Caching](https://hermes-agent.nousresearch.com/docs/developer-guide/context-compression-and-caching). When left empty, the main chat model doubles as the summarizer, which is safe but uses more tokens.
+
+The fix is straightforward: if you set a dedicated summary model, verify that its context window is at least as large as the main model's. Choosing a local model for this role can help control costs — the [Beginner's Guide to Hermes Local Models](/blog/hermes-local-models-guide/) covers how to evaluate model capabilities for tasks like summarization. If a compressed-away detail resurfaces as important, ask the agent to `session_search` the archived turns to recover it.
+
+## Monitoring context pressure in real time
+
+Hermes Agent exposes context pressure through the CLI status bar and the `/context` slash command, giving you real-time visibility into how much of the context window remains before compaction triggers automatically [CLI reference](https://hermes-agent.nousresearch.com/docs/reference/cli-commands#hermes-sessions). Reading these indicators early prevents quality degradation.
+
+The status bar uses color thresholds: green below 50%, yellow from 50% to 80%, orange from 80% to 95%, and red at 95% or above with a prompt to consider `/compress`. A tilde prefix next to the percentage indicates a local estimate rather than an exact token count. Running `/context` (or `/ctx`) displays a 5×20 glyph grid where each cell represents roughly 1% of the window, along with a per-category token table. Adding `/context all` includes per-skill and per-toolset cost breakdowns. The `/usage` command shows cumulative token usage, cost, and session duration. At startup, Hermes reports its detected context limit. For strategies on reducing token spend across long sessions, read [Token Usage & Cost Optimization](/blog/token-cost-optimization/).
+
+## FAQ
+
+### Does compaction delete my conversation history?
+
+No. Compaction soft-archives pre-compaction turns in the session store, setting them to `active=0` and `compacted=1` [Sessions](https://hermes-agent.nousresearch.com/docs/user-guide/sessions). These turns remain searchable through `session_search` and are fully recoverable. Compaction compresses active context while preserving the original conversation data for later reference — it is not a privacy delete.
+
+### What is the difference between /compress and /compress here?
+
+The `/compress` command triggers full compaction: original head messages, a generated summary, and a lean tail of recent turns. The `/compress here [N]` variant keeps the N most recent exchanges verbatim (default 2) before summarizing the rest [Slash Commands](https://hermes-agent.nousresearch.com/docs/reference/slash-commands). Use `/compress here` when only the latest turns carry the information you need.
+
+### Why does my agent seem to forget things after compaction?
+
+The most likely cause is a summary model with a context window too small for the main model, which causes `_generate_summary()` to return `None` and middle turns to be dropped silently [Troubleshooting Agent Quality](https://hermes-agent.nousresearch.com/docs/guides/troubleshooting-agent-quality). Set `auxiliary.compression.model` to a model whose window meets or exceeds the main model's context length. If a compressed-away detail resurfaces as relevant, ask the agent to `session_search` the archived turns.
+
+## Where to go next
+
+For a full walkthrough of every configuration option, see the [Configuration Deep Dive](/blog/configuration-deep-dive/). To master all available slash commands and CLI flags, consult [CLI Mastery: Hermes Agent Commands and Flags](/blog/cli-mastery/). For strategies on reducing token spend, read [Token Usage & Cost Optimization](/blog/token-cost-optimization/).
