@@ -980,10 +980,10 @@ try {
                   <span class="match-topic">{m.topic}</span>
                   {m.type && <span class="match-type">{m.type}</span>}
                   <span class="match-chips">
-                    {(m.results || []).slice().sort((a, b) => a.rank - b.rank).map(r => (
+                    {(m.results || []).slice().sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity)).map(r => (
                       <span class={`score-chip ${r.rank === 1 ? 'chip-winner' : ''}`}>
                         <span class="chip-model">{r.model}</span>
-                        <span class="chip-score">{r.score.toFixed(1)}</span>
+                        <span class="chip-score">{r.score != null ? r.score.toFixed(1) : '—'}</span>
                       </span>
                     ))}
                   </span>
@@ -999,12 +999,12 @@ try {
                   {m.results && m.results.length > 0 && (
                     <div class="match-results-list">
                       <strong>Results:</strong>
-                      {m.results.slice().sort((a, b) => a.rank - b.rank).map(r => (
+                      {m.results.slice().sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity)).map(r => (
                         <div class={`result-entry ${r.rank === 1 ? 'result-winner' : ''}`}>
                           <span class="result-rank">{r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : `#${r.rank}`}</span>
                           <span class="result-model">{r.model}</span>
                           <span class="result-provider">{r.provider}</span>
-                          <span class="result-score">{r.score.toFixed(1)}/10</span>
+                          <span class="result-score">{r.score != null ? `${r.score.toFixed(1)}/10` : '—'}</span>
                         </div>
                       ))}
                     </div>
