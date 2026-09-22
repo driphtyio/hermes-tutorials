@@ -1,0 +1,165 @@
+---
+title: "Use Hermes Agent ACP in VS Code, Zed & JetBrains Editors (2026)"
+description: "Set up Hermes Agent as an ACP server in VS Code, Zed, and JetBrains to chat from the editor with your existing Hermes provider, tools, memory, and skills."
+pubDate: 2026-09-21
+tags: [hermes-agent, acp, vs-code, zed, jetbrains, editor-integration]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-acp-editor-setup-guide-1790054137.webp"
+lastVerified: "2026-09-21"
+---
+---
+
+Switching between a terminal Hermes session and your code editor breaks focus. The hermes agent acp mode solves this: it lets VS Code, Zed, and JetBrains render Hermes chat, tool activity, diffs, terminal commands, and approvals. For those seeking hermes agent vscode integration, the ACP Client extension provides a native panel.
+
+## How this guide was built
+
+The main sources are the official Hermes Agent ACP Host Integration and ACP Internals docs, plus the CLI commands reference and Integrations overview. Local checks on 2026-09-21 returned `hermes acp --version` 0.19.0 and `hermes acp --check` OK. This guide is based on the official Hermes Agent documentation — we did not run ACP inside an editor hands-on.
+
+## What ACP mode does (and when to use it)
+
+Hermes Agent ACP mode turns Hermes into an Agent Client Protocol server that speaks to an editor over stdio, while the editor owns the conversation transport. This lets VS Code, Zed, and JetBrains render chat, tool activity, file diffs, terminal commands, approval prompts, and streamed reasoning without changing your existing Hermes identity, credentials, memory, skills, or tools.
+
+ACP stands for Agent Client Protocol. Hermes runs as an ACP server over stdio. This mode fits when another application owns the conversation transport while Hermes keeps its existing identity, provider setup, memory, skills, and tools. Hosts can render chat messages, tool activity, file diffs, terminal commands, approval prompts, and streamed thinking/response chunks. The [Integrations overview](https://hermes-agent.nousresearch.com/docs/integrations/) lists IDE Integration (ACP) alongside [Hermes MCP servers](/blog/mcp-servers-guide/) and other tools. See [ACP Host Integration docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/acp) for the full toolset, which includes read_file, write_file, patch, search_files, terminal, process, web/browser tools, memory, todo, session search, skills, execute_code, delegate_task, and vision. Messaging delivery and cronjob management are excluded.
+
+## Install and verify the ACP extra
+
+Run the ACP extra from the Hermes source checkout so the `hermes acp` command becomes available. Verify it with `hermes acp --version` and `hermes acp --check` before connecting an editor; both are non-interactive and should complete without launching an interactive server.
+
+Install from the Hermes source checkout with the exact command:
+
+```bash
+cd ~/.hermes/hermes-agent && uv pip install -e '.[acp]'
+```
+
+This installs the `agent-client-protocol` dependency and enables `hermes acp`. You can launch the server in several ways:
+
+```bash
+hermes acp
+hermes-acp
+python -m acp_adapter
+```
+
+Hermes logs to stderr so stdout stays reserved for ACP JSON-RPC traffic. Beyond the version and check, `hermes acp --setup` offers an interactive terminal-auth/model/provider setup method. Consult the [CLI commands reference](https://hermes-agent.nousresearch.com/docs/reference/cli-commands) and [ACP Host Integration docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/acp). For more on command usage, see our [CLI mastery guide](/blog/cli-mastery/).
+
+## VS Code setup: connect Hermes Agent
+
+Install the ACP Client extension, open its panel from the Activity Bar, choose Hermes Agent from the built-in agent list, and connect. If the built-in list does not find your local Hermes, add the explicit `acp.agents` setting below with the command `hermes` and args `["acp"]`.
+
+For hermes agent vscode users, the flow is simple. Install the “ACP Client” extension, open the ACP Client panel from the Activity Bar, select Hermes Agent from the built-in agent list, connect, and chat. If the list misses your local install, define it manually in VS Code settings:
+
+```json
+{
+  "acp.agents": {
+    "Hermes Agent": { "command": "hermes", "args": ["acp"] }
+  }
+}
+```
+
+Use the exact field names `acp.agents`, `command`, and `args`. The [ACP Host Integration docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/acp) confirm this shape. New to Hermes? Review [getting started with Hermes Agent](/blog/getting-started/) first.
+
+## Zed setup: add Hermes as a custom agent server
+
+Add Hermes as a custom agent server in Zed settings using the JSON below, open the Agent Panel, add the server, then start a new Hermes external-agent thread. First make sure provider credentials are set with `hermes model` or in `~/.hermes/.env` or `~/.hermes/config.yaml`.
+
+Zed reads a custom agent server block. Paste this into your Zed settings:
+
+```json
+{
+  "agent_servers": {
+    "hermes-agent": { "type": "custom", "command": "hermes", "args": ["acp"] }
+  }
+}
+```
+
+Open the Agent Panel, add the custom agent server, then start a new Hermes external-agent thread. Before connecting, configure provider credentials with `hermes model` or set them in `~/.hermes/.env` / `~/.hermes/config.yaml`. The [ACP Host Integration docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/acp) describe this. Our [provider setup guide](/blog/provider-setup/) covers credential files.
+
+## JetBrains setup: point an ACP-compatible plugin at Hermes
+
+Use an ACP-compatible JetBrains plugin and configure it to launch `hermes acp` or `hermes-acp` as the agent command. The docs do not name a specific plugin, so choose an extension that supports Agent Client Protocol over stdio and point it at your Hermes launcher.
+
+The official guidance is to use an ACP-compatible JetBrains plugin. Point the plugin at the command:
+
+```
+hermes acp
+```
+
+or:
+
+```
+hermes-acp
+```
+
+Do not invent a plugin name or marketplace ID; the documentation deliberately omits one. The [ACP Host Integration docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/acp) only require that the plugin supports Agent Client Protocol over stdio. Check [Hermes plugins](/blog/hermes-plugins/) for related extension discussion.
+
+## Optional: enable browser tools
+
+Browser tools are optional because they depend on the `agent-browser` npm package and Chromium, which are not part of the Python wheel. Run `hermes acp --setup-browser` to install them interactively, or `hermes acp --setup-browser --yes` for non-interactive setup; the process is idempotent and re-runs skip completed work.
+
+Browser tools need the `agent-browser` npm package and Chromium. Interactive install:
+
+```bash
+hermes acp --setup-browser
+```
+
+Non-interactive:
+
+```bash
+hermes acp --setup-browser --yes
+```
+
+The interactive command prompts before a download described as roughly 400 MB. The bootstrap installs Node.js 26 into `~/.hermes/node/` if missing, runs `npm install -g agent-browser @askjo/camofox-browser` into a user-writable prefix without sudo, and installs Playwright Chromium or uses detected system Chrome/Chromium. The terminal-auth flow `hermes acp --setup` also offers this after model selection. See [ACP Host Integration docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/acp).
+
+## Approvals and security in editor-hosted sessions
+
+Editor-hosted sessions expose `terminal` and `execute_code`, so approval behavior matters. The host decides whether prompts reach a human; headless Buzz bridges answer ACP permission requests themselves and can run shell commands without prompting, so keep Buzz agents Owner only, start with allow_once, and use `!shutdown` to stop an agent.
+
+The `hermes-acp` toolset includes `terminal` and `execute_code`. Whether you see an approval prompt is host-dependent; a host may answer programmatically. The docs warn that a Buzz-hosted Hermes “runs shell commands on the host without prompting.” Choosing “Anyone” instead of “Owner only” hands that shell access to every channel author. Buzz does not warn when you pick the unsafe option. `approvals.mode: manual` raises the permission request, but Buzz auto-approves it and the command still runs. `platform_toolsets.acp` cannot drop `terminal`. `!shutdown` from the owner stops the agent in any mode.
+
+Approval options on the wire: allow once / allow always / deny. On timeout or error, the bridge denies. Timeout comes from `approvals.timeout` in `config.yaml`; default is 300 seconds. Session-scoped edit auto-approval table:
+
+| Option | Editor label | Scope | Persisted across restarts |
+|---|---|---|---|
+| `allow_once` | Allow once | This one tool call | No |
+| `allow_session` | Allow for session | All matching calls in this ACP session | No — cleared when session ends |
+| `allow_always` | Allow always | All future sessions | Yes, permanent allowlist entry |
+| `deny` | Deny | This one tool call | No |
+
+Docs advice: start with allow_once for unfamiliar commands; promote to allow_session once the pattern runs correctly; reserve allow_always for truly idempotent commands such as `git status`. Source: [ACP Host Integration docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/acp).
+
+## Sessions, working directory, and persistence
+
+ACP sessions bind the editor's working directory to the Hermes task ID, so file and terminal tools run relative to your workspace. Conversations persist to Hermes' session database and can be listed, loaded, resumed, or forked after the server restarts; opening a new session without a prompt stays memory-only.
+
+Sessions are tracked by the adapter’s in-memory session manager while the server runs. Each stores: session ID, working directory, selected model, current conversation history, cancel event. Conversations persist to `~/.hermes/state.db` and can be listed, loaded, resumed, or forked after restart; they appear in `session_search`. Opening a new session without a prompt keeps it in memory only. Model-discovery probes do not create empty history rows. A nonempty fork is persisted immediately. Existing empty rows from older versions are not automatically deleted; inspect with `hermes sessions show <id>` and delete with `hermes sessions delete <id>`. Working directory binds the editor’s cwd to the Hermes task ID. Cancellation sets the cancel event, calls `agent.interrupt()` when available, and returns `stop_reason="cancelled"`. Forking deep-copies message history into a new live session with its own ID and cwd. Limitations: non-text prompt blocks ignored for request text extraction; editor UX varies by client. See [ACP Internals docs](https://hermes-agent.nousresearch.com/docs/developer-guide/acp-internals).
+
+## Troubleshooting and first checks
+
+Check that the host command points at `hermes acp`, Hermes is on PATH, and the ACP extra is installed, then run `hermes acp --version`, `hermes acp --check`, `hermes doctor`, and `hermes status`. If provider credentials are missing, run `hermes model` or edit `~/.hermes/.env`.
+
+Verify the host command points at `hermes acp`. Confirm Hermes is on PATH and the ACP extra installed. Run checks in order:
+
+```bash
+hermes acp --version
+hermes acp --check
+hermes doctor
+hermes status
+```
+
+Missing credentials? Run `hermes model` or edit `~/.hermes/.env`. The [ACP Internals docs](https://hermes-agent.nousresearch.com/docs/developer-guide/acp-internals) and [CLI commands reference](https://hermes-agent.nousresearch.com/docs/reference/cli-commands) support this. For more, visit our [Hermes troubleshooting guide](/blog/troubleshooting/).
+
+## FAQ
+
+These quick answers cover the setup questions beginners ask most often after connecting an editor. They assume you have installed the ACP extra, verified `hermes acp --version` and `hermes acp --check`, and configured provider credentials through `hermes model` or the Hermes config files before connecting.
+
+### Does ACP mode replace my existing Hermes CLI setup?
+
+No; ACP uses the same Hermes configuration as the CLI: `~/.hermes/.env`, `~/.hermes/config.yaml`, `~/.hermes/skills/`, and `~/.hermes/state.db`. Provider resolution uses Hermes' normal runtime resolver, so ACP inherits the currently configured provider and credentials. CLI workflows remain available; ACP is another transport. The [ACP Host Integration docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/acp) confirm this shared configuration model.
+
+### Will I always see an approval prompt before terminal commands run?
+
+Not necessarily; whether a prompt reaches a human depends on the host. A host may answer permission requests programmatically. For headless Buzz bridges, the docs say Hermes can run shell commands without prompting. Keep Buzz agents Owner only, start with allow_once, and use `!shutdown` from the owner to stop it. See [ACP Host Integration docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/acp) for the security warning.
+
+### What if my editor cannot find `hermes acp`?
+
+Check the editor’s agent command points at `hermes acp`. Confirm Hermes is on PATH and the ACP extra is installed. Run `hermes acp --version`, `hermes acp --check`, `hermes doctor`, and `hermes status`. If credentials are missing, run `hermes model` or edit `~/.hermes/.env`. The hermes agent acp command must be reachable for any editor integration to work. Source: [ACP Host Integration docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/acp).
+
+With these steps, you can start using hermes agent acp inside your favorite editor today.
