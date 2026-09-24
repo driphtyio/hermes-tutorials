@@ -81,7 +81,7 @@
     },
     {
       "model": "openai/gpt-6-luna",
-      "role": "builder",
+      "role": "research",
       "provider": "openrouter",
       "context_length": 1050000
     },
@@ -90,11 +90,6 @@
       "role": "planner",
       "provider": "commandcode",
       "context_length": 131072
-    },
-    {
-      "model": "mimo-v2.6-pro",
-      "provider": "commandcode",
-      "role": "research"
     }
   ],
   "stability": {
