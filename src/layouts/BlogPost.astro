@@ -702,13 +702,20 @@ const breadcrumbSchema = {
         .blog-layout {
           flex-direction: column;
           gap: 24px;
+          /* column mode + flex-start sizes article to max-content (865px on
+             phones) — stretch pins it to the container width instead */
+          align-items: stretch;
         }
         .sidebar {
           position: relative;
           top: 0;
           width: 100%;
+          max-width: 100%;
           max-height: none;
           border-right: 1px solid var(--border);
+        }
+        article {
+          max-width: 100%;
         }
         .sidebar.collapsed .toc-nav {
           display: none;

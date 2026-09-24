@@ -193,7 +193,9 @@ try {
       /* ── Side-by-side data grid: Leaderboard | Model Pool (wide screens) ── */
       .data-grid {
         display: grid;
-        grid-template-columns: 1fr;
+        /* minmax(0,1fr): plain 1fr sizes to max-content — the 439px leaderboard
+           table blew the track out and caused horizontal scroll on phones */
+        grid-template-columns: minmax(0, 1fr);
         gap: 0.9em;
         align-items: start;
       }
