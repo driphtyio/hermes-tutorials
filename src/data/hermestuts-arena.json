@@ -18,15 +18,6 @@
       "role": "builder"
     },
     {
-      "model": "mimo-v2.5",
-      "provider": "xiaomi",
-      "family": "xiaomi",
-      "benchmark_weight": 0.936,
-      "benchmark_score": 4.62,
-      "status": "pass",
-      "role": "builder"
-    },
-    {
       "model": "glm-5.2",
       "provider": "zai",
       "family": "glm",
@@ -49,13 +40,6 @@
       "family": "poolside",
       "status": "pass",
       "role": "builder"
-    },
-    {
-      "model": "openai/gpt-5.6-luna",
-      "provider": "openrouter",
-      "family": "openai",
-      "status": "pass",
-      "role": "research"
     },
     {
       "model": "mimo-v2.5-pro",
@@ -4953,5 +4937,15 @@
     }
   ],
   "last_updated": "2026-09-21",
-  "total_matches": 22
+  "total_matches": 22,
+  "retired_models": [
+    {
+      "model": "mimo-v2.5",
+      "reason": "superseded by mimo-v2.6-flash 2026-09-23"
+    },
+    {
+      "model": "openai/gpt-5.6-luna",
+      "reason": "superseded by gpt-6-luna 2026-09-23"
+    }
+  ]
 }
