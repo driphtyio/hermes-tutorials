@@ -254,33 +254,72 @@ import HeaderLink from './HeaderLink.astro';
 	const navLinks = document.querySelector('[data-nav-links]');
 
 	if (hamburger && header) {
+		// ── Scroll-close guard (passive, one listener per open) ──
+		let scrollBase = 0;
+		let scrollCheckActive = false;
+		let scrollGuardTimer = null;
+
+		function handleScroll() {
+			if (!scrollCheckActive) return;
+			if (Math.abs(window.scrollY - scrollBase) > 8) closeMenu();
+		}
+
+		function startScrollGuard() {
+			stopScrollGuard();
+			scrollBase = window.scrollY;
+			scrollCheckActive = false;
+			window.addEventListener('scroll', handleScroll, { passive: true });
+			// Grace period: ignore residual scroll events when opened mid-scroll,
+			// then re-capture the base position for future comparisons.
+			scrollGuardTimer = setTimeout(() => {
+				scrollBase = window.scrollY;
+				scrollCheckActive = true;
+			}, 150);
+		}
+
+		function stopScrollGuard() {
+			clearTimeout(scrollGuardTimer);
+			scrollCheckActive = false;
+			window.removeEventListener('scroll', handleScroll);
+		}
+
+		// ── Shared close helper — single source of truth for data-menu-open + aria-expanded ──
+		function closeMenu() {
+			if (header.getAttribute('data-menu-open') !== 'true') return;
+			header.setAttribute('data-menu-open', 'false');
+			hamburger.setAttribute('aria-expanded', 'false');
+			stopScrollGuard();
+		}
+
+		// ── Hamburger open / close ──
 		hamburger.addEventListener('click', () => {
-			const open = header.getAttribute('data-menu-open') === 'true';
-			header.setAttribute('data-menu-open', open ? 'false' : 'true');
-			hamburger.setAttribute('aria-expanded', open ? 'false' : 'true');
+			if (header.getAttribute('data-menu-open') === 'true') {
+				closeMenu();
+			} else {
+				header.setAttribute('data-menu-open', 'true');
+				hamburger.setAttribute('aria-expanded', 'true');
+				startScrollGuard();
+			}
 		});
 
-		// Click outside nav closes the mobile menu
+		// ── Click outside nav closes the mobile menu ──
 		document.addEventListener('click', (e) => {
 			if (header.getAttribute('data-menu-open') === 'true'
 				&& !navLinks?.contains(e.target)
 				&& !hamburger.contains(e.target)) {
-				header.setAttribute('data-menu-open', 'false');
-				hamburger.setAttribute('aria-expanded', 'false');
+				closeMenu();
 			}
 		});
 
-		navLinks?.addEventListener('click', (e) => {
-			if (e.target.closest('a')) {
-				header.setAttribute('data-menu-open', 'false');
-				hamburger.setAttribute('aria-expanded', 'false');
-			}
+		// ── ANY tap inside the panel closes (links still navigate) ──
+		navLinks?.addEventListener('click', () => {
+			closeMenu();
 		});
 
+		// ── Escape closes ──
 		document.addEventListener('keydown', (e) => {
 			if (e.key === 'Escape' && header.getAttribute('data-menu-open') === 'true') {
-				header.setAttribute('data-menu-open', 'false');
-				hamburger.setAttribute('aria-expanded', 'false');
+				closeMenu();
 			}
 		});
 	}
