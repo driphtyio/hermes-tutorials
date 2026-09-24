@@ -5274,7 +5274,9 @@
       "qa": {
         "verified": true,
         "notes": "Winner = deepseek draft, shipped with QA fill only (no rewrite). HERO_IMAGE_PROMPT line + the builder's own 'Prompt:' tail line stripped; header title/meta lines moved into frontmatter. QA fixes: (1) added the missing inline link to the primary official Computer Use docs page (the plan's external-authority contract); (2) trimmed the one H2 lead that measured 62 words back into the 40-60 band and (3) added a 50-word self-contained lead under ## FAQ, so all 13 H2 sections now measure 48-59 words. Mechanical QA ran in-orchestrator (the glm-5.2 QA lane is best-effort per the Z.AI stall pitfall): 5 external links all HTTP 200, 5 internal links all resolve to existing posts, 0 [N] refs, 0 HTML comments, 0 banned slop words, balanced backticks, 0 raw '<' in prose, no Bearer/*** artifacts, no fabricated testing claims. Body 1,740 words. heroImage generated with Lumenfall FLUX.1-schnell via gen-image-verified.sh and verified HTTP 200 (412,905 bytes). Frontmatter title 57 chars / description 153 chars per the plan contract; pubDate + lastVerified both 2026-09-24, quoted."
-      }
+      },
+      "brief_contract": true,
+      "brief_contract_note": "Plan (deepseek-v4-pro, Step 1b) ended with explicit MUST include / MUST NOT include lists; both were copied verbatim into all seven builder briefs (12 element requirements, 10 prohibitions)."
     }
   ],
   "leaderboard": [
