@@ -128,4 +128,16 @@
     max-height: 70vh;
     overflow-y: auto;
   }
+
+  /* Mobile: prevent iOS zoom-on-focus (<16px inputs trigger it)
+     and enlarge the toggle to a 44px tap target */
+  @media (max-width: 720px) {
+    .search-toggle {
+      width: 44px;
+      height: 44px;
+    }
+    .pagefind-ui__search-input {
+      font-size: 16px !important;
+    }
+  }
 </style>

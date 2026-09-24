@@ -281,6 +281,11 @@ const breadcrumbSchema = {
         // ---------- Sidebar collapse toggle ----------
         var sidebar = document.getElementById('sidebar');
         var sidebarToggle = document.getElementById('sidebar-toggle');
+        // Mobile: start collapsed — the full TOC above the article pushes
+        // content down on phones; readers opt in via the toggle.
+        if (sidebar && window.matchMedia('(max-width: 1023px)').matches) {
+          sidebar.classList.add('collapsed');
+        }
         if (sidebarToggle && sidebar) {
           sidebarToggle.addEventListener('click', function () {
             sidebar.classList.toggle('collapsed');
@@ -384,14 +389,23 @@ const breadcrumbSchema = {
       .sidebar.collapsed .toc-nav {
         display: none;
       }
+      /* Collapsed state: header becomes a tappable row */
       .sidebar.collapsed {
         padding-bottom: 16px;
+        cursor: pointer;
       }
       .sidebar-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
         margin-bottom: 12px;
+      }
+      /* Touch devices: permalinks always visible (no hover to reveal them) */
+      @media (hover: none) {
+        .prose h2 .permalink,
+        .prose h3 .permalink {
+          opacity: 0.35;
+        }
       }
       .sidebar-title {
         font-size: 0.75rem;
@@ -705,11 +719,23 @@ const breadcrumbSchema = {
         .hero-image {
           max-height: 280px;
         }
+        /* 44px minimum tap targets (Apple HIG / WCAG 2.5.5) */
         .back-up-top {
-          width: 36px;
-          height: 36px;
+          width: 44px;
+          height: 44px;
           bottom: 16px;
           left: 16px;
+        }
+        .prose .copy-btn {
+          padding: 8px 14px;
+          font-size: 0.8125rem;
+        }
+        .prose pre {
+          -webkit-overflow-scrolling: touch;
+        }
+        /* Prevent iOS auto-zoom on focus (<16px inputs trigger it) */
+        .search-input {
+          font-size: 16px;
         }
       }
 

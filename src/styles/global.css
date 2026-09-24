@@ -361,4 +361,8 @@ img {
 	h1 { font-size: 2.2rem; }
 	h2 { font-size: 1.6rem; }
 	h3 { font-size: 1.3rem; }
+	/* Prevent iOS auto-zoom on input focus (<16px triggers it) */
+	.search-input { font-size: 16px; }
+	/* Comfortable touch targets for filter pills */
+	.filter-btn { padding: 0.5em 1.1em; }
 }
