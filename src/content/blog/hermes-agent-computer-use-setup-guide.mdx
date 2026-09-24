@@ -1,0 +1,113 @@
+---
+title: "Hermes Agent Computer Use: Desktop Automation Setup Guide"
+description: "Configure Hermes Agent's Computer Use toolset, grant the right platform permissions, and run your first background click-and-type action with cua-driver."
+pubDate: 2026-09-24
+tags: [hermes-agent, computer-use, cua-driver, desktop-automation, mcp]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-computer-use-setup-guide-1790273715.webp"
+lastVerified: "2026-09-24"
+---
+
+Hermes Agent can drive a real desktop without taking over your mouse. The `computer_use` toolset clicks, types, scrolls and drags in the background, so your cursor stays exactly where you left it and your active window never jumps to the front. Here is how to install the driver, grant permissions, and run a first background action.
+
+> This guide is desk research based on the official Hermes Agent documentation fetched live on 2026-09-24, primarily the Computer Use feature page and related reference pages. No hands-on desktop automation was run for this article: no `cua-driver` installation, no macOS/Windows/Linux session was driven, and no screenshot or mouse action was observed. Every setup step below is documented from the official source, not from first-hand testing.
+
+## What Hermes Computer Use actually is
+
+Hermes Agent's `computer_use` toolset drives a real desktop in the background: it can click, type, scroll and drag without moving your cursor, changing keyboard focus, or switching Spaces. It works with any tool-capable model, not only Anthropic's, and talks over MCP to `cua-driver`, an open-source background computer-use driver. Your screen state is captured for the model to reason over.
+
+Under the hood it speaks MCP over stdio to [cua-driver](https://github.com/trycua/cua), the open-source background driver from the cua project, so Claude, GPT, Gemini and local vision models all work. The [official Computer Use docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/computer-use) list every action and its arguments. The [MCP servers guide](/blog/mcp-servers-guide/) explains that transport if it is new to you.
+
+## Prerequisites and supported platforms
+
+Computer Use runs on macOS, Windows, and Linux, but the permissions differ. macOS requires Accessibility and Screen Recording grants for the identity reported by doctor. Windows needs nothing at install time, while Linux needs a reachable display server and AT-SPI. A vision-capable model is strongly preferred; text-only models work only in a degraded accessibility-tree mode.
+
+The vision requirement matters more than the platform split, since a text-only model never sees pixels. The table below summarises what each platform expects and which checks the doctor will run.
+
+| Platform | Accessibility tree | Input dispatch | Required grants / prerequisites | Doctor checks |
+|---|---|---|---|---|
+| macOS | AX accessibility tree (SkyLight SPIs) | SLPSPostEventRecordTo, pid-scoped | Accessibility + Screen Recording for `com.trycua.driver` | bundle_identity, tcc_accessibility, tcc_screen_recording, ax_capability, screen_capture_capability |
+| Windows | UIAutomation tree | SendInput + PostMessage | None at install time; not SSH/console Session 0 | binary_version, platform_supported, session_active, ax_capability, screen_capture_capability |
+| Linux | AT-SPI (X11 + Wayland) | XTest (X11) / virtual-keyboard (Wayland) | DISPLAY or XDG_SESSION_TYPE=wayland, AT-SPI on, XWayland for capture | binary_version, platform_supported, session_active, ax_capability, screen_capture_capability, daemon unit/socket |
+
+## Install or verify cua-driver
+
+Fresh Hermes installs attempt to pre-install `cua-driver`, but that is best-effort and can be skipped. Enable the toolset or run `hermes computer-use install` as a manual fallback. Verify the resolved binary and version with `hermes computer-use status`. Existing driver installs are reused if they support the 0.20 runtime contract.
+
+Fresh installs attempt this silently, and `--skip-computer-use` opts out. An existing driver is reused when it satisfies the 0.20 runtime contract, re-checked at setup, on toolset enablement, during `hermes update` and on a session's first call. `HERMES_CUA_DRIVER_CMD` overrides the binary, and the [skills system guide](/blog/skills-system/) covers linking the driver skill pack.
+
+## Enable the Computer Use toolset
+
+From the CLI, run `hermes tools` and pick the Computer Use toolset. In the Desktop app, toggle Computer Use; a missing driver triggers a background install. For repeatable sessions, add `computer_use` to the enabled toolsets in `~/.hermes/config.yaml` or start a chat with `hermes -t computer_use chat`.
+
+All three routes end the same way: `computer_use` joins the session's enabled toolsets. Keep the config key under version control for repeatable runs; the [configuration deep dive](/blog/configuration-deep-dive/) covers the remaining keys.
+
+## Grant macOS permissions
+
+Open System Settings → Privacy & Security → Accessibility and Screen Recording. Grant both to the identity `hermes computer-use doctor` names, typically CuaDriver or `com.trycua.driver`, and grant every permission mode because the daemon always launches through CuaDriver.app. If the doctor still reports ungranted, reset stale grants with `tccutil reset Accessibility` or `tccutil reset ScreenCapture`.
+
+The daemon always launches through CuaDriver.app, so grants must land on that identity in every permission mode; granting the Hermes binary itself will not help. When System Settings shows CuaDriver enabled but the doctor disagrees, the stored row is stale. Reset it, then re-grant.
+
+## Start your first background session
+
+Run `hermes -t computer_use chat` or add the toolset in config. The overlay cursor shows where each click, type, or scroll lands, but the real OS cursor never moves. On macOS and some Linux setups the overlay is disabled automatically; you can override it with `computer_use.no_overlay` if needed.
+
+The overlay is cosmetic, since captures, clicks and typing work without it. Hermes disables it on macOS, headless Linux, WSL2 and containers, and Linux X11 desktops where a stuck fullscreen window can wedge input.
+
+## Choose a permission mode
+
+Computer Use supports Human intervention, standard, bounded, and private unrestricted YOLO modes. You cannot change the mode after the runtime starts. Bounded mode requires a reviewed capability manifest and makes your session fail closed outside named apps and origins. Standard mode uses normal Hermes approvals; YOLO accepts risk once and disables runtime prompts.
+
+Mode is a launch setting, so choose before the runtime starts. Bounded mode reads a reviewed capability manifest naming apps, profile kinds, origins and typed tools; anything outside it fails closed, and a missing manifest fails loudly.
+
+| Mode | How enabled | Runtime behavior | Best use |
+|---|---|---|---|
+| Human intervention | Default | Manual or smart approvals | Ad-hoc sessions with a human nearby |
+| standard | Normal Hermes approvals | Cua stops at its protected boundary | Everyday co-working |
+| bounded | `computer_use.permission_mode: bounded` + reviewed capability manifest | Fails closed outside named apps, origins, tools; missing manifest fails loudly at start | Repeatable automation |
+| private unrestricted / YOLO | `--yolo`, `/yolo`, or `approvals.mode: off` | One explicit risk acceptance, no runtime Cua prompts | Trusted, isolated test work |
+
+## Run a first capture, click, and type action
+
+An example flow is `computer_use(action="capture", mode="som", app="Mail")`, then `click(element=14)`, then `type(text="from:stripe")`, then `key(keys="return", capture_after=True)`. Element indices stay valid only until the next capture, so re-capture after any state-changing action. Screenshots normally stay internal, but the path is reported and a native shareable copy exists.
+
+Set-of-marks numbering labels every sidebar item, toolbar button and message row. Opaque element tokens raise a stale error instead of clicking the wrong thing, so re-capture after anything that changes state.
+
+## Keep browser automation in the browser toolset
+
+Pages in a signed-in browser profile should go through the browser toolset, specifically `browser_exec`, not Computer Use. The old `computer_use.grant_existing_profile` opt-in was removed, and any leftover key is ignored. Use Computer Use for native applications and OS-shell work like opening desktop icons or driving a local app.
+
+The same logic covers unattended browser profile work. Native apps, desktop icons, the taskbar and local windows remain Computer Use territory, and the [official browser toolset docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/browser) describe the other path.
+
+## Verify and troubleshoot with computer-use doctor
+
+`hermes computer-use doctor` runs cua-driver's structured health_report tool and prints a platform-aware check matrix. Exit 0 means ok, 1 degraded, 2 driver binary unreachable. It checks binary version, platform support, session state, and platform access such as TCC on macOS or AT-SPI on Linux. Use `--skip CHECK` to omit a failing check.
+
+`--skip CHECK` wins over `--include CHECK`, and `--json` returns the raw payload. On Linux the doctor also inspects the systemd user unit or XDG autostart entry, flagging a pruned releases path or a dead daemon socket, and the [troubleshooting guide](/blog/troubleshooting/) collects the common failure modes.
+
+## Safety approvals, hard blocks, and cron refusal
+
+Click, type, drag, scroll, key, and focus_app actions require the same approval gate as dangerous shell commands. Grants are scoped as `cua:<action>:<background|foreground>`, and a background grant never covers the foreground variant. If no one can answer, such as in cron or single-query mode, the action is refused rather than auto-approved; YOLO bypasses.
+
+Hard blocks also stop empty trash, lock screen and command-shell payloads typed via `type`. The wider approval model is covered in the [security and privacy guide](/blog/security-privacy/), and pairing manual approvals with a bounded manifest is the safest everyday combination.
+
+## Platform-specific operating notes
+
+Windows elevation can block capture and clicks through UIPI, so run Hermes elevated to drive Administrator windows. Windows SSH sessions have no interactive desktop, so use RDP. macOS private SkyLight SPIs can change with OS updates and trigger a stale-driver warning, while headless Linux servers can borrow a display from [Bot Screen](https://hermes-agent.nousresearch.com/docs/user-guide/features/bot-screen).
+
+Bot Screen streams a per-profile Xfce desktop over TigerVNC into Hermes Desktop, letting you take over for logins and two-factor prompts. Set `bot_desktop.auto_start` if you want it ready on first use, and check the [environment variables reference](https://hermes-agent.nousresearch.com/docs/reference/environment-variables) for driver overrides before debugging further.
+
+## FAQ
+
+These are the three Computer Use failures readers hit most often, and each one has a documented fix rather than a workaround. The answers below cover Windows integrity levels blocking capture, stale macOS TCC grants after a driver update, and unattended runs where no one can approve a destructive action.
+
+### Why does my click report success but nothing happens on Windows?
+
+On Windows, if `capture(mode="som")` returns zero elements and `click(...)` reports success while doing nothing, the target window is likely elevated. A Medium-integrity Hermes process cannot enumerate or inject into a High-integrity Administrator window because of UIPI. Run Hermes from an elevated terminal to drive elevated windows; keyboard events partially bypass UIPI, so Tab and Enter may still navigate an elevated dialog.
+
+### How do I fix stale macOS Accessibility or Screen Recording grants?
+
+Grant both permissions in System Settings to the identity shown by `hermes computer-use doctor` — CuaDriver or `com.trycua.driver` — in every permission mode. If System Settings shows CuaDriver ON but the doctor still reports not granted, reset the stale TCC entries with `tccutil reset Accessibility com.trycua.driver` and `tccutil reset ScreenCapture com.trycua.driver`, then run `hermes computer-use permissions grant`.
+
+### Why does Computer Use refuse an action when nobody can approve it?
+
+Destructive actions — click, type, drag, scroll, key, and focus_app — require approval through the same gate as dangerous shell commands. On unattended platforms or in cron/single-query mode, where nobody can answer, the action is refused rather than auto-approved. Use `--yolo` or `/yolo` only if you accept the risk.
