@@ -87,12 +87,12 @@
       "fallback": "commandcode stealth/space-bunny-alpha (1M ctx, Stealth route, probe-OK)"
     },
     {
-      "model": "poolside/laguna-s-2.1-free",
-      "provider": "commandcode",
+      "model": "poolside/laguna-s-2.1",
+      "provider": "openrouter",
       "family": "poolside",
       "role": "builder",
       "status": "active",
-      "fallback": "openrouter poolside/laguna-s-2.1:free"
+      "fallback": "openrouter poolside/laguna-s-2.1 (PAID \u2014 the :free tier is rate-limited 3/5; openrouter primary probe-OK 6/6 2026-09-25); commandcode poolside/laguna-s-2.1-free (FALLBACK \u2014 CC returns 0 text deltas on 3/3 probes, intermittent)"
     },
     {
       "model": "glm-5.2",
