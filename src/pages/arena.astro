@@ -825,7 +825,9 @@ try {
           grid-template-columns: 1fr;
         }
       }
-    </style>
+    
+  .retired-tag{margin-left:.45rem;font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim,#8b8b94);border:1px solid var(--border,rgba(255,255,255,.14));border-radius:999px;padding:.05rem .45rem}
+</style>
   </head>
   <body>
     <Header />
@@ -870,7 +872,7 @@ try {
                       <tr>
                         <td class="rank-cell">{i < 3 ? ['🥇', '🥈', '🥉'][i] : `#${i + 1}`}</td>
                         <td class="model-provider-wrap">
-                          <span class="model-name">{entry.model}</span>
+                          <span class="model-name">{entry.model}{entry.retired ? <span class="retired-tag">retired</span> : null}</span>
                           {entry.provider && <span class="provider-tag">{entry.provider}</span>}
                         </td>
                         <td>
