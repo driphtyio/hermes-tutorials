@@ -136,3 +136,12 @@ No on both counts. Credential files never trigger a sync, since token refreshes 
 After running the import, verify the report against your inventory, confirm `config.yaml` mappings and skills are present, re-add stripped secrets, and run `hermes import-agent --sync --dry-run` once. For ongoing maintenance, set a daily cron around the sync command so changed source files flow into Hermes without redoing the migration.
 
 Treat the first `--sync --dry-run` as your confirmation pass: nothing writes, and the output tells you whether the sources still match the recorded digests. After that, the [cron](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) schedule plus the [import reference](https://hermes-agent.nousresearch.com/docs/user-guide/import-from-other-agents) are the two pages to keep handy, alongside the other setup guides on this site.
+
+{/* crosslinks */}
+
+## 📖 Related Reads
+
+- **[ToolBrain](https://toolbrain.net/)** — tool reviews, LLM comparisons, and AI workflow guides
+- **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools, agents, and APIs
+
+*Cross-links automatically generated from Hermes Tutorials.*
