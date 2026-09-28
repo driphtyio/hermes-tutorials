@@ -1,0 +1,138 @@
+---
+title: "Migrate Claude Code and Codex CLI to Hermes Agent with `hermes import-agent`"
+description: "Move Claude Code and Codex CLI configs, memory, MCP servers, and skills into Hermes Agent with the preview-first importer, then rebuild secrets and sync."
+pubDate: 2026-09-28
+tags: ["hermes-agent", "claude-code", "codex-cli", "migration", "tutorial"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/migrate-claude-code-codex-to-hermes-agent-1790620505.webp"
+lastVerified: 2026-09-28
+---
+
+If you have spent months tuning Claude Code or Codex CLI, the hard part of switching agents is not installing a new binary — it is carrying over the instruction files, shell policies, MCP servers, and skills you accumulated. Hermes Agent ships an importer for exactly that job, and this guide covers its mappings, its limits, the manual credential rebuild, and how `--sync` keeps the result current.
+
+> This guide is based on Hermes Agent's official documentation (fetched 2026-09-28) — we did not run the importer hands-on. The sources are the import-from-other-agents, secrets, and configuration pages on hermes-agent.nousresearch.com. Every command, mapping, and limitation below reflects those documents only; we did not test against a live installation.
+
+`hermes import-agent` turns a risky weekend migration into a previewable, repeatable import: it maps Claude Code and Codex CLI configuration into Hermes equivalents, strips secrets by design, and records every source for later `--sync` runs.
+
+## Why migrate instead of rebuild?
+
+Migration matters because your CLI agent setup is accumulated configuration, not just a binary choice. Claude Code and Codex CLI store global instructions, permissions, MCP servers, and skills in tool-specific locations like `~/.claude` and `~/.codex`. Rebuilding by hand loses that tuning; `hermes import-agent` recovers it with a preview and repeatable re-import.
+
+Cost is also per-artifact. A command can rerun in seconds, while a hand-copied permission rule or an orphaned skill folder is a silent, ongoing tax. The [Import from other agents](https://hermes-agent.nousresearch.com/docs/user-guide/import-from-other-agents) page frames this as preview-first plus repeatable: you verify the plan before it writes, then re-run it to confirm.
+
+## What `hermes import-agent` does
+
+`hermes import-agent` auto-detects `~/.claude` or `~/.codex` and prints a per-item import plan before writing anything. Use `--dry-run` for a disk-safe preview; the command maps instructions, permissions, MCP servers, and skills into Hermes locations, merges instead of replacing, and records the source for later `--sync` runs.
+
+The plan prints the full item list before applying, so you can see what maps, what is skipped, and what conflicts while nothing has been written. Under `--dry-run` the disk stays untouched, and every completed import is recorded for later comparison. Flags and behavior are documented in the [official import guide](https://hermes-agent.nousresearch.com/docs/user-guide/import-from-other-agents).
+
+## Before you start: inventory `~/.claude` and `~/.codex`
+
+Before importing, list what actually exists under `~/.claude` and `~/.codex`. Claude Code stores `CLAUDE.md`, `settings.json`, `mcpServers`, skills, and slash commands; Codex CLI stores `AGENTS.md`, `config.toml`, memories, and skills. This inventory tells you which artifacts to expect in the import report and which unimplemented items to handle manually.
+
+Write the list down before you run anything: filenames, skill folders, and the commands you rely on daily. That inventory becomes the checklist you hold the import report against, so skipped or unmapped items surface immediately rather than weeks later. Source layout is described in [Import from other agents](https://hermes-agent.nousresearch.com/docs/user-guide/import-from-other-agents).
+
+## The commands, end to end
+
+Use `hermes import-agent` to auto-detect a source, or target one explicitly with `claude-code` or `codex`. Add `--dry-run` to preview, `--source /path/to/.codex` for a custom Codex location, and `--overwrite --yes` to replace conflicts in non-interactive runs. Always read the printed plan first; non-interactive runs stop at preview without `--yes`.
+
+```bash
+hermes import-agent
+hermes import-agent claude-code
+hermes import-agent codex
+hermes import-agent claude-code --dry-run
+hermes import-agent codex --source /path/to/.codex
+hermes import-agent claude-code --overwrite --yes
+```
+
+Naming the source explicitly is useful when both trees exist. Flags compose: `--dry-run` previews, `--overwrite` replaces conflicting servers and skills, `--yes` removes prompts. OpenClaw users have the sibling path `hermes claw migrate`, which follows the same preview-first design ([import docs](https://hermes-agent.nousresearch.com/docs/user-guide/import-from-other-agents), [migrate from OpenClaw](https://hermes-agent.nousresearch.com/docs/guides/migrate-from-openclaw)).
+
+## What migrates from Claude Code
+
+Claude Code global instructions in `CLAUDE.md` become memory entries under `~/.hermes/memories/MEMORY.md`; Bash permissions move into `command_allowlist` and `approvals.deny` in `config.yaml`; MCP servers become `mcp_servers`; and skill folders land under `~/.hermes/skills/claude-code-imports/`. Slash commands are skipped and must be converted into skills.
+
+| Source | Hermes target |
+|---|---|
+| `CLAUDE.md` (global instructions) | memory entries in `~/.hermes/memories/MEMORY.md` |
+| `settings.json` `permissions.allow` (`Bash(...)` rules) | `command_allowlist` in `config.yaml` |
+| `settings.json` `permissions.deny` (`Bash(...)` rules) | `approvals.deny` in `config.yaml` |
+| `mcpServers` (from `~/.claude.json` and `settings.json`) | `mcp_servers` in `config.yaml` |
+| `skills/<name>/` (dirs with `SKILL.md`) | `~/.hermes/skills/claude-code-imports/<name>/` |
+| `commands/*.md` (slash commands) | SKIPPED with a note — convert into skills |
+
+Watch the permission translation: `Bash(npm run test:*)` becomes the glob `npm run test*`, which can match a different set of commands than the original prefix. Mappings come from [Import from other agents](https://hermes-agent.nousresearch.com/docs/user-guide/import-from-other-agents); targets are detailed in [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration), [Memory](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory), and [Skills](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills).
+
+## What migrates from Codex CLI
+
+Codex CLI global instructions in `AGENTS.md` and `memories/*.md` become Hermes memory entries in `~/.hermes/memories/MEMORY.md`. MCP servers from `config.toml` move into `mcp_servers` in `config.yaml`. Skill folders import under `~/.hermes/skills/codex-imports/`; credentials in `auth.json` are never read or migrated, and the report lists every mapped file so skipped or stripped items surface immediately.
+
+| Source | Hermes target |
+|---|---|
+| `AGENTS.md` (global instructions) | memory entries in `~/.hermes/memories/MEMORY.md` |
+| `config.toml` `[mcp_servers.*]` | `mcp_servers` in `config.yaml` |
+| `memories/*.md` | memory entries in `~/.hermes/memories/MEMORY.md` |
+| `skills/<name>/` (dirs with `SKILL.md`) | `~/.hermes/skills/codex-imports/<name>/` |
+
+Because `auth.json` stays closed, Codex credentials need the manual rebuild below. MCP definitions arrive as structure only: secret-looking environment variables and headers are stripped at read time and listed in the report. See [Import from other agents](https://hermes-agent.nousresearch.com/docs/user-guide/import-from-other-agents) and [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
+
+## What never migrates: secrets and credentials
+
+The importer never reads `~/.claude/.credentials.json` or `~/.codex/auth.json`, and it strips secret-looking MCP environment variables or headers such as `*_TOKEN`, `*_API_KEY`, and `Authorization`. Those items appear in the report for deliberate manual re-addition afterward; they are not silently carried over.
+
+That boundary is deliberate: credentials never cross into Hermes, so import manifests and sync digests stay free of secrets. Treat the report's stripped list as a work queue, where each entry is re-added on purpose following the patterns on the [Secrets](https://hermes-agent.nousresearch.com/docs/user-guide/secrets) page.
+
+## Import behavior rules
+
+Four rules drive every import. The tool previews first, merges memory and config entries instead of replacing them, skips conflicting MCP servers or skills unless `--overwrite` is passed, and converts malformed source files into per-item errors while importing everything else. These rules keep the operation reversible and non-destructive.
+
+In documented behavior, merges deduplicate memory entries against an existing `MEMORY.md` and combine allowlist and denylist patterns rather than replacing them, while a broken `settings.json` or `config.toml` becomes a per-item error as the rest of the import proceeds. The four rules are set out in [Import from other agents](https://hermes-agent.nousresearch.com/docs/user-guide/import-from-other-agents).
+
+## Gotchas and how to handle them
+
+The importer has sharp edges: Claude Code slash commands are dropped, non-Bash permission rules go unmapped, Bash prefix rules become potentially broader globs, stripped secrets may leave MCP servers broken until restored, conflicts skip silently without `--overwrite`, and non-interactive runs need `--yes` to proceed past preview.
+
+1. Claude Code `commands/*.md` slash commands are skipped entirely, so you must hand-convert any that you rely on into Hermes skills under `~/.hermes/skills/`.
+2. Non-`Bash` permission rules such as `Read(...)` or `WebFetch` are reported as unmapped, not imported; only your Bash policy migrates.
+3. Bash prefix rules like `Bash(npm run test:*)` become `npm run test*` globs, which can match more or less than the original prefix, so verify the resulting pattern semantics.
+4. Secret-looking MCP environment variables and headers are stripped, so an MCP server that worked before may fail until you re-add `*_TOKEN`, `*_API_KEY`, or `Authorization` values by hand.
+5. Conflicts with existing MCP servers or skills are skipped and only reported unless you pass `--overwrite`, so expected updates won't happen silently.
+6. Non-interactive sessions (scripts, CI, cron) stop at the preview unless `--yes` is passed.
+
+Each one shows up as a report line rather than a failure, which is why reading the report matters ([import docs](https://hermes-agent.nousresearch.com/docs/user-guide/import-from-other-agents), [secrets](https://hermes-agent.nousresearch.com/docs/user-guide/secrets)).
+
+## Rebuilding credentials after import
+
+After import, configure providers with `hermes setup` so models and API keys live in `~/.hermes/config.yaml` or `~/.hermes/.env`. Add missing secrets to `.env`, or pull them from Bitwarden Secrets Manager, 1Password `op://` references, or a command-helper vault source. Then re-add the MCP env vars and headers the report stripped.
+
+1. Run `hermes setup` to configure providers, models, and API keys; these live in `~/.hermes/config.yaml` or `~/.hermes/.env`.
+2. Add secrets to `~/.hermes/.env` manually, or use an external secret manager pulled at startup: Bitwarden Secrets Manager (`bws` CLI), 1Password (`op://` references via the official `op` CLI), or a command-helper source for any CLI vault (`keepassxc-cli`, `secret-tool`, `pass`, custom scripts) printing `KEY=VALUE` lines.
+3. Re-add the stripped MCP env vars/headers named in the import report.
+
+The [Secrets](https://hermes-agent.nousresearch.com/docs/user-guide/secrets) page covers the manager options, [Installation](https://hermes-agent.nousresearch.com/docs/getting-started/installation) covers `hermes setup`, and [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) shows where providers and keys end up.
+
+## Keeping imports current with `--sync` and profiles
+
+Each successful import records the source and a digest in `~/.hermes/import-sync.json`. Run `hermes import-agent --sync` to re-import only changed sources; use `--sync --dry-run` to preview. Sync is deduplicating, refreshes imported skills in place, never clobbers your own skill edits, and ignores credential files.
+
+The digest covers everything that was read, so unchanged sources are skipped outright and a daily cron around `hermes import-agent --sync` is safe ([cron feature](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron)). Memory and config merges stay deduplicating, so repeated syncs never stack duplicate entries or patterns. Skills previously imported by `import-agent` refresh in place when the source copy changes, while skills you created or edited yourself under the import category are never clobbered — normal conflict semantics apply, and `--overwrite` on a manual run forces replacement. Credential files never trigger a sync: token refreshes in `~/.claude/.credentials.json` or `~/.codex/auth.json` are ignored by the digest and secrets remain stripped. The manifest is per profile, so `hermes profile create NAME --clone --sync-imports` carries it over and `hermes -p NAME import-agent --sync` keeps pulling from the same external trees ([profiles](https://hermes-agent.nousresearch.com/docs/user-guide/profiles), [import docs](https://hermes-agent.nousresearch.com/docs/user-guide/import-from-other-agents)).
+
+## FAQ
+
+This FAQ distills the migration decisions developers ask about most before running the importer. The answers cover preview and conflict behavior, how to recover slash commands after import, and what `--sync` will and won't do to credentials and skills in later runs.
+
+### Will the import overwrite anything I already have?
+
+No. Existing MCP servers and skills with the same name are reported as conflicts and left alone unless you pass `--overwrite`, while memory and config merges combine with what is already there instead of replacing it ([import docs](https://hermes-agent.nousresearch.com/docs/user-guide/import-from-other-agents)).
+
+### What happens to Claude Code slash commands?
+
+They are skipped with a note in the report. Convert any you rely on into Hermes skills under `~/.hermes/skills/` yourself, because the importer will not do it and a later `--sync` will not either.
+
+### Does --sync re-import credentials or risk repeated entries?
+
+No on both counts. Credential files never trigger a sync, since token refreshes in `~/.claude/.credentials.json` or `~/.codex/auth.json` are ignored and secrets stay stripped ([secrets](https://hermes-agent.nousresearch.com/docs/user-guide/secrets)), while memory and config merges deduplicate on every run.
+
+## Wrap-up: verify and next steps
+
+After running the import, verify the report against your inventory, confirm `config.yaml` mappings and skills are present, re-add stripped secrets, and run `hermes import-agent --sync --dry-run` once. For ongoing maintenance, set a daily cron around the sync command so changed source files flow into Hermes without redoing the migration.
+
+Treat the first `--sync --dry-run` as your confirmation pass: nothing writes, and the output tells you whether the sources still match the recorded digests. After that, the [cron](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) schedule plus the [import reference](https://hermes-agent.nousresearch.com/docs/user-guide/import-from-other-agents) are the two pages to keep handy, alongside the other setup guides on this site.
