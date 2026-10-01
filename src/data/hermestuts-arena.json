@@ -652,7 +652,7 @@
         "last_failure": null
       }
     },
-    "last_updated": "2026-09-28"
+    "last_updated": "2026-10-01"
   },
   "matches": [
     {
@@ -6615,6 +6615,357 @@
         "unsupported_claims": 0,
         "fixes_applied": 2
       }
+    },
+    {
+      "id": "arena-hermes-agent-memory-providers",
+      "match_id": "arena-hermes-agent-memory-providers",
+      "date": "2026-10-01",
+      "topic": "Hermes Agent Memory Providers Guide 2026: Add Long-Term Memory Beyond MEMORY.md \u2014 a setup/choose guide to the nine external memory providers Hermes documents (Honcho, OpenViking, Mem0, Hindsight, Holographic, RetainDB, ByteRover, Supermemory, Memori): the built-in MEMORY.md (2,200 chars) / USER.md (1,375 chars) frozen-snapshot baseline, the one-provider-at-a-time additive rule, the six activation steps, the three CLI commands (`hermes memory setup` / `status` / `off`), the `memory.provider` config key, the provider comparison table (storage/cost/tool-count/dependencies/unique feature), per-profile isolation, and the plugin-catalog migration. All facts desk-verified against the official Hermes Agent docs fetched 2026-10-01 (13 external links re-verified HTTP 200 at QA); no provider was installed or run. 12 builder lanes dispatched; 9 produced drafts, 3 DNF'd (ling-3.0-flash-fin-free empty commandcode stream; pixel-canary plan-gated 403; longcat-2.5-preview-free timeout). All 9 drafts were judged with qwen3.7-flash multipass (3 passes, mean-gated) behind a verified-fact preamble carrying the machine-counted 40-60-word lead measurements. Winner minimax-m3 (9.05).",
+      "slug": "hermes-agent-memory-providers-guide",
+      "type": "tutorial",
+      "category": "guide",
+      "pipeline": "cron-subagent-arena (12-lane parallel-builders.py, one attempt each, 380s per lane; the harness 420s tool cap killed the first wave after 8 lanes, the remaining lanes were re-dispatched and 1 more completed \u2014 9/12 drafts total)",
+      "orchestrator": "deepseek-v4.1-flash (hermes cron)",
+      "research_model": "mimo-v2.6-pro via commandcode arena-direct-runner call_model (1,271-word brief), grounded in the official Hermes Agent docs the orchestrator fetched live on 2026-10-01",
+      "plan_model": "deepseek-v4-pro via commandcode arena-direct-runner call_model (2,317-word plan ending in a verbatim MUST include (24) / MUST NOT include (12) contract; brief_contract: true). The orchestrator copied BOTH lists verbatim into the builder brief.",
+      "brief_contract": true,
+      "qa_model": "orchestrator mechanical QA (live link sweep 13/13 HTTP 200 after one GitHub 429 rate-limit retry; 0 [N] refs, 0 banned words, 0 HTML comments, 0 raw '<' outside code spans, description 154 chars, 5 internal links, 1,863 words) plus 1 content fix: the raw winner draft mis-attributed RetainDB's hybrid-search claim to the Hindsight integration docs (link removed) and claimed 'eight of the nine' providers ship in-tree (corrected to seven, with Hindsight from the plugin catalog and Memori external).",
+      "judge_model": "qwen3.7-flash (multipass 3, mean-gated) over all 9 eligible drafts behind a [VERIFIED FACT CONTEXT FOR JUDGING] preamble that included the machine-counted 40-60-word lead measurements; 27 passes, no 429s, no judge-model fallback",
+      "threshold_met": true,
+      "winner": "minimax-m3",
+      "brief_contract_note": "MUST include / MUST NOT include lists from the plan were copied verbatim into the brief.",
+      "models_competed": [
+        {
+          "model": "minimax-m3",
+          "provider": "opencode-go",
+          "family": "minimax",
+          "label": "E"
+        },
+        {
+          "model": "glm-5.3-flash",
+          "provider": "opencode-go",
+          "family": "glm",
+          "label": "C"
+        },
+        {
+          "model": "gpt-6-luna",
+          "provider": "commandcode",
+          "family": "gpt",
+          "label": "G"
+        },
+        {
+          "model": "mimo-v2.6-flash",
+          "provider": "opencode-go",
+          "family": "mimo",
+          "label": "B"
+        },
+        {
+          "model": "hy3",
+          "provider": "opencode-go",
+          "family": "tencent",
+          "label": "F"
+        },
+        {
+          "model": "deepseek-v4-flash",
+          "provider": "commandcode",
+          "family": "deepseek",
+          "label": "A"
+        },
+        {
+          "model": "space-bunny-free",
+          "provider": "opencode-go",
+          "family": "space",
+          "label": "I"
+        },
+        {
+          "model": "longcat-2.0",
+          "provider": "opencode-go",
+          "family": "longcat",
+          "label": "H"
+        },
+        {
+          "model": "muse-spark-1.3-contributor",
+          "provider": "opencode-go",
+          "family": "muse",
+          "label": "D"
+        },
+        {
+          "model": "ling-3.0-flash-fin-free",
+          "provider": "commandcode",
+          "family": "ling",
+          "label": "J"
+        },
+        {
+          "model": "pixel-canary",
+          "provider": "commandcode",
+          "family": "pixel",
+          "label": "K"
+        },
+        {
+          "model": "longcat-2.5-preview-free",
+          "provider": "opencode-go",
+          "family": "longcat25",
+          "label": "L"
+        }
+      ],
+      "results": [
+        {
+          "model": "minimax-m3",
+          "model_id": "minimax-m3",
+          "provider": "opencode-go",
+          "family": "minimax",
+          "label": "E",
+          "score": 9.05,
+          "threshold_met": true,
+          "scores": {
+            "accuracy": 9.33,
+            "sourcing": 9.0,
+            "quality": 9.0,
+            "practicality": 9.33,
+            "engagement": 8.0,
+            "per_pass_weighted": [
+              9.35,
+              8.9,
+              8.9
+            ]
+          },
+          "judge_model": "qwen3.7-flash (multipass, 3 passes, mean-gated)",
+          "strengths": "Only draft with 12 of 14 prose H2 leads inside the 40-60 word band; nine-provider table with all documented tool counts; explicit desk-research disclosure.",
+          "weaknesses": "RetainDB hybrid-search link mis-attributed to the Hindsight docs in the raw draft (fixed in QA); table row read 'Eight of the nine' in-tree before the QA correction to seven."
+        },
+        {
+          "model": "glm-5.3-flash",
+          "model_id": "glm-5.3-flash",
+          "provider": "opencode-go",
+          "family": "glm",
+          "label": "C",
+          "score": 8.72,
+          "threshold_met": true,
+          "scores": {
+            "accuracy": 9.0,
+            "sourcing": 8.5,
+            "quality": 9.0,
+            "practicality": 9.0,
+            "engagement": 7.5,
+            "per_pass_weighted": [
+              8.55,
+              8.9
+            ]
+          },
+          "judge_model": "qwen3.7-flash (multipass, 3 passes, mean-gated)",
+          "strengths": "Tight 1,903-word structure, 23 external links, strong FAQ framing.",
+          "weaknesses": "Only 7 of 14 H2 leads measured inside the 40-60 word band."
+        },
+        {
+          "model": "gpt-6-luna",
+          "model_id": "gpt-6-luna",
+          "provider": "commandcode",
+          "family": "gpt",
+          "label": "G",
+          "score": 8.65,
+          "threshold_met": true,
+          "scores": {
+            "accuracy": 9.0,
+            "sourcing": 8.0,
+            "quality": 9.0,
+            "practicality": 9.0,
+            "engagement": 8.0,
+            "per_pass_weighted": [
+              8.65,
+              8.65,
+              8.65
+            ]
+          },
+          "judge_model": "qwen3.7-flash (multipass, 3 passes, mean-gated)",
+          "strengths": "Zero-variance 3-pass judge scores (9/8/9/9/8), clean sourcing.",
+          "weaknesses": "8 of 14 leads in band; campaign-style phrasing in places."
+        },
+        {
+          "model": "mimo-v2.6-flash",
+          "model_id": "mimo-v2.6-flash",
+          "provider": "opencode-go",
+          "family": "mimo",
+          "label": "B",
+          "score": 8.58,
+          "threshold_met": true,
+          "scores": {
+            "accuracy": 9.67,
+            "sourcing": 7.67,
+            "quality": 8.33,
+            "practicality": 9.33,
+            "engagement": 7.0,
+            "per_pass_weighted": [
+              9.35,
+              9.35,
+              7.05
+            ]
+          },
+          "judge_model": "qwen3.7-flash (multipass, 3 passes, mean-gated)",
+          "strengths": "Two 9.35 passes; explicit README/provenance references.",
+          "weaknesses": "One weak pass (7.05) pulled the mean below the two strong passes."
+        },
+        {
+          "model": "hy3",
+          "model_id": "hy3",
+          "provider": "opencode-go",
+          "family": "tencent",
+          "label": "F",
+          "score": 8.5,
+          "threshold_met": true,
+          "scores": {
+            "accuracy": 9.0,
+            "sourcing": 7.67,
+            "quality": 9.0,
+            "practicality": 9.0,
+            "engagement": 7.33,
+            "per_pass_weighted": [
+              8.55,
+              8.3,
+              8.65
+            ]
+          },
+          "judge_model": "qwen3.7-flash (multipass, 3 passes, mean-gated)",
+          "strengths": "1,915 words with 20 external links and 10 of 14 leads in band.",
+          "weaknesses": "Slightly under the length target (1,915 words)."
+        },
+        {
+          "model": "deepseek-v4-flash",
+          "model_id": "deepseek-v4-flash",
+          "provider": "commandcode",
+          "family": "deepseek",
+          "label": "A",
+          "score": 8.5,
+          "threshold_met": true,
+          "scores": {
+            "accuracy": 9.0,
+            "sourcing": 8.0,
+            "quality": 8.33,
+            "practicality": 9.33,
+            "engagement": 7.33,
+            "per_pass_weighted": [
+              9.35,
+              9.35,
+              6.8
+            ]
+          },
+          "judge_model": "qwen3.7-flash (multipass, 3 passes, mean-gated)",
+          "strengths": "21/21 contract checks, 11 of 15 leads in band, 18 external links.",
+          "weaknesses": "Longest of the top group (2,401 words); slower to read."
+        },
+        {
+          "model": "space-bunny-free",
+          "model_id": "space-bunny-free",
+          "provider": "opencode-go",
+          "family": "space",
+          "label": "I",
+          "score": 8.37,
+          "threshold_met": true,
+          "scores": {
+            "accuracy": 8.67,
+            "sourcing": 8.0,
+            "quality": 8.67,
+            "practicality": 8.67,
+            "engagement": 7.33,
+            "per_pass_weighted": [
+              8.9,
+              8.65,
+              7.55
+            ]
+          },
+          "judge_model": "qwen3.7-flash (multipass, 3 passes, mean-gated)",
+          "strengths": "Compact 1,813-word version with 21 external links.",
+          "weaknesses": "Shallowest per-provider detail of the nine."
+        },
+        {
+          "model": "longcat-2.0",
+          "model_id": "longcat-2.0",
+          "provider": "opencode-go",
+          "family": "longcat",
+          "label": "H",
+          "score": 8.33,
+          "threshold_met": true,
+          "scores": {
+            "accuracy": 9.0,
+            "sourcing": 7.67,
+            "quality": 8.33,
+            "practicality": 9.0,
+            "engagement": 7.0,
+            "per_pass_weighted": [
+              8.55,
+              9.35,
+              7.1
+            ]
+          },
+          "judge_model": "qwen3.7-flash (multipass, 3 passes, mean-gated)",
+          "strengths": "Most detail (2,665 words) but over the length ceiling.",
+          "weaknesses": "2,665 words exceeds the 2,500-word ceiling."
+        },
+        {
+          "model": "muse-spark-1.3-contributor",
+          "model_id": "muse-spark-1.3-contributor",
+          "provider": "opencode-go",
+          "family": "muse",
+          "label": "D",
+          "score": 7.55,
+          "threshold_met": false,
+          "scores": {
+            "accuracy": 9.0,
+            "sourcing": 7.0,
+            "quality": 6.33,
+            "practicality": 8.67,
+            "engagement": 5.33,
+            "per_pass_weighted": [
+              8.05,
+              6.55,
+              8.05
+            ]
+          },
+          "judge_model": "qwen3.7-flash (multipass, 3 passes, mean-gated)",
+          "strengths": "Good accuracy (9.0 across passes) but sourcing/engagement dipped on pass 2 (5.0/4.0).",
+          "weaknesses": "Failed the 8.0 mean gate (7.55)."
+        },
+        {
+          "model": "ling-3.0-flash-fin-free",
+          "model_id": "ling-3.0-flash-fin-free",
+          "provider": "commandcode",
+          "family": "ling",
+          "label": "J",
+          "score": 0.0,
+          "threshold_met": false,
+          "scores": {},
+          "dnf": true,
+          "strengths": "",
+          "weaknesses": "No draft produced in the 380s lane window (commandcode lane returned an empty stream / plan-gated 403 with no rescue) \u2014 recorded as DNF, not scored."
+        },
+        {
+          "model": "pixel-canary",
+          "model_id": "pixel-canary",
+          "provider": "commandcode",
+          "family": "pixel",
+          "label": "K",
+          "score": 0.0,
+          "threshold_met": false,
+          "scores": {},
+          "dnf": true,
+          "strengths": "",
+          "weaknesses": "No draft produced in the 380s lane window (commandcode lane returned an empty stream / plan-gated 403 with no rescue) \u2014 recorded as DNF, not scored."
+        },
+        {
+          "model": "longcat-2.5-preview-free",
+          "model_id": "longcat-2.5-preview-free",
+          "provider": "opencode-go",
+          "family": "longcat25",
+          "label": "L",
+          "score": 0.0,
+          "threshold_met": false,
+          "scores": {},
+          "dnf": true,
+          "strengths": "",
+          "weaknesses": "No draft produced in the 380s lane window (opencode-go lane timed out) \u2014 recorded as DNF."
+        }
+      ],
+      "judge_notes": "Spread among the eight passing drafts was 0.72 pts (8.33-9.05) \u2014 the tight signature of a plan whose brief contract bound the field; muse-spark-1.3-contributor failed the gate at 7.55. Deterministic pre-screen: all 9 drafts hit 20-21 of 21 contract checks and every draft carried the mandatory HERO_IMAGE_PROMPT line.",
+      "notes": "3/12 lanes DNF (ling-3.0-flash-fin-free, pixel-canary, longcat-2.5-preview-free). Winner minimax-m3 ran on its opencode-go primary (the commandcode hop for this slug is plan-gated on this account)."
     }
   ],
   "leaderboard": [
@@ -6622,9 +6973,9 @@
       "model": "deepseek-v4-flash",
       "provider": "commandcode",
       "family": "deepseek",
-      "matches": 25,
+      "matches": 26,
       "wins": 10,
-      "losses": 15,
+      "losses": 16,
       "avgScore": 8.54,
       "bestScore": 9.78,
       "rank": 1
@@ -6656,10 +7007,10 @@
       "model": "mimo-v2.6-flash",
       "provider": "xiaomi",
       "family": "mimo",
-      "matches": 4,
+      "matches": 5,
       "wins": 2,
-      "losses": 2,
-      "avgScore": 8.89,
+      "losses": 3,
+      "avgScore": 8.83,
       "bestScore": 9.78,
       "rank": 4
     },
@@ -6667,43 +7018,43 @@
       "model": "glm-5.3-flash",
       "provider": "opencode-go",
       "family": "glm",
-      "matches": 8,
+      "matches": 9,
       "wins": 2,
-      "losses": 6,
-      "avgScore": 8.47,
+      "losses": 7,
+      "avgScore": 8.5,
       "bestScore": 9.75,
       "rank": 5
-    },
-    {
-      "model": "hy3",
-      "provider": "opencode-go",
-      "family": "tencent",
-      "matches": 4,
-      "wins": 1,
-      "losses": 3,
-      "avgScore": 8.89,
-      "bestScore": 9.65,
-      "rank": 6
     },
     {
       "model": "minimax-m3",
       "provider": "commandcode",
       "family": "minimax",
-      "matches": 2,
-      "wins": 0,
+      "matches": 3,
+      "wins": 1,
       "losses": 2,
-      "avgScore": 9.15,
+      "avgScore": 9.12,
       "bestScore": 9.72,
+      "rank": 6
+    },
+    {
+      "model": "hy3",
+      "provider": "opencode-go",
+      "family": "tencent",
+      "matches": 5,
+      "wins": 1,
+      "losses": 4,
+      "avgScore": 8.81,
+      "bestScore": 9.65,
       "rank": 7
     },
     {
       "model": "gpt-6-luna",
       "provider": "commandcode",
       "family": "openai",
-      "matches": 3,
+      "matches": 4,
       "wins": 0,
-      "losses": 3,
-      "avgScore": 9.0,
+      "losses": 4,
+      "avgScore": 8.91,
       "bestScore": 9.73,
       "rank": 8
     },
@@ -6711,10 +7062,10 @@
       "model": "space-bunny-free",
       "provider": "opencode-go",
       "family": "space",
-      "matches": 1,
+      "matches": 2,
       "wins": 0,
-      "losses": 1,
-      "avgScore": 8.95,
+      "losses": 2,
+      "avgScore": 8.66,
       "bestScore": 8.95,
       "rank": 9
     },
@@ -6722,10 +7073,10 @@
       "model": "muse-spark-1.3-contributor",
       "provider": "opencode-go",
       "family": "muse",
-      "matches": 4,
+      "matches": 5,
       "wins": 0,
-      "losses": 4,
-      "avgScore": 8.88,
+      "losses": 5,
+      "avgScore": 8.61,
       "bestScore": 9.45,
       "rank": 10
     },
@@ -6733,9 +7084,9 @@
       "model": "longcat-2.0",
       "provider": "opencode-go",
       "family": "longcat",
-      "matches": 3,
+      "matches": 4,
       "wins": 0,
-      "losses": 3,
+      "losses": 4,
       "avgScore": 8.3,
       "bestScore": 9.67,
       "rank": 11
@@ -6752,7 +7103,7 @@
       "rank": 12
     }
   ],
-  "last_updated": "2026-10-01T17:51:29Z",
+  "last_updated": "2026-10-01",
   "total_matches": 26,
   "retired_models": [
     {
