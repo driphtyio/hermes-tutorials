@@ -652,7 +652,7 @@
         "last_failure": null
       }
     },
-    "last_updated": "2026-10-01"
+    "last_updated": "2026-10-02"
   },
   "matches": [
     {
@@ -7030,6 +7030,94 @@
         "notes": "Judge weakness 'expander prose-only' addressed in implementation; container-padding measurement asymmetry resolved to true \u03940 parity"
       },
       "notes": "First 10-lane spec-arena match on this arena. Roster: 8 canonical builders + deepseek-v4-pro/mimo-v2.6-pro flex lanes (per-lane runner invocations, byte-identical briefs, brief-check.py gate passed pre-dispatch)."
+    },
+    {
+      "id": "arena-ht-arena-page-v3",
+      "match_id": "arena-ht-arena-page-v3",
+      "date": "2026-10-02",
+      "type": "design-spec",
+      "category": "design",
+      "topic": "Hermes Tutorials arena page v3 \u2014 widescreen + space-optimization redesign",
+      "slug": null,
+      "lanes_declared": 8,
+      "drafts": 6,
+      "dnf": [
+        "mimo-v2.6-flash",
+        "longcat-2.5-preview-free",
+        "gpt-6-luna"
+      ],
+      "results": [
+        {
+          "model": "hy3",
+          "model_id": "hy3",
+          "provider": "opencode-go",
+          "family": "tencent",
+          "rank": 1,
+          "score": 9.0,
+          "threshold_met": true
+        },
+        {
+          "model": "muse-spark-1.3-contributor",
+          "model_id": "muse-spark-1.3-contributor",
+          "provider": "opencode-go",
+          "family": "meta",
+          "rank": 2,
+          "score": 8.8,
+          "threshold_met": true
+        },
+        {
+          "model": "deepseek-v4-flash",
+          "model_id": "deepseek-v4-flash",
+          "provider": "commandcode",
+          "family": "deepseek",
+          "rank": 3,
+          "score": 6.7,
+          "threshold_met": true
+        },
+        {
+          "model": "glm-5.3-flash",
+          "model_id": "glm-5.3-flash",
+          "provider": "opencode-go",
+          "family": "glm",
+          "rank": 4,
+          "score": 6.6,
+          "threshold_met": true
+        },
+        {
+          "model": "space-bunny-free",
+          "model_id": "space-bunny-free",
+          "provider": "opencode-go",
+          "family": "space",
+          "rank": 5,
+          "score": 6.0,
+          "threshold_met": true
+        }
+      ],
+      "scores": {
+        "hy3": 9.0,
+        "muse-spark-1.3-contributor": 8.8,
+        "deepseek-v4-flash": 6.7,
+        "glm-5.3-flash": 6.6,
+        "space-bunny-free": 6.0
+      },
+      "winner": "hy3",
+      "winner_score": 9.0,
+      "threshold_met": true,
+      "brief_contract": true,
+      "research_model": "orchestrator (sibling-arena review + repo fact extraction)",
+      "plan_model": "orchestrator-authored brief with MUST include/MUST NOT include contract (no planner model dispatched \u2014 deviation)",
+      "judge_model": "deepseek-v4-pro (commandcode), structured verdict over 5 usable drafts",
+      "qa_model": "playwright layout-audit.js + functional browser QA (orchestrator)",
+      "judge": {
+        "model": "deepseek-v4-pro (commandcode)",
+        "kind": "structured"
+      },
+      "qa": {
+        "verdict": "implemented + measured",
+        "checks": "layout-audit.js PASS at 1280/1440/1920 (nav parity \u03940, 5 cols, whole rows, no dup controls, no JS errors); functional QA: fold leaderboard+latest side-by-side above the fold, archive window 11->29 via expander with correct label/aria, retired/availability/process-feedback collapsed by default, pool search filters 17->1, sticky var measured 65px, shape-B matches now render synthesized per-model rows",
+        "notes": "Winner chosen on measured space metrics (page scrollHeight 1884px @1440 vs 2035 v2 baseline; archive row height 18px vs 40px; leaderboard row 24px vs 31px) AND judge score 9.0 \u2014 both signals agree. deepseek-v4-flash was dense but failed nav parity (\u039432)."
+      },
+      "notes": "Builders = live canonical 8-lane roster from ~/.hermes/cron/jobs.json. mimo-v2.6-flash + longcat-2.5-preview-free hit the retry ladder and were killed after ~45min (timeout); gpt-6-luna returned a truncated draft (unclosed ```astro fence) = DNF. 5 usable drafts measured. DEVIATION: Step 1b planner model was NOT dispatched; the brief was orchestrator-authored with an explicit brief contract. Judge scores: hy3 9.0, muse-spark-1.3-contributor 8.8, deepseek-v4-flash 6.7, glm-5.3-flash 6.6, space-bunny-free 6.0."
     }
   ],
   "leaderboard": [
@@ -7037,10 +7125,10 @@
       "model": "deepseek-v4-flash",
       "provider": "commandcode",
       "family": "deepseek",
-      "matches": 26,
+      "matches": 27,
       "wins": 10,
-      "losses": 16,
-      "avgScore": 8.54,
+      "losses": 17,
+      "avgScore": 8.47,
       "bestScore": 9.78,
       "rank": 1
     },
@@ -7068,6 +7156,17 @@
       "rank": 3
     },
     {
+      "model": "hy3",
+      "provider": "opencode-go",
+      "family": "tencent",
+      "matches": 6,
+      "wins": 2,
+      "losses": 4,
+      "avgScore": 8.84,
+      "bestScore": 9.65,
+      "rank": 4
+    },
+    {
       "model": "mimo-v2.6-flash",
       "provider": "xiaomi",
       "family": "mimo",
@@ -7076,18 +7175,18 @@
       "losses": 3,
       "avgScore": 8.83,
       "bestScore": 9.78,
-      "rank": 4
+      "rank": 5
     },
     {
       "model": "glm-5.3-flash",
       "provider": "opencode-go",
       "family": "glm",
-      "matches": 9,
+      "matches": 10,
       "wins": 2,
-      "losses": 7,
-      "avgScore": 8.5,
+      "losses": 8,
+      "avgScore": 8.31,
       "bestScore": 9.75,
-      "rank": 5
+      "rank": 6
     },
     {
       "model": "minimax-m3",
@@ -7098,17 +7197,6 @@
       "losses": 2,
       "avgScore": 9.12,
       "bestScore": 9.72,
-      "rank": 6
-    },
-    {
-      "model": "hy3",
-      "provider": "opencode-go",
-      "family": "tencent",
-      "matches": 5,
-      "wins": 1,
-      "losses": 4,
-      "avgScore": 8.81,
-      "bestScore": 9.65,
       "rank": 7
     },
     {
@@ -7123,26 +7211,15 @@
       "rank": 8
     },
     {
-      "model": "space-bunny-free",
-      "provider": "opencode-go",
-      "family": "space",
-      "matches": 2,
-      "wins": 0,
-      "losses": 2,
-      "avgScore": 8.66,
-      "bestScore": 8.95,
-      "rank": 9
-    },
-    {
       "model": "muse-spark-1.3-contributor",
       "provider": "opencode-go",
       "family": "muse",
-      "matches": 5,
+      "matches": 6,
       "wins": 0,
-      "losses": 5,
-      "avgScore": 8.61,
+      "losses": 6,
+      "avgScore": 8.64,
       "bestScore": 9.45,
-      "rank": 10
+      "rank": 9
     },
     {
       "model": "longcat-2.0",
@@ -7153,7 +7230,7 @@
       "losses": 4,
       "avgScore": 8.3,
       "bestScore": 9.67,
-      "rank": 11
+      "rank": 10
     },
     {
       "model": "ling-3.0-flash-fin-free",
@@ -7164,6 +7241,17 @@
       "losses": 2,
       "avgScore": 8.07,
       "bestScore": 8.22,
+      "rank": 11
+    },
+    {
+      "model": "space-bunny-free",
+      "provider": "opencode-go",
+      "family": "space",
+      "matches": 3,
+      "wins": 0,
+      "losses": 3,
+      "avgScore": 7.77,
+      "bestScore": 8.95,
       "rank": 12
     }
   ],

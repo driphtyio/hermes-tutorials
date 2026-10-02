@@ -1,6 +1,5 @@
 ---
-// DESIGN B — hermes-tutorials arena page (space-optimized variant)
-// Priority: information density. Same content as arena.astro, compressed layout.
+// v3 — hermes-tutorials arena page (widescreen + space-optimization redesign)
 import BaseHead from '../components/BaseHead.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
@@ -8,7 +7,7 @@ import { SITE_TITLE } from '../consts';
 import fs from 'fs';
 import arenaData from '../data/hermestuts-arena.json';
 
-const { matches, leaderboard, model_pool, stability } = arenaData;
+const { matches, leaderboard, model_pool, stability, retired_models, last_updated } = arenaData;
 
 // ── Stats ──
 const totalModels = model_pool.length;
@@ -34,15 +33,38 @@ if (leaderboard.length > 0) {
 }
 const gapDelta = leaderAvg - fieldAvg;
 
-// ── Local matches only ──
+// ── Normalize matches (handle Shape A + Shape B) ──
 const localMatches = matches.filter(m => m.type !== 'router-selection');
-
-// ── 30-day match window (UTC, server-side) + archive (winning spec ht-arena-redesign-F) ──
 const sortedMatches = [...localMatches].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+
+function normalizeMatch(m) {
+  if (m.results && Array.isArray(m.results) && m.results.length) {
+    const displayResults = m.results.map(r => ({
+      model: r.model,
+      score: r.score,
+      rank: r.rank,
+      provider: r.provider,
+      dnf: false,
+      strengths: r.strengths,
+      weaknesses: r.weaknesses
+    }));
+    return { ...m, shape: 'A', displayResults };
+  } else if (m.scores && typeof m.scores === 'object') {
+    const dnf = Array.isArray(m.dnf) ? m.dnf : [];
+    const entries = Object.entries(m.scores).map(([model, score]) => ({ model, score, dnf: dnf.includes(model) }));
+    entries.sort((a, b) => b.score - a.score);
+    entries.forEach((e, i) => { e.rank = i + 1; e.provider = ''; });
+    return { ...m, shape: 'B', displayResults: entries };
+  }
+  return { ...m, shape: 'unknown', displayResults: [] };
+}
+const normalizedMatches = sortedMatches.map(normalizeMatch);
+
+// ── 30-day window (UTC) ──
 const nowD = new Date();
 const cutoff = new Date(Date.UTC(nowD.getUTCFullYear(), nowD.getUTCMonth(), nowD.getUTCDate() - 30));
-const recentMatches = sortedMatches.filter(m => new Date(`${m.date}T00:00:00Z`) >= cutoff);
-const archiveMatches = sortedMatches.filter(m => new Date(`${m.date}T00:00:00Z`) < cutoff);
+const recentMatches = normalizedMatches.filter(m => new Date(`${m.date}T00:00:00Z`) >= cutoff);
+const archiveMatches = normalizedMatches.filter(m => new Date(`${m.date}T00:00:00Z`) < cutoff);
 const retiredCount = model_pool.filter(m => m.status === 'retired').length;
 
 // ── Availability badge helper ──
@@ -56,7 +78,7 @@ function getAvailabilityBadge(modelName) {
   return { label: 'Down', cls: 'avail-down' };
 }
 
-// ── Role badge helper (model pool ROLE column) ──
+// ── Role badge helper ──
 function getRoleBadge(role) {
   if (!role) return { label: '—', cls: 'role-none' };
   const r = String(role).toLowerCase();
@@ -68,11 +90,21 @@ function getRoleBadge(role) {
   return { label: String(role), cls: 'role-other' };
 }
 
-const lastUpdated = stability?.last_updated ?? 'N/A';
+const lastUpdated = stability?.last_updated ?? last_updated ?? 'N/A';
 
-// ── Load process feedback ──
-// FIX (DESIGN B): local matches may carry `id` OR `match_id`; feedback entries
-// are keyed by `match_id` OR `id`. Match on both, so filtering actually works.
+// ── Retired models ──
+const retiredModels = Array.isArray(retired_models) ? retired_models : [];
+
+// ── Availability rows ──
+const availRows = stability?.model_stats
+  ? Object.entries(stability.model_stats).map(([model, stats]) => ({
+      model,
+      availability: stats.availability ?? null,
+      badge: getAvailabilityBadge(model)
+    }))
+  : [];
+
+// ── Process feedback (local file, optional) ──
 let feedbackData = { matches: [], recurring_issues: [], total_matches_analyzed: 0, clean_match_rate: 0 };
 try {
   const raw = JSON.parse(fs.readFileSync('/home/techgeek/.hermes/arena/arena-feedback.json', 'utf-8'));
@@ -87,10 +119,14 @@ try {
     recurring_issues: raw.recurring_issues || [],
     matches: localFeedback,
   };
-} catch (e) {
-  // Feedback file not available — skip
-}
+} catch (e) {}
 
+// helper to extract judge/qa label
+function judgeLabel(j) {
+  if (!j) return '—';
+  if (typeof j === 'string') return j;
+  return j.model ?? j.name ?? '—';
+}
 ---
 <!doctype html>
 <html lang="en">
@@ -116,6 +152,8 @@ try {
         --orange: #f97316;
       }
 
+      * { box-sizing: border-box; }
+
       /* Nav-aligned container (header caps at min(1800px, 95vw)) */
       .arena-container {
         width: 100%;
@@ -124,7 +162,7 @@ try {
         padding: 0.7em 0 1em;
       }
 
-      /* ── Slim hero strip: title inline with stat tiles, one row ── */
+      /* ── Slim hero strip ── */
       .hero-strip {
         display: flex;
         align-items: center;
@@ -174,7 +212,7 @@ try {
         font-size: 1.25em;
       }
 
-      /* ── Above-the-fold duo: Leaderboard (wide) | Latest results (compact) ── */
+      /* ── Above-the-fold duo: Leaderboard | Latest results ── */
       .fold-grid {
         display: grid;
         grid-template-columns: minmax(0, 1fr);
@@ -187,7 +225,7 @@ try {
       .fold-latest { grid-area: latest; }
       @media (min-width: 1200px) {
         .fold-grid {
-          grid-template-columns: minmax(0, 2.1fr) minmax(340px, 1fr);
+          grid-template-columns: minmax(0, 2fr) minmax(340px, 1fr);
           grid-template-areas: 'leaderboard latest';
         }
       }
@@ -218,9 +256,9 @@ try {
       }
       .section-title .st-link:hover { text-decoration: underline; }
 
-      /* ── Leaderboard table: dense ── */
+      /* ── Dense tables ── */
       .tbl-wrap {
-        overflow-x: clip;
+        overflow-x: auto;
         border: 1px solid var(--border);
         border-radius: 8px;
         background: var(--surface-2);
@@ -229,6 +267,7 @@ try {
         width: 100%;
         border-collapse: collapse;
         font-size: 0.78em;
+        min-width: 640px;
       }
       table.data thead {
         background: var(--surface-1);
@@ -238,7 +277,7 @@ try {
       }
       table.data th {
         text-align: left;
-        padding: 0.32em 0.55em;
+        padding: 0.25em 0.5em;
         font-weight: 600;
         color: var(--text-dim);
         font-size: 0.7em;
@@ -248,10 +287,11 @@ try {
         white-space: nowrap;
       }
       table.data td {
-        padding: 0.26em 0.55em;
+        padding: 0.25em 0.5em;
         border-bottom: 1px solid var(--border);
         color: var(--text);
         white-space: nowrap;
+        line-height: 1.2;
       }
       table.data tr:last-child td { border-bottom: none; }
       table.data tr:hover td { background: var(--surface-2); filter: brightness(1.1); }
@@ -286,8 +326,13 @@ try {
         border-radius: 999px;
         padding: 0.05rem 0.45rem;
       }
+      .avail-stable { color: var(--green); }
+      .avail-degraded { color: var(--yellow); }
+      .avail-unstable { color: var(--orange); }
+      .avail-down { color: var(--red); }
+      .avail-unknown { color: var(--text-muted); }
 
-      /* ── Latest results: compact match cards (above the fold) ── */
+      /* ── Latest results: compact match cards ── */
       .latest-list { display: grid; gap: 0.5em; }
       .latest-card {
         background: var(--surface-1);
@@ -339,14 +384,13 @@ try {
         margin-top: 0.3em;
       }
 
-      /* ── Role-grouped pool: compact chip grid replaces the 17-row table ── */
+      /* ── Role-grouped pool grid (fills container) ── */
       .pool-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 0.7em;
       }
-      /* 5 role groups: cap tracks so the row always fills whole (no ragged row) */
-      @media (min-width: 1600px) {
+      @media (min-width: 1280px) {
         .pool-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
       }
       .pool-group {
@@ -398,7 +442,7 @@ try {
       .pool-search:focus { border-color: var(--accent); }
       .pool-search::placeholder { color: var(--text-muted); }
 
-      /* ── Full match archive: dense rows replace the giant details cards ── */
+      /* ── Archive table ── */
       .archive-tbl td { font-size: 0.74em; }
       .archive-topic {
         color: var(--text);
@@ -411,7 +455,8 @@ try {
       .arch-winner { color: var(--green); }
       .arch-date { color: var(--text-muted); font-variant-numeric: tabular-nums; }
       .arch-score { color: var(--accent-light); font-variant-numeric: tabular-nums; font-weight: 600; }
-      details.arch-detail summary { cursor: pointer; }
+      details.arch-detail summary { cursor: pointer; list-style: none; }
+      details.arch-detail summary::-webkit-details-marker { display: none; }
       .arch-detail .arch-detail-body {
         background: var(--surface-1);
         padding: 0.6em 0.8em;
@@ -440,14 +485,14 @@ try {
       }
       .history-toggle:hover { border-color: var(--accent); }
 
-      /* ── Process feedback: collapsed strip ── */
-      details.pf-strip {
+      /* ── Collapsed strips (retired, availability, feedback) ── */
+      details.collapsed-strip {
         border: 1px solid var(--border);
         border-radius: 8px;
         background: var(--surface-1);
         margin-top: 1em;
       }
-      details.pf-strip > summary {
+      details.collapsed-strip > summary {
         cursor: pointer;
         padding: 0.55em 0.8em;
         font-size: 0.82em;
@@ -457,12 +502,25 @@ try {
         align-items: center;
         list-style: none;
       }
-      details.pf-strip > summary::-webkit-details-marker { display: none; }
-      details.pf-strip > summary .pf-arrow { transition: transform 0.15s; font-size: 0.8em; }
-      details.pf-strip[open] > summary .pf-arrow { transform: rotate(90deg); }
-      details.pf-strip > summary strong { color: #fff; font-weight: 600; }
-      details.pf-strip > summary .pf-stats { color: var(--text-muted); font-size: 0.92em; }
-      .pf-body { padding: 0.2em 0.8em 0.8em; font-size: 0.76em; }
+      details.collapsed-strip > summary::-webkit-details-marker { display: none; }
+      details.collapsed-strip > summary svg.arrow { transition: transform 0.15s; flex-shrink: 0; }
+      details.collapsed-strip[open] > summary svg.arrow { transform: rotate(90deg); }
+      details.collapsed-strip > summary strong { color: #fff; font-weight: 600; }
+      details.collapsed-strip > summary .cs-stats { color: var(--text-muted); font-size: 0.92em; }
+      .collapsed-body { padding: 0.2em 0.8em 0.8em; font-size: 0.76em; }
+      .avail-table { width: 100%; border-collapse: collapse; }
+      .avail-table th, .avail-table td {
+        padding: 0.25em 0.5em;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+        white-space: nowrap;
+      }
+      .avail-table tr:last-child td { border-bottom: none; }
+      .retired-list { margin: 0; padding-left: 1.2em; }
+      .retired-list li { margin: 0.2em 0; color: var(--text); }
+      .retired-list li span { color: var(--text-muted); font-size: 0.9em; }
+
+      /* ── Process feedback body ── */
       .pf-body .issue-tag {
         display: inline-block;
         background: var(--surface-2);
@@ -503,8 +561,8 @@ try {
     <Header />
     <main class="arena-container">
 
-      <!-- ── Slim hero strip: identity + key numbers in one row ── -->
-      <div class="hero-strip inset">
+      <!-- ── Slim hero strip ── -->
+      <div class="hero-strip">
         <h1><span>Arena</span></h1>
         <p class="tagline">LLMs head-to-head on Hermes Agent content, design & engineering tasks — judged by a multipass model jury.</p>
         <div class="hero-stats">
@@ -517,8 +575,8 @@ try {
       </div>
 
       <!-- ── Above the fold: Leaderboard | Latest match results ── -->
-      <div class="fold-grid inset">
-        <section class="fold-leaderboard">
+      <div class="fold-grid">
+        <section class="fold-leaderboard" id="leaderboard">
           <h2 class="section-title">Leaderboard <span class="st-note">avg judge score / 10</span></h2>
           {leaderboard.length > 0 ? (
             <div class="tbl-wrap">
@@ -570,17 +628,17 @@ try {
         <section class="fold-latest" id="latest-results">
           <h2 class="section-title">Latest Results <a class="st-link" href="#match-history">full archive ↓</a></h2>
           <div class="latest-list">
-            {sortedMatches.slice(0, 4).map(m => (
+            {normalizedMatches.slice(0, 4).map(m => (
               <a class="latest-card" href={`#match-${m.match_id ?? m.id}`}>
                 <div class="lc-top">
                   <span class="lc-topic">{m.topic}</span>
                   <span class="lc-date">{m.date}</span>
                 </div>
                 <div class="lc-row">
-                  {(m.results || []).slice().sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity)).slice(0, 5).map(r => (
+                  {m.displayResults.slice(0, 5).map(r => (
                     <span class={`lc-chip ${r.rank === 1 ? 'win' : ''}`}>
-                      <span class="m">{r.model}</span>
-                      <span class="s">{r.score != null ? r.score.toFixed(1) : '—'}</span>
+                      <span class="m">{r.model}{r.dnf ? ' (DNF)' : ''}</span>
+                      <span class="s">{r.dnf ? '—' : (r.score != null ? r.score.toFixed(1) : '—')}</span>
                     </span>
                   ))}
                 </div>
@@ -593,6 +651,7 @@ try {
 
       <!-- ── Model pool: role-grouped compact grid ── -->
       <section class="section" id="model-pool" style="margin-top:1em">
+        <span id="pool"></span>
         <h2 class="section-title">Model Pool <span class="st-note">{totalModels} models · {retiredCount} retired</span></h2>
         <input type="text" class="pool-search" id="poolSearch" placeholder="Search models…" oninput="filterPool()" />
         <div class="pool-grid" id="poolTable">
@@ -609,7 +668,7 @@ try {
             });
             return keys.map(role => (
               <div class="pool-group" data-role-group={role.toLowerCase()}>
-                <h3>{role} <span style="color:var(--border)">·</span> {groups[role].length}</h3>
+                <h3>{role} · {groups[role].length}</h3>
                 {groups[role].map(m => (
                   <div class="pool-row" data-provider={m.provider ?? ''} data-model={m.model ?? ''} data-family={m.family ?? ''} data-role={m.role ?? ''}>
                     <span class={`pm ${m.status === 'retired' ? 'is-retired' : ''}`}>
@@ -627,15 +686,77 @@ try {
         </div>
       </section>
 
-      <!-- ── Full match archive: dense sortable-feel table + per-row detail ── -->
+      <!-- ── Retired models (collapsed) ── -->
+      <details class="collapsed-strip">
+        <summary>
+          <svg class="arrow" width="10" height="10" viewBox="0 0 10 10"><path d="M2 1l5 4-5 4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+          <strong>Retired Models</strong>
+          <span class="cs-stats">{retiredModels.length} entries</span>
+        </summary>
+        <div class="collapsed-body">
+          {retiredModels.length > 0 ? (
+            <ul class="retired-list">
+              {retiredModels.map(rm => (
+                <li>
+                  <strong>{rm.model}</strong>
+                  {rm.provider && <span> · {rm.provider}</span>}
+                  {rm.family && <span> · {rm.family}</span>}
+                  {rm.status && <span> · {rm.status}</span>}
+                  {rm.reason && <span> — {rm.reason}</span>}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p class="empty-state">No retired models recorded.</p>
+          )}
+        </div>
+      </details>
+
+      <!-- ── Availability table (collapsed) ── -->
+      <details class="collapsed-strip">
+        <summary>
+          <svg class="arrow" width="10" height="10" viewBox="0 0 10 10"><path d="M2 1l5 4-5 4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+          <strong>Availability</strong>
+          <span class="cs-stats">{availRows.length} models tracked</span>
+        </summary>
+        <div class="collapsed-body">
+          {availRows.length > 0 ? (
+            <div class="tbl-wrap">
+              <table class="data avail-table">
+                <thead>
+                  <tr>
+                    <th>Model</th>
+                    <th>Availability %</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {availRows.map(row => (
+                    <tr>
+                      <td class="model-name">{row.model}</td>
+                      <td>{row.availability != null ? row.availability.toFixed(1) : '—'}</td>
+                      <td><span class={`avail-badge ${row.badge.cls}`}>{row.badge.label}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p class="empty-state">No availability stats.</p>
+          )}
+        </div>
+      </details>
+
+      <!-- ── Full match archive ── -->
       <section class="section" id="match-history" style="margin-top:1em">
+        <span id="matches"></span>
         <h2 class="section-title">Match Archive <span class="st-note">last 30 days: {recentMatches.length} · older: {archiveMatches.length}</span></h2>
         {archiveMatches.length > 0 && (
           <button type="button" id="historyToggle" class="history-toggle" aria-expanded="false" data-state="window">
             Show all {localMatches.length} matches
           </button>
         )}
-        {localMatches.length > 0 ? (
+        {normalizedMatches.length > 0 ? (
           <div class="tbl-wrap">
             <table class="data archive-tbl">
               <thead>
@@ -645,43 +766,43 @@ try {
                   <th>Winner</th>
                   <th>Top score</th>
                   <th>Lanes</th>
+                  <th class="xl-col">Judge</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {sortedMatches.map((m, mi) => {
+                {normalizedMatches.map(m => {
                   const isRecent = recentMatches.some(rm => (rm.match_id ?? rm.id) === (m.match_id ?? m.id));
                   const id = m.match_id ?? m.id;
-                  const top = (m.results || []).slice().sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity))[0];
+                  const top = m.displayResults.slice().sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity))[0];
                   return (
-                    <>
-                      <tr class="arch-row" data-windowed={!isRecent ? 'true' : null} hidden={!isRecent}>
-                        <td class="arch-date">{m.date}</td>
-                        <td>
-                          <details class="arch-detail" id={`match-${id}`}>
-                            <summary>
-                              <span class="archive-topic">{m.topic}</span>
-                            </summary>
-                            <div class="arch-detail-body">
-                              {(m.results || []).slice().sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity)).map(r => (
-                                <div class="res-line">
-                                  <span class="rk">{r.status === 'failed' || r.status === 'dnf' ? 'DNF' : r.rank === 1 ? '🥇 1st' : r.rank === 2 ? '🥈 2nd' : r.rank === 3 ? '🥉 3rd' : (r.rank != null ? `#${r.rank}` : '—')}</span>
-                                  <span class="md">{r.model}</span>
-                                  <span class="sc">{r.score != null ? `${r.score.toFixed(1)}/10` : '—'}</span>
-                                  <span style="color:var(--text-muted)">{r.provider}</span>
-                                </div>
-                              ))}
-                              {m.judge?.model && <div class="qa-note">Judged by {m.judge.model}{m.qa?.model ? ` · QA: ${m.qa.model}` : ''}</div>}
-                              {m.post && <div class="qa-note"><a href={m.post} style="color:var(--accent-light)">Read the published post →</a></div>}
-                            </div>
-                          </details>
-                        </td>
-                        <td class="arch-winner">{m.winner}</td>
-                        <td class="arch-score">{top?.score != null ? top.score.toFixed(1) : (m.winner_score != null ? m.winner_score.toFixed(1) : '—')}</td>
-                        <td>{m.lanes_declared ?? (m.results?.length ?? '—')}</td>
-                        <td></td>
-                      </tr>
-                    </>
+                    <tr class="arch-row" data-windowed={!isRecent ? 'true' : null} hidden={!isRecent}>
+                      <td class="arch-date">{m.date}</td>
+                      <td>
+                        <details class="arch-detail" id={`match-${id}`}>
+                          <summary>
+                            <span class="archive-topic">{m.topic}</span>
+                          </summary>
+                          <div class="arch-detail-body">
+                            {m.displayResults.map(r => (
+                              <div class="res-line">
+                                <span class="rk">{r.dnf ? 'DNF' : (r.rank === 1 ? '🥇 1st' : r.rank === 2 ? '🥈 2nd' : r.rank === 3 ? '🥉 3rd' : (r.rank != null ? `#${r.rank}` : '—'))}</span>
+                                <span class="md">{r.model}</span>
+                                <span class="sc">{r.dnf ? '—' : (r.score != null ? `${r.score.toFixed(1)}/10` : '—')}</span>
+                                <span style="color:var(--text-muted)">{r.provider || ''}</span>
+                              </div>
+                            ))}
+                            <div class="qa-note">Judged by {judgeLabel(m.judge)}{m.qa ? ` · QA: ${judgeLabel(m.qa)}` : ''}</div>
+                            {m.notes && <div class="qa-note">{m.notes}</div>}
+                          </div>
+                        </details>
+                      </td>
+                      <td class="arch-winner">{m.winner}</td>
+                      <td class="arch-score">{top?.dnf ? '—' : (top?.score != null ? top.score.toFixed(1) : (m.winner_score != null ? m.winner_score.toFixed(1) : '—'))}</td>
+                      <td>{m.lanes_declared ?? (m.results?.length ?? (m.scores ? Object.keys(m.scores).length : '—'))}</td>
+                      <td class="xl-col">{judgeLabel(m.judge)}</td>
+                      <td></td>
+                    </tr>
                   );
                 })}
               </tbody>
@@ -692,14 +813,14 @@ try {
         )}
       </section>
 
-      <!-- ── Process feedback: one collapsed strip ── -->
-      <details class="pf-strip inset" id="process-feedback">
+      <!-- ── Process feedback (collapsed) ── -->
+      <details class="collapsed-strip" id="process-feedback">
         <summary>
-          <span class="pf-arrow">▶</span>
+          <svg class="arrow" width="10" height="10" viewBox="0 0 10 10"><path d="M2 1l5 4-5 4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
           <strong>Process Feedback</strong>
-          <span class="pf-stats">{feedbackData.matches.length} analyzed · {feedbackData.clean_match_rate}% clean · {feedbackData.matches.filter(m => !m.clean).length} issues found</span>
+          <span class="cs-stats">{feedbackData.matches.length} analyzed · {feedbackData.clean_match_rate}% clean · {feedbackData.matches.filter(m => !m.clean).length} issues found</span>
         </summary>
-        <div class="pf-body">
+        <div class="collapsed-body pf-body">
           {feedbackData.recurring_issues.length > 0 && (
             <div style="margin-bottom:0.5em">
               {feedbackData.recurring_issues.map(issue => (
@@ -723,7 +844,7 @@ try {
         </div>
       </details>
 
-      <div class="last-updated inset">Arena data last updated: <strong>{lastUpdated}</strong></div>
+      <div class="last-updated">Arena data last updated: <strong>{lastUpdated}</strong> · Stability last updated: <strong>{stability?.last_updated ?? 'N/A'}</strong></div>
 
     </main>
     <Footer />
@@ -746,7 +867,7 @@ try {
         });
       })();
 
-      // ── Sticky thead offset: measure the real header ──
+      // ── Sticky thead offset: measure real header ──
       (function () {
         var header = document.querySelector('header');
         var setStickyOffset = function () {
@@ -758,7 +879,7 @@ try {
         window.addEventListener('resize', setStickyOffset);
       })();
 
-      // ── Pool search (works across role-grouped chips) ──
+      // ── Pool search ──
       function filterPool() {
         var input = document.getElementById('poolSearch');
         if (!input) return;
@@ -769,7 +890,6 @@ try {
           }).join(' ');
           row.style.display = (q === '' || hay.includes(q)) ? '' : 'none';
         });
-        // collapse emptied groups
         document.querySelectorAll('#poolTable .pool-group').forEach(function (g) {
           var any = Array.from(g.querySelectorAll('.pool-row')).some(function (r) { return r.style.display !== 'none'; });
           g.style.display = any ? '' : 'none';
@@ -781,7 +901,11 @@ try {
         var det = document.querySelector(location.hash);
         if (det) {
           var row = det.closest('.arch-row');
-          if (row && row.hidden) { row.hidden = false; var b = document.getElementById('historyToggle'); if (b) { b.dataset.state = 'all'; b.setAttribute('aria-expanded', 'true'); b.textContent = 'Show last 30 days'; } }
+          if (row && row.hidden) {
+            row.hidden = false;
+            var b = document.getElementById('historyToggle');
+            if (b) { b.dataset.state = 'all'; b.setAttribute('aria-expanded', 'true'); b.textContent = 'Show last 30 days'; }
+          }
           det.open = true;
         }
       }
