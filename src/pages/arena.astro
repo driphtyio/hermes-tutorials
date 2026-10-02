@@ -1,5 +1,6 @@
 ---
-// v3 — hermes-tutorials arena page (widescreen + space-optimization redesign)
+// Hermes Tutorials — Arena page (v4, hand-built IA overhaul)
+// Priority: widescreen-first dashboard. Record above reference; dense readable tables; all matches visible.
 import BaseHead from '../components/BaseHead.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
@@ -7,136 +8,129 @@ import { SITE_TITLE } from '../consts';
 import fs from 'fs';
 import arenaData from '../data/hermestuts-arena.json';
 
-const { matches, leaderboard, model_pool, stability, retired_models, last_updated } = arenaData;
+const { matches, leaderboard, model_pool, stability, retired_models } = arenaData;
 
-// ── Stats ──
-const totalModels = model_pool.length;
-const totalProviders = [...new Set(model_pool.map(m => m.provider))].length;
-const rankedModels = leaderboard.length;
-const totalMatches = matches.length;
+/* ── provider lookup from the pool ── */
+const poolByModel = new Map();
+for (const m of model_pool) poolByModel.set(String(m.model).toLowerCase(), m);
+const providerOf = (name) => (poolByModel.get(String(name || '').toLowerCase()) || {}).provider || '';
 
-// ── Impact ──
-let leaderAvg = 0;
-let fieldAvg = 0;
-if (leaderboard.length > 0) {
-  const topQuarter = Math.max(1, Math.ceil(leaderboard.length * 0.25));
-  const topModels = leaderboard.slice(0, topQuarter);
-  leaderAvg = topModels.reduce((s, m) => s + (m.avgScore ?? 0), 0) / topModels.length;
-  fieldAvg = leaderboard.reduce((s, m) => s + (m.avgScore ?? 0), 0) / leaderboard.length;
-} else {
-  const withScore = model_pool.filter(m => typeof m.benchmark_score === 'number').sort((a, b) => b.benchmark_score - a.benchmark_score);
-  if (withScore.length > 0) {
-    const topQuarter = Math.max(1, Math.ceil(withScore.length * 0.25));
-    leaderAvg = withScore.slice(0, topQuarter).reduce((s, m) => s + m.benchmark_score, 0) / topQuarter;
-    fieldAvg = withScore.reduce((s, m) => s + m.benchmark_score, 0) / withScore.length;
-  }
-}
-const gapDelta = leaderAvg - fieldAvg;
-
-// ── Normalize matches (handle Shape A + Shape B) ──
-const localMatches = matches.filter(m => m.type !== 'router-selection');
-const sortedMatches = [...localMatches].sort((a, b) => String(b.date).localeCompare(String(a.date)));
-
-function normalizeMatch(m) {
-  if (m.results && Array.isArray(m.results) && m.results.length) {
-    const displayResults = m.results.map(r => ({
-      model: r.model,
-      score: r.score,
-      rank: r.rank,
-      provider: r.provider,
-      dnf: false,
-      strengths: r.strengths,
-      weaknesses: r.weaknesses
+/* ── uniform per-match rows (handles BOTH match shapes) ── */
+function matchRows(m) {
+  let rows = [];
+  if (Array.isArray(m.results) && m.results.length) {
+    rows = m.results.map((r) => ({
+      model: r.model || r.model_id || '—',
+      provider: r.provider || providerOf(r.model || r.model_id),
+      score: typeof r.score === 'number' ? r.score : null,
+      status: r.status || null,
     }));
-    return { ...m, shape: 'A', displayResults };
-  } else if (m.scores && typeof m.scores === 'object') {
-    const dnf = Array.isArray(m.dnf) ? m.dnf : [];
-    const entries = Object.entries(m.scores).map(([model, score]) => ({ model, score, dnf: dnf.includes(model) }));
-    entries.sort((a, b) => b.score - a.score);
-    entries.forEach((e, i) => { e.rank = i + 1; e.provider = ''; });
-    return { ...m, shape: 'B', displayResults: entries };
+  } else {
+    const sc = m.scores && typeof m.scores === 'object' ? m.scores : {};
+    rows = Object.entries(sc).map(([model, score]) => ({
+      model, provider: providerOf(model),
+      score: typeof score === 'number' ? score : null, status: null,
+    }));
+    for (const dnf of (Array.isArray(m.dnf) ? m.dnf : [])) {
+      rows.push({ model: dnf, provider: providerOf(dnf), score: null, status: 'timeout' });
+    }
   }
-  return { ...m, shape: 'unknown', displayResults: [] };
-}
-const normalizedMatches = sortedMatches.map(normalizeMatch);
-
-// ── 30-day window (UTC) ──
-const nowD = new Date();
-const cutoff = new Date(Date.UTC(nowD.getUTCFullYear(), nowD.getUTCMonth(), nowD.getUTCDate() - 30));
-const recentMatches = normalizedMatches.filter(m => new Date(`${m.date}T00:00:00Z`) >= cutoff);
-const archiveMatches = normalizedMatches.filter(m => new Date(`${m.date}T00:00:00Z`) < cutoff);
-const retiredCount = model_pool.filter(m => m.status === 'retired').length;
-
-// ── Availability badge helper ──
-function getAvailabilityBadge(modelName) {
-  const stats = stability?.model_stats?.[modelName];
-  if (!stats) return { label: 'Unknown', cls: 'avail-unknown' };
-  const avail = stats.availability;
-  if (avail >= 99) return { label: 'Stable', cls: 'avail-stable' };
-  if (avail >= 80) return { label: 'Degraded', cls: 'avail-degraded' };
-  if (avail >= 1) return { label: 'Unstable', cls: 'avail-unstable' };
-  return { label: 'Down', cls: 'avail-down' };
+  return rows
+    .sort((a, b) => (b.score ?? -1) - (a.score ?? -1))
+    .map((r, i) => ({ ...r, rank: r.score == null ? null : i + 1 }));
 }
 
-// ── Role badge helper ──
-function getRoleBadge(role) {
-  if (!role) return { label: '—', cls: 'role-none' };
-  const r = String(role).toLowerCase();
-  if (r === 'builder') return { label: 'Builder', cls: 'role-builder' };
-  if (r === 'judge') return { label: 'Judge', cls: 'role-judge' };
-  if (r === 'qa') return { label: 'QA', cls: 'role-qa' };
-  if (r === 'research') return { label: 'Research', cls: 'role-research' };
-  if (r === 'planner') return { label: 'Planner', cls: 'role-planner' };
-  return { label: String(role), cls: 'role-other' };
+const localMatches = matches.filter((m) => m.type !== 'router-selection');
+const sortedMatches = [...localMatches].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+const rowsByMatch = new Map(sortedMatches.map((m) => [String(m.match_id ?? m.id), matchRows(m)]));
+const rowsOf = (m) => rowsByMatch.get(String(m.match_id ?? m.id)) || [];
+const keyOf = (m) => String(m.match_id ?? m.id);
+const topScoreOf = (m) => {
+  const r = rowsOf(m).find((x) => x.score != null);
+  return r ? r.score : null;
+};
+const scoreOf = (m) => (typeof m.winner_score === 'number' ? m.winner_score : topScoreOf(m));
+
+/* ── KPIs ── */
+const totalMatches = localMatches.length;
+const rankedModels = leaderboard.length;
+const totalModels = model_pool.length;
+const retiredCount = model_pool.filter((m) => m.status === 'retired').length;
+const providers = new Set(model_pool.map((m) => m.provider).filter(Boolean));
+const scored = sortedMatches.filter((m) => typeof scoreOf(m) === 'number');
+const avgWinner = scored.length ? (scored.reduce((s, m) => s + scoreOf(m), 0) / scored.length) : null;
+const withGate = sortedMatches.filter((m) => typeof m.threshold_met === 'boolean');
+const gateRate = withGate.length ? Math.round((withGate.filter((m) => m.threshold_met).length / withGate.length) * 100) : null;
+const distinctLanes = new Set();
+for (const m of localMatches) for (const r of rowsOf(m)) distinctLanes.add(String(r.model).toLowerCase());
+
+/* ── leaderboard enrichment ── */
+const lastSeen = new Map();
+for (const m of sortedMatches) {
+  for (const r of rowsOf(m)) {
+    const k = String(r.model).toLowerCase();
+    if (!lastSeen.has(k)) lastSeen.set(k, m.date);
+  }
+}
+const lb = leaderboard.map((e, i) => ({
+  ...e,
+  rank: e.rank ?? i + 1,
+  winRate: e.matches ? Math.round(((e.wins ?? 0) / e.matches) * 100) : 0,
+  last: lastSeen.get(String(e.model).toLowerCase()) || '—',
+}));
+
+/* ── availability badge ── */
+function availBadge(name) {
+  const s = stability?.model_stats?.[name];
+  if (!s || typeof s.availability !== 'number') return { label: '—', cls: 'a-none' };
+  const a = s.availability;
+  if (a >= 99) return { label: 'Stable', cls: 'a-ok' };
+  if (a >= 80) return { label: 'Degraded', cls: 'a-warn' };
+  if (a >= 1) return { label: 'Unstable', cls: 'a-bad' };
+  return { label: 'Down', cls: 'a-down' };
 }
 
-const lastUpdated = stability?.last_updated ?? last_updated ?? 'N/A';
-
-// ── Retired models ──
-const retiredModels = Array.isArray(retired_models) ? retired_models : [];
-
-// ── Availability rows ──
-const availRows = stability?.model_stats
-  ? Object.entries(stability.model_stats).map(([model, stats]) => ({
-      model,
-      availability: stats.availability ?? null,
-      badge: getAvailabilityBadge(model)
-    }))
-  : [];
-
-// ── Process feedback (local file, optional) ──
-let feedbackData = { matches: [], recurring_issues: [], total_matches_analyzed: 0, clean_match_rate: 0 };
+/* ── process feedback (local matches only) ── */
+let feedback = { matches: [], recurring_issues: [], cleanRate: null };
 try {
   const raw = JSON.parse(fs.readFileSync('/home/techgeek/.hermes/arena/arena-feedback.json', 'utf-8'));
-  const localMatchIds = new Set(localMatches.map(m => m.id ?? m.match_id));
-  const localFeedback = raw.matches.filter(fm => localMatchIds.has(fm.match_id ?? fm.id));
-  feedbackData = {
-    last_updated: raw.last_updated,
-    total_matches_analyzed: localFeedback.length,
-    clean_match_rate: localFeedback.length > 0
-      ? Math.round((localFeedback.filter(m => m.clean).length / localFeedback.length) * 100)
-      : 0,
-    recurring_issues: raw.recurring_issues || [],
-    matches: localFeedback,
+  const ids = new Set(localMatches.map(keyOf));
+  const local = (raw.matches || []).filter((f) => ids.has(String(f.match_id ?? f.id)));
+  feedback = {
+    matches: local,
+    recurring_issues: Array.isArray(raw.recurring_issues) ? raw.recurring_issues : [],
+    cleanRate: local.length ? Math.round((local.filter((f) => f.clean).length / local.length) * 100) : null,
   };
-} catch (e) {}
+} catch (e) { /* optional */ }
 
-// helper to extract judge/qa label
-function judgeLabel(j) {
-  if (!j) return '—';
-  if (typeof j === 'string') return j;
-  return j.model ?? j.name ?? '—';
-}
+/* ── model pool rows ── */
+const roleOrder = { builder: 0, judge: 1, qa: 2, research: 3, planner: 4 };
+const roleLabel = { builder: 'Builder', judge: 'Judge', qa: 'QA', research: 'Research', planner: 'Planner' };
+const poolRows = [...model_pool]
+  .map((m) => ({ ...m, played: (leaderboard.find((l) => String(l.model).toLowerCase() === String(m.model).toLowerCase()) || {}).matches ?? m.matches_played ?? null }))
+  .sort((a, b) => (roleOrder[String(a.role).toLowerCase()] ?? 9) - (roleOrder[String(b.role).toLowerCase()] ?? 9)
+    || (b.played ?? -1) - (a.played ?? -1) || String(a.model).localeCompare(String(b.model)));
+
+const lastUpdated = arenaData.last_updated || 'N/A';
+const stabilityUpdated = stability?.last_updated || 'N/A';
+
+const jsonLd = {
+  '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Arena',
+  url: 'https://hermes-tutorials.dev/arena/',
+  description: 'Model-vs-model arena for Hermes Agent content and design tasks.',
+  dateModified: lastUpdated,
+  mainEntity: { '@type': 'ItemList', numberOfItems: lb.length, itemListElement: lb.map((e, i) => ({ '@type': 'ListItem', position: i + 1, name: e.model })) },
+};
 ---
 <!doctype html>
 <html lang="en">
   <head>
-    <BaseHead title={`Arena — ${SITE_TITLE}`} description="Model-vs-model battle arena — comparing LLMs on Hermes Agent content and design tasks." />
+    <BaseHead title={`Arena — ${SITE_TITLE}`} description="Model-vs-model battle arena — LLMs head-to-head on Hermes Agent content, design and engineering tasks." />
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
     <style>
       :root {
         --accent: #6c5ce7;
         --accent-light: #a29bfe;
-        --accent-glow: rgba(108, 92, 231, 0.15);
         --bg: #0a0a0b;
         --surface-1: #121214;
         --surface-2: #1a1a1e;
@@ -150,765 +144,451 @@ function judgeLabel(j) {
         --red: #ef4444;
         --yellow: #eab308;
         --orange: #f97316;
+        --nav-h: 0px;
+        --subnav-h: 0px;
       }
+      main.arena-container { width: 100%; max-width: min(1800px, 95vw); margin: 0 auto; padding: 0 0 2.5rem; color: var(--text); }
 
-      * { box-sizing: border-box; }
+      /* hero + KPI strip */
+      .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 1.2rem; flex-wrap: wrap; padding: 0.9rem 0 0.6rem; border-bottom: 1px solid var(--border); }
+      .hero h1 { font-family: 'Atkinson Hyperlegible', sans-serif; font-size: clamp(1.4rem, 2.1vw, 1.9rem); font-weight: 700; letter-spacing: -0.03em; margin: 0; color: #fff; }
+      .hero h1 span { color: var(--accent-light); }
+      .hero .tagline { margin: 0.15rem 0 0; font-size: 0.82em; color: var(--text-dim); max-width: 68ch; }
+      .kpis { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+      .kpi { display: inline-flex; align-items: baseline; gap: 0.32em; font-size: 0.72em; color: var(--text-dim); border: 1px solid var(--border); background: var(--surface-1); border-radius: 999px; padding: 0.28em 0.7em; white-space: nowrap; }
+      .kpi strong { color: #fff; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 1.22em; }
 
-      /* Nav-aligned container (header caps at min(1800px, 95vw)) */
-      .arena-container {
-        width: 100%;
-        max-width: min(1800px, 95vw);
-        margin: 0 auto;
-        padding: 0.7em 0 1em;
-      }
+      /* sticky sub-nav */
+      .subnav { position: sticky; top: var(--nav-h); z-index: 40; display: flex; gap: 0.4rem; align-items: center; overflow-x: auto; padding: 0.5rem 0; background: var(--bg); border-bottom: 1px solid var(--border); scrollbar-width: none; }
+      .subnav::-webkit-scrollbar { display: none; }
+      .subnav a { flex: none; font-size: 0.76em; font-weight: 600; color: var(--text-dim); border: 1px solid var(--border); background: var(--surface-1); border-radius: 999px; padding: 0.34em 0.85em; text-decoration: none; }
+      .subnav a:hover, .subnav a.active { color: #fff; border-color: var(--accent); }
+      .subnav .sn-count { color: var(--text-muted); font-weight: 400; margin-left: 0.35em; }
 
-      /* ── Slim hero strip ── */
-      .hero-strip {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 0.5em 1.2em;
-        padding-bottom: 0.55em;
-        border-bottom: 1px solid var(--border);
-      }
-      .hero-strip h1 {
-        font-family: 'Atkinson Hyperlegible', sans-serif;
-        font-size: clamp(1.3rem, 2vw, 1.65rem);
-        font-weight: 700;
-        letter-spacing: -0.03em;
-        margin: 0;
-        color: #fff;
-        white-space: nowrap;
-      }
-      .hero-strip h1 span { color: var(--accent); }
-      .hero-strip .tagline {
-        font-size: 0.78em;
-        color: var(--text-dim);
-        margin: 0;
-        flex: 1 1 320px;
-        min-width: 0;
-      }
-      .hero-stats {
-        display: flex;
-        gap: 0;
-        font-size: 0.72em;
-        color: var(--text-dim);
-        white-space: nowrap;
-      }
-      .hero-stats .hs {
-        display: inline-flex;
-        align-items: baseline;
-        gap: 0.3em;
-      }
-      .hero-stats .hs + .hs::before {
-        content: '|';
-        color: var(--border);
-        margin: 0 0.65em;
-      }
-      .hero-stats strong {
-        color: #fff;
-        font-weight: 700;
-        font-variant-numeric: tabular-nums;
-        font-size: 1.25em;
-      }
+      section.block { margin-top: 1.1rem; }
+      .sec-head { display: flex; align-items: center; gap: 0.7rem; margin: 0 0 0.45rem; flex-wrap: wrap; }
+      .sec-head h2 { font-family: 'Atkinson Hyperlegible', sans-serif; font-size: 1rem; font-weight: 700; color: #fff; letter-spacing: -0.02em; margin: 0; }
+      .sec-head .note { font-size: 0.72em; color: var(--text-muted); }
+      .sec-head .spacer { margin-left: auto; }
 
-      /* ── Above-the-fold duo: Leaderboard | Latest results ── */
-      .fold-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        grid-template-areas: 'leaderboard' 'latest';
-        gap: 1em;
-        margin-top: 0.9em;
-        align-items: start;
-      }
-      .fold-leaderboard { grid-area: leaderboard; }
-      .fold-latest { grid-area: latest; }
-      @media (min-width: 1200px) {
-        .fold-grid {
-          grid-template-columns: minmax(0, 2fr) minmax(340px, 1fr);
-          grid-template-areas: 'leaderboard latest';
-        }
-      }
+      /* above-the-fold dashboard */
+      .fold { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; align-items: start; }
+      @media (min-width: 1100px) { .fold { grid-template-columns: minmax(0, 1.75fr) minmax(320px, 1fr); } }
+      .panel { border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); overflow: hidden; min-width: 0; }
+      .panel .p-head { display: flex; align-items: baseline; gap: 0.6rem; padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--border); background: var(--surface-1); }
+      .panel .p-head h2 { margin: 0; font-size: 0.88rem; font-weight: 700; color: #fff; letter-spacing: -0.01em; }
+      .panel .p-head .note { font-size: 0.68em; color: var(--text-muted); }
+      .panel .p-head a { margin-left: auto; font-size: 0.68em; color: var(--accent-light); text-decoration: none; }
+      .panel .p-head a:hover { text-decoration: underline; }
 
-      .section-title {
-        font-family: 'Atkinson Hyperlegible', sans-serif;
-        font-size: 0.95em;
-        font-weight: 600;
-        color: #fff;
-        margin: 0 0 0.45em;
-        letter-spacing: -0.02em;
-        display: flex;
-        align-items: baseline;
-        gap: 0.6em;
-      }
-      .section-title .st-note {
-        font-size: 0.68em;
-        font-weight: 400;
-        color: var(--text-muted);
-        letter-spacing: 0;
-      }
-      .section-title .st-link {
-        font-size: 0.68em;
-        font-weight: 400;
-        color: var(--accent-light);
-        letter-spacing: 0;
-        margin-left: auto;
-      }
-      .section-title .st-link:hover { text-decoration: underline; }
+      /* dense tables */
+      .tw { overflow: visible; }
+      table.dt { width: 100%; border-collapse: collapse; font-size: 0.78em; }
+      table.dt thead th { position: sticky; top: calc(var(--nav-h) + var(--subnav-h)); z-index: 5; background: var(--surface-1); text-align: left; font-size: 0.7em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding: 0.42em 0.6em; border-bottom: 1px solid var(--border-light); white-space: nowrap; }
+      table.dt tbody td { padding: 0.24em 0.6em; border-bottom: 1px solid var(--border); height: 28px; vertical-align: middle; white-space: nowrap; color: var(--text); }
+      table.dt.tight tbody td { height: 25px; padding: 0.14em 0.6em; }
+      table.dt tbody tr:last-child td { border-bottom: none; }
+      table.dt tbody tr:nth-child(even) td { background: rgba(255, 255, 255, 0.014); }
+      table.dt tbody tr:hover td { background: var(--surface-3); }
+      .num { text-align: right; font-variant-numeric: tabular-nums; }
+      th.num { text-align: right; }
+      .rk { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+      .mdl { color: #fff; font-weight: 600; }
+      .prov { color: var(--text-muted); font-size: 0.88em; margin-left: 0.45em; font-weight: 400; }
+      .avg { color: var(--accent-light); font-weight: 700; font-variant-numeric: tabular-nums; }
+      .best { color: var(--text-dim); font-variant-numeric: tabular-nums; }
+      .w { color: var(--green); } .l { color: var(--red); }
+      .bar { display: inline-block; width: 54px; height: 4px; border-radius: 2px; background: var(--surface-3); overflow: hidden; vertical-align: middle; margin-left: 0.45em; }
+      .bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-light)); }
+      .tag { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--border); border-radius: 999px; padding: 0.05rem 0.42rem; color: var(--text-dim); }
+      .tag.builder { color: #8ec9c0; border-color: rgba(45,212,191,.28); }
+      .tag.judge { color: #b7a8e8; border-color: rgba(167,139,250,.28); }
+      .tag.retired { color: var(--text-muted); text-decoration: line-through; }
+      .a-ok { color: var(--green); } .a-warn { color: var(--yellow); } .a-bad { color: var(--orange); } .a-down { color: var(--red); } .a-none { color: var(--text-muted); }
+      .win { color: var(--green); font-weight: 600; }
+      .date { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+      .topic { color: var(--text); display: block; max-width: 62ch; overflow: hidden; text-overflow: ellipsis; }
+      .wide-only { display: none; }
+      @media (min-width: 1800px) { .wide-only { display: table-cell; } }
 
-      /* ── Dense tables ── */
-      .tbl-wrap {
-        overflow-x: auto;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        background: var(--surface-2);
-      }
-      table.data {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.78em;
-        min-width: 640px;
-      }
-      table.data thead {
-        background: var(--surface-1);
-        position: sticky;
-        top: var(--arena-sticky-top, 0);
-        z-index: 5;
-      }
-      table.data th {
-        text-align: left;
-        padding: 0.25em 0.5em;
-        font-weight: 600;
-        color: var(--text-dim);
-        font-size: 0.7em;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        border-bottom: 1px solid var(--border);
-        white-space: nowrap;
-      }
-      table.data td {
-        padding: 0.25em 0.5em;
-        border-bottom: 1px solid var(--border);
-        color: var(--text);
-        white-space: nowrap;
-        line-height: 1.2;
-      }
-      table.data tr:last-child td { border-bottom: none; }
-      table.data tr:hover td { background: var(--surface-2); filter: brightness(1.1); }
-      .rank-cell { font-variant-numeric: tabular-nums; }
-      .model-name { color: #fff; font-weight: 600; }
-      .provider-tag {
-        font-size: 0.68em;
-        color: var(--text-muted);
-        margin-left: 0.45em;
-      }
-      .score-wrap { display: flex; align-items: center; gap: 0.5em; }
-      .score-num { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent-light); min-width: 2.2em; }
-      .score-bg {
-        flex: 0 0 64px;
-        height: 4px;
-        background: var(--surface-3);
-        border-radius: 2px;
-        overflow: hidden;
-      }
-      .score-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-light)); }
-      .wins { color: var(--green); }
-      .losses { color: var(--red); }
-      .xl-col { display: none; }
-      @media (min-width: 1800px) { .xl-col { display: table-cell; } }
-      .retired-tag {
-        margin-left: 0.45em;
-        font-size: 0.62rem;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--text-dim);
-        border: 1px solid var(--border);
-        border-radius: 999px;
-        padding: 0.05rem 0.45rem;
-      }
-      .avail-stable { color: var(--green); }
-      .avail-degraded { color: var(--yellow); }
-      .avail-unstable { color: var(--orange); }
-      .avail-down { color: var(--red); }
-      .avail-unknown { color: var(--text-muted); }
+      /* archive expander */
+      details.mx > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; }
+      details.mx > summary::-webkit-details-marker { display: none; }
+      details.mx > summary::before { content: '\25B8'; color: var(--text-muted); font-size: 0.9em; flex: none; }
+      details.mx[open] > summary::before { content: '\25BE'; color: var(--accent-light); }
+      details.mx[open] > summary .topic { color: #fff; }
+      details.mx .mx-body { padding: 0.5rem 0.6rem 0.6rem 1.5rem; background: var(--surface-1); }
+      details.mx .mx-body table { width: 100%; border-collapse: collapse; font-size: 0.72em; }
+      details.mx .mx-body td { padding: 0.16em 0.5em; border-bottom: 1px solid var(--border); white-space: nowrap; }
+      details.mx .mx-body tr:last-child td { border-bottom: none; }
 
-      /* ── Latest results: compact match cards ── */
-      .latest-list { display: grid; gap: 0.5em; }
-      .latest-card {
-        background: var(--surface-1);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 0.5em 0.65em;
-        display: block;
-        color: inherit;
-        text-decoration: none;
-      }
-      .latest-card:hover { border-color: var(--accent); }
-      .lc-top {
-        display: flex;
-        justify-content: space-between;
-        gap: 0.6em;
-        align-items: baseline;
-      }
-      .lc-topic {
-        font-size: 0.76em;
-        font-weight: 600;
-        color: #fff;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .lc-date { font-size: 0.66em; color: var(--text-muted); flex-shrink: 0; }
-      .lc-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.3em;
-        margin-top: 0.35em;
-        font-size: 0.68em;
-      }
-      .lc-chip {
-        display: inline-flex;
-        gap: 0.3em;
-        background: var(--surface-2);
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        padding: 0.1em 0.4em;
-      }
-      .lc-chip.win { border-color: var(--accent); color: var(--accent-light); }
-      .lc-chip .m { color: var(--text); overflow: hidden; text-overflow: ellipsis; max-width: 14ch; }
-      .lc-chip.win .m { color: var(--accent-light); }
-      .lc-chip .s { color: var(--text-dim); font-variant-numeric: tabular-nums; }
-      .lc-winner {
-        font-size: 0.68em;
-        color: var(--green);
-        margin-top: 0.3em;
-      }
+      /* collapsed strips */
+      details.strip { border: 1px solid var(--border); border-radius: 10px; background: var(--surface-1); margin-top: 0.7rem; }
+      details.strip > summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 0.6rem; padding: 0.55rem 0.8rem; font-size: 0.82em; color: var(--text-dim); }
+      details.strip > summary::-webkit-details-marker { display: none; }
+      details.strip > summary strong { color: #fff; }
+      details.strip > summary .sn { margin-left: auto; font-size: 0.92em; color: var(--text-muted); }
+      details.strip .strip-body { padding: 0.2rem 0.8rem 0.8rem; font-size: 0.76em; }
+      .issue { display: inline-block; background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 0.12em 0.45em; margin: 0 0.3em 0.3em 0; }
+      .issue em { color: var(--orange); font-style: normal; }
+      .fb-row { border-top: 1px solid var(--border); padding: 0.4rem 0; }
+      .fb-row .fb-top { display: flex; justify-content: space-between; gap: 0.8rem; }
+      .fb-row .ok { color: var(--green); } .fb-row .bad { color: var(--orange); }
+      .fb-row p { margin: 0.25rem 0 0; color: var(--text-dim); }
 
-      /* ── Role-grouped pool grid (fills container) ── */
-      .pool-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 0.7em;
-      }
-      @media (min-width: 1280px) {
-        .pool-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-      }
-      .pool-group {
-        background: var(--surface-1);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 0.55em 0.65em;
-      }
-      .pool-group h3 {
-        font-size: 0.64em;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--text-muted);
-        margin: 0 0 0.4em;
-        font-weight: 600;
-      }
-      .pool-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.5em;
-        padding: 0.16em 0;
-        font-size: 0.72em;
-      }
-      .pool-row .pm { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .pool-row .pm.is-retired { color: var(--text-muted); }
-      .pool-row .ps { color: var(--accent-light); font-variant-numeric: tabular-nums; flex-shrink: 0; }
-      .pool-row .pd { color: var(--text-muted); flex-shrink: 0; }
-      .retired-dot {
-        display: inline-block;
-        width: 5px; height: 5px;
-        border-radius: 50%;
-        background: var(--text-muted);
-        margin-right: 0.4em;
-        vertical-align: 1px;
-      }
-      .pool-search {
-        width: 100%;
-        max-width: 360px;
-        background: var(--surface-2);
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        color: var(--text);
-        padding: 0.4em 0.7em;
-        font-size: 0.78em;
-        margin: 0 0 0.7em;
-        outline: none;
-      }
-      .pool-search:focus { border-color: var(--accent); }
-      .pool-search::placeholder { color: var(--text-muted); }
-
-      /* ── Archive table ── */
-      .archive-tbl td { font-size: 0.74em; }
-      .archive-topic {
-        color: var(--text);
-        max-width: 52ch;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        display: block;
-      }
-      .arch-winner { color: var(--green); }
-      .arch-date { color: var(--text-muted); font-variant-numeric: tabular-nums; }
-      .arch-score { color: var(--accent-light); font-variant-numeric: tabular-nums; font-weight: 600; }
-      details.arch-detail summary { cursor: pointer; list-style: none; }
-      details.arch-detail summary::-webkit-details-marker { display: none; }
-      .arch-detail .arch-detail-body {
-        background: var(--surface-1);
-        padding: 0.6em 0.8em;
-        font-size: 0.72em;
-        white-space: normal;
-      }
-      .arch-detail .res-line {
-        display: flex;
-        gap: 0.8em;
-        padding: 0.14em 0;
-        flex-wrap: wrap;
-      }
-      .arch-detail .res-line .rk { color: var(--text-muted); min-width: 2.2em; }
-      .arch-detail .res-line .md { color: var(--text); min-width: 16ch; }
-      .arch-detail .res-line .sc { color: var(--accent-light); font-variant-numeric: tabular-nums; }
-      .arch-detail .qa-note { color: var(--text-muted); margin-top: 0.4em; }
-      .history-toggle {
-        background: var(--surface-2);
-        color: var(--accent-light);
-        border: 1px solid var(--border);
-        border-radius: 999px;
-        padding: 0.28em 0.9em;
-        font-size: 0.72em;
-        cursor: pointer;
-        margin: 0 0 0.6em;
-      }
-      .history-toggle:hover { border-color: var(--accent); }
-
-      /* ── Collapsed strips (retired, availability, feedback) ── */
-      details.collapsed-strip {
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        background: var(--surface-1);
-        margin-top: 1em;
-      }
-      details.collapsed-strip > summary {
-        cursor: pointer;
-        padding: 0.55em 0.8em;
-        font-size: 0.82em;
-        color: var(--text-dim);
-        display: flex;
-        gap: 0.8em;
-        align-items: center;
-        list-style: none;
-      }
-      details.collapsed-strip > summary::-webkit-details-marker { display: none; }
-      details.collapsed-strip > summary svg.arrow { transition: transform 0.15s; flex-shrink: 0; }
-      details.collapsed-strip[open] > summary svg.arrow { transform: rotate(90deg); }
-      details.collapsed-strip > summary strong { color: #fff; font-weight: 600; }
-      details.collapsed-strip > summary .cs-stats { color: var(--text-muted); font-size: 0.92em; }
-      .collapsed-body { padding: 0.2em 0.8em 0.8em; font-size: 0.76em; }
-      .avail-table { width: 100%; border-collapse: collapse; }
-      .avail-table th, .avail-table td {
-        padding: 0.25em 0.5em;
-        border-bottom: 1px solid var(--border);
-        text-align: left;
-        white-space: nowrap;
-      }
-      .avail-table tr:last-child td { border-bottom: none; }
-      .retired-list { margin: 0; padding-left: 1.2em; }
-      .retired-list li { margin: 0.2em 0; color: var(--text); }
-      .retired-list li span { color: var(--text-muted); font-size: 0.9em; }
-
-      /* ── Process feedback body ── */
-      .pf-body .issue-tag {
-        display: inline-block;
-        background: var(--surface-2);
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        padding: 0.12em 0.45em;
-        margin: 0 0.3em 0.3em 0;
-      }
-      .pf-body .issue-tag em { color: var(--orange); font-style: normal; }
-      .pf-match {
-        border-top: 1px solid var(--border);
-        padding: 0.45em 0;
-      }
-      .pf-match .fm-head {
-        display: flex;
-        justify-content: space-between;
-        gap: 0.8em;
-        align-items: baseline;
-      }
-      .pf-match .fm-topic { color: var(--text); font-weight: 600; }
-      .pf-match .fm-status.clean { color: var(--green); }
-      .pf-match .fm-status.issues { color: var(--orange); }
-      .pf-match .fm-sugg { color: var(--text-dim); margin: 0.25em 0 0; }
-      .pf-match .fm-sugg .sev { font-weight: 700; }
-      .pf-match .fm-sugg.hi .sev { color: var(--red); }
-      .pf-match .fm-sugg.med .sev { color: var(--yellow); }
-      .pf-match .fm-sugg.low .sev { color: var(--text-muted); }
-
-      .last-updated {
-        margin-top: 1em;
-        font-size: 0.68em;
-        color: var(--text-muted);
-      }
-      .empty-state { color: var(--text-muted); font-size: 0.8em; padding: 1em 0; }
+      #poolSearch { width: min(320px, 100%); background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 0.36em 0.65em; font-size: 0.76em; outline: none; }
+      #poolSearch:focus { border-color: var(--accent); }
+      .more-btn { background: var(--surface-2); color: var(--accent-light); border: 1px solid var(--border); border-radius: 999px; padding: 0.34em 0.9em; font-size: 0.76em; cursor: pointer; }
+      .more-btn:hover { border-color: var(--accent); }
+      .footline { margin-top: 1rem; font-size: 0.7em; color: var(--text-muted); display: flex; gap: 1rem; flex-wrap: wrap; }
+      .empty { color: var(--text-muted); font-size: 0.8em; padding: 1rem 0; }
+      @media (max-width: 900px) { .topic { max-width: 30ch; } .tw { overflow-x: auto; } table.dt { min-width: 620px; } }
     </style>
   </head>
   <body>
     <Header />
     <main class="arena-container">
 
-      <!-- ── Slim hero strip ── -->
-      <div class="hero-strip">
-        <h1><span>Arena</span></h1>
-        <p class="tagline">LLMs head-to-head on Hermes Agent content, design & engineering tasks — judged by a multipass model jury.</p>
-        <div class="hero-stats">
-          <span class="hs"><strong>{totalMatches}</strong> matches</span>
-          <span class="hs"><strong>{rankedModels}</strong> ranked</span>
-          <span class="hs"><strong>{totalModels}</strong> pool</span>
-          <span class="hs"><strong>{retiredCount}</strong> retired</span>
-          <span class="hs"><strong>{totalProviders}</strong> providers</span>
+      <div class="hero">
+        <div>
+          <h1><span>Arena</span></h1>
+          <p class="tagline">LLMs head-to-head on Hermes Agent content, design and engineering tasks — every match scored by a multipass model jury.</p>
+        </div>
+        <div class="kpis">
+          <span class="kpi"><strong>{totalMatches}</strong> matches</span>
+          <span class="kpi"><strong>{rankedModels}</strong> ranked</span>
+          <span class="kpi"><strong>{totalModels}</strong> in pool</span>
+          <span class="kpi"><strong>{distinctLanes.size}</strong> models competed</span>
+          <span class="kpi"><strong>{providers.size}</strong> providers</span>
+          {avgWinner != null && <span class="kpi"><strong>{avgWinner.toFixed(1)}</strong> avg winning score</span>}
+          {gateRate != null && <span class="kpi"><strong>{gateRate}%</strong> cleared 8.0</span>}
         </div>
       </div>
 
-      <!-- ── Above the fold: Leaderboard | Latest match results ── -->
-      <div class="fold-grid">
-        <section class="fold-leaderboard" id="leaderboard">
-          <h2 class="section-title">Leaderboard <span class="st-note">avg judge score / 10</span></h2>
-          {leaderboard.length > 0 ? (
-            <div class="tbl-wrap">
-              <table class="data">
+      <nav class="subnav" aria-label="Arena sections">
+        <a href="#leaderboard">Leaderboard<span class="sn-count">{lb.length}</span></a>
+        <a href="#latest-results">Latest results</a>
+        <a href="#match-history">Match archive<span class="sn-count">{totalMatches}</span></a>
+        <a href="#model-pool">Model pool<span class="sn-count">{totalModels}</span></a>
+        <a href="#process-feedback">Feedback<span class="sn-count">{feedback.matches.length}</span></a>
+      </nav>
+
+      <div class="fold" style="margin-top:1rem">
+        <section class="panel" id="leaderboard" aria-label="Leaderboard">
+          <div class="p-head">
+            <h2>Leaderboard</h2>
+            <span class="note">avg score / 10 · ranked by wins</span>
+          </div>
+          {lb.length > 0 ? (
+            <div class="tw">
+              <table class="dt">
                 <thead>
                   <tr>
-                    <th>#</th>
-                    <th>Model</th>
-                    <th>Avg</th>
-                    <th>Matches</th>
-                    <th>W/L</th>
-                    <th>Best</th>
-                    <th class="xl-col">Provider</th>
-                    <th class="xl-col">Uptime</th>
+                    <th>#</th><th>Model</th><th class="num">Avg</th><th class="num">Best</th>
+                    <th class="num">M</th><th class="num">W / L</th><th class="num">Win%</th>
+                    <th class="num wide-only">Uptime</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {leaderboard.map((entry, i) => {
-                    const badge = getAvailabilityBadge(entry.model);
+                  {lb.map((e) => {
+                    const b = availBadge(e.model);
                     return (
                       <tr>
-                        <td class="rank-cell">{i < 3 ? ['🥇', '🥈', '🥉'][i] : `#${i + 1}`}</td>
+                        <td class="rk">{e.rank <= 3 ? ['🥇', '🥈', '🥉'][e.rank - 1] : `#${e.rank}`}</td>
                         <td>
-                          <span class="model-name">{entry.model}{entry.retired ? <span class="retired-tag">retired</span> : null}</span>
-                          {entry.provider && <span class="provider-tag">{entry.provider}</span>}
+                          <span class="mdl">{e.model}</span>
+                          <span class="prov">{e.provider}</span>
+                          {e.retired ? <span class="tag retired">retired</span> : null}
                         </td>
-                        <td>
-                          <div class="score-wrap">
-                            <span class="score-num">{(entry.avgScore ?? 0).toFixed(1)}</span>
-                            <div class="score-bg"><div class="score-fill" style={`width: ${((entry.avgScore ?? 0) / 10) * 100}%`}></div></div>
-                          </div>
+                        <td class="num">
+                          <span class="avg">{(e.avgScore ?? 0).toFixed(1)}</span>
+                          <span class="bar"><i style={`width:${Math.max(0, Math.min(100, ((e.avgScore ?? 0) / 10) * 100))}%`}></i></span>
                         </td>
-                        <td>{entry.matches ?? 0}</td>
-                        <td><span class="wins">{entry.wins ?? 0}</span>/<span class="losses">{entry.losses ?? 0}</span></td>
-                        <td>{(entry.bestScore ?? 0).toFixed(1)}</td>
-                        <td class="xl-col">{entry.provider ?? '—'}</td>
-                        <td class="xl-col"><span class={`avail-badge ${badge.cls}`}>{badge.label}</span></td>
+                        <td class="num best">{(e.bestScore ?? 0).toFixed(1)}</td>
+                        <td class="num">{e.matches ?? 0}</td>
+                        <td class="num"><span class="w">{e.wins ?? 0}</span> / <span class="l">{e.losses ?? 0}</span></td>
+                        <td class="num best">{e.winRate}%</td>
+                        <td class="num wide-only"><span class={b.cls}>{b.label}</span></td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-          ) : (
-            <div class="empty-state"><p>No ranked models yet.</p></div>
-          )}
+          ) : <div class="empty">No ranked models yet.</div>}
         </section>
 
-        <section class="fold-latest" id="latest-results">
-          <h2 class="section-title">Latest Results <a class="st-link" href="#match-history">full archive ↓</a></h2>
-          <div class="latest-list">
-            {normalizedMatches.slice(0, 4).map(m => (
-              <a class="latest-card" href={`#match-${m.match_id ?? m.id}`}>
-                <div class="lc-top">
-                  <span class="lc-topic">{m.topic}</span>
-                  <span class="lc-date">{m.date}</span>
-                </div>
-                <div class="lc-row">
-                  {m.displayResults.slice(0, 5).map(r => (
-                    <span class={`lc-chip ${r.rank === 1 ? 'win' : ''}`}>
-                      <span class="m">{r.model}{r.dnf ? ' (DNF)' : ''}</span>
-                      <span class="s">{r.dnf ? '—' : (r.score != null ? r.score.toFixed(1) : '—')}</span>
-                    </span>
-                  ))}
-                </div>
-                <div class="lc-winner">⚑ {m.winner}{m.winner_score != null ? ` · ${m.winner_score.toFixed(1)}/10` : ''}</div>
-              </a>
-            ))}
+        <section class="panel" id="latest-results" aria-label="Latest results">
+          <div class="p-head">
+            <h2>Latest results</h2>
+            <span class="note">newest first</span>
+            <a href="#match-history">full archive ↓</a>
+          </div>
+          <div class="tw">
+            <table class="dt">
+              <thead>
+                <tr><th>Date</th><th>Match</th><th class="num">Winner</th></tr>
+              </thead>
+              <tbody>
+                {sortedMatches.slice(0, 8).map((m) => (
+                  <tr>
+                    <td class="date">{m.date}</td>
+                    <td><a href={`#match-${keyOf(m)}`} class="topic" style="text-decoration:none;color:inherit">{m.topic}</a></td>
+                    <td class="num"><span class="win">{m.winner}</span> <span class="best">{scoreOf(m) != null ? scoreOf(m).toFixed(1) : '—'}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style="padding:0.55rem 0.7rem;border-top:1px solid var(--border);font-size:0.72em;color:var(--text-dim);display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">
+            <span style="color:#fff;font-weight:600">How a match runs</span>
+            <span style="color:var(--text-muted)">Brief → Plan → Build (all lanes) → Judge → QA → Publish</span>
           </div>
         </section>
       </div>
 
-      <!-- ── Model pool: role-grouped compact grid ── -->
-      <section class="section" id="model-pool" style="margin-top:1em">
-        <span id="pool"></span>
-        <h2 class="section-title">Model Pool <span class="st-note">{totalModels} models · {retiredCount} retired</span></h2>
-        <input type="text" class="pool-search" id="poolSearch" placeholder="Search models…" oninput="filterPool()" />
-        <div class="pool-grid" id="poolTable">
-          {(() => {
-            const groups = {};
-            for (const m of model_pool) {
-              const role = getRoleBadge(m.role).label;
-              (groups[role] = groups[role] || []).push(m);
-            }
-            const order = ['Builder', 'QA', 'QA Fallback', 'Research', 'Judge', 'Planner'];
-            const keys = Object.keys(groups).sort((a, b) => {
-              const ia = order.indexOf(a), ib = order.indexOf(b);
-              return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-            });
-            return keys.map(role => (
-              <div class="pool-group" data-role-group={role.toLowerCase()}>
-                <h3>{role} · {groups[role].length}</h3>
-                {groups[role].map(m => (
-                  <div class="pool-row" data-provider={m.provider ?? ''} data-model={m.model ?? ''} data-family={m.family ?? ''} data-role={m.role ?? ''}>
-                    <span class={`pm ${m.status === 'retired' ? 'is-retired' : ''}`}>
-                      {m.status === 'retired' && <span class="retired-dot"></span>}
-                      {m.model}
-                    </span>
-                    {typeof m.benchmark_score === 'number'
-                      ? <span class="ps">{m.benchmark_score.toFixed(1)}</span>
-                      : <span class="pd">—</span>}
-                  </div>
-                ))}
-              </div>
-            ));
-          })()}
+      <section class="block" id="match-history">
+        <div class="sec-head">
+          <h2>Match archive</h2>
+          <span class="note">{totalMatches} matches · newest first · click a row for per-model scores</span>
         </div>
-      </section>
-
-      <!-- ── Retired models (collapsed) ── -->
-      <details class="collapsed-strip">
-        <summary>
-          <svg class="arrow" width="10" height="10" viewBox="0 0 10 10"><path d="M2 1l5 4-5 4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-          <strong>Retired Models</strong>
-          <span class="cs-stats">{retiredModels.length} entries</span>
-        </summary>
-        <div class="collapsed-body">
-          {retiredModels.length > 0 ? (
-            <ul class="retired-list">
-              {retiredModels.map(rm => (
-                <li>
-                  <strong>{rm.model}</strong>
-                  {rm.provider && <span> · {rm.provider}</span>}
-                  {rm.family && <span> · {rm.family}</span>}
-                  {rm.status && <span> · {rm.status}</span>}
-                  {rm.reason && <span> — {rm.reason}</span>}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p class="empty-state">No retired models recorded.</p>
-          )}
-        </div>
-      </details>
-
-      <!-- ── Availability table (collapsed) ── -->
-      <details class="collapsed-strip">
-        <summary>
-          <svg class="arrow" width="10" height="10" viewBox="0 0 10 10"><path d="M2 1l5 4-5 4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-          <strong>Availability</strong>
-          <span class="cs-stats">{availRows.length} models tracked</span>
-        </summary>
-        <div class="collapsed-body">
-          {availRows.length > 0 ? (
-            <div class="tbl-wrap">
-              <table class="data avail-table">
+        {sortedMatches.length > 0 ? (
+          <div class="panel">
+            <div class="tw">
+              <table class="dt">
                 <thead>
                   <tr>
-                    <th>Model</th>
-                    <th>Availability %</th>
-                    <th>Status</th>
+                    <th>Date</th><th>Match</th><th>Type</th><th class="num">Lanes</th>
+                    <th>Winner</th><th class="num">Score</th>
+                    <th class="wide-only">Threshold</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {availRows.map(row => (
-                    <tr>
-                      <td class="model-name">{row.model}</td>
-                      <td>{row.availability != null ? row.availability.toFixed(1) : '—'}</td>
-                      <td><span class={`avail-badge ${row.badge.cls}`}>{row.badge.label}</span></td>
+                  {sortedMatches.map((m, mi) => (
+                      <tr data-extra={mi >= 12 ? '1' : null} hidden={mi >= 12}>
+                        <td class="date">{m.date}</td>
+                      <td>
+                        <details class="mx" id={`match-${keyOf(m)}`}>
+                          <summary>
+                            <span class="topic">{m.topic}</span>
+                          </summary>
+                          <div class="mx-body">
+                            <table>
+                              <tbody>
+                                {rowsOf(m).map((r) => (
+                                  <tr>
+                                    <td class="rk">{r.rank === 1 ? '🥇 1st' : r.rank === 2 ? '🥈 2nd' : r.rank === 3 ? '🥉 3rd' : r.rank ? `#${r.rank}` : 'DNF'}</td>
+                                    <td class="mdl">{r.model}</td>
+                                    <td class="num avg">{r.score != null ? `${r.score.toFixed(1)}/10` : '—'}</td>
+                                    <td class="prov" style="margin-left:0">{r.provider}{r.status ? ` · ${r.status}` : ''}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                            {(m.judge || m.judge_model) && <div style="margin-top:0.4rem;color:var(--text-muted)">Judged by {m.judge_model || (m.judge && m.judge.model) || m.judge}{m.qa_model ? ` · QA: ${m.qa_model}` : ''}</div>}
+                            {m.slug && <div style="margin-top:0.25rem"><a href={`/blog/${m.slug}/`} style="color:var(--accent-light)">Read the published post →</a></div>}
+                          </div>
+                        </details>
+                      </td>
+                      <td><span class="tag">{m.type || '—'}</span></td>
+                      <td class="num">{m.lanes_declared ?? rowsOf(m).length}</td>
+                      <td class="win">{m.winner || '—'}</td>
+                      <td class="num avg">{scoreOf(m) != null ? scoreOf(m).toFixed(1) : '—'}</td>
+                      <td class="wide-only" style="color:var(--text-dim)">{m.threshold_met === true ? 'met' : m.threshold_met === false ? 'missed' : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          ) : (
-            <p class="empty-state">No availability stats.</p>
-          )}
-        </div>
-      </details>
-
-      <!-- ── Full match archive ── -->
-      <section class="section" id="match-history" style="margin-top:1em">
-        <span id="matches"></span>
-        <h2 class="section-title">Match Archive <span class="st-note">last 30 days: {recentMatches.length} · older: {archiveMatches.length}</span></h2>
-        {archiveMatches.length > 0 && (
-          <button type="button" id="historyToggle" class="history-toggle" aria-expanded="false" data-state="window">
-            Show all {localMatches.length} matches
-          </button>
+          </div>
+        ) : <div class="empty">No matches recorded yet.</div>}
+        {sortedMatches.length > 12 && (
+          <div style="margin-top:0.5rem">
+            <button type="button" id="archiveToggle" class="more-btn" data-state="less">Show more matches ({sortedMatches.length - 12} more)</button>
+          </div>
         )}
-        {normalizedMatches.length > 0 ? (
-          <div class="tbl-wrap">
-            <table class="data archive-tbl">
+      </section>
+
+      <section class="block" id="model-pool">
+        <div class="sec-head">
+          <h2>Model pool</h2>
+          <span class="note">{totalModels} models · {retiredCount} retired · {providers.size} providers</span>
+          <span class="spacer"></span>
+          <input type="search" id="poolSearch" placeholder="Search model, provider, role…" aria-label="Search model pool" />
+        </div>
+        <div class="panel">
+          <div class="tw">
+            <table class="dt tight" id="poolTable">
               <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Match</th>
-                  <th>Winner</th>
-                  <th>Top score</th>
-                  <th>Lanes</th>
-                  <th class="xl-col">Judge</th>
-                  <th></th>
-                </tr>
+                <tr><th>Model</th><th>Role</th><th>Provider</th><th class="num">Played</th><th class="num">Avg</th><th class="wide-only">Status</th></tr>
               </thead>
               <tbody>
-                {normalizedMatches.map(m => {
-                  const isRecent = recentMatches.some(rm => (rm.match_id ?? rm.id) === (m.match_id ?? m.id));
-                  const id = m.match_id ?? m.id;
-                  const top = m.displayResults.slice().sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity))[0];
+                {poolRows.map((m) => {
+                  const role = String(m.role || '').toLowerCase();
+                  const played = m.played;
                   return (
-                    <tr class="arch-row" data-windowed={!isRecent ? 'true' : null} hidden={!isRecent}>
-                      <td class="arch-date">{m.date}</td>
-                      <td>
-                        <details class="arch-detail" id={`match-${id}`}>
-                          <summary>
-                            <span class="archive-topic">{m.topic}</span>
-                          </summary>
-                          <div class="arch-detail-body">
-                            {m.displayResults.map(r => (
-                              <div class="res-line">
-                                <span class="rk">{r.dnf ? 'DNF' : (r.rank === 1 ? '🥇 1st' : r.rank === 2 ? '🥈 2nd' : r.rank === 3 ? '🥉 3rd' : (r.rank != null ? `#${r.rank}` : '—'))}</span>
-                                <span class="md">{r.model}</span>
-                                <span class="sc">{r.dnf ? '—' : (r.score != null ? `${r.score.toFixed(1)}/10` : '—')}</span>
-                                <span style="color:var(--text-muted)">{r.provider || ''}</span>
-                              </div>
-                            ))}
-                            <div class="qa-note">Judged by {judgeLabel(m.judge)}{m.qa ? ` · QA: ${judgeLabel(m.qa)}` : ''}</div>
-                            {m.notes && <div class="qa-note">{m.notes}</div>}
-                          </div>
-                        </details>
-                      </td>
-                      <td class="arch-winner">{m.winner}</td>
-                      <td class="arch-score">{top?.dnf ? '—' : (top?.score != null ? top.score.toFixed(1) : (m.winner_score != null ? m.winner_score.toFixed(1) : '—'))}</td>
-                      <td>{m.lanes_declared ?? (m.results?.length ?? (m.scores ? Object.keys(m.scores).length : '—'))}</td>
-                      <td class="xl-col">{judgeLabel(m.judge)}</td>
-                      <td></td>
+                    <tr data-search={`${m.model} ${m.provider || ''} ${role} ${m.status || ''}`.toLowerCase()}>
+                      <td class="mdl">{m.model}</td>
+                      <td><span class={`tag ${role === 'builder' ? 'builder' : role === 'judge' ? 'judge' : ''}`}>{roleLabel[role] || m.role || '—'}</span></td>
+                      <td class="prov" style="margin-left:0">{m.provider || '—'}</td>
+                      <td class="num">{played != null ? played : '—'}</td>
+                      <td class="num avg">{typeof m.benchmark_score === 'number' ? m.benchmark_score.toFixed(1) : '—'}</td>
+                      <td class="wide-only" style="color:var(--text-dim)">{m.status || '—'}</td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
           </div>
-        ) : (
-          <div class="empty-state"><p>No matches recorded yet.</p></div>
+        </div>
+
+        {Array.isArray(retired_models) && retired_models.length > 0 && (
+          <details class="strip">
+            <summary><strong>Retired models</strong><span class="sn">{retired_models.length} entries</span></summary>
+            <div class="strip-body">
+              <table class="dt" style="font-size:0.72em">
+                <tbody>
+                  {retired_models.map((r) => (
+                    <tr><td class="mdl">{r.model}</td><td class="prov" style="margin-left:0">{r.provider || ''}</td><td style="color:var(--text-dim)">{r.reason || ''}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        )}
+
+        {stability?.model_stats && (
+          <details class="strip">
+            <summary><strong>Availability</strong><span class="sn">updated {stabilityUpdated}</span></summary>
+            <div class="strip-body">
+              <table class="dt" style="font-size:0.72em">
+                <tbody>
+                  {Object.entries(stability.model_stats).map(([name, s]) => {
+                    const b = availBadge(name);
+                    return (
+                      <tr>
+                        <td class="mdl">{name}</td>
+                        <td class={`num ${b.cls}`}>{typeof s.availability === 'number' ? `${s.availability}%` : '—'}</td>
+                        <td class="prov" style="margin-left:0">{b.label}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </details>
         )}
       </section>
 
-      <!-- ── Process feedback (collapsed) ── -->
-      <details class="collapsed-strip" id="process-feedback">
+      <details class="strip" id="process-feedback">
         <summary>
-          <svg class="arrow" width="10" height="10" viewBox="0 0 10 10"><path d="M2 1l5 4-5 4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-          <strong>Process Feedback</strong>
-          <span class="cs-stats">{feedbackData.matches.length} analyzed · {feedbackData.clean_match_rate}% clean · {feedbackData.matches.filter(m => !m.clean).length} issues found</span>
+          <strong>Process feedback</strong>
+          <span class="sn">{feedback.matches.length} analyzed{feedback.cleanRate != null ? ` · ${feedback.cleanRate}% clean` : ''} · {feedback.matches.filter((f) => !f.clean).length} flagged</span>
         </summary>
-        <div class="collapsed-body pf-body">
-          {feedbackData.recurring_issues.length > 0 && (
-            <div style="margin-bottom:0.5em">
-              {feedbackData.recurring_issues.map(issue => (
-                <span class="issue-tag">{issue.issue} <em>x{issue.count}</em></span>
-              ))}
+        <div class="strip-body">
+          {feedback.recurring_issues.length > 0 && (
+            <div style="margin-bottom:0.5rem">
+              {feedback.recurring_issues.map((i) => <span class="issue">{i.issue} <em>×{i.count}</em></span>)}
             </div>
           )}
-          {feedbackData.matches.map(fm => (
-            <div class="pf-match">
-              <div class="fm-head">
-                <span class="fm-topic">{fm.topic}</span>
-                <span class={`fm-status ${fm.clean ? 'clean' : 'issues'}`}>{fm.clean ? 'Clean' : `${fm.suggestions?.length ?? 0} suggestions`}</span>
+          {feedback.matches.map((f) => (
+            <div class="fb-row">
+              <div class="fb-top">
+                <span style="color:var(--text)">{f.topic}</span>
+                <span class={f.clean ? 'ok' : 'bad'}>{f.clean ? 'Clean' : `${(f.suggestions || []).length} suggestion(s)`}</span>
               </div>
-              {!fm.clean && fm.suggestions?.map(s => (
-                <p class={`fm-sugg ${s.severity}`}>
-                  <span class="sev">[{s.severity.toUpperCase()}]</span> {s.text}
-                </p>
-              ))}
+              {!f.clean && (f.suggestions || []).map((s) => <p>[{String(s.severity || '').toUpperCase()}] {s.text}</p>)}
             </div>
           ))}
         </div>
       </details>
 
-      <div class="last-updated">Arena data last updated: <strong>{lastUpdated}</strong> · Stability last updated: <strong>{stability?.last_updated ?? 'N/A'}</strong></div>
+      <div class="footline">
+        <span>Arena data: <strong style="color:var(--text-dim)">{lastUpdated}</strong></span>
+        <span>Stability: <strong style="color:var(--text-dim)">{stabilityUpdated}</strong></span>
+        <span>Router-selection matches excluded</span>
+      </div>
 
     </main>
     <Footer />
 
     <script is:inline>
-      // ── Match-archive 30-day window expander ──
       (function () {
-        var btn = document.getElementById('historyToggle');
-        if (!btn) return;
-        btn.addEventListener('click', function () {
-          var showing = btn.getAttribute('data-state') === 'window';
-          document.querySelectorAll('.arch-row[data-windowed="true"]').forEach(function (d) {
-            d.hidden = !showing;
-            if (!showing) { var det = d.querySelector('details'); if (det) det.open = false; }
-          });
-          btn.setAttribute('data-state', showing ? 'all' : 'window');
-          btn.setAttribute('aria-expanded', showing ? 'true' : 'false');
-          var total = btn.textContent.match(/\d+/);
-          btn.textContent = showing ? 'Show last 30 days' : ('Show all ' + (total ? total[0] : '') + ' matches');
-        });
+        function setOffsets() {
+          var header = document.querySelector('header');
+          var nav = document.querySelector('.subnav');
+          var hb = header ? header.getBoundingClientRect().bottom : 0;
+          document.documentElement.style.setProperty('--nav-h', Math.max(0, hb) + 'px');
+          var nh = nav ? nav.getBoundingClientRect().height : 0;
+          document.documentElement.style.setProperty('--subnav-h', nh + 'px');
+        }
+        setOffsets();
+        if ('ResizeObserver' in window) new ResizeObserver(setOffsets).observe(document.body);
+        window.addEventListener('resize', setOffsets);
+        window.addEventListener('load', setOffsets);
       })();
 
-      // ── Sticky thead offset: measure real header ──
       (function () {
-        var header = document.querySelector('header');
-        var setStickyOffset = function () {
-          var bottom = header ? header.getBoundingClientRect().bottom : 0;
-          document.documentElement.style.setProperty('--arena-sticky-top', Math.max(0, bottom) + 'px');
-        };
-        setStickyOffset();
-        if (header && 'ResizeObserver' in window) new ResizeObserver(setStickyOffset).observe(header);
-        window.addEventListener('resize', setStickyOffset);
+        var links = Array.prototype.slice.call(document.querySelectorAll('.subnav a'));
+        if (!links.length) return;
+        var ids = links.map(function (a) { return a.getAttribute('href').slice(1); });
+        function onScroll() {
+          var cur = ids[0];
+          for (var i = 0; i < ids.length; i++) {
+            var el = document.getElementById(ids[i]);
+            if (el && el.getBoundingClientRect().top <= 200) cur = ids[i];
+          }
+          links.forEach(function (a) { a.classList.toggle('active', a.getAttribute('href') === '#' + cur); });
+        }
+        document.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
       })();
 
-      // ── Pool search ──
-      function filterPool() {
+      (function () {
         var input = document.getElementById('poolSearch');
-        if (!input) return;
-        var q = input.value.toLowerCase().trim();
-        document.querySelectorAll('#poolTable .pool-row').forEach(function (row) {
-          var hay = ['data-provider', 'data-model', 'data-family', 'data-role'].map(function (a) {
-            return (row.getAttribute(a) || '').toLowerCase();
-          }).join(' ');
-          row.style.display = (q === '' || hay.includes(q)) ? '' : 'none';
+        var table = document.getElementById('poolTable');
+        if (!input || !table) return;
+        input.addEventListener('input', function () {
+          var q = input.value.trim().toLowerCase();
+          Array.prototype.forEach.call(table.querySelectorAll('tbody tr'), function (tr) {
+            var hay = tr.getAttribute('data-search') || '';
+            tr.hidden = q !== '' && hay.indexOf(q) === -1;
+          });
         });
-        document.querySelectorAll('#poolTable .pool-group').forEach(function (g) {
-          var any = Array.from(g.querySelectorAll('.pool-row')).some(function (r) { return r.style.display !== 'none'; });
-          g.style.display = any ? '' : 'none';
-        });
-      }
+      })();
 
-      // Deep-link into an archive row expands it
       if (location.hash && location.hash.indexOf('#match-') === 0) {
-        var det = document.querySelector(location.hash);
-        if (det) {
-          var row = det.closest('.arch-row');
+        var d = document.querySelector(location.hash);
+        if (d && d.tagName === 'DETAILS') {
+          var row = d.closest('tr');
           if (row && row.hidden) {
             row.hidden = false;
-            var b = document.getElementById('historyToggle');
-            if (b) { b.dataset.state = 'all'; b.setAttribute('aria-expanded', 'true'); b.textContent = 'Show last 30 days'; }
+            var b = document.getElementById('archiveToggle');
+            if (b && b.getAttribute('data-state') === 'less') {
+              b.setAttribute('data-state', 'more');
+              b.textContent = 'Show fewer matches';
+            }
           }
-          det.open = true;
+          d.open = true;
         }
       }
+
+      // archive window: reveal older matches on demand
+      (function () {
+        var btn = document.getElementById('archiveToggle');
+        if (!btn) return;
+        var total = document.querySelectorAll('#match-history table.dt > tbody > tr').length;
+        var SHOWN = 12;
+        btn.addEventListener('click', function () {
+          var showingAll = btn.getAttribute('data-state') === 'all';
+          var extras = document.querySelectorAll('#match-history table.dt > tbody > tr[data-extra="1"]');
+          Array.prototype.forEach.call(extras, function (r) { r.hidden = !showingAll ? false : true; });
+          if (showingAll) { Array.prototype.forEach.call(extras, function (r) { var d = r.querySelector('details'); if (d) d.open = false; }); }
+          btn.setAttribute('data-state', showingAll ? 'less' : 'all');
+          btn.setAttribute('aria-expanded', showingAll ? 'false' : 'true');
+          btn.textContent = showingAll ? ('Show more matches (' + (total - SHOWN) + ' more)') : 'Show fewer matches';
+        });
+      })();
     </script>
   </body>
 </html>
