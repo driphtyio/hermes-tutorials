@@ -174,6 +174,17 @@ const jsonLd = {
       /* above-the-fold dashboard */
       .fold { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; align-items: start; }
       @media (min-width: 1100px) { .fold { grid-template-columns: minmax(0, 1.75fr) minmax(320px, 1fr); } }
+
+      /* below-the-fold duo: record (archive) | sticky reference rail (pool) */
+      .duo { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; align-items: start; margin-top: 1.1rem; }
+      .duo-rail { min-width: 0; display: grid; gap: 0; }
+      .duo .block { margin-top: 0; }
+      @media (min-width: 1440px) {
+        .duo { grid-template-columns: minmax(0, 1.9fr) minmax(340px, 1fr); }
+        .duo-rail { position: sticky; top: calc(var(--nav-h) + var(--subnav-h) + 0.5rem); max-height: calc(100vh - var(--nav-h) - var(--subnav-h) - 1rem); overflow: auto; }
+        .duo-main .topic { max-width: 44ch; }
+        .duo-main .tw { overflow-x: auto; }
+      }
       .panel { border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); overflow: hidden; min-width: 0; }
       .panel .p-head { display: flex; align-items: baseline; gap: 0.6rem; padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--border); background: var(--surface-1); }
       .panel .p-head h2 { margin: 0; font-size: 0.88rem; font-weight: 700; color: #fff; letter-spacing: -0.01em; }
@@ -347,7 +358,9 @@ const jsonLd = {
         </section>
       </div>
 
-      <section class="block" id="match-history">
+      <!-- record + reference: two-column at ≥1440 -->
+      <div class="duo">
+        <section class="block duo-main" id="match-history">
         <div class="sec-head">
           <h2>Match archive</h2>
           <span class="note">{totalMatches} matches · newest first · click a row for per-model scores</span>
@@ -407,9 +420,10 @@ const jsonLd = {
             <button type="button" id="archiveToggle" class="more-btn" data-state="less">Show more matches ({sortedMatches.length - 12} more)</button>
           </div>
         )}
-      </section>
+        </section>
 
-      <section class="block" id="model-pool">
+        <aside class="duo-rail">
+          <section class="block" id="model-pool">
         <div class="sec-head">
           <h2>Model pool</h2>
           <span class="note">{totalModels} models · {retiredCount} retired · {providers.size} providers</span>
@@ -478,7 +492,9 @@ const jsonLd = {
             </div>
           </details>
         )}
-      </section>
+        </section>
+        </aside>
+      </div>
 
       <details class="strip" id="process-feedback">
         <summary>
