@@ -6999,6 +6999,37 @@
       },
       "post": "/blog/2026-10-02-hermes-v021x-release-line/",
       "notes": "First 8-lane match with the hy3-restored roster. Runner must be launched detached (nohup script) \u2014 kernel kills orphaned wave 1 at 4/8 lanes."
+    },
+    {
+      "match_id": "ht-arena-redesign",
+      "date": "2026-10-02",
+      "type": "design-spec",
+      "topic": "Arena page widescreen + space-optimization redesign spec",
+      "lanes_declared": 10,
+      "drafts": 10,
+      "dnf": [],
+      "scores": {
+        "gpt-6-luna": 9.1,
+        "mimo-v2.6-pro": 9.0,
+        "deepseek-v4-flash": 8.9,
+        "deepseek-v4-pro": 8.6,
+        "space-bunny-free": 8.4,
+        "mimo-v2.6-flash": 8.1,
+        "muse-spark-1.3-contributor": 8.0,
+        "glm-5.3-flash": 7.4,
+        "longcat-2.5-preview-free": 7.8,
+        "hy3": 6.4
+      },
+      "winner": "gpt-6-luna",
+      "winner_score": 9.1,
+      "threshold_met": true,
+      "judge": "deepseek-v4-pro (commandcode), single-pass structured verdict; lane letters A-J",
+      "qa": {
+        "verdict": "implemented + measured",
+        "checks": "layout-audit.js PASS at 1280/1440/1920 (nav parity \u03940, 4 cols, full rows, no dup controls); functional browser QA: expander 28<->10 matches with correct labels/aria, two-col wide grid, sticky var measured, pool search works",
+        "notes": "Judge weakness 'expander prose-only' addressed in implementation; container-padding measurement asymmetry resolved to true \u03940 parity"
+      },
+      "notes": "First 10-lane spec-arena match on this arena. Roster: 8 canonical builders + deepseek-v4-pro/mimo-v2.6-pro flex lanes (per-lane runner invocations, byte-identical briefs, brief-check.py gate passed pre-dispatch)."
     }
   ],
   "leaderboard": [
@@ -7136,8 +7167,8 @@
       "rank": 12
     }
   ],
-  "last_updated": "2026-10-01",
-  "total_matches": 26,
+  "last_updated": "2026-10-02",
+  "total_matches": 29,
   "retired_models": [
     {
       "model": "mimo-v2.5",
