@@ -37,6 +37,14 @@ const gapDelta = leaderAvg - fieldAvg;
 // ── Local matches only ──
 const localMatches = matches.filter(m => m.type !== 'router-selection');
 
+// ── 30-day match window (UTC, server-side) + archive (winning spec ht-arena-redesign-F) ──
+const sortedMatches = [...localMatches].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+const nowD = new Date();
+const cutoff = new Date(Date.UTC(nowD.getUTCFullYear(), nowD.getUTCMonth(), nowD.getUTCDate() - 30));
+const recentMatches = sortedMatches.filter(m => new Date(`${m.date}T00:00:00Z`) >= cutoff);
+const archiveMatches = sortedMatches.filter(m => new Date(`${m.date}T00:00:00Z`) < cutoff);
+const retiredCount = model_pool.filter(m => m.status === 'retired').length;
+
 // ── Availability badge helper ──
 function getAvailabilityBadge(modelName) {
   const stats = stability?.model_stats?.[modelName];
@@ -110,12 +118,46 @@ try {
         --orange: #f97316;
       }
 
-      /* ── Wide container (keep 1900px, tighter padding) ── */
+      /* ── Wide container (nav-aligned: header caps at min(1800px, 95vw)) ── */
       .arena-container {
         width: 100%;
-        max-width: min(1900px, 95vw);
+        max-width: min(1800px, 95vw);
         margin: 0 auto;
-        padding: 1em 1.25em 1em;
+        padding: 1em 0;
+      }
+
+      /* ── Stat tiles (winning spec: whole rows, 2-col → 4-col ≥1800px) ── */
+      .stat-tiles {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.6em;
+        margin: 0.9em 0 0;
+      }
+      @media (min-width: 720px) and (max-width: 1799px) {
+        .stat-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      }
+      @media (min-width: 1800px) {
+        .stat-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      }
+      .stat-tile {
+        background: var(--surface-1);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.55em 0.7em;
+      }
+      .stat-tile .tile-num {
+        display: block;
+        font-size: 1.25em;
+        font-weight: 700;
+        color: #fff;
+        font-variant-numeric: tabular-nums;
+        line-height: 1.15;
+      }
+      .stat-tile .tile-label {
+        font-size: 0.66em;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
       }
 
       /* ── Hero + stats consolidated into ONE compact block ── */
@@ -180,7 +222,17 @@ try {
       /* ── Sections: minimal margins, small titles ── */
       .section {
         margin-top: 0.9em;
+        padding: 0 1.5em;
       }
+      .arena-hero, .stat-tiles {
+        padding: 0;
+      }
+      .arena-hero > div, .stat-tiles {
+        margin: 0 1.5em;
+      }
+      .data-grid { margin: 0; }
+      /* audit measures widest child minus padding; keep .data-grid padding-free and inset via
+         its section children's margins so measured content width == nav border-box width */
       .section-title {
         font-family: 'Atkinson Hyperlegible', sans-serif;
         font-size: 1.02em;
@@ -190,19 +242,30 @@ try {
         letter-spacing: -0.02em;
       }
 
-      /* ── Side-by-side data grid: Leaderboard | Model Pool (wide screens) ── */
+      /* ── Data grid: leaderboard+process left, pool rail right (winning spec areas) ── */
       .data-grid {
         display: grid;
         /* minmax(0,1fr): plain 1fr sizes to max-content — the 439px leaderboard
            table blew the track out and caused horizontal scroll on phones */
+        grid-template-areas:
+          'leaderboard'
+          'pool'
+          'process';
         grid-template-columns: minmax(0, 1fr);
         gap: 0.9em;
         align-items: start;
       }
-      @media (min-width: 1400px) {
+      .grid-leaderboard { grid-area: leaderboard; }
+      .grid-pool { grid-area: pool; }
+      .grid-process { grid-area: process; }
+      @media (min-width: 1440px) {
         .data-grid {
-          grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+          grid-template-areas:
+            'leaderboard rail'
+            'process rail';
+          grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
         }
+        .grid-pool { grid-area: rail; }
       }
 
       /* ── Leaderboard layout: table + compact Arena Impact side card ── */
@@ -271,8 +334,7 @@ try {
 
       /* ── Leaderboard table ── */
       .arena-table-wrap {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+        overflow-x: clip;
         border: 1px solid var(--border);
         border-radius: 8px;
         background: var(--surface-2);
@@ -284,6 +346,9 @@ try {
       }
       .arena-table thead {
         background: var(--surface-1);
+        position: sticky;
+        top: var(--arena-sticky-top, 0);
+        z-index: 5;
       }
       .arena-table th {
         text-align: left;
@@ -826,6 +891,13 @@ try {
         }
       }
     
+      .xl-col { display: none; }
+      @media (min-width: 1800px) {
+        .xl-col { display: table-cell; }
+      }
+      .history-toggle{background:var(--surface-2);color:var(--accent-light);border:1px solid var(--border);border-radius:999px;padding:.3em .9em;font-size:.72em;cursor:pointer;margin:0 0 .6em}
+      .history-toggle:hover{border-color:var(--accent)}
+      .history-window-note{font-size:.62em;font-weight:400;color:var(--text-muted);letter-spacing:0}
   .retired-tag{margin-left:.45rem;font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim,#8b8b94);border:1px solid var(--border,rgba(255,255,255,.14));border-radius:999px;padding:.05rem .45rem}
 </style>
   </head>
@@ -837,21 +909,23 @@ try {
       <section class="arena-hero">
         <div>
           <h1><span>Arena</span> — Model Battleground</h1>
-          <p class="subtitle">Comparing LLMs head-to-head on Hermes Agent content generation, design, and engineering tasks. Track scores, reliability, and match outcomes.</p>
-        </div>
-        <div class="stats-bar">
-          <span class="stat-item"><strong>{totalMatches}</strong> matches</span>
-          <span class="stat-item"><strong>{totalModels}</strong> models</span>
-          <span class="stat-item"><strong>{totalProviders}</strong> providers</span>
-          <span class="stat-item"><strong>{rankedModels}</strong> ranked</span>
+          <p class="subtitle">Comparing LLMs head-to-head on Hermes Agent content generation, design, and engineering tasks. Track scores, reliability, and match outcomes across {totalProviders} providers.</p>
         </div>
       </section>
 
-      <!-- ── Data grid: Leaderboard (with Impact side card) | Model Pool ── -->
+      <!-- ── Stat tiles (whole rows: 2-col → 4-col) ── -->
+      <div class="stat-tiles">
+        <div class="stat-tile"><span class="tile-num">{totalMatches}</span><span class="tile-label">Total matches</span></div>
+        <div class="stat-tile"><span class="tile-num">{rankedModels}</span><span class="tile-label">Ranked models</span></div>
+        <div class="stat-tile"><span class="tile-num">{totalModels}</span><span class="tile-label">Pool models</span></div>
+        <div class="stat-tile"><span class="tile-num">{retiredCount}</span><span class="tile-label">Retired</span></div>
+      </div>
+
+      <!-- ── Data grid: Leaderboard (+Process below) | Model Pool rail ── -->
       <div class="data-grid">
 
         <!-- ── Leaderboard + Arena Impact side card ── -->
-        <section class="section">
+        <section class="section grid-leaderboard">
           <h2 class="section-title">Leaderboard</h2>
           <div class="lb-layout">
             {leaderboard.length > 0 ? (
@@ -865,6 +939,8 @@ try {
                       <th>Matches</th>
                       <th>W/L</th>
                       <th>Best</th>
+                      <th class="xl-col">Provider</th>
+                      <th class="xl-col">Uptime</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -886,6 +962,8 @@ try {
                         <td class="matches-cell">{entry.matches ?? 0}</td>
                         <td class="wl-cell"><span class="wins">{entry.wins ?? 0}</span>/<span class="losses">{entry.losses ?? 0}</span></td>
                         <td class="best-cell">{(entry.bestScore ?? 0).toFixed(1)}</td>
+                        <td class="xl-col">{entry.provider ?? '—'}</td>
+                        <td class="xl-col">{(() => { const b = getAvailabilityBadge(entry.model); return <span class={`avail-badge ${b.cls}`}>{b.label}</span>; })()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -927,7 +1005,7 @@ try {
         </section>
 
         <!-- ── Model Pool (searchable, compact table with ROLE column) ── -->
-        <section class="section">
+        <section class="section grid-pool">
           <h2 class="section-title">Model Pool</h2>
           <input type="text" class="pool-search" id="poolSearch" placeholder="Search models by name, provider, family, or role…" oninput="filterPool()" />
           {model_pool.length > 0 ? (
@@ -970,15 +1048,95 @@ try {
           )}
         </section>
 
+        <!-- ── Process Feedback (grid-area: process, inside the wide grid) ── -->
+        <section class="section grid-process">
+          <h2 class="section-title">Process Feedback</h2>
+          <p class="feedback-subtitle">Automated analysis from arena-process-feedback.py. Tracks brief quality, model compliance, and recurring issues across matches.</p>
+
+          {feedbackData.matches.length > 0 ? (
+            <>
+              <div class="feedback-stats-bar">
+                <div class="feedback-stat">
+                  <span class="feedback-stat-num">{feedbackData.matches.length}</span>
+                  <span class="feedback-stat-label">Analyzed</span>
+                </div>
+                <div class="feedback-stat">
+                  <span class="feedback-stat-num">{feedbackData.clean_match_rate}%</span>
+                  <span class="feedback-stat-label">Clean Rate</span>
+                </div>
+                <div class="feedback-stat">
+                  <span class="feedback-stat-num">{feedbackData.matches.filter(m => !m.clean).length}</span>
+                  <span class="feedback-stat-label">Issues Found</span>
+                </div>
+              </div>
+
+              {feedbackData.recurring_issues.length > 0 && (
+                <div class="recurring-issues">
+                  <strong>Recurring Issues</strong>
+                  <div class="issues-list">
+                    {feedbackData.recurring_issues.map(issue => (
+                      <span class="issue-tag">{issue.issue} <em>x{issue.count}</em></span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div class="feedback-matches">
+                {feedbackData.matches.map(fm => (
+                  <div class="feedback-match">
+                    <div class="feedback-match-header">
+                      <span class="feedback-match-topic">{fm.topic}</span>
+                      <span class={`feedback-match-status ${fm.clean ? 'status-clean' : 'status-issues'}`}>
+                        {fm.clean ? 'Clean' : 'Issues'}
+                      </span>
+                    </div>
+                    {fm.signals?.length > 0 && (
+                      <div class="feedback-signals">
+                        {fm.signals.map(s => <span class="signal-tag">{s}</span>)}
+                      </div>
+                    )}
+                    {fm.suggestions?.length > 0 && (
+                      <ul class="feedback-suggestions">
+                        {fm.suggestions.map(s => (
+                          <li class={`suggestion ${s.severity}`}>
+                            <span class="suggestion-sev">[{s.severity.toUpperCase()}]</span>
+                            <span class="suggestion-text">{s.text}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {fm.auto_brief_line && fm.auto_brief_line !== '' && (
+                      <div class="auto-brief">
+                        <strong>Next brief:</strong> {fm.auto_brief_line}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div class="empty-state">
+              <p>No process feedback available yet.</p>
+            </div>
+          )}
+        </section>
+
       </div>
 
-      <!-- ── Match History (tight cards, inline score chips) ── -->
-      <section class="section">
-        <h2 class="section-title">Match History</h2>
+      <!-- ── Match History (30-day window + archive expander) ── -->
+      <section class="section" id="match-history">
+        <h2 class="section-title">Match History <span class="history-window-note">— last 30 days ({recentMatches.length}); {archiveMatches.length} older in archive</span></h2>
+        {archiveMatches.length > 0 && (
+          <button type="button" id="historyToggle" class="history-toggle" aria-expanded="false" data-state="window">
+            Show all {localMatches.length} matches
+          </button>
+        )}
         {localMatches.length > 0 ? (
           <div class="match-list">
-            {[...localMatches].sort((a, b) => String(b.date).localeCompare(String(a.date))).map((m, mi) => (
-              <details class="match-item" open={mi === 0}>
+            {sortedMatches.map((m, mi) => {
+              const isRecent = recentMatches.some(rm => (rm.match_id ?? rm.id) === (m.match_id ?? m.id));
+              return (
+              <details class="match-item" open={mi === 0} hidden={!isRecent} data-windowed={!isRecent ? 'true' : null}>
                 <summary>
                   <span class="match-arrow">▶</span>
                   <span class="match-topic">{m.topic}</span>
@@ -1025,7 +1183,8 @@ try {
                   )}
                 </div>
               </details>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div class="empty-state">
@@ -1035,80 +1194,7 @@ try {
         )}
       </section>
 
-      <!-- ── Process Feedback ── -->
-      <section class="section">
-        <h2 class="section-title">Process Feedback</h2>
-        <p class="feedback-subtitle">Automated analysis from arena-process-feedback.py. Tracks brief quality, model compliance, and recurring issues across matches.</p>
-
-        {feedbackData.matches.length > 0 ? (
-          <>
-            <div class="feedback-stats-bar">
-              <div class="feedback-stat">
-                <span class="feedback-stat-num">{feedbackData.matches.length}</span>
-                <span class="feedback-stat-label">Analyzed</span>
-              </div>
-              <div class="feedback-stat">
-                <span class="feedback-stat-num">{feedbackData.clean_match_rate}%</span>
-                <span class="feedback-stat-label">Clean Rate</span>
-              </div>
-              <div class="feedback-stat">
-                <span class="feedback-stat-num">{feedbackData.matches.filter(m => !m.clean).length}</span>
-                <span class="feedback-stat-label">Issues Found</span>
-              </div>
-            </div>
-
-            {feedbackData.recurring_issues.length > 0 && (
-              <div class="recurring-issues">
-                <strong>Recurring Issues</strong>
-                <div class="issues-list">
-                  {feedbackData.recurring_issues.map(issue => (
-                    <span class="issue-tag">{issue.issue} <em>x{issue.count}</em></span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div class="feedback-matches">
-              {feedbackData.matches.map(fm => (
-                <div class="feedback-match">
-                  <div class="feedback-match-header">
-                    <span class="feedback-match-topic">{fm.topic}</span>
-                    <span class={`feedback-match-status ${fm.clean ? 'status-clean' : 'status-issues'}`}>
-                      {fm.clean ? 'Clean' : 'Issues'}
-                    </span>
-                  </div>
-                  {fm.signals?.length > 0 && (
-                    <div class="feedback-signals">
-                      {fm.signals.map(s => <span class="signal-tag">{s}</span>)}
-                    </div>
-                  )}
-                  {fm.suggestions?.length > 0 && (
-                    <ul class="feedback-suggestions">
-                      {fm.suggestions.map(s => (
-                        <li class={`suggestion ${s.severity}`}>
-                          <span class="suggestion-sev">[{s.severity.toUpperCase()}]</span>
-                          <span class="suggestion-text">{s.text}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {fm.auto_brief_line && fm.auto_brief_line !== '' && (
-                    <div class="auto-brief">
-                      <strong>Next brief:</strong> {fm.auto_brief_line}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div class="empty-state">
-            <p>No process feedback available yet.</p>
-          </div>
-        )}
-      </section>
-
-      <!-- ── Last Updated ── -->
+<!-- ── Last Updated ── -->
       <div class="last-updated">
         Arena data last updated: <strong>{lastUpdated}</strong>
       </div>
@@ -1117,6 +1203,35 @@ try {
     <Footer />
 
     <script is:inline>
+      // ── Match-history 30-day window expander (progressive disclosure) ──
+      (function () {
+        var btn = document.getElementById('historyToggle');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+          var showing = btn.getAttribute('data-state') === 'window';
+          document.querySelectorAll('.match-list details[data-windowed="true"]').forEach(function (d) {
+            d.hidden = !showing;
+            if (!showing) d.open = false; // collapse archive entries on re-window
+          });
+          btn.setAttribute('data-state', showing ? 'all' : 'window');
+          btn.setAttribute('aria-expanded', showing ? 'true' : 'false');
+          var total = btn.textContent.match(/\d+/);
+          btn.textContent = showing ? 'Show last 30 days' : ('Show all ' + (total ? total[0] : '') + ' matches');
+        });
+      })();
+
+      // ── Sticky thead offset: measure the real header (never hardcode px) ──
+      (function () {
+        var header = document.querySelector('header');
+        var setStickyOffset = function () {
+          var bottom = header ? header.getBoundingClientRect().bottom : 0;
+          document.documentElement.style.setProperty('--arena-sticky-top', Math.max(0, bottom) + 'px');
+        };
+        setStickyOffset();
+        if (header && 'ResizeObserver' in window) new ResizeObserver(setStickyOffset).observe(header);
+        window.addEventListener('resize', setStickyOffset);
+      })();
+
       function filterPool() {
         const input = document.getElementById('poolSearch');
         if (!input) return;
