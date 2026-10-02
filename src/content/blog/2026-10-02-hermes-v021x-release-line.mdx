@@ -1,0 +1,102 @@
+---
+title: "Hermes Agent v0.21.x: state.db reliability, remote gateway fixes, and the Desktop plugin SDK wave"
+description: "A practical guide to Hermes Agent v0.21.1–v0.21.5, covering the state.db fixes, remote sign-in changes, Desktop plugin SDK updates, and what to do next."
+pubDate: 2026-10-02
+tags: [Hermes Agent, release notes, state.db, Desktop, gateway]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-v021x-release-line-1790973751.webp"
+lastVerified: 2026-10-02
+---
+
+## Short answer
+
+Hermes Agent v0.21.1–v0.21.5 brought a large codebase rollup, a focused `state.db` reliability campaign, a fix for remote sign-in failures during refresh bursts, and a wave of Desktop plugin SDK capabilities. The line also added structured `stream-json` CLI output and strengthened coordination between Desktop and a host’s running gateway backend.
+
+## What changed in the v0.21.x line
+
+This release line spans September 7–24, 2026. It starts with a broad rollup and then addresses operational reliability: first local state-database problems, then remote authentication, then coordination between Desktop and gateway processes. v0.21.5 (September 24, 2026) is the latest release.
+
+If you are new to Hermes Agent, start with [getting started](/blog/getting-started/) before applying these notes. For the release records, use the project’s [v0.21.2 release page](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.11), [v0.21.3 release page](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.14), [v0.21.4 release page](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.21), and [v0.21.5 release page](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.24).
+
+### v0.21.1 — September 7: broad rollup
+
+v0.21.1, published as v2026.9.7, rolled up changes since v0.21.0. Its scale was substantial: 5,139 non-merge commits across 4,364 files, with 632 merged pull requests. The release included codebase modularization and performance work in file operations and startup, alongside provider and model updates.
+
+For day-to-day use, the rollup also included Desktop session controls, browser annotations, MCP authorization improvements, cron scheduling and delivery fixes, and delegation reliability improvements. This is a wide-ranging release rather than a single-issue patch; users should consult the [v0.21.1 release tag](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.7) if they need the upstream record for that rollup.
+
+### v0.21.2 — September 11: state.db reliability campaign
+
+v0.21.2 was explicitly a state.db patch release. The campaign comprised six pull requests and closed 44 issues. The important lesson is that the failures came from multiple kinds of concurrent access and lifecycle handling—not one isolated database operation. The [v0.21.2 release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.11) identify the fixes; the specific root causes and changes are summarized below.
+
+### v0.21.3 — September 14: remote gateway sign-in
+
+v0.21.3 fixed remote dashboard sessions that could expire during refresh bursts. When several refresh requests carried the same rotating refresh token, concurrent processing could cause a token that had already been rotated to be replayed into the Portal’s reuse-detection path. The fix coalesces those requests and runs refresh work off the event loop. See the [v0.21.3 release record](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.14).
+
+### v0.21.4 — September 21: gateway coordination and structured CLI output
+
+v0.21.4 was a large patch rollup, with about 1,800 merged pull requests (upstream labels this a patch rollup) and 2,116 closed issues. Among its changes were a host-wide gateway singleton lock with a rendezvous record, and a Desktop change that attaches to a running host backend rather than spawning a second one.
+
+It also consolidated connector work around one backend-owned operation, with a setup card available in Desktop, TUI, and CLI. For CLI consumers, `--format stream-json` adds structured JSONL output. If you process Hermes output in scripts or another program, this is the release-line change to investigate; the [v0.21.4 release tag](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.21) is the upstream reference.
+
+### v0.21.5 — September 24: Desktop plugin SDK wave
+
+v0.21.5 is the current release in this release line. It adds a broad set of Desktop plugin SDK capabilities: a composer draft API; session-list and row-decoration slots; sidebar navigation preferences; model-pill label providers; typed bridges for settings, skills, toolsets, and profiles; a sandboxed embed primitive; an appearance-settings slot; and a public event bridge for plugin backends.
+
+
+
+## Why the state.db campaign mattered
+
+The state.db work addressed interactions among profile gateways, the dashboard, cron lifecycle checks, and repair tooling. Those components could touch the live database in ways that undermined reliability:
+
+- **Profile gateways wrote hosted-room state into the root database.** They wrote hosted-room state into the root `state.db` every five seconds. The change moved hosted-room state to `shared-state.db`.
+- **The dashboard opened a writable database handle at startup.** The fix makes it open read-only first, avoiding an unnecessary writable handle during startup.
+- **The cron lifecycle guard used a raw `open()` against a live database.** On POSIX systems, that could cancel locks held by another process. The guard now uses the tracked connection registry instead.
+- **`doctor --fix` could checkpoint while another process held the live database.** The fix defers checkpointing while a live holder exists, so repair activity no longer interferes with active connections.
+
+Taken together, these changes address both where state is written and how processes discover and interact with database connections. If you operate hosted rooms, a dashboard, cron jobs, or maintenance commands together, v0.21.2 is especially relevant. The release does not mean every possible database contention scenario has been independently tested by this article; it means the listed causes and remedies are part of the verified release record.
+
+For more on configuring persistence options, see the [memory providers guide](/blog/hermes-agent-memory-providers-guide/). Memory providers are a separate subject from the state.db fixes described here, so do not treat this patch campaign as a change to the provider list or a migration instruction.
+
+
+## Desktop and the gateway now coordinate more deliberately
+
+The v0.21.4 host-wide singleton lock and rendezvous record support a clearer relationship between Desktop and a gateway backend on the same host. Instead of Desktop spawning another backend when one is already running, it can attach to the running host backend. The release also describes one backend-owned connector operation, surfaced through a setup card in Desktop, TUI, and CLI.
+
+This is relevant if you move between those interfaces or run a gateway alongside Desktop: the stated change is about avoiding a duplicate backend and making connector setup a backend-owned operation. Detailed lock semantics and every possible multi-process configuration are not detailed in the release notes. so treat the release tag as the boundary of what is confirmed.
+
+Hermes supports gateways for **21+ messaging platforms**: 19 native integrations plus IRC and Microsoft Teams via plugins, 21+ platforms in total, per the official documentation. The listed platforms include Telegram, Discord, Slack, SMS, Matrix, Signal, BlueBubbles (iMessage), Mattermost, Google Chat, DingTalk, Feishu/Lark, WeCom, Weixin, QQ Bot, LINE, Yuanbao, Email, and Home Assistant; MS Teams and IRC are the plugin-based additions. For guidance on bot workflows, group chats, and routines, see the [Bot Mode guide](/blog/hermes-agent-bot-mode-specialist-bots-routines-group-chats/).
+
+## CLI output and the plugin SDK
+
+### Structured output with `--format stream-json`
+
+v0.21.4 adds `--format stream-json` for structured JSONL CLI output. That gives tools that consume CLI results a structured output mode to use instead of treating output as plain text. The release notes do not specify a complete schema, event list, or compatibility guarantees, so avoid building assumptions about those details from the option name alone. Check the [v0.21.4 release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.21) and the current machine-readable documentation before depending on particular fields.
+
+### Extension points in v0.21.5
+
+The v0.21.5 SDK wave reaches several parts of Desktop: composing, session lists, row decoration, sidebar navigation, model labels, appearance settings, and bridges to settings, skills, toolsets, profiles, and plugin backends. It also includes a sandboxed embed primitive. That breadth matters to plugin developers because the listed capabilities span both interface placement and access to typed application concepts.
+
+However, the release notes do not provide enough detail here to prescribe API signatures, permission rules, compatibility policy, or a working plugin example. Those specifics are **not detailed in the release notes.**. The upstream project deferred its full curated notes to v0.22.0, so use the [v0.21.5 tag](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.24) as a feature inventory, not as a substitute for current SDK documentation.
+
+## Documentation, tools, and platform scope
+
+The project publishes machine-readable documentation at [`/llms.txt`](https://hermes-agent.nousresearch.com/llms.txt), a curated index of about 17 KB, and [`/llms-full.txt`](https://hermes-agent.nousresearch.com/llms-full.txt), a full corpus of about 1.8 MB. Both are regenerated with each deploy. They are useful entry points for finding current official material without guessing page paths.
+
+The documentation update window added pages on Curator (background skill maintenance), Memory Providers, Extending the Dashboard, Kanban Multi-Gateway, Language Packs, Plugin Catalog, Nous Tool Gateway, Web Dashboard, and importing from other agents with `hermes import-agent`. The full documentation endpoint is the source to consult for these pages; the release notes do not provide direct page URLs.
+
+The official docs claim 60+ built-in tools. A default-profile session had The official documentation counts the built-in tools at 60+, spread across toolsets. Those are different scopes, so the session count should not be read as contradicting the broader official claim. The listed terminal backends are local, Docker, SSH, Daytona, Modal, Singularity, and Vercel Sandbox. The documented memory providers are Honcho, OpenViking, Mem0, Hindsight, Holographic, RetainDB, ByteRover, and Supermemory.
+
+Current setup details are best confirmed against the machine-readable docs linked above.
+
+## What users should do
+
+1. **Choose the release based on the problem you encountered.** For state.db reliability, use v0.21.2 or later; for remote refresh-burst sign-in failures, use v0.21.3 or later; for host-backend coordination and `stream-json`, review v0.21.4; for the Desktop plugin SDK additions, review v0.21.5.
+2. **Use the official install entry point when installing or refreshing an installation:** [`curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash`](https://hermes-agent.nousresearch.com/install.sh). Confirm the release and installation procedure against the current official instructions rather than assuming any local upgrade behavior not specified here.
+3. **For Portal setup, run `hermes setup --portal`.** The documented flow uses one OAuth sign-in for the model and four Tool Gateway tools. The official setup entry point is the [install script](https://hermes-agent.nousresearch.com/install.sh); consult the current machine-readable docs at [`/llms-full.txt`](https://hermes-agent.nousresearch.com/llms-full.txt) if you need broader configuration context.
+4. **Plugin authors should verify API details before shipping.** The v0.21.5 release identifies the new SDK areas, but signatures and compatibility details are not detailed in the release notes.
+5. **If a release-specific failure persists, report the exact version and reproduction conditions.** In particular, distinguish local state.db behavior from remote refresh-session behavior; they were addressed in separate releases.
+
+## How This Was Verified
+
+This article was checked against the release-tag records for [v0.21.1](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.7), [v0.21.2](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.11), [v0.21.3](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.14), [v0.21.4](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.21), and [v0.21.5](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.24). Platform and documentation facts were checked against the official [`/llms.txt`](https://hermes-agent.nousresearch.com/llms.txt) and [`/llms-full.txt`](https://hermes-agent.nousresearch.com/llms-full.txt) endpoints, fetched on October 2, 2026. Official documentation pages consulted: the [Hermes Agent docs index](https://hermes-agent.nousresearch.com/docs/), the [Bot Mode guide](https://hermes-agent.nousresearch.com/docs/user-guide/bot-mode), the [tools overview](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools), the [memory providers reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory-providers), and the [plugins system page](https://hermes-agent.nousresearch.com/docs/user-guide/features/plugins). This site's [changelog](/changelog/) lists every release tag with links. Gateway and release details were not independently tested beyond what the release notes and documentation state.
+
+Not independently verified for this article: runtime behavior under every database or gateway workload, whether each fix resolves every related user report, and the undocumented signatures, permissions, and compatibility guarantees of the Desktop plugin SDK. The v0.21.5 full curated notes were deferred upstream to v0.22.0; details beyond the feature list above should be checked against later official documentation.

@@ -1,4 +1,4 @@
-// AUTO-GENERATED from NousResearch/hermes-agent GitHub releases (32 releases, 2026-03-12..2026-09-07).
+// AUTO-GENERATED from NousResearch/hermes-agent GitHub releases (36 releases, 2026-03-12..2026-09-24).
 // Regenerate via /tmp/ht-changelog-gen.py — do not hand-edit entries.
 export interface ChangelogLink {
   url: string;
@@ -19,6 +19,81 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+    {
+    "tag": "v2026.9.24",
+    "version": "v0.21.5",
+    "codename": "",
+    "date": "2026-09-24",
+    "summary": "Measured at commit `f97608f178d1ffeca59860195ab7da295f7c8e5f`, the window since v0.21.4 contains **1,610 non-merge commits** across **4,828 changed files** (+164,132 / −149,440), **460 merged PRs** and **475 closed issues**.",
+    "highlights": [],
+    "prs": "460",
+    "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.24",
+    "compare": "https://github.com/NousResearch/hermes-agent/compare/",
+    "links": [
+      {
+        "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.24",
+        "label": "Release notes (v2026.9.24)"
+      }
+    ]
+  },
+    {
+    "tag": "v2026.9.21",
+    "version": "v0.21.4",
+    "codename": "",
+    "date": "2026-09-21",
+    "summary": "Measured at commit `4b8a8134009a8727a289bcabeb0019fedd353128`, the window since v0.21.3 contains **5,071 non-merge commits** across **5,169 changed files** (+312,961 / −62,855), **1,812 merged PRs** and **2,116 closed issues**.",
+    "highlights": [],
+    "prs": "1812",
+    "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.21",
+    "compare": "https://github.com/NousResearch/hermes-agent/compare/",
+    "links": [
+      {
+        "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.21",
+        "label": "Release notes (v2026.9.21)"
+      }
+    ]
+  },
+    {
+    "tag": "v2026.9.14",
+    "version": "v0.21.3",
+    "codename": "",
+    "date": "2026-09-14",
+    "summary": "Measured at commit `9b419a2d3c2657c192008e732149d61170b32c01`, the window since v0.21.2 contains **1,036 non-merge commits** across **2,642 changed files** (+131,690 / −37,096) and **338 merged PRs**.",
+    "highlights": [],
+    "prs": "338",
+    "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.14",
+    "compare": "https://github.com/NousResearch/hermes-agent/compare/",
+    "links": [
+      {
+        "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.14",
+        "label": "Release notes (v2026.9.14)"
+      }
+    ]
+  },
+    {
+    "tag": "v2026.9.11",
+    "version": "v0.21.2",
+    "codename": "",
+    "date": "2026-09-11",
+    "summary": "Measured at commit `04dd80a977f40b05e5b2054111747af07a61886a`, the window since v0.21.1 contains **947 non-merge commits** across **1,869 changed files** (+182,504 / −15,564) and **312 merged PRs**. **140 contributors** appear in commits, co-author trailers, or salvage credits.",
+    "highlights": [
+      "**No more second writers.** Profile gateways wrote hosted-room state into the *root* `state.db` every 5 seconds; the dashboard opened a writable handle on startup; cron's lifecycle guard did a raw `open()` on a live database (which cancels the gateway's POSIX locks — the classic ",
+      "**Healthy WAL databases stop wedging.** OpenZFS `(deleted)` dentries and a `close()` racing an `append_message` both produced a sticky `DeletedWalGenerationError` on a perfectly good store; the read pool was handed out under an unconfirmed journal mode; a transient `disk I/O erro",
+      "**FTS damage no longer kills your turn.** An error scoped to the full-text-search index was classified as whole-file corruption and fail-closed the conversation. It's now `fts_index`: search degrades, the index rebuilds later, the transcript store is untouched. Same PR: doctor na",
+      "**One corrupt row no longer kills `sessions list`, export, or insights.** A TEXT timestamp or a `1e30` epoch used to crash the whole listing; malformed marker JSON crashed `json_extract`; more than 999 ids crashed bulk delete/prune. One `coerce_epoch()` helper on every reader (ba",
+      "**Sessions never bind to or read another profile's database.** The Desktop launch backend could pin itself to the wrong profile's `state.db` under a HERMES_HOME override race; `session_search` by bare ID silently scanned every profile and returned someone else's transcript; recov",
+      "**Opening state.db no longer takes the write lock when nothing needs writing.** A one-shot `hermes` process opening the store behind a busy gateway stalled 4–20 s and then failed with \"database is locked\". Now 0.01 s. (#108067 — salvage #106751 @kshitijk4poor, #101881 @jonpol01)"
+    ],
+    "prs": "312",
+    "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.11",
+    "compare": "https://github.com/NousResearch/hermes-agent/compare/",
+    "links": [
+      {
+        "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.11",
+        "label": "Release notes (v2026.9.11)"
+      }
+    ]
+  },
   {
     "tag": "v2026.9.7",
     "version": "v0.21.1",
