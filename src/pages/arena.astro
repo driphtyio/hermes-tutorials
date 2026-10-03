@@ -1,6 +1,4 @@
 ---
-// Hermes Tutorials — Arena page (v4, hand-built IA overhaul)
-// Priority: widescreen-first dashboard. Record above reference; dense readable tables; all matches visible.
 import BaseHead from '../components/BaseHead.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
@@ -10,12 +8,10 @@ import arenaData from '../data/hermestuts-arena.json';
 
 const { matches, leaderboard, model_pool, stability, retired_models } = arenaData;
 
-/* ── provider lookup from the pool ── */
 const poolByModel = new Map();
 for (const m of model_pool) poolByModel.set(String(m.model).toLowerCase(), m);
 const providerOf = (name) => (poolByModel.get(String(name || '').toLowerCase()) || {}).provider || '';
 
-/* ── uniform per-match rows (handles BOTH match shapes) ── */
 function matchRows(m) {
   let rows = [];
   if (Array.isArray(m.results) && m.results.length) {
@@ -28,8 +24,10 @@ function matchRows(m) {
   } else {
     const sc = m.scores && typeof m.scores === 'object' ? m.scores : {};
     rows = Object.entries(sc).map(([model, score]) => ({
-      model, provider: providerOf(model),
-      score: typeof score === 'number' ? score : null, status: null,
+      model,
+      provider: providerOf(model),
+      score: typeof score === 'number' ? score : null,
+      status: null,
     }));
     for (const dnf of (Array.isArray(m.dnf) ? m.dnf : [])) {
       rows.push({ model: dnf, provider: providerOf(dnf), score: null, status: 'timeout' });
@@ -50,8 +48,20 @@ const topScoreOf = (m) => {
   return r ? r.score : null;
 };
 const scoreOf = (m) => (typeof m.winner_score === 'number' ? m.winner_score : topScoreOf(m));
+const winnerOf = (m) => {
+  if (m.winner) return m.winner;
+  if (m.scores && typeof m.scores === 'object') {
+    const entries = Object.entries(m.scores).filter(([, v]) => typeof v === 'number');
+    if (entries.length) {
+      entries.sort((a, b) => b[1] - a[1]);
+      return entries[0][0];
+    }
+  }
+  return '—';
+};
+const judgeOf = (m) => m.judge_model || (m.judge && typeof m.judge === 'object' ? m.judge.model : m.judge) || '—';
+const qaLabel = (m) => m.qa_model || (m.qa && typeof m.qa === 'object' ? m.qa.model : m.qa) || '';
 
-/* ── KPIs ── */
 const totalMatches = localMatches.length;
 const rankedModels = leaderboard.length;
 const totalModels = model_pool.length;
@@ -64,22 +74,12 @@ const gateRate = withGate.length ? Math.round((withGate.filter((m) => m.threshol
 const distinctLanes = new Set();
 for (const m of localMatches) for (const r of rowsOf(m)) distinctLanes.add(String(r.model).toLowerCase());
 
-/* ── leaderboard enrichment ── */
-const lastSeen = new Map();
-for (const m of sortedMatches) {
-  for (const r of rowsOf(m)) {
-    const k = String(r.model).toLowerCase();
-    if (!lastSeen.has(k)) lastSeen.set(k, m.date);
-  }
-}
 const lb = leaderboard.map((e, i) => ({
   ...e,
   rank: e.rank ?? i + 1,
   winRate: e.matches ? Math.round(((e.wins ?? 0) / e.matches) * 100) : 0,
-  last: lastSeen.get(String(e.model).toLowerCase()) || '—',
 }));
 
-/* ── availability badge ── */
 function availBadge(name) {
   const s = stability?.model_stats?.[name];
   if (!s || typeof s.availability !== 'number') return { label: '—', cls: 'a-none' };
@@ -90,7 +90,6 @@ function availBadge(name) {
   return { label: 'Down', cls: 'a-down' };
 }
 
-/* ── process feedback (local matches only) ── */
 let feedback = { matches: [], recurring_issues: [], cleanRate: null };
 try {
   const raw = JSON.parse(fs.readFileSync('/home/techgeek/.hermes/arena/arena-feedback.json', 'utf-8'));
@@ -101,9 +100,8 @@ try {
     recurring_issues: Array.isArray(raw.recurring_issues) ? raw.recurring_issues : [],
     cleanRate: local.length ? Math.round((local.filter((f) => f.clean).length / local.length) * 100) : null,
   };
-} catch (e) { /* optional */ }
+} catch { /* optional */ }
 
-/* ── model pool rows ── */
 const roleOrder = { builder: 0, judge: 1, qa: 2, research: 3, planner: 4 };
 const roleLabel = { builder: 'Builder', judge: 'Judge', qa: 'QA', research: 'Research', planner: 'Planner' };
 const poolRows = [...model_pool]
@@ -111,8 +109,8 @@ const poolRows = [...model_pool]
   .sort((a, b) => (roleOrder[String(a.role).toLowerCase()] ?? 9) - (roleOrder[String(b.role).toLowerCase()] ?? 9)
     || (b.played ?? -1) - (a.played ?? -1) || String(a.model).localeCompare(String(b.model)));
 
-const lastUpdated = arenaData.last_updated || 'N/A';
-const stabilityUpdated = stability?.last_updated || 'N/A';
+const lastUpdated = arenaData.last_updated || '—';
+const stabilityUpdated = stability?.last_updated || '—';
 
 const jsonLd = {
   '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Arena',
@@ -129,131 +127,130 @@ const jsonLd = {
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
     <style>
       :root {
-        --accent: #6c5ce7;
-        --accent-light: #a29bfe;
-        --bg: #0a0a0b;
-        --surface-1: #121214;
-        --surface-2: #1a1a1e;
-        --surface-3: #202026;
-        --border: #1e1e22;
-        --border-light: #2a2a2e;
-        --text: #e8e8ed;
-        --text-dim: #a1a1aa;
-        --text-muted: #6b6b76;
-        --green: #22c55e;
-        --red: #ef4444;
-        --yellow: #eab308;
-        --orange: #f97316;
         --nav-h: 0px;
         --subnav-h: 0px;
+        --row-h: 30px;
+        --panel-radius: 10px;
+        --arena-ok: #22c55e;
+        --arena-warn: #eab308;
+        --arena-danger: #ef4444;
+        --arena-info: #f97316;
       }
-      main.arena-container { width: 100%; max-width: min(1800px, 95vw); margin: 0 auto; padding: 0 0 2.5rem; color: var(--text); }
 
-      /* hero + KPI strip */
-      .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 1.2rem; flex-wrap: wrap; padding: 0.9rem 0 0.6rem; border-bottom: 1px solid var(--border); }
-      .hero h1 { font-family: 'Atkinson Hyperlegible', sans-serif; font-size: clamp(1.4rem, 2.1vw, 1.9rem); font-weight: 700; letter-spacing: -0.03em; margin: 0; color: #fff; }
-      .hero h1 span { color: var(--accent-light); }
-      .hero .tagline { margin: 0.15rem 0 0; font-size: 0.82em; color: var(--text-dim); max-width: 68ch; }
-      .kpis { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-      .kpi { display: inline-flex; align-items: baseline; gap: 0.32em; font-size: 0.72em; color: var(--text-dim); border: 1px solid var(--border); background: var(--surface-1); border-radius: 999px; padding: 0.28em 0.7em; white-space: nowrap; }
-      .kpi strong { color: #fff; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 1.22em; }
-
-      /* sticky sub-nav */
-      .subnav { position: sticky; top: var(--nav-h); z-index: 40; display: flex; gap: 0.4rem; align-items: center; overflow-x: auto; padding: 0.5rem 0; background: var(--bg); border-bottom: 1px solid var(--border); scrollbar-width: none; }
-      .subnav::-webkit-scrollbar { display: none; }
-      .subnav a { flex: none; font-size: 0.76em; font-weight: 600; color: var(--text-dim); border: 1px solid var(--border); background: var(--surface-1); border-radius: 999px; padding: 0.34em 0.85em; text-decoration: none; }
-      .subnav a:hover, .subnav a.active { color: #fff; border-color: var(--accent); }
-      .subnav .sn-count { color: var(--text-muted); font-weight: 400; margin-left: 0.35em; }
-
-      section.block { margin-top: 1.1rem; }
-      .sec-head { display: flex; align-items: center; gap: 0.7rem; margin: 0 0 0.45rem; flex-wrap: wrap; }
-      .sec-head h2 { font-family: 'Atkinson Hyperlegible', sans-serif; font-size: 1rem; font-weight: 700; color: #fff; letter-spacing: -0.02em; margin: 0; }
-      .sec-head .note { font-size: 0.72em; color: var(--text-muted); }
-      .sec-head .spacer { margin-left: auto; }
-
-      /* above-the-fold dashboard */
-      .fold { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; align-items: start; }
-      @media (min-width: 1100px) { .fold { grid-template-columns: minmax(0, 1.75fr) minmax(320px, 1fr); } }
-
-      /* below-the-fold duo: record (archive) | sticky reference rail (pool) */
-      .duo { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; align-items: start; margin-top: 1.1rem; }
-      .duo-rail { min-width: 0; display: grid; gap: 0; }
-      .duo .block { margin-top: 0; }
-      @media (min-width: 1440px) {
-        .duo { grid-template-columns: minmax(0, 1.9fr) minmax(340px, 1fr); }
-        .duo-rail { position: sticky; top: calc(var(--nav-h) + var(--subnav-h) + 0.5rem); max-height: calc(100vh - var(--nav-h) - var(--subnav-h) - 1rem); overflow: auto; }
-        .duo-main .topic { max-width: 44ch; }
-        .duo-main .tw { overflow-x: auto; }
+      main.arena-container {
+        width: 100%;
+        max-width: min(1800px, 95vw);
+        margin: 0 auto;
+        padding: 0 0 2.5rem;
+        color: var(--text-primary);
       }
-      .panel { border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); overflow: hidden; min-width: 0; }
-      .panel .p-head { display: flex; align-items: baseline; gap: 0.6rem; padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--border); background: var(--surface-1); }
-      .panel .p-head h2 { margin: 0; font-size: 0.88rem; font-weight: 700; color: #fff; letter-spacing: -0.01em; }
-      .panel .p-head .note { font-size: 0.68em; color: var(--text-muted); }
-      .panel .p-head a { margin-left: auto; font-size: 0.68em; color: var(--accent-light); text-decoration: none; }
-      .panel .p-head a:hover { text-decoration: underline; }
 
-      /* dense tables */
-      .tw { overflow: visible; }
-      table.dt { width: 100%; border-collapse: collapse; font-size: 0.78em; }
-      table.dt thead th { position: sticky; top: calc(var(--nav-h) + var(--subnav-h)); z-index: 5; background: var(--surface-1); text-align: left; font-size: 0.7em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding: 0.42em 0.6em; border-bottom: 1px solid var(--border-light); white-space: nowrap; }
-      table.dt tbody td { padding: 0.24em 0.6em; border-bottom: 1px solid var(--border); height: 28px; vertical-align: middle; white-space: nowrap; color: var(--text); }
-      table.dt.tight tbody td { height: 25px; padding: 0.14em 0.6em; }
-      table.dt tbody tr:last-child td { border-bottom: none; }
-      table.dt tbody tr:nth-child(even) td { background: rgba(255, 255, 255, 0.014); }
-      table.dt tbody tr:hover td { background: var(--surface-3); }
-      .num { text-align: right; font-variant-numeric: tabular-nums; }
-      th.num { text-align: right; }
-      .rk { color: var(--text-muted); font-variant-numeric: tabular-nums; }
-      .mdl { color: #fff; font-weight: 600; }
-      .prov { color: var(--text-muted); font-size: 0.88em; margin-left: 0.45em; font-weight: 400; }
-      .avg { color: var(--accent-light); font-weight: 700; font-variant-numeric: tabular-nums; }
-      .best { color: var(--text-dim); font-variant-numeric: tabular-nums; }
-      .w { color: var(--green); } .l { color: var(--red); }
-      .bar { display: inline-block; width: 54px; height: 4px; border-radius: 2px; background: var(--surface-3); overflow: hidden; vertical-align: middle; margin-left: 0.45em; }
-      .bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-light)); }
-      .tag { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--border); border-radius: 999px; padding: 0.05rem 0.42rem; color: var(--text-dim); }
-      .tag.builder { color: #8ec9c0; border-color: rgba(45,212,191,.28); }
-      .tag.judge { color: #b7a8e8; border-color: rgba(167,139,250,.28); }
-      .tag.retired { color: var(--text-muted); text-decoration: line-through; }
-      .a-ok { color: var(--green); } .a-warn { color: var(--yellow); } .a-bad { color: var(--orange); } .a-down { color: var(--red); } .a-none { color: var(--text-muted); }
-      .win { color: var(--green); font-weight: 600; }
-      .date { color: var(--text-muted); font-variant-numeric: tabular-nums; }
-      .topic { color: var(--text); display: block; max-width: 62ch; overflow: hidden; text-overflow: ellipsis; }
-      .wide-only { display: none; }
-      @media (min-width: 1800px) { .wide-only { display: table-cell; } }
+      .hero { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; flex-wrap:wrap; padding:1rem 0 0.6rem; border-bottom:1px solid var(--border); }
+      .hero h1 { font-family:var(--font-sans); font-size:clamp(1.4rem, 2.1vw, 1.9rem); font-weight:700; letter-spacing:-0.03em; margin:0; color:var(--text-primary); }
+      .hero h1 span { color:var(--accent-light); }
+      .hero .tagline { margin:0.15rem 0 0; font-size:0.82em; color:var(--text-secondary); max-width:68ch; }
+      .kpis { display:flex; flex-wrap:wrap; gap:0.35rem; }
+      .kpi { display:inline-flex; align-items:baseline; gap:0.32em; font-size:0.72em; color:var(--text-secondary); border:1px solid var(--border); background:var(--bg-secondary); border-radius:999px; padding:0.28em 0.7em; white-space:nowrap; }
+      .kpi strong { color:var(--text-primary); font-weight:700; font-variant-numeric:tabular-nums; font-size:1.22em; }
 
-      /* archive expander */
-      details.mx > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; }
-      details.mx > summary::-webkit-details-marker { display: none; }
-      details.mx > summary::before { content: '\25B8'; color: var(--text-muted); font-size: 0.9em; flex: none; }
-      details.mx[open] > summary::before { content: '\25BE'; color: var(--accent-light); }
-      details.mx[open] > summary .topic { color: #fff; }
-      details.mx .mx-body { padding: 0.5rem 0.6rem 0.6rem 1.5rem; background: var(--surface-1); }
-      details.mx .mx-body table { width: 100%; border-collapse: collapse; font-size: 0.72em; }
-      details.mx .mx-body td { padding: 0.16em 0.5em; border-bottom: 1px solid var(--border); white-space: nowrap; }
-      details.mx .mx-body tr:last-child td { border-bottom: none; }
+      .subnav { position:sticky; top:var(--nav-h); z-index:40; display:flex; gap:0.4rem; align-items:center; overflow-x:auto; padding:0.5rem 0; background:var(--bg); border-bottom:1px solid var(--border); scrollbar-width:none; }
+      .subnav::-webkit-scrollbar { display:none; }
+      .subnav a { flex:none; font-size:0.76em; font-weight:600; color:var(--text-secondary); border:1px solid var(--border); background:var(--bg-secondary); border-radius:999px; padding:0.34em 0.85em; text-decoration:none; }
+      .subnav a:hover, .subnav a.active { color:var(--text-primary); border-color:var(--accent); background:var(--accent-glow); }
+      .subnav .sn-count { color:var(--text-muted); font-weight:400; margin-left:0.35em; }
 
-      /* collapsed strips */
-      details.strip { border: 1px solid var(--border); border-radius: 10px; background: var(--surface-1); margin-top: 0.7rem; }
-      details.strip > summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 0.6rem; padding: 0.55rem 0.8rem; font-size: 0.82em; color: var(--text-dim); }
-      details.strip > summary::-webkit-details-marker { display: none; }
-      details.strip > summary strong { color: #fff; }
-      details.strip > summary .sn { margin-left: auto; font-size: 0.92em; color: var(--text-muted); }
-      details.strip .strip-body { padding: 0.2rem 0.8rem 0.8rem; font-size: 0.76em; }
-      .issue { display: inline-block; background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 0.12em 0.45em; margin: 0 0.3em 0.3em 0; }
-      .issue em { color: var(--orange); font-style: normal; }
-      .fb-row { border-top: 1px solid var(--border); padding: 0.4rem 0; }
-      .fb-row .fb-top { display: flex; justify-content: space-between; gap: 0.8rem; }
-      .fb-row .ok { color: var(--green); } .fb-row .bad { color: var(--orange); }
-      .fb-row p { margin: 0.25rem 0 0; color: var(--text-dim); }
+      section.block { margin-top:1.1rem; }
+      .sec-head { display:flex; align-items:center; gap:0.7rem; margin:0 0 0.45rem; flex-wrap:wrap; }
+      .sec-head h2 { font-family:var(--font-sans); font-size:1rem; font-weight:700; color:var(--text-primary); letter-spacing:-0.02em; margin:0; }
+      .sec-head .note { font-size:0.72em; color:var(--text-muted); }
+      .sec-head .spacer { margin-left:auto; }
 
-      #poolSearch { width: min(320px, 100%); background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 0.36em 0.65em; font-size: 0.76em; outline: none; }
-      #poolSearch:focus { border-color: var(--accent); }
-      .more-btn { background: var(--surface-2); color: var(--accent-light); border: 1px solid var(--border); border-radius: 999px; padding: 0.34em 0.9em; font-size: 0.76em; cursor: pointer; }
-      .more-btn:hover { border-color: var(--accent); }
-      .footline { margin-top: 1rem; font-size: 0.7em; color: var(--text-muted); display: flex; gap: 1rem; flex-wrap: wrap; }
-      .empty { color: var(--text-muted); font-size: 0.8em; padding: 1rem 0; }
-      @media (max-width: 900px) { .topic { max-width: 30ch; } .tw { overflow-x: auto; } table.dt { min-width: 620px; } }
+      .fold { display:grid; grid-template-columns:minmax(0,1fr); gap:1rem; align-items:start; margin-top:1rem; }
+      @media (min-width:1100px) { .fold { grid-template-columns:minmax(0,1.75fr) minmax(320px,1fr); } }
+
+      .duo { display:grid; grid-template-columns:minmax(0,1fr); gap:1rem; align-items:start; margin-top:1.1rem; }
+      .duo-rail { min-width:0; display:grid; gap:0; }
+      .duo .block { margin-top:0; }
+      @media (min-width:1440px) {
+        .duo { grid-template-columns:minmax(0,1.9fr) minmax(340px,1fr); }
+        .duo-rail { position:sticky; top:calc(var(--nav-h) + var(--subnav-h) + 0.5rem); max-height:calc(100vh - var(--nav-h) - var(--subnav-h) - 1rem); overflow:auto; }
+        .duo-main .topic { max-width:44ch; }
+      }
+
+      .panel { border:1px solid var(--border); border-radius:var(--panel-radius); background:var(--bg-secondary); min-width:0; }
+      .panel .p-head { display:flex; align-items:baseline; gap:0.6rem; padding:0.5rem 0.7rem; border-bottom:1px solid var(--border); background:var(--bg-tertiary); }
+      .panel .p-head h2 { margin:0; font-size:0.88rem; font-weight:700; color:var(--text-primary); letter-spacing:-0.01em; }
+      .panel .p-head .note { font-size:0.72em; color:var(--text-muted); }
+      .panel .p-head a { margin-left:auto; font-size:0.72em; color:var(--accent-light); text-decoration:none; }
+      .panel .p-head a:hover { text-decoration:underline; }
+
+      .tw { overflow:visible; }
+      table.dt { width:100%; border-collapse:collapse; font-size:0.78em; }
+      table.dt thead th { position:sticky; top:calc(var(--nav-h) + var(--subnav-h)); z-index:5; background:var(--bg-tertiary); text-align:left; font-size:0.7em; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); padding:0.42em 0.6em; border-bottom:1px solid var(--border-light); white-space:nowrap; }
+      table.dt.no-sticky thead th { position:static; }
+      table.dt tbody td { padding:0.24em 0.6em; border-bottom:1px solid var(--border); height:var(--row-h); vertical-align:middle; white-space:nowrap; color:var(--text-primary); }
+      table.dt.tight tbody td { height:26px; padding:0.14em 0.6em; }
+      table.dt tbody tr:last-child td { border-bottom:none; }
+      table.dt tbody tr:nth-child(even) td { background:rgba(255,255,255,0.014); }
+      table.dt tbody tr:hover td { background:var(--bg-tertiary); }
+      .num { text-align:right; font-variant-numeric:tabular-nums; }
+      th.num { text-align:right; }
+      .rk { color:var(--text-muted); font-variant-numeric:tabular-nums; }
+      .mdl { color:var(--text-primary); font-weight:600; }
+      .prov { color:var(--text-muted); font-size:0.88em; margin-left:0.45em; font-weight:400; }
+      .prov-inline { display:inline; }
+      .avg { color:var(--accent-light); font-weight:700; font-variant-numeric:tabular-nums; }
+      .best { color:var(--text-secondary); font-variant-numeric:tabular-nums; }
+      .w { color:var(--arena-ok); } .l { color:var(--arena-danger); }
+      .bar { display:inline-block; width:54px; height:4px; border-radius:2px; background:var(--bg-tertiary); overflow:hidden; vertical-align:middle; margin-left:0.45em; }
+      .bar > i { display:block; height:100%; background:linear-gradient(90deg, var(--accent), var(--accent-light)); }
+      .tag { font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; border:1px solid var(--border); border-radius:999px; padding:0.05rem 0.42rem; color:var(--text-secondary); }
+      .tag.builder { color:var(--arena-ok); border-color:rgba(34,197,94,.28); }
+      .tag.judge { color:var(--accent-light); border-color:rgba(162,155,254,.28); }
+      .tag.retired { color:var(--text-muted); text-decoration:line-through; }
+      .a-ok { color:var(--arena-ok); } .a-warn { color:var(--arena-warn); } .a-bad { color:var(--arena-info); } .a-down { color:var(--arena-danger); } .a-none { color:var(--text-muted); }
+      .win { color:var(--arena-ok); font-weight:600; }
+      .date { color:var(--text-muted); font-variant-numeric:tabular-nums; }
+      .topic { color:var(--text-primary); display:block; max-width:62ch; overflow:hidden; text-overflow:ellipsis; }
+      .wide-only { display:none; }
+      @media (min-width:1800px) { .wide-only { display:table-cell; } .prov-inline { display:none; } }
+
+      details.mx > summary { list-style:none; cursor:pointer; display:flex; align-items:center; gap:0.5rem; }
+      details.mx > summary::-webkit-details-marker { display:none; }
+      details.mx > summary::before { content:'\25B8'; color:var(--text-muted); font-size:0.9em; flex:none; }
+      details.mx[open] > summary::before { content:'\25BE'; color:var(--accent-light); }
+      details.mx[open] > summary .topic { color:var(--text-primary); }
+      details.mx .mx-body { padding:0.5rem 0.6rem 0.6rem 1.5rem; background:var(--bg-tertiary); }
+      details.mx .mx-body table { width:100%; border-collapse:collapse; font-size:0.72em; }
+      details.mx .mx-body td { padding:0.16em 0.5em; border-bottom:1px solid var(--border); white-space:nowrap; }
+      details.mx .mx-body tr:last-child td { border-bottom:none; }
+
+      details.strip { border:1px solid var(--border); border-radius:var(--panel-radius); background:var(--bg-secondary); margin-top:0.7rem; }
+      details.strip > summary { cursor:pointer; list-style:none; display:flex; align-items:baseline; gap:0.6rem; padding:0.55rem 0.8rem; font-size:0.82em; color:var(--text-secondary); }
+      details.strip > summary::-webkit-details-marker { display:none; }
+      details.strip > summary strong { color:var(--text-primary); }
+      details.strip > summary .sn { margin-left:auto; font-size:0.92em; color:var(--text-muted); }
+      details.strip .strip-body { padding:0.2rem 0.8rem 0.8rem; font-size:0.76em; }
+
+      .issue { display:inline-block; background:var(--bg-tertiary); border:1px solid var(--border); border-radius:4px; padding:0.12em 0.45em; margin:0 0.3em 0.3em 0; }
+      .issue em { color:var(--arena-info); font-style:normal; }
+      .fb-row { border-top:1px solid var(--border); padding:0.4rem 0; }
+      .fb-top { display:flex; justify-content:space-between; gap:0.8rem; }
+      .ok { color:var(--arena-ok); } .bad { color:var(--arena-info); }
+      .fb-row p { margin:0.25rem 0 0; color:var(--text-secondary); }
+
+      #poolSearch { width:min(320px,100%); background:var(--bg-tertiary); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text-primary); padding:0.36em 0.65em; font-size:0.76em; outline:none; }
+      #poolSearch:focus { border-color:var(--accent); }
+      .more-btn { background:var(--bg-tertiary); color:var(--accent-light); border:1px solid var(--border); border-radius:999px; padding:0.34em 0.9em; font-size:0.76em; cursor:pointer; }
+      .more-btn:hover { border-color:var(--accent); }
+      .footline { margin-top:1rem; font-size:0.7em; color:var(--text-muted); display:flex; gap:1rem; flex-wrap:wrap; }
+      .empty { color:var(--text-muted); font-size:0.8em; padding:1rem 0; }
+
+      @media (max-width:900px) {
+        .topic { max-width:30ch; }
+        .tw { overflow-x:auto; }
+        table.dt { min-width:620px; }
+      }
     </style>
   </head>
   <body>
@@ -284,7 +281,7 @@ const jsonLd = {
         <a href="#process-feedback">Feedback<span class="sn-count">{feedback.matches.length}</span></a>
       </nav>
 
-      <div class="fold" style="margin-top:1rem">
+      <div class="fold">
         <section class="panel" id="leaderboard" aria-label="Leaderboard">
           <div class="p-head">
             <h2>Leaderboard</h2>
@@ -295,8 +292,15 @@ const jsonLd = {
               <table class="dt">
                 <thead>
                   <tr>
-                    <th>#</th><th>Model</th><th class="num">Avg</th><th class="num">Best</th>
-                    <th class="num">M</th><th class="num">W / L</th><th class="num">Win%</th>
+                    <th>#</th>
+                    <th>Model</th>
+                    <th class="wide-only">Provider</th>
+                    <th class="wide-only">Family</th>
+                    <th class="num">Avg</th>
+                    <th class="num">Best</th>
+                    <th class="num">M</th>
+                    <th class="num">W / L</th>
+                    <th class="num">Win%</th>
                     <th class="num wide-only">Uptime</th>
                   </tr>
                 </thead>
@@ -308,9 +312,11 @@ const jsonLd = {
                         <td class="rk">{e.rank <= 3 ? ['🥇', '🥈', '🥉'][e.rank - 1] : `#${e.rank}`}</td>
                         <td>
                           <span class="mdl">{e.model}</span>
-                          <span class="prov">{e.provider}</span>
+                          <span class="prov prov-inline">{e.provider}</span>
                           {e.retired ? <span class="tag retired">retired</span> : null}
                         </td>
+                        <td class="wide-only prov" style="margin-left:0">{e.provider || '—'}</td>
+                        <td class="wide-only" style="color:var(--text-secondary)">{e.family || '—'}</td>
                         <td class="num">
                           <span class="avg">{(e.avgScore ?? 0).toFixed(1)}</span>
                           <span class="bar"><i style={`width:${Math.max(0, Math.min(100, ((e.avgScore ?? 0) / 10) * 100))}%`}></i></span>
@@ -343,156 +349,168 @@ const jsonLd = {
               <tbody>
                 {sortedMatches.slice(0, 8).map((m) => (
                   <tr>
-                    <td class="date">{m.date}</td>
-                    <td><a href={`#match-${keyOf(m)}`} class="topic" style="text-decoration:none;color:inherit">{m.topic}</a></td>
-                    <td class="num"><span class="win">{m.winner}</span> <span class="best">{scoreOf(m) != null ? scoreOf(m).toFixed(1) : '—'}</span></td>
+                    <td class="date">{m.date || '—'}</td>
+                    <td><a href={`#match-${keyOf(m)}`} class="topic" style="text-decoration:none;color:inherit">{m.topic || '—'}</a></td>
+                    <td class="num"><span class="win">{winnerOf(m)}</span> <span class="best">{scoreOf(m) != null ? scoreOf(m).toFixed(1) : '—'}</span></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <div style="padding:0.55rem 0.7rem;border-top:1px solid var(--border);font-size:0.72em;color:var(--text-dim);display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">
-            <span style="color:#fff;font-weight:600">How a match runs</span>
+          <div style="padding:0.55rem 0.7rem;border-top:1px solid var(--border);font-size:0.72em;color:var(--text-secondary);display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">
+            <span style="color:var(--text-primary);font-weight:600">How a match runs</span>
             <span style="color:var(--text-muted)">Brief → Plan → Build (all lanes) → Judge → QA → Publish</span>
           </div>
         </section>
       </div>
 
-      <!-- record + reference: two-column at ≥1440 -->
       <div class="duo">
         <section class="block duo-main" id="match-history">
-        <div class="sec-head">
-          <h2>Match archive</h2>
-          <span class="note">{totalMatches} matches · newest first · click a row for per-model scores</span>
-        </div>
-        {sortedMatches.length > 0 ? (
-          <div class="panel">
-            <div class="tw">
-              <table class="dt">
-                <thead>
-                  <tr>
-                    <th>Date</th><th>Match</th><th>Type</th><th class="num">Lanes</th>
-                    <th>Winner</th><th class="num">Score</th>
-                    <th class="wide-only">Threshold</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedMatches.map((m, mi) => (
-                      <tr data-extra={mi >= 12 ? '1' : null} hidden={mi >= 12}>
-                        <td class="date">{m.date}</td>
-                      <td>
-                        <details class="mx" id={`match-${keyOf(m)}`}>
-                          <summary>
-                            <span class="topic">{m.topic}</span>
-                          </summary>
-                          <div class="mx-body">
-                            <table>
-                              <tbody>
-                                {rowsOf(m).map((r) => (
-                                  <tr>
-                                    <td class="rk">{r.rank === 1 ? '🥇 1st' : r.rank === 2 ? '🥈 2nd' : r.rank === 3 ? '🥉 3rd' : r.rank ? `#${r.rank}` : 'DNF'}</td>
-                                    <td class="mdl">{r.model}</td>
-                                    <td class="num avg">{r.score != null ? `${r.score.toFixed(1)}/10` : '—'}</td>
-                                    <td class="prov" style="margin-left:0">{r.provider}{r.status ? ` · ${r.status}` : ''}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                            {(m.judge || m.judge_model) && <div style="margin-top:0.4rem;color:var(--text-muted)">Judged by {m.judge_model || (m.judge && m.judge.model) || m.judge}{m.qa_model ? ` · QA: ${m.qa_model}` : ''}</div>}
-                            {m.slug && <div style="margin-top:0.25rem"><a href={`/blog/${m.slug}/`} style="color:var(--accent-light)">Read the published post →</a></div>}
-                          </div>
-                        </details>
-                      </td>
-                      <td><span class="tag">{m.type || '—'}</span></td>
-                      <td class="num">{m.lanes_declared ?? rowsOf(m).length}</td>
-                      <td class="win">{m.winner || '—'}</td>
-                      <td class="num avg">{scoreOf(m) != null ? scoreOf(m).toFixed(1) : '—'}</td>
-                      <td class="wide-only" style="color:var(--text-dim)">{m.threshold_met === true ? 'met' : m.threshold_met === false ? 'missed' : '—'}</td>
+          <div class="sec-head">
+            <h2>Match archive</h2>
+            <span class="note">{totalMatches} matches · newest first · click a row for per-model scores</span>
+          </div>
+          {sortedMatches.length > 0 ? (
+            <div class="panel">
+              <div class="tw">
+                <table class="dt">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Match</th>
+                      <th>Type</th>
+                      <th class="num">Lanes</th>
+                      <th>Winner</th>
+                      <th class="num">Score</th>
+                      <th class="wide-only">Winner provider</th>
+                      <th class="wide-only">Judge</th>
+                      <th class="wide-only">QA</th>
+                      <th class="wide-only">Threshold</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {sortedMatches.map((m, mi) => (
+                      <tr data-extra={mi >= 12 ? '1' : null} hidden={mi >= 12}>
+                        <td class="date">{m.date || '—'}</td>
+                        <td>
+                          <details class="mx" id={`match-${keyOf(m)}`}>
+                            <summary>
+                              <span class="topic">{m.topic || '—'}</span>
+                            </summary>
+                            <div class="mx-body">
+                              <table>
+                                <tbody>
+                                  {rowsOf(m).map((r) => (
+                                    <tr>
+                                      <td class="rk">{r.rank === 1 ? '🥇 1st' : r.rank === 2 ? '🥈 2nd' : r.rank === 3 ? '🥉 3rd' : r.rank ? `#${r.rank}` : 'DNF'}</td>
+                                      <td class="mdl">{r.model}</td>
+                                      <td class="num avg">{r.score != null ? `${r.score.toFixed(1)}/10` : '—'}</td>
+                                      <td class="prov" style="margin-left:0">{r.provider || '—'}{r.status ? ` · ${r.status}` : ''}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                              <div style="margin-top:0.4rem;color:var(--text-muted)">Judged by {judgeOf(m)}{qaLabel(m) ? ` · QA: ${qaLabel(m)}` : ''}</div>
+                              {typeof m.drafts === 'number' ? <div style="margin-top:0.25rem;color:var(--text-muted)">Drafts: {m.drafts}</div> : null}
+                              {m.slug ? <div style="margin-top:0.25rem"><a href={`/blog/${m.slug}/`} style="color:var(--accent-light)">Read the published post →</a></div> : null}
+                            </div>
+                          </details>
+                        </td>
+                        <td><span class="tag">{m.type || '—'}</span></td>
+                        <td class="num">{m.lanes_declared ?? rowsOf(m).length}</td>
+                        <td class="win">{winnerOf(m)}</td>
+                        <td class="num avg">{scoreOf(m) != null ? scoreOf(m).toFixed(1) : '—'}</td>
+                        <td class="wide-only" style="color:var(--text-secondary)">{providerOf(winnerOf(m)) || '—'}</td>
+                        <td class="wide-only" style="color:var(--text-secondary)">{judgeOf(m)}</td>
+                        <td class="wide-only" style="color:var(--text-secondary)">{qaLabel(m) || '—'}</td>
+                        <td class="wide-only" style="color:var(--text-secondary)">{m.threshold_met === true ? 'met' : m.threshold_met === false ? 'missed' : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        ) : <div class="empty">No matches recorded yet.</div>}
-        {sortedMatches.length > 12 && (
-          <div style="margin-top:0.5rem">
-            <button type="button" id="archiveToggle" class="more-btn" data-state="less">Show more matches ({sortedMatches.length - 12} more)</button>
-          </div>
-        )}
+          ) : <div class="empty">No matches recorded yet.</div>}
+          {sortedMatches.length > 12 && (
+            <div style="margin-top:0.5rem">
+              <button type="button" id="archiveToggle" class="more-btn" data-state="less" aria-expanded="false">Show more matches ({sortedMatches.length - 12} more)</button>
+            </div>
+          )}
         </section>
 
         <aside class="duo-rail">
           <section class="block" id="model-pool">
-        <div class="sec-head">
-          <h2>Model pool</h2>
-          <span class="note">{totalModels} models · {retiredCount} retired · {providers.size} providers</span>
-          <span class="spacer"></span>
-          <input type="search" id="poolSearch" placeholder="Search model, provider, role…" aria-label="Search model pool" />
-        </div>
-        <div class="panel">
-          <div class="tw">
-            <table class="dt tight" id="poolTable">
-              <thead>
-                <tr><th>Model</th><th>Role</th><th>Provider</th><th class="num">Played</th><th class="num">Avg</th><th class="wide-only">Status</th></tr>
-              </thead>
-              <tbody>
-                {poolRows.map((m) => {
-                  const role = String(m.role || '').toLowerCase();
-                  const played = m.played;
-                  return (
-                    <tr data-search={`${m.model} ${m.provider || ''} ${role} ${m.status || ''}`.toLowerCase()}>
-                      <td class="mdl">{m.model}</td>
-                      <td><span class={`tag ${role === 'builder' ? 'builder' : role === 'judge' ? 'judge' : ''}`}>{roleLabel[role] || m.role || '—'}</span></td>
-                      <td class="prov" style="margin-left:0">{m.provider || '—'}</td>
-                      <td class="num">{played != null ? played : '—'}</td>
-                      <td class="num avg">{typeof m.benchmark_score === 'number' ? m.benchmark_score.toFixed(1) : '—'}</td>
-                      <td class="wide-only" style="color:var(--text-dim)">{m.status || '—'}</td>
+            <div class="sec-head">
+              <h2>Model pool</h2>
+              <span class="note">{totalModels} models · {retiredCount} retired · {providers.size} providers</span>
+              <span class="spacer"></span>
+              <input type="search" id="poolSearch" placeholder="Search model, provider, role…" aria-label="Search model pool" />
+            </div>
+            <div class="panel">
+              <div class="tw">
+                <table class="dt tight no-sticky" id="poolTable">
+                  <thead>
+                    <tr>
+                      <th>Model</th><th>Role</th><th>Provider</th><th class="num">Played</th><th class="num">Avg</th><th class="wide-only">Status</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {Array.isArray(retired_models) && retired_models.length > 0 && (
-          <details class="strip">
-            <summary><strong>Retired models</strong><span class="sn">{retired_models.length} entries</span></summary>
-            <div class="strip-body">
-              <table class="dt" style="font-size:0.72em">
-                <tbody>
-                  {retired_models.map((r) => (
-                    <tr><td class="mdl">{r.model}</td><td class="prov" style="margin-left:0">{r.provider || ''}</td><td style="color:var(--text-dim)">{r.reason || ''}</td></tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {poolRows.map((m) => {
+                      const role = String(m.role || '').toLowerCase();
+                      const played = m.played;
+                      return (
+                        <tr data-search={`${m.model} ${m.provider || ''} ${role} ${m.status || ''}`.toLowerCase()}>
+                          <td class="mdl">{m.model}</td>
+                          <td><span class={`tag ${role === 'builder' ? 'builder' : role === 'judge' ? 'judge' : ''}`}>{roleLabel[role] || m.role || '—'}</span></td>
+                          <td class="prov" style="margin-left:0">{m.provider || '—'}</td>
+                          <td class="num">{played != null ? played : '—'}</td>
+                          <td class="num avg">{typeof m.benchmark_score === 'number' ? m.benchmark_score.toFixed(1) : '—'}</td>
+                          <td class="wide-only" style="color:var(--text-secondary)">{m.status || '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </details>
-        )}
 
-        {stability?.model_stats && (
-          <details class="strip">
-            <summary><strong>Availability</strong><span class="sn">updated {stabilityUpdated}</span></summary>
-            <div class="strip-body">
-              <table class="dt" style="font-size:0.72em">
-                <tbody>
-                  {Object.entries(stability.model_stats).map(([name, s]) => {
-                    const b = availBadge(name);
-                    return (
-                      <tr>
-                        <td class="mdl">{name}</td>
-                        <td class={`num ${b.cls}`}>{typeof s.availability === 'number' ? `${s.availability}%` : '—'}</td>
-                        <td class="prov" style="margin-left:0">{b.label}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </details>
-        )}
-        </section>
+            {Array.isArray(retired_models) && retired_models.length > 0 && (
+              <details class="strip">
+                <summary><strong>Retired models</strong><span class="sn">{retired_models.length} entries</span></summary>
+                <div class="strip-body">
+                  <table class="dt" style="font-size:0.72em">
+                    <tbody>
+                      {retired_models.map((r) => (
+                        <tr><td class="mdl">{r.model}</td><td class="prov" style="margin-left:0">{r.provider || '—'}</td><td style="color:var(--text-secondary)">{r.reason || '—'}</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            )}
+
+            {stability?.model_stats && (
+              <details class="strip">
+                <summary><strong>Availability</strong><span class="sn">updated {stabilityUpdated}</span></summary>
+                <div class="strip-body">
+                  <table class="dt" style="font-size:0.72em">
+                    <tbody>
+                      {Object.entries(stability.model_stats).map(([name, s]) => {
+                        const b = availBadge(name);
+                        return (
+                          <tr>
+                            <td class="mdl">{name}</td>
+                            <td class={`num ${b.cls}`}>{typeof s.availability === 'number' ? `${s.availability}%` : '—'}</td>
+                            <td class="prov" style="margin-left:0">{b.label}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            )}
+          </section>
         </aside>
       </div>
 
@@ -510,7 +528,7 @@ const jsonLd = {
           {feedback.matches.map((f) => (
             <div class="fb-row">
               <div class="fb-top">
-                <span style="color:var(--text)">{f.topic}</span>
+                <span style="color:var(--text-primary)">{f.topic}</span>
                 <span class={f.clean ? 'ok' : 'bad'}>{f.clean ? 'Clean' : `${(f.suggestions || []).length} suggestion(s)`}</span>
               </div>
               {!f.clean && (f.suggestions || []).map((s) => <p>[{String(s.severity || '').toUpperCase()}] {s.text}</p>)}
@@ -520,8 +538,8 @@ const jsonLd = {
       </details>
 
       <div class="footline">
-        <span>Arena data: <strong style="color:var(--text-dim)">{lastUpdated}</strong></span>
-        <span>Stability: <strong style="color:var(--text-dim)">{stabilityUpdated}</strong></span>
+        <span>Arena data: <strong style="color:var(--text-secondary)">{lastUpdated}</strong></span>
+        <span>Stability: <strong style="color:var(--text-secondary)">{stabilityUpdated}</strong></span>
         <span>Router-selection matches excluded</span>
       </div>
 
@@ -533,8 +551,9 @@ const jsonLd = {
         function setOffsets() {
           var header = document.querySelector('header');
           var nav = document.querySelector('.subnav');
-          var hb = header ? header.getBoundingClientRect().bottom : 0;
-          document.documentElement.style.setProperty('--nav-h', Math.max(0, hb) + 'px');
+          var headerPos = header ? getComputedStyle(header).position : 'static';
+          var navH = (headerPos === 'sticky' || headerPos === 'fixed') ? header.offsetHeight : 0;
+          document.documentElement.style.setProperty('--nav-h', Math.max(0, navH) + 'px');
           var nh = nav ? nav.getBoundingClientRect().height : 0;
           document.documentElement.style.setProperty('--subnav-h', nh + 'px');
         }
@@ -573,6 +592,24 @@ const jsonLd = {
         });
       })();
 
+      (function () {
+        var btn = document.getElementById('archiveToggle');
+        if (!btn) return;
+        var SHOWN = 12;
+        var total = document.querySelectorAll('#match-history table.dt > tbody > tr').length;
+        btn.addEventListener('click', function () {
+          var showingAll = btn.getAttribute('data-state') === 'all';
+          var extras = document.querySelectorAll('#match-history table.dt > tbody > tr[data-extra="1"]');
+          Array.prototype.forEach.call(extras, function (r) { r.hidden = showingAll; });
+          if (showingAll) {
+            Array.prototype.forEach.call(extras, function (r) { var d = r.querySelector('details'); if (d) d.open = false; });
+          }
+          btn.setAttribute('data-state', showingAll ? 'less' : 'all');
+          btn.setAttribute('aria-expanded', showingAll ? 'false' : 'true');
+          btn.textContent = showingAll ? ('Show more matches (' + (total - SHOWN) + ' more)') : 'Show fewer matches';
+        });
+      })();
+
       if (location.hash && location.hash.indexOf('#match-') === 0) {
         var d = document.querySelector(location.hash);
         if (d && d.tagName === 'DETAILS') {
@@ -581,30 +618,14 @@ const jsonLd = {
             row.hidden = false;
             var b = document.getElementById('archiveToggle');
             if (b && b.getAttribute('data-state') === 'less') {
-              b.setAttribute('data-state', 'more');
+              b.setAttribute('data-state', 'all');
+              b.setAttribute('aria-expanded', 'true');
               b.textContent = 'Show fewer matches';
             }
           }
           d.open = true;
         }
       }
-
-      // archive window: reveal older matches on demand
-      (function () {
-        var btn = document.getElementById('archiveToggle');
-        if (!btn) return;
-        var total = document.querySelectorAll('#match-history table.dt > tbody > tr').length;
-        var SHOWN = 12;
-        btn.addEventListener('click', function () {
-          var showingAll = btn.getAttribute('data-state') === 'all';
-          var extras = document.querySelectorAll('#match-history table.dt > tbody > tr[data-extra="1"]');
-          Array.prototype.forEach.call(extras, function (r) { r.hidden = !showingAll ? false : true; });
-          if (showingAll) { Array.prototype.forEach.call(extras, function (r) { var d = r.querySelector('details'); if (d) d.open = false; }); }
-          btn.setAttribute('data-state', showingAll ? 'less' : 'all');
-          btn.setAttribute('aria-expanded', showingAll ? 'false' : 'true');
-          btn.textContent = showingAll ? ('Show more matches (' + (total - SHOWN) + ' more)') : 'Show fewer matches';
-        });
-      })();
     </script>
   </body>
 </html>
