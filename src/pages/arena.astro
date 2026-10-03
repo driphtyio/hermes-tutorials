@@ -193,11 +193,15 @@ const jsonLd = {
       .kpi strong.accent { color: var(--accent); }
 
       
-      /* Auto-collapse: show first 10 matches, hide the rest */
-      .result-list .result-card:nth-child(n+11) {
+      /* Auto-collapse: compact one-liners, expand for full details */
+      .result-list.collapsed .rc-lanes,
+      .result-list.collapsed .rc-foot {
         display: none;
       }
-      .result-list.expanded .result-card:nth-child(n+11) {
+      .result-list.expanded .rc-lanes {
+        display: flex;
+      }
+      .result-list.expanded .rc-foot {
         display: block;
       }
 
@@ -220,11 +224,15 @@ const jsonLd = {
       .kpi strong.accent { color: var(--accent); }
 
       
-      /* Auto-collapse: show first 10 matches, hide the rest */
-      .result-list .result-card:nth-child(n+11) {
+      /* Auto-collapse: compact one-liners, expand for full details */
+      .result-list.collapsed .rc-lanes,
+      .result-list.collapsed .rc-foot {
         display: none;
       }
-      .result-list.expanded .result-card:nth-child(n+11) {
+      .result-list.expanded .rc-lanes {
+        display: flex;
+      }
+      .result-list.expanded .rc-foot {
         display: block;
       }
 
@@ -303,6 +311,9 @@ const jsonLd = {
       .rc-top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
       .rc-date { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; color: var(--ink-3); }
       .rc-topic { font-size: 14px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+      .rc-winner { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+      .rc-winner-label { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-3); margin-right: 4px; }
+      .rc-winner strong { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; font-weight: 700; color: var(--accent-light); margin-left: 4px; }
       .rc-meta { margin-left: auto; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
       .rc-lanes { display: flex; flex-direction: column; gap: 3px; margin-top: 8px; }
       .rc-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 6px; border: 1px solid transparent; font-size: 13px; }
@@ -475,6 +486,7 @@ const jsonLd = {
                         <div class="rc-top">
                           <span class="rc-date">{m.date || '—'}</span>
                           <span class="rc-topic">{m.topic || '—'}</span>
+                          <span class="rc-winner"><span class="rc-winner-label">winner</span> {winnerOf(m)} <strong>{scoreOf(m) != null ? scoreOf(m).toFixed(1) : '—'}</strong></span>
                           <span class="rc-meta">
                             <span class="pill">{m.type || '—'}</span>
                             <span class="pill">{m.lanes_declared ?? rowsOf(m).length} lanes</span>
@@ -658,22 +670,18 @@ const jsonLd = {
     var toggle = document.getElementById('archiveToggle');
     var list = document.getElementById('resultList');
     if (!toggle || !list) return;
-    var COLLAPSED_COUNT = 10;
-    function applyCollapse() {
-      var cards = list.querySelectorAll('.result-card');
-      var expanded = list.classList.contains('expanded');
-      cards.forEach(function(card, i) {
-        card.style.display = (!expanded && i >= COLLAPSED_COUNT) ? 'none' : '';
-      });
-      toggle.textContent = expanded ? 'Show recent' : 'Show all';
+    // Start collapsed: compact one-liners (title + winner + score)
+    list.classList.add('collapsed');
+    toggle.textContent = 'Show details';
+    toggle.setAttribute('data-state', 'collapsed');
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.addEventListener('click', function() {
+      var expanded = list.classList.toggle('expanded');
+      list.classList.toggle('collapsed', !expanded);
+      toggle.textContent = expanded ? 'Show compact' : 'Show details';
       toggle.setAttribute('data-state', expanded ? 'expanded' : 'collapsed');
       toggle.setAttribute('aria-expanded', String(expanded));
-    }
-    toggle.addEventListener('click', function() {
-      list.classList.toggle('expanded');
-      applyCollapse();
     });
-    applyCollapse();
   })();
   </script>
 
