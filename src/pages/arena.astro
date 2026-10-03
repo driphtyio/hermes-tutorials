@@ -184,22 +184,38 @@ const jsonLd = {
       .prompt-label::before { content: '$ '; color: var(--accent); }
 
       /* ── Page-level named grid ────────────── */
+      
+      .kpis-bar { grid-area: kpis; padding: 12px 0; }
+      .kpis-inner { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; }
+      .kpi { display: flex; align-items: baseline; gap: 6px; font-size: 13px; color: var(--ink-2); }
+      .kpi .k { color: var(--ink-3); }
+      .kpi strong { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+      .kpi strong.accent { color: var(--accent); }
+
       .page-grid {
         display: grid; gap: var(--gap);
         grid-template-columns: minmax(0, 1fr);
-        grid-template-areas: "subnav" "main" "sidebar" "pool";
+        grid-template-areas: "subnav" "kpis" "main" "sidebar";
       }
       .page-grid > .subnav-slot { grid-area: subnav; }
       .page-grid > .main-slot { grid-area: main; min-width: 0; }
       .page-grid > .sidebar-slot { grid-area: sidebar; min-width: 0; }
       .page-grid > .pool-slot { grid-area: pool; min-width: 0; }
       @media (min-width: 1024px) {
-        .page-grid {
+        
+      .kpis-bar { grid-area: kpis; padding: 12px 0; }
+      .kpis-inner { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; }
+      .kpi { display: flex; align-items: baseline; gap: 6px; font-size: 13px; color: var(--ink-2); }
+      .kpi .k { color: var(--ink-3); }
+      .kpi strong { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+      .kpi strong.accent { color: var(--accent); }
+
+      .page-grid {
           grid-template-columns: minmax(0, 1fr) 340px;
           grid-template-areas:
             "subnav subnav"
-            "main sidebar"
-            "pool pool";
+            "kpis kpis"
+            "main sidebar";
         }
       }
 
@@ -374,7 +390,19 @@ const jsonLd = {
         </div>
 
         <div class="main-slot">
-          <div class="main-grid">
+          <div class="kpis-bar">
+          <div class="kpis-inner">
+            <span class="kpi"><span class="k">Total matches</span><strong>{totalMatches}</strong></span>
+            <span class="kpi"><span class="k">Ranked models</span><strong>{rankedModels}</strong></span>
+            <span class="kpi"><span class="k">Model pool</span><strong>{totalModels}</strong></span>
+            <span class="kpi"><span class="k">Retired</span><strong>{retiredCount}</strong></span>
+            <span class="kpi"><span class="k">Providers</span><strong>{providers.size}</strong></span>
+            {avgWinner != null && <span class="kpi"><span class="k">Avg winner</span><strong class="accent">{avgWinner.toFixed(1)}</strong></span>}
+            {gateRate != null && <span class="kpi"><span class="k">Threshold</span><strong class="accent">{gateRate}%</strong></span>}
+            {feedback.cleanRate != null && <span class="kpi"><span class="k">Feedback clean</span><strong>{feedback.cleanRate}%</strong></span>}
+          </div>
+        </div>
+        <div class="main-grid">
 
             <section class="panel" id="leaderboard" aria-label="Leaderboard">
               <div class="p-head">
@@ -456,36 +484,11 @@ const jsonLd = {
             </section>
 
           </div>
+        
         </div>
-
-        <aside class="sidebar-slot" aria-label="Arena quick stats">
+        <aside class="sidebar-slot" aria-label="Model pool">
           <div class="sidebar-inner">
-            <div class="stat-panel">
-              <h3>Quick stats</h3>
-              <div class="stat-rows">
-                <div class="stat-row"><span>Total matches</span><strong>{totalMatches}</strong></div>
-                <div class="stat-row"><span>Ranked models</span><strong>{rankedModels}</strong></div>
-                <div class="stat-row"><span>Model pool</span><strong>{totalModels}</strong></div>
-                <div class="stat-row"><span>Retired models</span><strong>{retiredCount}</strong></div>
-                <div class="stat-row"><span>Distinct lanes</span><strong>{distinctLanes.size}</strong></div>
-                <div class="stat-row"><span>Providers</span><strong>{providers.size}</strong></div>
-                {avgWinner != null && <div class="stat-row"><span>Avg winner score</span><strong class="accent">{avgWinner.toFixed(1)}</strong></div>}
-                {gateRate != null && <div class="stat-row"><span>Threshold cleared</span><strong class="accent">{gateRate}%</strong></div>}
-                {feedback.cleanRate != null && <div class="stat-row"><span>Feedback clean rate</span><strong>{feedback.cleanRate}%</strong></div>}
-              </div>
-            </div>
-            <div class="stat-panel">
-              <h3>Status line</h3>
-              <div class="status-line">
-                <span class="k">arena:</span> {totalMatches} matches · {rankedModels} ranked<br />
-                <span class="k">pool:</span> {totalModels} models · {retiredCount} retired<br />
-                <span class="k">updated:</span> {lastUpdated}
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        <div class="pool-slot">
+            <div class="pool-slot">
           <section id="model-pool" aria-label="Model pool">
             <div class="pool-head">
               <h2>Model pool</h2>
@@ -545,6 +548,12 @@ const jsonLd = {
             )}
           </section>
         </div>
+          </div>
+        </aside>
+
+        
+
+        
 
       </div>
 
