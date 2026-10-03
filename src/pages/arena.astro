@@ -125,137 +125,147 @@ const jsonLd = {
   <head>
     <BaseHead title={`Arena — ${SITE_TITLE}`} description="Model-vs-model battle arena — LLMs head-to-head on Hermes Agent content, design and engineering tasks." />
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
-    <style>
-      :root {
-        --nav-h: 0px;
-        --subnav-h: 0px;
-        --row-h: 30px;
-        --panel-radius: 10px;
+    <style is:global>
+      main.arena-shell {
+        --arena-accent: #6c5ce7;
+        --arena-accent-light: #a29bfe;
+        --arena-canvas: #0a0a0b;
+        --arena-surface-1: #121214;
+        --arena-surface-2: #1a1a1e;
+        --arena-surface-3: #202026;
+        --arena-border: #1e1e22;
+        --arena-border-light: #2a2a2e;
+        --arena-ink: #e8e8ed;
+        --arena-ink-2: #a1a1aa;
+        --arena-ink-3: #6b6b76;
         --arena-ok: #22c55e;
         --arena-warn: #eab308;
-        --arena-danger: #ef4444;
-        --arena-info: #f97316;
+        --arena-bad: #ef4444;
+        --arena-glow: rgba(108, 92, 231, 0.15);
+        background: var(--arena-canvas);
+        color: var(--arena-ink);
+        font-family: 'Atkinson Hyperlegible', -apple-system, sans-serif;
+      }
+    </style>
+    <style>
+      main.arena-shell { width: 100%; max-width: none; margin: 0; padding: 0 24px 3rem; box-sizing: border-box; }
+      main.arena-shell a { color: var(--arena-accent-light); }
+      main.arena-shell a:hover { color: var(--arena-ink); }
+
+      .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 24px 0 16px; border-bottom: 1px solid var(--arena-border); }
+      .hero h1 { font-size: 36px; font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; margin: 0; color: var(--arena-ink); }
+      .hero h1 span { color: var(--arena-accent); }
+      .hero .tagline { margin: 4px 0 0; font-size: 15px; line-height: 1.75; color: var(--arena-ink-2); max-width: 68ch; }
+      .kpis { display: flex; flex-wrap: wrap; gap: 8px; }
+      .kpi { display: inline-flex; align-items: baseline; gap: 6px; font-size: 13px; color: var(--arena-ink-2); border: 1px solid var(--arena-border-light); background: var(--arena-surface-1); border-radius: 9999px; padding: 4px 12px; white-space: nowrap; }
+      .kpi strong { color: var(--arena-ink); font-weight: 700; font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+      .subnav { position: sticky; top: var(--nav-h, 0px); z-index: 40; display: flex; gap: 8px; align-items: center; overflow-x: auto; padding: 8px 0; background: var(--arena-canvas); border-bottom: 1px solid var(--arena-border); scrollbar-width: none; }
+      .subnav::-webkit-scrollbar { display: none; }
+      .subnav a { flex: none; font-size: 13px; font-weight: 600; color: var(--arena-ink-2); border: 1px solid var(--arena-border-light); background: var(--arena-surface-1); border-radius: 9999px; padding: 5px 14px; text-decoration: none; }
+      .subnav a:hover, .subnav a.active { color: var(--arena-ink); border-color: var(--arena-accent); background: var(--arena-glow); }
+      .subnav .sn-count { color: var(--arena-ink-3); font-weight: 400; margin-left: 6px; font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+      .prompt-label { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; color: var(--arena-ink-3); }
+      .prompt-label::before { content: '$ '; color: var(--arena-accent); }
+      .prompt-label b { color: var(--arena-ink); font-weight: 600; }
+
+      .primary-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; margin-top: 20px; }
+      @media (min-width: 1000px) {
+        .primary-grid { grid-template-columns: minmax(0, 1.6fr) minmax(360px, 1fr); }
       }
 
-      main.arena-container {
-        width: 100%;
-        max-width: min(1800px, 95vw);
-        margin: 0 auto;
-        padding: 0 0 2.5rem;
-        color: var(--text-primary);
+      .panel { border: 1px solid var(--arena-border); border-radius: 12px; background: var(--arena-surface-1); min-width: 0; overflow: hidden; }
+      .p-head { display: flex; align-items: baseline; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--arena-border); background: var(--arena-surface-2); flex-wrap: wrap; }
+      .p-head h2 { margin: 0; font-size: 18px; font-weight: 600; color: var(--arena-ink); letter-spacing: -0.015em; }
+      .p-head .note { font-size: 13px; color: var(--arena-ink-3); }
+      .p-head .spacer { margin-left: auto; }
+
+      .tw { overflow-x: auto; }
+      table.dt { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+      table.dt.auto { table-layout: auto; }
+      table.dt thead th { background: var(--arena-surface-2); text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--arena-ink-3); padding: 6px 10px; border-bottom: 1px solid var(--arena-border-light); white-space: nowrap; }
+      table.dt thead th.num, table.dt td.num { text-align: right; }
+      table.dt tbody td { padding: 6px 10px; border-bottom: 1px solid var(--arena-border); height: 34px; vertical-align: middle; white-space: nowrap; color: var(--arena-ink); }
+      table.dt tbody tr:last-child td { border-bottom: none; }
+      table.dt tbody tr:nth-child(even) td { background: rgba(255,255,255,0.012); }
+      table.dt tbody tr:hover td { background: var(--arena-surface-2); }
+      .num { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+      .rk { color: var(--arena-ink-3); font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+      .mdl { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; color: var(--arena-ink); font-weight: 600; }
+      .prov { color: var(--arena-ink-3); font-size: 12px; margin-left: 8px; }
+      .avg { color: var(--arena-accent-light); font-weight: 700; }
+      .best { color: var(--arena-ink-2); }
+      .w { color: var(--arena-ok); } .l { color: var(--arena-bad); }
+      .bar { display: inline-block; width: 54px; height: 4px; border-radius: 9999px; background: var(--arena-surface-3); overflow: hidden; vertical-align: middle; margin-left: 8px; }
+      .bar > i { display: block; height: 100%; background: var(--arena-accent); }
+      tr.top-row td { background: var(--arena-glow) !important; }
+      tr.top-row td:first-child { box-shadow: inset 3px 0 0 var(--arena-accent); }
+      .tag { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid var(--arena-border-light); border-radius: 9999px; padding: 1px 8px; color: var(--arena-ink-2); }
+      .tag.builder { color: var(--arena-accent-light); border-color: rgba(108,92,231,0.4); background: var(--arena-glow); }
+      .tag.retired { color: var(--arena-ink-3); text-decoration: line-through; }
+      .a-ok { color: var(--arena-ok); } .a-warn { color: var(--arena-warn); } .a-bad { color: var(--arena-bad); } .a-down { color: var(--arena-bad); } .a-none { color: var(--arena-ink-3); }
+      .badge { display: inline-block; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; border-radius: 6px; padding: 1px 8px; background: var(--arena-glow); color: var(--arena-accent-light); border: 1px solid rgba(108,92,231,0.35); }
+      .badge.neutral { background: var(--arena-surface-3); color: var(--arena-ink-2); border-color: var(--arena-border-light); }
+      .win { color: var(--arena-ok); font-weight: 600; }
+      .date { color: var(--arena-ink-3); font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+      .topic { color: var(--arena-ink); display: block; overflow: hidden; text-overflow: ellipsis; }
+      .empty { color: var(--arena-ink-3); font-size: 13px; padding: 16px; }
+
+      details.mx > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+      details.mx > summary::-webkit-details-marker { display: none; }
+      details.mx > summary::before { content: '\25B8'; color: var(--arena-ink-3); flex: none; font-family: 'JetBrains Mono', ui-monospace, monospace; }
+      details.mx[open] > summary::before { content: '\25BE'; color: var(--arena-accent-light); }
+      details.mx .mx-body { padding: 8px 12px 12px 24px; background: var(--arena-surface-2); }
+      details.mx .mx-body table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      details.mx .mx-body td { padding: 4px 8px; border-bottom: 1px solid var(--arena-border); white-space: nowrap; }
+      details.mx .mx-body tr:last-child td { border-bottom: none; }
+
+      .pool-section { margin-top: 32px; }
+      .pool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 12px; }
+      .pool-card { border: 1px solid var(--arena-border); border-radius: 12px; background: var(--arena-surface-1); padding: 14px 16px; min-width: 0; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; transition: border-color .15s; }
+      .pool-card:hover { border-color: var(--arena-accent); }
+      .pool-card .pc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+      .pool-card .pc-id { color: var(--arena-ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .pool-card .pc-id::before { content: 'model: '; color: var(--arena-accent); font-weight: 400; }
+      .pool-card dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; }
+      .pool-card dt { color: var(--arena-ink-3); font-size: 11px; }
+      .pool-card dt::after { content: ':'; }
+      .pool-card dd { margin: 0; color: var(--arena-ink-2); font-variant-numeric: tabular-nums; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .pool-card dd.av { font-weight: 700; }
+      #poolSearch { width: min(280px, 100%); background: var(--arena-surface-2); border: 1px solid var(--arena-border-light); border-radius: 6px; color: var(--arena-ink); padding: 6px 10px; font-size: 13px; font-family: 'JetBrains Mono', ui-monospace, monospace; outline: none; }
+      #poolSearch:focus { border-color: var(--arena-accent); }
+      .more-btn { background: var(--arena-surface-2); color: var(--arena-accent-light); border: 1px solid var(--arena-border-light); border-radius: 9999px; padding: 6px 14px; font-size: 13px; cursor: pointer; font-family: 'Atkinson Hyperlegible', sans-serif; }
+      .more-btn:hover { border-color: var(--arena-accent); }
+
+      details.strip { border: 1px solid var(--arena-border); border-radius: 12px; background: var(--arena-surface-1); margin-top: 20px; }
+      details.strip > summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 10px; padding: 10px 16px; font-size: 13px; color: var(--arena-ink-2); flex-wrap: wrap; }
+      details.strip > summary::-webkit-details-marker { display: none; }
+      details.strip > summary strong { color: var(--arena-ink); }
+      details.strip > summary .sn { margin-left: auto; font-family: 'JetBrains Mono', ui-monospace, monospace; color: var(--arena-ink-3); }
+      details.strip .strip-body { padding: 8px 16px 16px; font-size: 13px; }
+      .issue { display: inline-block; background: var(--arena-surface-2); border: 1px solid var(--arena-border-light); border-left: 2px solid var(--arena-accent); border-radius: 6px; padding: 2px 8px; margin: 0 6px 6px 0; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; }
+      .fb-row { border-top: 1px solid var(--arena-border); padding: 8px 0; }
+      .fb-top { display: flex; justify-content: space-between; gap: 12px; }
+      .ok { color: var(--arena-ok); } .bad { color: var(--arena-warn); }
+      .fb-row p { margin: 4px 0 0; color: var(--arena-ink-2); }
+
+      .footline { margin-top: 20px; font-size: 13px; color: var(--arena-ink-3); display: flex; gap: 16px; flex-wrap: wrap; font-family: 'JetBrains Mono', ui-monospace, monospace; }
+      .footline strong { color: var(--arena-ink-2); font-weight: 600; }
+
+      @media (max-width: 960px) {
+        .primary-grid { grid-template-columns: minmax(0, 1fr); }
+        .pool-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
       }
-
-      .hero { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; flex-wrap:wrap; padding:1rem 0 0.6rem; border-bottom:1px solid var(--border); }
-      .hero h1 { font-family:var(--font-sans); font-size:clamp(1.4rem, 2.1vw, 1.9rem); font-weight:700; letter-spacing:-0.03em; margin:0; color:var(--text-primary); }
-      .hero h1 span { color:var(--accent-light); }
-      .hero .tagline { margin:0.15rem 0 0; font-size:0.82em; color:var(--text-secondary); max-width:68ch; }
-      .kpis { display:flex; flex-wrap:wrap; gap:0.35rem; }
-      .kpi { display:inline-flex; align-items:baseline; gap:0.32em; font-size:0.72em; color:var(--text-secondary); border:1px solid var(--border); background:var(--bg-secondary); border-radius:999px; padding:0.28em 0.7em; white-space:nowrap; }
-      .kpi strong { color:var(--text-primary); font-weight:700; font-variant-numeric:tabular-nums; font-size:1.22em; }
-
-      .subnav { position:sticky; top:var(--nav-h); z-index:40; display:flex; gap:0.4rem; align-items:center; overflow-x:auto; padding:0.5rem 0; background:var(--bg); border-bottom:1px solid var(--border); scrollbar-width:none; }
-      .subnav::-webkit-scrollbar { display:none; }
-      .subnav a { flex:none; font-size:0.76em; font-weight:600; color:var(--text-secondary); border:1px solid var(--border); background:var(--bg-secondary); border-radius:999px; padding:0.34em 0.85em; text-decoration:none; }
-      .subnav a:hover, .subnav a.active { color:var(--text-primary); border-color:var(--accent); background:var(--accent-glow); }
-      .subnav .sn-count { color:var(--text-muted); font-weight:400; margin-left:0.35em; }
-
-      section.block { margin-top:1.1rem; }
-      .sec-head { display:flex; align-items:center; gap:0.7rem; margin:0 0 0.45rem; flex-wrap:wrap; }
-      .sec-head h2 { font-family:var(--font-sans); font-size:1rem; font-weight:700; color:var(--text-primary); letter-spacing:-0.02em; margin:0; }
-      .sec-head .note { font-size:0.72em; color:var(--text-muted); }
-      .sec-head .spacer { margin-left:auto; }
-
-      .fold { display:grid; grid-template-columns:minmax(0,1fr); gap:1rem; align-items:start; margin-top:1rem; }
-      @media (min-width:1100px) { .fold { grid-template-columns:minmax(0,1.75fr) minmax(320px,1fr); } }
-
-      .duo { display:grid; grid-template-columns:minmax(0,1fr); gap:1rem; align-items:start; margin-top:1.1rem; }
-      .duo-rail { min-width:0; display:grid; gap:0; }
-      .duo .block { margin-top:0; }
-      @media (min-width:1440px) {
-        .duo { grid-template-columns:minmax(0,1.9fr) minmax(340px,1fr); }
-        .duo-rail { position:sticky; top:calc(var(--nav-h) + var(--subnav-h) + 0.5rem); max-height:calc(100vh - var(--nav-h) - var(--subnav-h) - 1rem); overflow:auto; }
-        .duo-main .topic { max-width:44ch; }
-      }
-
-      .panel { border:1px solid var(--border); border-radius:var(--panel-radius); background:var(--bg-secondary); min-width:0; }
-      .panel .p-head { display:flex; align-items:baseline; gap:0.6rem; padding:0.5rem 0.7rem; border-bottom:1px solid var(--border); background:var(--bg-tertiary); }
-      .panel .p-head h2 { margin:0; font-size:0.88rem; font-weight:700; color:var(--text-primary); letter-spacing:-0.01em; }
-      .panel .p-head .note { font-size:0.72em; color:var(--text-muted); }
-      .panel .p-head a { margin-left:auto; font-size:0.72em; color:var(--accent-light); text-decoration:none; }
-      .panel .p-head a:hover { text-decoration:underline; }
-
-      .tw { overflow:visible; }
-      table.dt { width:100%; border-collapse:collapse; font-size:0.78em; }
-      table.dt thead th { position:sticky; top:calc(var(--nav-h) + var(--subnav-h)); z-index:5; background:var(--bg-tertiary); text-align:left; font-size:0.7em; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); padding:0.42em 0.6em; border-bottom:1px solid var(--border-light); white-space:nowrap; }
-      table.dt.no-sticky thead th { position:static; }
-      table.dt tbody td { padding:0.24em 0.6em; border-bottom:1px solid var(--border); height:var(--row-h); vertical-align:middle; white-space:nowrap; color:var(--text-primary); }
-      table.dt.tight tbody td { height:26px; padding:0.14em 0.6em; }
-      table.dt tbody tr:last-child td { border-bottom:none; }
-      table.dt tbody tr:nth-child(even) td { background:rgba(255,255,255,0.014); }
-      table.dt tbody tr:hover td { background:var(--bg-tertiary); }
-      .num { text-align:right; font-variant-numeric:tabular-nums; }
-      th.num { text-align:right; }
-      .rk { color:var(--text-muted); font-variant-numeric:tabular-nums; }
-      .mdl { color:var(--text-primary); font-weight:600; }
-      .prov { color:var(--text-muted); font-size:0.88em; margin-left:0.45em; font-weight:400; }
-      .prov-inline { display:inline; }
-      .avg { color:var(--accent-light); font-weight:700; font-variant-numeric:tabular-nums; }
-      .best { color:var(--text-secondary); font-variant-numeric:tabular-nums; }
-      .w { color:var(--arena-ok); } .l { color:var(--arena-danger); }
-      .bar { display:inline-block; width:54px; height:4px; border-radius:2px; background:var(--bg-tertiary); overflow:hidden; vertical-align:middle; margin-left:0.45em; }
-      .bar > i { display:block; height:100%; background:linear-gradient(90deg, var(--accent), var(--accent-light)); }
-      .tag { font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; border:1px solid var(--border); border-radius:999px; padding:0.05rem 0.42rem; color:var(--text-secondary); }
-      .tag.builder { color:var(--arena-ok); border-color:rgba(34,197,94,.28); }
-      .tag.judge { color:var(--accent-light); border-color:rgba(162,155,254,.28); }
-      .tag.retired { color:var(--text-muted); text-decoration:line-through; }
-      .a-ok { color:var(--arena-ok); } .a-warn { color:var(--arena-warn); } .a-bad { color:var(--arena-info); } .a-down { color:var(--arena-danger); } .a-none { color:var(--text-muted); }
-      .win { color:var(--arena-ok); font-weight:600; }
-      .date { color:var(--text-muted); font-variant-numeric:tabular-nums; }
-      .topic { color:var(--text-primary); display:block; max-width:62ch; overflow:hidden; text-overflow:ellipsis; }
-      .wide-only { display:none; }
-      @media (min-width:1800px) { .wide-only { display:table-cell; } .prov-inline { display:none; } }
-
-      details.mx > summary { list-style:none; cursor:pointer; display:flex; align-items:center; gap:0.5rem; }
-      details.mx > summary::-webkit-details-marker { display:none; }
-      details.mx > summary::before { content:'\25B8'; color:var(--text-muted); font-size:0.9em; flex:none; }
-      details.mx[open] > summary::before { content:'\25BE'; color:var(--accent-light); }
-      details.mx[open] > summary .topic { color:var(--text-primary); }
-      details.mx .mx-body { padding:0.5rem 0.6rem 0.6rem 1.5rem; background:var(--bg-tertiary); }
-      details.mx .mx-body table { width:100%; border-collapse:collapse; font-size:0.72em; }
-      details.mx .mx-body td { padding:0.16em 0.5em; border-bottom:1px solid var(--border); white-space:nowrap; }
-      details.mx .mx-body tr:last-child td { border-bottom:none; }
-
-      details.strip { border:1px solid var(--border); border-radius:var(--panel-radius); background:var(--bg-secondary); margin-top:0.7rem; }
-      details.strip > summary { cursor:pointer; list-style:none; display:flex; align-items:baseline; gap:0.6rem; padding:0.55rem 0.8rem; font-size:0.82em; color:var(--text-secondary); }
-      details.strip > summary::-webkit-details-marker { display:none; }
-      details.strip > summary strong { color:var(--text-primary); }
-      details.strip > summary .sn { margin-left:auto; font-size:0.92em; color:var(--text-muted); }
-      details.strip .strip-body { padding:0.2rem 0.8rem 0.8rem; font-size:0.76em; }
-
-      .issue { display:inline-block; background:var(--bg-tertiary); border:1px solid var(--border); border-radius:4px; padding:0.12em 0.45em; margin:0 0.3em 0.3em 0; }
-      .issue em { color:var(--arena-info); font-style:normal; }
-      .fb-row { border-top:1px solid var(--border); padding:0.4rem 0; }
-      .fb-top { display:flex; justify-content:space-between; gap:0.8rem; }
-      .ok { color:var(--arena-ok); } .bad { color:var(--arena-info); }
-      .fb-row p { margin:0.25rem 0 0; color:var(--text-secondary); }
-
-      #poolSearch { width:min(320px,100%); background:var(--bg-tertiary); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text-primary); padding:0.36em 0.65em; font-size:0.76em; outline:none; }
-      #poolSearch:focus { border-color:var(--accent); }
-      .more-btn { background:var(--bg-tertiary); color:var(--accent-light); border:1px solid var(--border); border-radius:999px; padding:0.34em 0.9em; font-size:0.76em; cursor:pointer; }
-      .more-btn:hover { border-color:var(--accent); }
-      .footline { margin-top:1rem; font-size:0.7em; color:var(--text-muted); display:flex; gap:1rem; flex-wrap:wrap; }
-      .empty { color:var(--text-muted); font-size:0.8em; padding:1rem 0; }
-
-      @media (max-width:900px) {
-        .topic { max-width:30ch; }
-        .tw { overflow-x:auto; }
-        table.dt { min-width:620px; }
+      @media (max-width: 600px) {
+        main.arena-shell { padding: 0 12px 2rem; }
+        .pool-grid { grid-template-columns: 1fr; }
       }
     </style>
   </head>
   <body>
     <Header />
-    <main class="arena-container">
+    <main class="arena-shell">
 
       <div class="hero">
         <div>
@@ -266,9 +276,9 @@ const jsonLd = {
           <span class="kpi"><strong>{totalMatches}</strong> matches</span>
           <span class="kpi"><strong>{rankedModels}</strong> ranked</span>
           <span class="kpi"><strong>{totalModels}</strong> in pool</span>
-          <span class="kpi"><strong>{distinctLanes.size}</strong> models competed</span>
+          <span class="kpi"><strong>{distinctLanes.size}</strong> competed</span>
           <span class="kpi"><strong>{providers.size}</strong> providers</span>
-          {avgWinner != null && <span class="kpi"><strong>{avgWinner.toFixed(1)}</strong> avg winning score</span>}
+          {avgWinner != null && <span class="kpi"><strong>{avgWinner.toFixed(1)}</strong> avg win</span>}
           {gateRate != null && <span class="kpi"><strong>{gateRate}%</strong> cleared 8.0</span>}
         </div>
       </div>
@@ -278,10 +288,9 @@ const jsonLd = {
         <a href="#latest-results">Latest results</a>
         <a href="#match-history">Match archive<span class="sn-count">{totalMatches}</span></a>
         <a href="#model-pool">Model pool<span class="sn-count">{totalModels}</span></a>
-        <a href="#process-feedback">Feedback<span class="sn-count">{feedback.matches.length}</span></a>
       </nav>
 
-      <div class="fold">
+      <div class="primary-grid">
         <section class="panel" id="leaderboard" aria-label="Leaderboard">
           <div class="p-head">
             <h2>Leaderboard</h2>
@@ -289,34 +298,30 @@ const jsonLd = {
           </div>
           {lb.length > 0 ? (
             <div class="tw">
-              <table class="dt">
+              <table class="dt auto">
                 <thead>
                   <tr>
-                    <th>#</th>
+                    <th style="width:44px">#</th>
                     <th>Model</th>
-                    <th class="wide-only">Provider</th>
-                    <th class="wide-only">Family</th>
                     <th class="num">Avg</th>
                     <th class="num">Best</th>
                     <th class="num">M</th>
                     <th class="num">W / L</th>
                     <th class="num">Win%</th>
-                    <th class="num wide-only">Uptime</th>
+                    <th class="num">Uptime</th>
                   </tr>
                 </thead>
                 <tbody>
                   {lb.map((e) => {
                     const b = availBadge(e.model);
                     return (
-                      <tr>
-                        <td class="rk">{e.rank <= 3 ? ['🥇', '🥈', '🥉'][e.rank - 1] : `#${e.rank}`}</td>
+                      <tr class={e.rank === 1 ? 'top-row' : null}>
+                        <td class="rk">{e.rank === 1 ? '#1' : e.rank === 2 ? '#2' : e.rank === 3 ? '#3' : `#${e.rank}`}</td>
                         <td>
                           <span class="mdl">{e.model}</span>
-                          <span class="prov prov-inline">{e.provider}</span>
-                          {e.retired ? <span class="tag retired">retired</span> : null}
+                          <span class="prov">{e.provider || ''}</span>
+                          {e.retired ? <span class="tag retired" style="margin-left:8px">retired</span> : null}
                         </td>
-                        <td class="wide-only prov" style="margin-left:0">{e.provider || '—'}</td>
-                        <td class="wide-only" style="color:var(--text-secondary)">{e.family || '—'}</td>
                         <td class="num">
                           <span class="avg">{(e.avgScore ?? 0).toFixed(1)}</span>
                           <span class="bar"><i style={`width:${Math.max(0, Math.min(100, ((e.avgScore ?? 0) / 10) * 100))}%`}></i></span>
@@ -325,7 +330,7 @@ const jsonLd = {
                         <td class="num">{e.matches ?? 0}</td>
                         <td class="num"><span class="w">{e.wins ?? 0}</span> / <span class="l">{e.losses ?? 0}</span></td>
                         <td class="num best">{e.winRate}%</td>
-                        <td class="num wide-only"><span class={b.cls}>{b.label}</span></td>
+                        <td class={`num ${b.cls}`}>{b.label}</td>
                       </tr>
                     );
                   })}
@@ -339,180 +344,166 @@ const jsonLd = {
           <div class="p-head">
             <h2>Latest results</h2>
             <span class="note">newest first</span>
-            <a href="#match-history">full archive ↓</a>
+            <span class="spacer"></span>
+            <a href="#match-history" style="font-size:13px;text-decoration:none">full archive →</a>
           </div>
           <div class="tw">
-            <table class="dt">
+            <table class="dt auto">
               <thead>
-                <tr><th>Date</th><th>Match</th><th class="num">Winner</th></tr>
+                <tr><th>Date</th><th>Match</th><th class="num">Result</th></tr>
               </thead>
               <tbody>
                 {sortedMatches.slice(0, 8).map((m) => (
                   <tr>
                     <td class="date">{m.date || '—'}</td>
-                    <td><a href={`#match-${keyOf(m)}`} class="topic" style="text-decoration:none;color:inherit">{m.topic || '—'}</a></td>
-                    <td class="num"><span class="win">{winnerOf(m)}</span> <span class="best">{scoreOf(m) != null ? scoreOf(m).toFixed(1) : '—'}</span></td>
+                    <td><a href={`#match-${keyOf(m)}`} class="topic" style="text-decoration:none">{m.topic || '—'}</a></td>
+                    <td class="num">
+                      <span class="badge">{winnerOf(m)}</span>
+                      <span class="best" style="margin-left:6px">{scoreOf(m) != null ? scoreOf(m).toFixed(1) : '—'}</span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <div style="padding:0.55rem 0.7rem;border-top:1px solid var(--border);font-size:0.72em;color:var(--text-secondary);display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">
-            <span style="color:var(--text-primary);font-weight:600">How a match runs</span>
-            <span style="color:var(--text-muted)">Brief → Plan → Build (all lanes) → Judge → QA → Publish</span>
+          <div style="padding:10px 16px;border-top:1px solid var(--arena-border);font-size:13px;color:var(--arena-ink-2);display:flex;gap:8px;flex-wrap:wrap;align-items:baseline">
+            <span class="prompt-label"><b>how-a-match-runs</b></span>
+            <span style="color:var(--arena-ink-3)">Brief → Plan → Build (all lanes) → Judge → QA → Publish</span>
           </div>
         </section>
       </div>
 
-      <div class="duo">
-        <section class="block duo-main" id="match-history">
-          <div class="sec-head">
-            <h2>Match archive</h2>
-            <span class="note">{totalMatches} matches · newest first · click a row for per-model scores</span>
+      <section class="panel" id="match-history" style="margin-top:20px" aria-label="Match archive">
+        <div class="p-head">
+          <h2>Match archive</h2>
+          <span class="note">{totalMatches} matches · newest first · click a row for per-model scores</span>
+        </div>
+        {sortedMatches.length > 0 ? (
+          <div class="tw">
+            <table class="dt auto">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Match</th>
+                  <th>Type</th>
+                  <th class="num">Lanes</th>
+                  <th>Winner</th>
+                  <th class="num">Score</th>
+                  <th>Judge</th>
+                  <th class="num">Threshold</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedMatches.map((m, mi) => (
+                  <tr data-extra={mi >= 12 ? '1' : null} hidden={mi >= 12}>
+                    <td class="date">{m.date || '—'}</td>
+                    <td style="max-width:480px">
+                      <details class="mx" id={`match-${keyOf(m)}`}>
+                        <summary><span class="topic">{m.topic || '—'}</span></summary>
+                        <div class="mx-body">
+                          <table>
+                            <tbody>
+                              {rowsOf(m).map((r) => (
+                                <tr>
+                                  <td class="rk">{r.rank === 1 ? '1st' : r.rank === 2 ? '2nd' : r.rank === 3 ? '3rd' : r.rank ? `#${r.rank}` : 'DNF'}</td>
+                                  <td class="mdl">{r.model}</td>
+                                  <td class="num avg">{r.score != null ? `${r.score.toFixed(1)}/10` : '—'}</td>
+                                  <td class="prov" style="margin-left:0">{r.provider || '—'}{r.status ? ` · ${r.status}` : ''}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                          <div style="margin-top:6px;color:var(--arena-ink-3);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px">judge: {judgeOf(m)}{qaLabel(m) ? ` · qa: ${qaLabel(m)}` : ''}</div>
+                          {typeof m.drafts === 'number' ? <div style="margin-top:4px;color:var(--arena-ink-3);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px">drafts: {m.drafts}</div> : null}
+                          {m.slug ? <div style="margin-top:4px"><a href={`/blog/${m.slug}/`} style="font-size:13px;text-decoration:none">Read the published post →</a></div> : null}
+                        </div>
+                      </details>
+                    </td>
+                    <td><span class="tag">{m.type || '—'}</span></td>
+                    <td class="num">{m.lanes_declared ?? rowsOf(m).length}</td>
+                    <td><span class="badge">{winnerOf(m)}</span></td>
+                    <td class="num avg">{scoreOf(m) != null ? scoreOf(m).toFixed(1) : '—'}</td>
+                    <td style="color:var(--arena-ink-2)">{judgeOf(m)}</td>
+                    <td class="num" style="color:var(--arena-ink-2)">{m.threshold_met === true ? 'met' : m.threshold_met === false ? 'missed' : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          {sortedMatches.length > 0 ? (
-            <div class="panel">
-              <div class="tw">
-                <table class="dt">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Match</th>
-                      <th>Type</th>
-                      <th class="num">Lanes</th>
-                      <th>Winner</th>
-                      <th class="num">Score</th>
-                      <th class="wide-only">Winner provider</th>
-                      <th class="wide-only">Judge</th>
-                      <th class="wide-only">QA</th>
-                      <th class="wide-only">Threshold</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedMatches.map((m, mi) => (
-                      <tr data-extra={mi >= 12 ? '1' : null} hidden={mi >= 12}>
-                        <td class="date">{m.date || '—'}</td>
-                        <td>
-                          <details class="mx" id={`match-${keyOf(m)}`}>
-                            <summary>
-                              <span class="topic">{m.topic || '—'}</span>
-                            </summary>
-                            <div class="mx-body">
-                              <table>
-                                <tbody>
-                                  {rowsOf(m).map((r) => (
-                                    <tr>
-                                      <td class="rk">{r.rank === 1 ? '🥇 1st' : r.rank === 2 ? '🥈 2nd' : r.rank === 3 ? '🥉 3rd' : r.rank ? `#${r.rank}` : 'DNF'}</td>
-                                      <td class="mdl">{r.model}</td>
-                                      <td class="num avg">{r.score != null ? `${r.score.toFixed(1)}/10` : '—'}</td>
-                                      <td class="prov" style="margin-left:0">{r.provider || '—'}{r.status ? ` · ${r.status}` : ''}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                              <div style="margin-top:0.4rem;color:var(--text-muted)">Judged by {judgeOf(m)}{qaLabel(m) ? ` · QA: ${qaLabel(m)}` : ''}</div>
-                              {typeof m.drafts === 'number' ? <div style="margin-top:0.25rem;color:var(--text-muted)">Drafts: {m.drafts}</div> : null}
-                              {m.slug ? <div style="margin-top:0.25rem"><a href={`/blog/${m.slug}/`} style="color:var(--accent-light)">Read the published post →</a></div> : null}
-                            </div>
-                          </details>
-                        </td>
-                        <td><span class="tag">{m.type || '—'}</span></td>
-                        <td class="num">{m.lanes_declared ?? rowsOf(m).length}</td>
-                        <td class="win">{winnerOf(m)}</td>
-                        <td class="num avg">{scoreOf(m) != null ? scoreOf(m).toFixed(1) : '—'}</td>
-                        <td class="wide-only" style="color:var(--text-secondary)">{providerOf(winnerOf(m)) || '—'}</td>
-                        <td class="wide-only" style="color:var(--text-secondary)">{judgeOf(m)}</td>
-                        <td class="wide-only" style="color:var(--text-secondary)">{qaLabel(m) || '—'}</td>
-                        <td class="wide-only" style="color:var(--text-secondary)">{m.threshold_met === true ? 'met' : m.threshold_met === false ? 'missed' : '—'}</td>
+        ) : <div class="empty">No matches recorded yet.</div>}
+        {sortedMatches.length > 12 && (
+          <div style="margin-top:10px;padding:0 16px 14px">
+            <button type="button" id="archiveToggle" class="more-btn" data-state="less" aria-expanded="false">Show more matches ({sortedMatches.length - 12} more)</button>
+          </div>
+        )}
+      </section>
+
+      <section class="pool-section" id="model-pool" aria-label="Model pool">
+        <div class="p-head" style="border:none;background:none;padding:0 0 4px;flex-wrap:wrap">
+          <h2 style="font-size:18px;font-weight:600;letter-spacing:-0.015em;margin:0;color:var(--arena-ink)">Model pool</h2>
+          <span class="note" style="font-size:13px;color:var(--arena-ink-3)">{totalModels} models · {retiredCount} retired · {providers.size} providers</span>
+          <span class="spacer"></span>
+          <input type="search" id="poolSearch" placeholder="grep model, provider, role…" aria-label="Search model pool" />
+        </div>
+        <div class="pool-grid" id="poolGrid">
+          {poolRows.map((m) => {
+            const role = String(m.role || '').toLowerCase();
+            const b = availBadge(m.model);
+            return (
+              <div class="pool-card" data-search={`${m.model} ${m.provider || ''} ${role} ${m.status || ''}`.toLowerCase()}>
+                <div class="pc-head">
+                  <span class="pc-id">{m.model}</span>
+                  <span class={`a ${b.cls}`} style={`font-size:11px;color:${b.cls === 'a-ok' ? 'var(--arena-ok)' : b.cls === 'a-warn' ? 'var(--arena-warn)' : b.cls === 'a-none' ? 'var(--arena-ink-3)' : 'var(--arena-bad)'}`}>{b.label}</span>
+                </div>
+                <dl>
+                  <dt>role</dt><dd><span class={`tag ${role === 'builder' ? 'builder' : ''}`}>{roleLabel[role] || m.role || '—'}</span></dd>
+                  <dt>provider</dt><dd>{m.provider || '—'}</dd>
+                  <dt>played</dt><dd>{m.played != null ? m.played : '—'}</dd>
+                  <dt>avg</dt><dd class="av" style="color:var(--arena-accent-light)">{typeof m.benchmark_score === 'number' ? m.benchmark_score.toFixed(1) : '—'}</dd>
+                  <dt>status</dt><dd>{m.status || '—'}</dd>
+                </dl>
+              </div>
+            );
+          })}
+        </div>
+
+        {Array.isArray(retired_models) && retired_models.length > 0 && (
+          <details class="strip">
+            <summary><strong>Retired models</strong><span class="sn">{retired_models.length} entries</span></summary>
+            <div class="strip-body">
+              <table class="dt auto" style="font-size:13px">
+                <tbody>
+                  {retired_models.map((r) => (
+                    <tr><td class="mdl">{r.model}</td><td class="prov" style="margin-left:0">{r.provider || '—'}</td><td style="color:var(--arena-ink-2)">{r.reason || '—'}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        )}
+
+        {stability?.model_stats && (
+          <details class="strip">
+            <summary><strong>Availability</strong><span class="sn">updated {stabilityUpdated}</span></summary>
+            <div class="strip-body">
+              <table class="dt auto" style="font-size:13px">
+                <tbody>
+                  {Object.entries(stability.model_stats).map(([name, s]) => {
+                    const b = availBadge(name);
+                    return (
+                      <tr>
+                        <td class="mdl">{name}</td>
+                        <td class={`num ${b.cls}`}>{typeof s.availability === 'number' ? `${s.availability}%` : '—'}</td>
+                        <td class="prov" style="margin-left:0">{b.label}</td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          ) : <div class="empty">No matches recorded yet.</div>}
-          {sortedMatches.length > 12 && (
-            <div style="margin-top:0.5rem">
-              <button type="button" id="archiveToggle" class="more-btn" data-state="less" aria-expanded="false">Show more matches ({sortedMatches.length - 12} more)</button>
-            </div>
-          )}
-        </section>
-
-        <aside class="duo-rail">
-          <section class="block" id="model-pool">
-            <div class="sec-head">
-              <h2>Model pool</h2>
-              <span class="note">{totalModels} models · {retiredCount} retired · {providers.size} providers</span>
-              <span class="spacer"></span>
-              <input type="search" id="poolSearch" placeholder="Search model, provider, role…" aria-label="Search model pool" />
-            </div>
-            <div class="panel">
-              <div class="tw">
-                <table class="dt tight no-sticky" id="poolTable">
-                  <thead>
-                    <tr>
-                      <th>Model</th><th>Role</th><th>Provider</th><th class="num">Played</th><th class="num">Avg</th><th class="wide-only">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {poolRows.map((m) => {
-                      const role = String(m.role || '').toLowerCase();
-                      const played = m.played;
-                      return (
-                        <tr data-search={`${m.model} ${m.provider || ''} ${role} ${m.status || ''}`.toLowerCase()}>
-                          <td class="mdl">{m.model}</td>
-                          <td><span class={`tag ${role === 'builder' ? 'builder' : role === 'judge' ? 'judge' : ''}`}>{roleLabel[role] || m.role || '—'}</span></td>
-                          <td class="prov" style="margin-left:0">{m.provider || '—'}</td>
-                          <td class="num">{played != null ? played : '—'}</td>
-                          <td class="num avg">{typeof m.benchmark_score === 'number' ? m.benchmark_score.toFixed(1) : '—'}</td>
-                          <td class="wide-only" style="color:var(--text-secondary)">{m.status || '—'}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {Array.isArray(retired_models) && retired_models.length > 0 && (
-              <details class="strip">
-                <summary><strong>Retired models</strong><span class="sn">{retired_models.length} entries</span></summary>
-                <div class="strip-body">
-                  <table class="dt" style="font-size:0.72em">
-                    <tbody>
-                      {retired_models.map((r) => (
-                        <tr><td class="mdl">{r.model}</td><td class="prov" style="margin-left:0">{r.provider || '—'}</td><td style="color:var(--text-secondary)">{r.reason || '—'}</td></tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </details>
-            )}
-
-            {stability?.model_stats && (
-              <details class="strip">
-                <summary><strong>Availability</strong><span class="sn">updated {stabilityUpdated}</span></summary>
-                <div class="strip-body">
-                  <table class="dt" style="font-size:0.72em">
-                    <tbody>
-                      {Object.entries(stability.model_stats).map(([name, s]) => {
-                        const b = availBadge(name);
-                        return (
-                          <tr>
-                            <td class="mdl">{name}</td>
-                            <td class={`num ${b.cls}`}>{typeof s.availability === 'number' ? `${s.availability}%` : '—'}</td>
-                            <td class="prov" style="margin-left:0">{b.label}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </details>
-            )}
-          </section>
-        </aside>
-      </div>
+          </details>
+        )}
+      </section>
 
       <details class="strip" id="process-feedback">
         <summary>
@@ -521,14 +512,14 @@ const jsonLd = {
         </summary>
         <div class="strip-body">
           {feedback.recurring_issues.length > 0 && (
-            <div style="margin-bottom:0.5rem">
-              {feedback.recurring_issues.map((i) => <span class="issue">{i.issue} <em>×{i.count}</em></span>)}
+            <div style="margin-bottom:8px">
+              {feedback.recurring_issues.map((i) => <span class="issue">{i.issue} ×{i.count}</span>)}
             </div>
           )}
           {feedback.matches.map((f) => (
             <div class="fb-row">
               <div class="fb-top">
-                <span style="color:var(--text-primary)">{f.topic}</span>
+                <span style="color:var(--arena-ink)">{f.topic}</span>
                 <span class={f.clean ? 'ok' : 'bad'}>{f.clean ? 'Clean' : `${(f.suggestions || []).length} suggestion(s)`}</span>
               </div>
               {!f.clean && (f.suggestions || []).map((s) => <p>[{String(s.severity || '').toUpperCase()}] {s.text}</p>)}
@@ -538,9 +529,9 @@ const jsonLd = {
       </details>
 
       <div class="footline">
-        <span>Arena data: <strong style="color:var(--text-secondary)">{lastUpdated}</strong></span>
-        <span>Stability: <strong style="color:var(--text-secondary)">{stabilityUpdated}</strong></span>
-        <span>Router-selection matches excluded</span>
+        <span>arena_data: <strong>{lastUpdated}</strong></span>
+        <span>stability: <strong>{stabilityUpdated}</strong></span>
+        <span>router-selection matches excluded</span>
       </div>
 
     </main>
@@ -581,13 +572,13 @@ const jsonLd = {
 
       (function () {
         var input = document.getElementById('poolSearch');
-        var table = document.getElementById('poolTable');
-        if (!input || !table) return;
+        var grid = document.getElementById('poolGrid');
+        if (!input || !grid) return;
         input.addEventListener('input', function () {
           var q = input.value.trim().toLowerCase();
-          Array.prototype.forEach.call(table.querySelectorAll('tbody tr'), function (tr) {
-            var hay = tr.getAttribute('data-search') || '';
-            tr.hidden = q !== '' && hay.indexOf(q) === -1;
+          Array.prototype.forEach.call(grid.querySelectorAll('.pool-card'), function (card) {
+            var hay = card.getAttribute('data-search') || '';
+            card.hidden = q !== '' && hay.indexOf(q) === -1;
           });
         });
       })();
