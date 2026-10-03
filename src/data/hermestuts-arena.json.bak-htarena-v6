@@ -7118,82 +7118,6 @@
         "notes": "Winner chosen on measured space metrics (page scrollHeight 1884px @1440 vs 2035 v2 baseline; archive row height 18px vs 40px; leaderboard row 24px vs 31px) AND judge score 9.0 \u2014 both signals agree. deepseek-v4-flash was dense but failed nav parity (\u039432)."
       },
       "notes": "Builders = live canonical 8-lane roster from ~/.hermes/cron/jobs.json. mimo-v2.6-flash + longcat-2.5-preview-free hit the retry ladder and were killed after ~45min (timeout); gpt-6-luna returned a truncated draft (unclosed ```astro fence) = DNF. 5 usable drafts measured. DEVIATION: Step 1b planner model was NOT dispatched; the brief was orchestrator-authored with an explicit brief contract. Judge scores: hy3 9.0, muse-spark-1.3-contributor 8.8, deepseek-v4-flash 6.7, glm-5.3-flash 6.6, space-bunny-free 6.0."
-    },
-    {
-      "id": "arena-ht-arena-page-v6",
-      "match_id": "arena-ht-arena-page-v6",
-      "date": "2026-10-02",
-      "type": "design-spec",
-      "topic": "Arena page v6 \u2014 widescreen + space redesign under c1-c5 canonical rubric with vision judge",
-      "slug": null,
-      "lanes_declared": 8,
-      "drafts": 5,
-      "dnf": [
-        "mimo-v2.6-flash",
-        "longcat-2.5-preview-free",
-        "space-bunny-free",
-        "gpt-6-luna (truncated, no closing fence)"
-      ],
-      "results": [
-        {
-          "model": "deepseek-v4-flash",
-          "model_id": "deepseek-v4-flash",
-          "provider": "commandcode",
-          "family": "deepseek",
-          "rank": 1,
-          "score": 9.55,
-          "threshold_met": true
-        },
-        {
-          "model": "hy3",
-          "model_id": "hy3",
-          "provider": "opencode-go",
-          "family": "tencent",
-          "rank": 2,
-          "score": 9.45,
-          "threshold_met": true
-        },
-        {
-          "model": "glm-5.3-flash",
-          "model_id": "glm-5.3-flash",
-          "provider": "opencode-go",
-          "family": "glm",
-          "rank": 3,
-          "score": 9.15,
-          "threshold_met": true
-        },
-        {
-          "model": "muse-spark-1.3-contributor",
-          "model_id": "muse-spark-1.3-contributor",
-          "provider": "opencode-go",
-          "family": "meta",
-          "rank": 4,
-          "score": 8.9,
-          "threshold_met": true
-        }
-      ],
-      "scores": {
-        "deepseek-v4-flash": 9.55,
-        "hy3": 9.45,
-        "glm-5.3-flash": 9.15,
-        "muse-spark-1.3-contributor": 8.9
-      },
-      "winner": "deepseek-v4-flash",
-      "winner_score": 9.55,
-      "threshold_met": true,
-      "brief_contract": true,
-      "judge_rubric": "c1-c5 canonical (data 30 / layout 25 / fidelity 20 / code 15 / ux 10)",
-      "vision_judge": "pass \u2014 screenshots at 1440+1920 per qualifying draft, scored c2/c3/c5; text judge scored c1/c4",
-      "research_model": "orchestrator (repo facts + global.css contract extraction)",
-      "plan_model": "orchestrator-authored brief (c1-c5 mandate + global-token contract + reader mandate embedded)",
-      "judge_model": "split: c1/c4 deterministic+text (15/15 contract grep, build, functional QA); c2/c3/c5 vision on renders",
-      "qa_model": "layout-audit.js default+strict PASS 1280/1440/1920; functional QA (anchors, expander 103->177 rows aria-true, pool search 17->1, sticky 65px, no undefined/NaN, 0 JS errors)",
-      "qa": {
-        "verdict": "implemented + measured",
-        "checks": "local + live PASS; 3 cache-busted live fetches 200; global-token re-declaration violations: 0 across all 4 drafts (brief contract \u00a73/\u00a711 enforced)",
-        "notes": "Winner deepseek-v4-flash: fold pair + archive head visible @1440 (section top 784), rows 30-32px, widescreen adds provider/uptime columns @1920, vision 9.5 fidelity. Runner-up hy3 9.45 (same architecture, fidelity 9.0)."
-      },
-      "notes": "First match under the locked c1-c5 rubric + mandatory vision pass. global.css factored into the brief: canonical token block inlined, builders ordered to consume var(--token) and never re-declare global tokens (the v2-v5 --border-light drift class). 5/8 lanes landed: space-bunny-free + longcat-2.5 hung (killed), mimo lane timed out earlier in the retry ladder, gpt-6-luna truncated. All 4 judged drafts scored >= 8.9 \u2014 the reader-mandate brief compressed the spread to 0.65 (was 3.55 in v3)."
     }
   ],
   "leaderboard": [
@@ -7201,10 +7125,10 @@
       "model": "deepseek-v4-flash",
       "provider": "commandcode",
       "family": "deepseek",
-      "matches": 28,
-      "wins": 11,
+      "matches": 27,
+      "wins": 10,
       "losses": 17,
-      "avgScore": 8.51,
+      "avgScore": 8.47,
       "bestScore": 9.78,
       "rank": 1
     },
@@ -7235,10 +7159,10 @@
       "model": "hy3",
       "provider": "opencode-go",
       "family": "tencent",
-      "matches": 7,
+      "matches": 6,
       "wins": 2,
-      "losses": 5,
-      "avgScore": 8.93,
+      "losses": 4,
+      "avgScore": 8.84,
       "bestScore": 9.65,
       "rank": 4
     },
@@ -7257,10 +7181,10 @@
       "model": "glm-5.3-flash",
       "provider": "opencode-go",
       "family": "glm",
-      "matches": 11,
+      "matches": 10,
       "wins": 2,
-      "losses": 9,
-      "avgScore": 8.39,
+      "losses": 8,
+      "avgScore": 8.31,
       "bestScore": 9.75,
       "rank": 6
     },
@@ -7290,10 +7214,10 @@
       "model": "muse-spark-1.3-contributor",
       "provider": "opencode-go",
       "family": "muse",
-      "matches": 7,
+      "matches": 6,
       "wins": 0,
-      "losses": 7,
-      "avgScore": 8.68,
+      "losses": 6,
+      "avgScore": 8.64,
       "bestScore": 9.45,
       "rank": 9
     },
