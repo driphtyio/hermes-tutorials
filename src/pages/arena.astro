@@ -192,6 +192,15 @@ const jsonLd = {
       .kpi strong { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
       .kpi strong.accent { color: var(--accent); }
 
+      
+      /* Auto-collapse: show first 10 matches, hide the rest */
+      .result-list .result-card:nth-child(n+11) {
+        display: none;
+      }
+      .result-list.expanded .result-card:nth-child(n+11) {
+        display: block;
+      }
+
       .page-grid {
         display: grid; gap: var(--gap);
         grid-template-columns: minmax(0, 1fr);
@@ -209,6 +218,15 @@ const jsonLd = {
       .kpi .k { color: var(--ink-3); }
       .kpi strong { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
       .kpi strong.accent { color: var(--accent); }
+
+      
+      /* Auto-collapse: show first 10 matches, hide the rest */
+      .result-list .result-card:nth-child(n+11) {
+        display: none;
+      }
+      .result-list.expanded .result-card:nth-child(n+11) {
+        display: block;
+      }
 
       .page-grid {
           grid-template-columns: minmax(0, 1fr) 340px;
@@ -240,7 +258,7 @@ const jsonLd = {
       .p-head .spacer { margin-left: auto; }
       .p-body { overflow-y: auto; min-height: 0; }
       @media (min-width: 1024px) {
-        .p-body.tall { max-height: 920px; }
+        .p-body.tall { /* no max-height — content flows naturally */ }
       }
       .p-body::-webkit-scrollbar { width: 8px; }
       .p-body::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: var(--radius-pill); }
@@ -444,9 +462,11 @@ const jsonLd = {
               <div class="p-head">
                 <h2>Match archive</h2>
                 <span class="note">{totalMatches} matches · newest first</span>
+                <span class="spacer" style="margin-left:auto"></span>
+                <button type="button" class="pill" id="archiveToggle" data-state="collapsed" aria-expanded="false" style="cursor:pointer;font-size:12px">Show all</button>
               </div>
               {sortedMatches.length > 0 ? (
-                <div class="p-body tall result-list">
+                <div class="p-body tall result-list" id="resultList">
                   {sortedMatches.map((m) => {
                     const winner = winnerOf(m);
                     const gate = m.threshold_met;
@@ -633,5 +653,18 @@ const jsonLd = {
         });
       })();
     </script>
+  <script is:inline>
+  const toggle = document.getElementById('archiveToggle');
+  const list = document.getElementById('resultList');
+  if (toggle && list) {
+    toggle.addEventListener('click', () => {
+      const expanded = list.classList.toggle('expanded');
+      toggle.setAttribute('data-state', expanded ? 'expanded' : 'collapsed');
+      toggle.setAttribute('aria-expanded', String(expanded));
+      toggle.textContent = expanded ? 'Show recent' : 'Show all';
+    });
+  }
+</script>
+
   </body>
 </html>
