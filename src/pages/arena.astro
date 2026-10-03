@@ -267,7 +267,7 @@ const jsonLd = {
       /* ── Leaderboard cards ────────────────── */
       .lb-list { display: flex; flex-direction: column; }
       .leaderboard-card {
-        display: grid; grid-template-columns: auto auto 1fr;
+        display: grid; grid-template-columns: auto 1fr auto;
         grid-template-areas: "rank name pills" "rank bar pills";
         align-items: center; column-gap: 12px; row-gap: 6px;
         padding: 10px 16px; border-bottom: 1px solid var(--border);
@@ -284,7 +284,7 @@ const jsonLd = {
       .lb-name { grid-area: name; font-family: 'Atkinson Hyperlegible', sans-serif; font-size: 15px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .lb-name .prov { color: var(--ink-3); font-size: 12px; font-weight: 400; margin-left: 8px; }
       .lb-bar { grid-area: bar; display: flex; align-items: center; gap: 10px; }
-      .lb-bar .track { flex: 1; height: 6px; border-radius: var(--radius-pill); background: var(--surface-3); overflow: hidden; max-width: 320px; }
+      .lb-bar .track { flex: 1; height: 6px; border-radius: var(--radius-pill); background: var(--surface-3); overflow: hidden;  }
       .lb-bar .track > i { display: block; height: 100%; background: var(--accent); border-radius: var(--radius-pill); }
       .lb-bar .avg { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; font-weight: 700; color: var(--accent-light); }
       .lb-pills { grid-area: pills; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
@@ -653,20 +653,29 @@ const jsonLd = {
         });
       })();
     </script>
-  <script is:inline>
-  document.addEventListener('DOMContentLoaded', () => {
-    const toggle = document.getElementById('archiveToggle');
-    const list = document.getElementById('resultList');
-    if (toggle && list) {
-      toggle.addEventListener('click', () => {
-        const expanded = list.classList.toggle('expanded');
-        toggle.setAttribute('data-state', expanded ? 'expanded' : 'collapsed');
-        toggle.setAttribute('aria-expanded', String(expanded));
-        toggle.textContent = expanded ? 'Show recent' : 'Show all';
+  <script>
+  (function() {
+    var toggle = document.getElementById('archiveToggle');
+    var list = document.getElementById('resultList');
+    if (!toggle || !list) return;
+    var COLLAPSED_COUNT = 10;
+    function applyCollapse() {
+      var cards = list.querySelectorAll('.result-card');
+      var expanded = list.classList.contains('expanded');
+      cards.forEach(function(card, i) {
+        card.style.display = (!expanded && i >= COLLAPSED_COUNT) ? 'none' : '';
       });
+      toggle.textContent = expanded ? 'Show recent' : 'Show all';
+      toggle.setAttribute('data-state', expanded ? 'expanded' : 'collapsed');
+      toggle.setAttribute('aria-expanded', String(expanded));
     }
-  });
-</script>
+    toggle.addEventListener('click', function() {
+      list.classList.toggle('expanded');
+      applyCollapse();
+    });
+    applyCollapse();
+  })();
+  </script>
 
   </body>
 </html>
