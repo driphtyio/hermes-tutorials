@@ -79,15 +79,16 @@ const lb = leaderboard.map((e, i) => ({
   rank: e.rank ?? i + 1,
   winRate: e.matches ? Math.round(((e.wins ?? 0) / e.matches) * 100) : 0,
 }));
+const maxScore = Math.max(...lb.map((e) => e.avgScore ?? 0), 0.0001);
 
 function availBadge(name) {
   const s = stability?.model_stats?.[name];
-  if (!s || typeof s.availability !== 'number') return { label: '—', cls: 'a-none' };
+  if (!s || typeof s.availability !== 'number') return { label: 'unknown', cls: 'st-none' };
   const a = s.availability;
-  if (a >= 99) return { label: 'Stable', cls: 'a-ok' };
-  if (a >= 80) return { label: 'Degraded', cls: 'a-warn' };
-  if (a >= 1) return { label: 'Unstable', cls: 'a-bad' };
-  return { label: 'Down', cls: 'a-down' };
+  if (a >= 99) return { label: 'Stable', cls: 'st-ok' };
+  if (a >= 80) return { label: 'Degraded', cls: 'st-warn' };
+  if (a >= 1) return { label: 'Unstable', cls: 'st-bad' };
+  return { label: 'Down', cls: 'st-bad' };
 }
 
 let feedback = { matches: [], recurring_issues: [], cleanRate: null };
@@ -127,354 +128,424 @@ const jsonLd = {
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
     <style is:global>
       main.arena-shell {
-        --arena-accent: #6c5ce7;
-        --arena-accent-light: #a29bfe;
-        --arena-canvas: #0a0a0b;
-        --arena-surface-1: #121214;
-        --arena-surface-2: #1a1a1e;
-        --arena-surface-3: #202026;
-        --arena-border: #1e1e22;
-        --arena-border-light: #2a2a2e;
-        --arena-ink: #e8e8ed;
-        --arena-ink-2: #a1a1aa;
-        --arena-ink-3: #6b6b76;
-        --arena-ok: #22c55e;
-        --arena-warn: #eab308;
-        --arena-bad: #ef4444;
-        --arena-glow: rgba(108, 92, 231, 0.15);
-        background: var(--arena-canvas);
-        color: var(--arena-ink);
+        --canvas: #0a0a0b;
+        --accent: #6c5ce7;
+        --accent-light: #a29bfe;
+        --accent-glow: rgba(108, 92, 231, 0.15);
+        --surface-1: #121214;
+        --surface-2: #1a1a1e;
+        --surface-3: #202026;
+        --border: #1e1e22;
+        --border-light: #2a2a2e;
+        --ink: #e8e8ed;
+        --ink-2: #a1a1aa;
+        --ink-3: #6b6b76;
+        --st-ok: #22c55e;
+        --st-bad: #ef4444;
+        --st-none: #6b6b76;
+        --gap: 1.25rem;
+        --card-padding: 1.5rem;
+        --radius-pill: 999px;
+        background: var(--canvas);
+        color: var(--ink);
         font-family: 'Atkinson Hyperlegible', -apple-system, sans-serif;
       }
     </style>
     <style>
-      main.arena-shell { width: 100%; max-width: none; margin: 0; padding: 0 24px 3rem; box-sizing: border-box; }
-      main.arena-shell a { color: var(--arena-accent-light); }
-      main.arena-shell a:hover { color: var(--arena-ink); }
+      main.arena-shell {
+        width: min(1800px, 100% - 3rem);
+        margin: 0 auto;
+        padding: 0 0 3rem;
+        box-sizing: border-box;
+      }
+      main.arena-shell a { color: var(--accent-light); }
+      main.arena-shell a:hover { color: var(--ink); }
+      .mono { font-family: 'JetBrains Mono', SF Mono, ui-monospace, monospace; font-variant-numeric: tabular-nums; }
 
-      .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 24px 0 16px; border-bottom: 1px solid var(--arena-border); }
-      .hero h1 { font-size: 36px; font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; margin: 0; color: var(--arena-ink); }
-      .hero h1 span { color: var(--arena-accent); }
-      .hero .tagline { margin: 4px 0 0; font-size: 15px; line-height: 1.75; color: var(--arena-ink-2); max-width: 68ch; }
+      /* ── Hero ─────────────────────────────── */
+      .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 24px 0 16px; border-bottom: 1px solid var(--border); }
+      .hero h1 { font-size: 36px; font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; margin: 0; }
+      .hero h1 span { color: var(--accent); }
+      .hero .tagline { margin: 4px 0 0; font-size: 15px; line-height: 1.75; color: var(--ink-2); max-width: 68ch; }
       .kpis { display: flex; flex-wrap: wrap; gap: 8px; }
-      .kpi { display: inline-flex; align-items: baseline; gap: 6px; font-size: 13px; color: var(--arena-ink-2); border: 1px solid var(--arena-border-light); background: var(--arena-surface-1); border-radius: 9999px; padding: 4px 12px; white-space: nowrap; }
-      .kpi strong { color: var(--arena-ink); font-weight: 700; font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+      .kpi { display: inline-flex; align-items: baseline; gap: 6px; font-size: 13px; color: var(--ink-2); border: 1px solid var(--border-light); background: var(--surface-1); border-radius: var(--radius-pill); padding: 4px 12px; white-space: nowrap; }
+      .kpi strong { color: var(--ink); font-weight: 700; font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
 
-      .subnav { position: sticky; top: var(--nav-h, 0px); z-index: 40; display: flex; gap: 8px; align-items: center; overflow-x: auto; padding: 8px 0; background: var(--arena-canvas); border-bottom: 1px solid var(--arena-border); scrollbar-width: none; }
-      .subnav::-webkit-scrollbar { display: none; }
-      .subnav a { flex: none; font-size: 13px; font-weight: 600; color: var(--arena-ink-2); border: 1px solid var(--arena-border-light); background: var(--arena-surface-1); border-radius: 9999px; padding: 5px 14px; text-decoration: none; }
-      .subnav a:hover, .subnav a.active { color: var(--arena-ink); border-color: var(--arena-accent); background: var(--arena-glow); }
-      .subnav .sn-count { color: var(--arena-ink-3); font-weight: 400; margin-left: 6px; font-family: 'JetBrains Mono', ui-monospace, monospace; }
+      /* ── Sticky subnav ────────────────────── */
+      nav.subnav {
+        position: sticky; top: var(--nav-h, 0px); z-index: 100;
+        display: flex; gap: 8px; align-items: center;
+        padding: 8px 0; background: var(--canvas); border-bottom: 1px solid var(--border-light);
+      }
+      nav.subnav a { font-size: 13px; font-weight: 600; color: var(--ink-2); border: 1px solid var(--border-light); background: var(--surface-1); border-radius: var(--radius-pill); padding: 5px 14px; text-decoration: none; }
+      nav.subnav a:hover, nav.subnav a.active { color: var(--ink); border-color: var(--accent); background: var(--accent-glow); }
+      nav.subnav .sn-count { color: var(--ink-3); font-weight: 400; margin-left: 6px; font-family: 'JetBrains Mono', ui-monospace, monospace; }
+      .prompt-label { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; color: var(--ink-3); margin-left: auto; }
+      .prompt-label::before { content: '$ '; color: var(--accent); }
 
-      .prompt-label { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; color: var(--arena-ink-3); }
-      .prompt-label::before { content: '$ '; color: var(--arena-accent); }
-      .prompt-label b { color: var(--arena-ink); font-weight: 600; }
-
-      .primary-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; margin-top: 20px; }
-      @media (min-width: 1000px) {
-        .primary-grid { grid-template-columns: minmax(0, 1.6fr) minmax(360px, 1fr); }
+      /* ── Page-level named grid ────────────── */
+      .page-grid {
+        display: grid; gap: var(--gap);
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: "subnav" "main" "sidebar" "pool";
+      }
+      .page-grid > .subnav-slot { grid-area: subnav; }
+      .page-grid > .main-slot { grid-area: main; min-width: 0; }
+      .page-grid > .sidebar-slot { grid-area: sidebar; min-width: 0; }
+      .page-grid > .pool-slot { grid-area: pool; min-width: 0; }
+      @media (min-width: 1024px) {
+        .page-grid {
+          grid-template-columns: minmax(0, 1fr) 340px;
+          grid-template-areas:
+            "subnav subnav"
+            "main sidebar"
+            "pool pool";
+        }
       }
 
-      .panel { border: 1px solid var(--arena-border); border-radius: 12px; background: var(--arena-surface-1); min-width: 0; overflow: hidden; }
-      .p-head { display: flex; align-items: baseline; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--arena-border); background: var(--arena-surface-2); flex-wrap: wrap; }
-      .p-head h2 { margin: 0; font-size: 18px; font-weight: 600; color: var(--arena-ink); letter-spacing: -0.015em; }
-      .p-head .note { font-size: 13px; color: var(--arena-ink-3); }
+      /* ── Main two-column: leaderboard + history ── */
+      .main-grid {
+        display: grid; gap: var(--gap);
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: "leaderboard" "history";
+      }
+      @media (min-width: 1024px) {
+        .main-grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-areas: "leaderboard history"; }
+      }
+      #leaderboard { grid-area: leaderboard; }
+      #match-history { grid-area: history; }
+
+      /* ── Panels ───────────────────────────── */
+      .panel { border: 1px solid var(--border); border-radius: 12px; background: var(--surface-1); min-width: 0; overflow: hidden; display: flex; flex-direction: column; }
+      .p-head { display: flex; align-items: baseline; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--surface-2); flex-wrap: wrap; }
+      .p-head h2 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.015em; }
+      .p-head h2::before { content: '» '; color: var(--accent); font-family: 'JetBrains Mono', ui-monospace, monospace; }
+      .p-head .note { font-size: 13px; color: var(--ink-3); }
       .p-head .spacer { margin-left: auto; }
-
-      .tw { overflow-x: auto; }
-      table.dt { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
-      table.dt.auto { table-layout: auto; }
-      table.dt thead th { background: var(--arena-surface-2); text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--arena-ink-3); padding: 6px 10px; border-bottom: 1px solid var(--arena-border-light); white-space: nowrap; }
-      table.dt thead th.num, table.dt td.num { text-align: right; }
-      table.dt tbody td { padding: 6px 10px; border-bottom: 1px solid var(--arena-border); height: 34px; vertical-align: middle; white-space: nowrap; color: var(--arena-ink); }
-      table.dt tbody tr:last-child td { border-bottom: none; }
-      table.dt tbody tr:nth-child(even) td { background: rgba(255,255,255,0.012); }
-      table.dt tbody tr:hover td { background: var(--arena-surface-2); }
-      .num { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
-      .rk { color: var(--arena-ink-3); font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
-      .mdl { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; color: var(--arena-ink); font-weight: 600; }
-      .prov { color: var(--arena-ink-3); font-size: 12px; margin-left: 8px; }
-      .avg { color: var(--arena-accent-light); font-weight: 700; }
-      .best { color: var(--arena-ink-2); }
-      .w { color: var(--arena-ok); } .l { color: var(--arena-bad); }
-      .bar { display: inline-block; width: 54px; height: 4px; border-radius: 9999px; background: var(--arena-surface-3); overflow: hidden; vertical-align: middle; margin-left: 8px; }
-      .bar > i { display: block; height: 100%; background: var(--arena-accent); }
-      tr.top-row td { background: var(--arena-glow) !important; }
-      tr.top-row td:first-child { box-shadow: inset 3px 0 0 var(--arena-accent); }
-      .tag { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid var(--arena-border-light); border-radius: 9999px; padding: 1px 8px; color: var(--arena-ink-2); }
-      .tag.builder { color: var(--arena-accent-light); border-color: rgba(108,92,231,0.4); background: var(--arena-glow); }
-      .tag.retired { color: var(--arena-ink-3); text-decoration: line-through; }
-      .a-ok { color: var(--arena-ok); } .a-warn { color: var(--arena-warn); } .a-bad { color: var(--arena-bad); } .a-down { color: var(--arena-bad); } .a-none { color: var(--arena-ink-3); }
-      .badge { display: inline-block; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; border-radius: 6px; padding: 1px 8px; background: var(--arena-glow); color: var(--arena-accent-light); border: 1px solid rgba(108,92,231,0.35); }
-      .badge.neutral { background: var(--arena-surface-3); color: var(--arena-ink-2); border-color: var(--arena-border-light); }
-      .win { color: var(--arena-ok); font-weight: 600; }
-      .date { color: var(--arena-ink-3); font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
-      .topic { color: var(--arena-ink); display: block; overflow: hidden; text-overflow: ellipsis; }
-      .empty { color: var(--arena-ink-3); font-size: 13px; padding: 16px; }
-
-      details.mx > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-      details.mx > summary::-webkit-details-marker { display: none; }
-      details.mx > summary::before { content: '\25B8'; color: var(--arena-ink-3); flex: none; font-family: 'JetBrains Mono', ui-monospace, monospace; }
-      details.mx[open] > summary::before { content: '\25BE'; color: var(--arena-accent-light); }
-      details.mx .mx-body { padding: 8px 12px 12px 24px; background: var(--arena-surface-2); }
-      details.mx .mx-body table { width: 100%; border-collapse: collapse; font-size: 13px; }
-      details.mx .mx-body td { padding: 4px 8px; border-bottom: 1px solid var(--arena-border); white-space: nowrap; }
-      details.mx .mx-body tr:last-child td { border-bottom: none; }
-
-      .pool-section { margin-top: 32px; }
-      .pool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 12px; }
-      .pool-card { border: 1px solid var(--arena-border); border-radius: 12px; background: var(--arena-surface-1); padding: 14px 16px; min-width: 0; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; transition: border-color .15s; }
-      .pool-card:hover { border-color: var(--arena-accent); }
-      .pool-card .pc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-      .pool-card .pc-id { color: var(--arena-ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .pool-card .pc-id::before { content: 'model: '; color: var(--arena-accent); font-weight: 400; }
-      .pool-card dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; }
-      .pool-card dt { color: var(--arena-ink-3); font-size: 11px; }
-      .pool-card dt::after { content: ':'; }
-      .pool-card dd { margin: 0; color: var(--arena-ink-2); font-variant-numeric: tabular-nums; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .pool-card dd.av { font-weight: 700; }
-      #poolSearch { width: min(280px, 100%); background: var(--arena-surface-2); border: 1px solid var(--arena-border-light); border-radius: 6px; color: var(--arena-ink); padding: 6px 10px; font-size: 13px; font-family: 'JetBrains Mono', ui-monospace, monospace; outline: none; }
-      #poolSearch:focus { border-color: var(--arena-accent); }
-      .more-btn { background: var(--arena-surface-2); color: var(--arena-accent-light); border: 1px solid var(--arena-border-light); border-radius: 9999px; padding: 6px 14px; font-size: 13px; cursor: pointer; font-family: 'Atkinson Hyperlegible', sans-serif; }
-      .more-btn:hover { border-color: var(--arena-accent); }
-
-      details.strip { border: 1px solid var(--arena-border); border-radius: 12px; background: var(--arena-surface-1); margin-top: 20px; }
-      details.strip > summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 10px; padding: 10px 16px; font-size: 13px; color: var(--arena-ink-2); flex-wrap: wrap; }
-      details.strip > summary::-webkit-details-marker { display: none; }
-      details.strip > summary strong { color: var(--arena-ink); }
-      details.strip > summary .sn { margin-left: auto; font-family: 'JetBrains Mono', ui-monospace, monospace; color: var(--arena-ink-3); }
-      details.strip .strip-body { padding: 8px 16px 16px; font-size: 13px; }
-      .issue { display: inline-block; background: var(--arena-surface-2); border: 1px solid var(--arena-border-light); border-left: 2px solid var(--arena-accent); border-radius: 6px; padding: 2px 8px; margin: 0 6px 6px 0; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; }
-      .fb-row { border-top: 1px solid var(--arena-border); padding: 8px 0; }
-      .fb-top { display: flex; justify-content: space-between; gap: 12px; }
-      .ok { color: var(--arena-ok); } .bad { color: var(--arena-warn); }
-      .fb-row p { margin: 4px 0 0; color: var(--arena-ink-2); }
-
-      .footline { margin-top: 20px; font-size: 13px; color: var(--arena-ink-3); display: flex; gap: 16px; flex-wrap: wrap; font-family: 'JetBrains Mono', ui-monospace, monospace; }
-      .footline strong { color: var(--arena-ink-2); font-weight: 600; }
-
-      @media (max-width: 960px) {
-        .primary-grid { grid-template-columns: minmax(0, 1fr); }
-        .pool-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+      .p-body { overflow-y: auto; min-height: 0; }
+      @media (min-width: 1024px) {
+        .p-body.tall { max-height: 920px; }
       }
-      @media (max-width: 600px) {
-        main.arena-shell { padding: 0 12px 2rem; }
+      .p-body::-webkit-scrollbar { width: 8px; }
+      .p-body::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: var(--radius-pill); }
+      .empty { color: var(--ink-3); font-size: 13px; padding: 16px; }
+
+      /* ── Leaderboard cards ────────────────── */
+      .lb-list { display: flex; flex-direction: column; }
+      .leaderboard-card {
+        display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas: "rank name pills" "rank bar pills";
+        align-items: center; column-gap: 12px; row-gap: 6px;
+        padding: 10px 16px; border-bottom: 1px solid var(--border);
+      }
+      .leaderboard-card:last-child { border-bottom: none; }
+      .leaderboard-card.is-top { background: var(--accent-glow); box-shadow: inset 3px 0 0 var(--accent); }
+      .rank-badge {
+        grid-area: rank; width: 34px; height: 34px; border-radius: var(--radius-pill);
+        display: inline-flex; align-items: center; justify-content: center;
+        font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; font-weight: 700;
+        background: var(--surface-3); color: var(--ink-2); border: 1px solid var(--border-light);
+      }
+      .leaderboard-card.is-top .rank-badge { background: var(--accent); color: #fff; border-color: var(--accent); }
+      .lb-name { grid-area: name; font-family: 'Atkinson Hyperlegible', sans-serif; font-size: 15px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .lb-name .prov { color: var(--ink-3); font-size: 12px; font-weight: 400; margin-left: 8px; }
+      .lb-bar { grid-area: bar; display: flex; align-items: center; gap: 10px; }
+      .lb-bar .track { flex: 1; height: 6px; border-radius: var(--radius-pill); background: var(--surface-3); overflow: hidden; max-width: 320px; }
+      .lb-bar .track > i { display: block; height: 100%; background: var(--accent); border-radius: var(--radius-pill); }
+      .lb-bar .avg { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; font-weight: 700; color: var(--accent-light); }
+      .lb-pills { grid-area: pills; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+      .pill { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; border-radius: var(--radius-pill); padding: 3px 10px; border: 1px solid var(--border-light); background: var(--surface-2); color: var(--ink-2); white-space: nowrap; }
+      .pill.win-rate { color: var(--accent-light); border-color: rgba(108,92,231,0.4); background: var(--accent-glow); }
+      .pill.st-ok { color: var(--st-ok); border-color: rgba(34,197,94,0.35); }
+      .pill.st-bad { color: var(--st-bad); border-color: rgba(239,68,68,0.35); }
+      .pill.st-none { color: var(--st-none); }
+      .pill.retired { color: var(--st-none); text-decoration: line-through; }
+      .pill .w { color: var(--st-ok); } .pill .l { color: var(--st-bad); }
+
+      /* ── Match result cards ───────────────── */
+      .result-list { display: flex; flex-direction: column; }
+      .result-card { padding: 10px 16px; border-bottom: 1px solid var(--border); }
+      .result-card:last-child { border-bottom: none; }
+      .rc-top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+      .rc-date { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; color: var(--ink-3); }
+      .rc-topic { font-size: 14px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+      .rc-meta { margin-left: auto; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+      .rc-lanes { display: flex; flex-direction: column; gap: 3px; margin-top: 8px; }
+      .rc-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 6px; border: 1px solid transparent; font-size: 13px; }
+      .rc-row .rk { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; color: var(--ink-3); width: 30px; flex: none; }
+      .rc-row .mdl { font-family: 'Atkinson Hyperlegible', sans-serif; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .rc-row .chip { margin-left: auto; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; border-radius: var(--radius-pill); padding: 2px 9px; background: var(--surface-3); color: var(--ink-2); border: 1px solid var(--border-light); white-space: nowrap; }
+      .rc-row.is-winner { border-color: rgba(108,92,231,0.45); background: var(--accent-glow); }
+      .rc-row.is-winner .chip { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+      .rc-foot { margin-top: 6px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; color: var(--ink-3); }
+      .rc-foot a { color: var(--accent-light); text-decoration: none; }
+      .status-pill { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; border-radius: var(--radius-pill); padding: 2px 10px; }
+      .status-pill.st-ok { color: var(--st-ok); border: 1px solid rgba(34,197,94,0.35); background: rgba(34,197,94,0.08); }
+      .status-pill.st-bad { color: var(--st-bad); border: 1px solid rgba(239,68,68,0.35); background: rgba(239,68,68,0.08); }
+      .status-pill.st-none { color: var(--st-none); border: 1px solid var(--border-light); background: var(--surface-2); }
+
+      /* ── Sidebar ──────────────────────────── */
+      .sidebar-inner { position: sticky; top: calc(var(--nav-h, 0px) + 56px); display: flex; flex-direction: column; gap: var(--gap); }
+      .stat-panel { border: 1px solid var(--border); border-radius: 12px; background: var(--surface-1); padding: var(--card-padding); }
+      .stat-panel h3 { margin: 0 0 12px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); }
+      .stat-panel h3::before { content: '# '; color: var(--accent); font-family: 'JetBrains Mono', ui-monospace, monospace; }
+      .stat-rows { display: flex; flex-direction: column; gap: 8px; }
+      .stat-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--ink-2); }
+      .stat-row strong { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 15px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+      .stat-row strong.accent { color: var(--accent-light); }
+      .status-line { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: var(--ink-3); border: 1px solid var(--border); border-radius: 6px; background: var(--surface-2); padding: 8px 10px; line-height: 1.5; word-break: break-word; }
+      .status-line .k { color: var(--accent); }
+
+      /* ── Model pool (full width) ──────────── */
+      .pool-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 0 0 4px; }
+      .pool-head h2 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.015em; }
+      .pool-head h2::before { content: '» '; color: var(--accent); font-family: 'JetBrains Mono', ui-monospace, monospace; }
+      .pool-head .note { font-size: 13px; color: var(--ink-3); }
+      #poolSearch { width: min(280px, 100%); background: var(--surface-2); border: 1px solid var(--border-light); border-radius: 6px; color: var(--ink); padding: 6px 10px; font-size: 13px; font-family: 'JetBrains Mono', ui-monospace, monospace; outline: none; }
+      #poolSearch:focus { border-color: var(--accent); }
+      .pool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 12px; }
+      .pool-card { border: 1px solid var(--border); border-radius: 12px; background: var(--surface-1); padding: 14px 16px; min-width: 0; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; transition: border-color .15s; }
+      .pool-card:hover { border-color: var(--accent); }
+      .pool-card .pc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+      .pool-card .pc-id { color: var(--ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .pool-card .pc-id::before { content: 'model: '; color: var(--accent); font-weight: 400; }
+      .pool-card dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; }
+      .pool-card dt { color: var(--ink-3); font-size: 11px; }
+      .pool-card dt::after { content: ':'; }
+      .pool-card dd { margin: 0; color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .pool-card dd.av { font-weight: 700; color: var(--accent-light); }
+      .role-pill { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; border-radius: var(--radius-pill); padding: 2px 9px; border: 1px solid var(--border-light); background: var(--surface-2); color: var(--ink-2); }
+      .role-pill.builder { color: var(--accent-light); border-color: rgba(108,92,231,0.4); background: var(--accent-glow); }
+
+      /* ── Collapsible strips ───────────────── */
+      details.strip { border: 1px solid var(--border); border-radius: 12px; background: var(--surface-1); margin-top: var(--gap); }
+      details.strip > summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 10px; padding: 10px 16px; font-size: 13px; color: var(--ink-2); flex-wrap: wrap; }
+      details.strip > summary::-webkit-details-marker { display: none; }
+      details.strip > summary::before { content: '\25B8'; color: var(--ink-3); font-family: 'JetBrains Mono', ui-monospace, monospace; }
+      details.strip[open] > summary::before { content: '\25BE'; color: var(--accent-light); }
+      details.strip > summary strong { color: var(--ink); }
+      details.strip > summary .sn { margin-left: auto; font-family: 'JetBrains Mono', ui-monospace, monospace; color: var(--ink-3); }
+      details.strip .strip-body { padding: 8px 16px 16px; font-size: 13px; }
+      .strip-body .line { display: flex; gap: 12px; align-items: baseline; padding: 6px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+      .strip-body .line:last-child { border-bottom: none; }
+      .issue { display: inline-block; background: var(--surface-2); border: 1px solid var(--border-light); border-left: 2px solid var(--accent); border-radius: 6px; padding: 2px 8px; margin: 0 6px 6px 0; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; }
+      .fb-row { border-top: 1px solid var(--border); padding: 8px 0; }
+      .fb-top { display: flex; justify-content: space-between; gap: 12px; }
+      .ok { color: var(--st-ok); } .bad { color: var(--st-bad); }
+      .fb-row p { margin: 4px 0 0; color: var(--ink-2); }
+
+      .footline { margin-top: var(--gap); font-size: 13px; color: var(--ink-3); display: flex; gap: 16px; flex-wrap: wrap; font-family: 'JetBrains Mono', ui-monospace, monospace; }
+      .footline strong { color: var(--ink-2); font-weight: 600; }
+
+      @media (max-width: 768px) {
+        main.arena-shell { width: min(1800px, 100% - 1.5rem); }
         .pool-grid { grid-template-columns: 1fr; }
+        .sidebar-inner { position: static; }
       }
     </style>
   </head>
   <body>
     <Header />
     <main class="arena-shell">
+      <div class="page-grid">
 
-      <div class="hero">
-        <div>
-          <h1><span>Arena</span></h1>
-          <p class="tagline">LLMs head-to-head on Hermes Agent content, design and engineering tasks — every match scored by a multipass model jury.</p>
-        </div>
-        <div class="kpis">
-          <span class="kpi"><strong>{totalMatches}</strong> matches</span>
-          <span class="kpi"><strong>{rankedModels}</strong> ranked</span>
-          <span class="kpi"><strong>{totalModels}</strong> in pool</span>
-          <span class="kpi"><strong>{distinctLanes.size}</strong> competed</span>
-          <span class="kpi"><strong>{providers.size}</strong> providers</span>
-          {avgWinner != null && <span class="kpi"><strong>{avgWinner.toFixed(1)}</strong> avg win</span>}
-          {gateRate != null && <span class="kpi"><strong>{gateRate}%</strong> cleared 8.0</span>}
-        </div>
-      </div>
-
-      <nav class="subnav" aria-label="Arena sections">
-        <a href="#leaderboard">Leaderboard<span class="sn-count">{lb.length}</span></a>
-        
-        <a href="#match-history">Match archive<span class="sn-count">{totalMatches}</span></a>
-        <a href="#model-pool">Model pool<span class="sn-count">{totalModels}</span></a>
-      </nav>
-
-      <div class="primary-grid">
-        <section class="panel" id="leaderboard" aria-label="Leaderboard">
-          <div class="p-head">
-            <h2>Leaderboard</h2>
-            <span class="note">avg score / 10 · ranked by wins</span>
+        <div class="subnav-slot">
+          <div class="hero">
+            <div>
+              <h1><span>Arena</span></h1>
+              <p class="tagline">LLMs head-to-head on Hermes Agent content, design and engineering tasks — every match scored by a multipass model jury.</p>
+            </div>
+            <div class="kpis">
+              <span class="kpi"><strong>{totalMatches}</strong> matches</span>
+              <span class="kpi"><strong>{rankedModels}</strong> ranked</span>
+              <span class="kpi"><strong>{totalModels}</strong> in pool</span>
+              <span class="kpi"><strong>{distinctLanes.size}</strong> competed</span>
+              <span class="kpi"><strong>{providers.size}</strong> providers</span>
+              {avgWinner != null && <span class="kpi"><strong>{avgWinner.toFixed(1)}</strong> avg win</span>}
+              {gateRate != null && <span class="kpi"><strong>{gateRate}%</strong> cleared 8.0</span>}
+            </div>
           </div>
-          {lb.length > 0 ? (
-            <div class="tw">
-              <table class="dt auto">
-                <thead>
-                  <tr>
-                    <th style="width:44px">#</th>
-                    <th>Model</th>
-                    <th class="num">Avg</th>
-                    <th class="num">Best</th>
-                    <th class="num">M</th>
-                    <th class="num">W / L</th>
-                    <th class="num">Win%</th>
-                    <th class="num">Uptime</th>
-                  </tr>
-                </thead>
-                <tbody>
+          <nav class="subnav" aria-label="Arena sections">
+            <a href="#leaderboard">Leaderboard<span class="sn-count">{lb.length}</span></a>
+            <a href="#match-history">Match archive<span class="sn-count">{totalMatches}</span></a>
+            <a href="#model-pool">Model pool<span class="sn-count">{totalModels}</span></a>
+            <span class="prompt-label">hermes arena --watch</span>
+          </nav>
+        </div>
+
+        <div class="main-slot">
+          <div class="main-grid">
+
+            <section class="panel" id="leaderboard" aria-label="Leaderboard">
+              <div class="p-head">
+                <h2>Leaderboard</h2>
+                <span class="note">avg score / 10 · ranked by wins</span>
+              </div>
+              {lb.length > 0 ? (
+                <div class="p-body tall lb-list">
                   {lb.map((e) => {
                     const b = availBadge(e.model);
+                    const barPct = Math.max(0, Math.min(100, ((e.avgScore ?? 0) / maxScore) * 100));
                     return (
-                      <tr class={e.rank === 1 ? 'top-row' : null}>
-                        <td class="rk">{e.rank === 1 ? '#1' : e.rank === 2 ? '#2' : e.rank === 3 ? '#3' : `#${e.rank}`}</td>
-                        <td>
-                          <span class="mdl">{e.model}</span>
+                      <article class:list={['leaderboard-card', { 'is-top': e.rank === 1 }]}>
+                        <span class="rank-badge">{`#${e.rank}`}</span>
+                        <span class="lb-name">
+                          {e.model}
                           <span class="prov">{e.provider || ''}</span>
-                          {e.retired ? <span class="tag retired" style="margin-left:8px">retired</span> : null}
-                        </td>
-                        <td class="num">
+                        </span>
+                        <span class="lb-bar">
+                          <span class="track"><i style={`width:${barPct}%`}></i></span>
                           <span class="avg">{(e.avgScore ?? 0).toFixed(1)}</span>
-                          <span class="bar"><i style={`width:${Math.max(0, Math.min(100, ((e.avgScore ?? 0) / 10) * 100))}%`}></i></span>
-                        </td>
-                        <td class="num best">{(e.bestScore ?? 0).toFixed(1)}</td>
-                        <td class="num">{e.matches ?? 0}</td>
-                        <td class="num"><span class="w">{e.wins ?? 0}</span> / <span class="l">{e.losses ?? 0}</span></td>
-                        <td class="num best">{e.winRate}%</td>
-                        <td class={`num ${b.cls}`}>{b.label}</td>
-                      </tr>
+                        </span>
+                        <span class="lb-pills">
+                          <span class="pill"><span class="w">W:{e.wins ?? 0}</span> / <span class="l">L:{e.losses ?? 0}</span></span>
+                          <span class="pill win-rate">{e.winRate}% win</span>
+                          <span class="pill">M:{e.matches ?? 0}</span>
+                          <span class="pill">best {(e.bestScore ?? 0).toFixed(1)}</span>
+                          <span class:list={['pill', 'st', b.cls]}>{b.label}</span>
+                          {e.retired ? <span class="pill retired">retired</span> : null}
+                        </span>
+                      </article>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
-          ) : <div class="empty">No ranked models yet.</div>}
-        </section>
-
-        <section class="panel" id="match-history" style="margin-top:20px" aria-label="Match archive">
-        <div class="p-head">
-          <h2>Match archive</h2>
-          <span class="note">{totalMatches} matches · newest first · click a row for per-model scores</span>
-        </div>
-          <div style="padding:10px 16px;border-top:1px solid var(--arena-border);font-size:13px;color:var(--arena-ink-2);display:flex;gap:8px;flex-wrap:wrap;align-items:baseline">
-            <span class="prompt-label"><b>how-a-match-runs</b></span>
-            <span style="color:var(--arena-ink-3)">Brief → Plan → Build (all lanes) → Judge → QA → Publish</span>
-          </div>
-        {sortedMatches.length > 0 ? (
-          <div class="tw">
-            <table class="dt auto">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Match</th>
-                  <th>Type</th>
-                  <th class="num">Lanes</th>
-                  <th>Winner</th>
-                  <th class="num">Score</th>
-                  <th>Judge</th>
-                  <th class="num">Threshold</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedMatches.map((m, mi) => (
-                  <tr data-extra={mi >= 12 ? '1' : null} hidden={mi >= 12}>
-                    <td class="date">{m.date || '—'}</td>
-                    <td style="max-width:480px">
-                      <details class="mx" id={`match-${keyOf(m)}`}>
-                        <summary><span class="topic">{m.topic || '—'}</span></summary>
-                        <div class="mx-body">
-                          <table>
-                            <tbody>
-                              {rowsOf(m).map((r) => (
-                                <tr>
-                                  <td class="rk">{r.rank === 1 ? '1st' : r.rank === 2 ? '2nd' : r.rank === 3 ? '3rd' : r.rank ? `#${r.rank}` : 'DNF'}</td>
-                                  <td class="mdl">{r.model}</td>
-                                  <td class="num avg">{r.score != null ? `${r.score.toFixed(1)}/10` : '—'}</td>
-                                  <td class="prov" style="margin-left:0">{r.provider || '—'}{r.status ? ` · ${r.status}` : ''}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                          <div style="margin-top:6px;color:var(--arena-ink-3);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px">judge: {judgeOf(m)}{qaLabel(m) ? ` · qa: ${qaLabel(m)}` : ''}</div>
-                          {typeof m.drafts === 'number' ? <div style="margin-top:4px;color:var(--arena-ink-3);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px">drafts: {m.drafts}</div> : null}
-                          {m.slug ? <div style="margin-top:4px"><a href={`/blog/${m.slug}/`} style="font-size:13px;text-decoration:none">Read the published post →</a></div> : null}
-                        </div>
-                      </details>
-                    </td>
-                    <td><span class="tag">{m.type || '—'}</span></td>
-                    <td class="num">{m.lanes_declared ?? rowsOf(m).length}</td>
-                    <td><span class="badge">{winnerOf(m)}</span></td>
-                    <td class="num avg">{scoreOf(m) != null ? scoreOf(m).toFixed(1) : '—'}</td>
-                    <td style="color:var(--arena-ink-2)">{judgeOf(m)}</td>
-                    <td class="num" style="color:var(--arena-ink-2)">{m.threshold_met === true ? 'met' : m.threshold_met === false ? 'missed' : '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : <div class="empty">No matches recorded yet.</div>}
-        {sortedMatches.length > 12 && (
-          <div style="margin-top:10px;padding:0 16px 14px">
-            <button type="button" id="archiveToggle" class="more-btn" data-state="less" aria-expanded="false">Show more matches ({sortedMatches.length - 12} more)</button>
-          </div>
-        )}
-      </section>
-
-      <section class="pool-section" id="model-pool" aria-label="Model pool">
-        <div class="p-head" style="border:none;background:none;padding:0 0 4px;flex-wrap:wrap">
-          <h2 style="font-size:18px;font-weight:600;letter-spacing:-0.015em;margin:0;color:var(--arena-ink)">Model pool</h2>
-          <span class="note" style="font-size:13px;color:var(--arena-ink-3)">{totalModels} models · {retiredCount} retired · {providers.size} providers</span>
-          <span class="spacer"></span>
-          <input type="search" id="poolSearch" placeholder="grep model, provider, role…" aria-label="Search model pool" />
-        </div>
-        <div class="pool-grid" id="poolGrid">
-          {poolRows.map((m) => {
-            const role = String(m.role || '').toLowerCase();
-            const b = availBadge(m.model);
-            return (
-              <div class="pool-card" data-search={`${m.model} ${m.provider || ''} ${role} ${m.status || ''}`.toLowerCase()}>
-                <div class="pc-head">
-                  <span class="pc-id">{m.model}</span>
-                  <span class={`a ${b.cls}`} style={`font-size:11px;color:${b.cls === 'a-ok' ? 'var(--arena-ok)' : b.cls === 'a-warn' ? 'var(--arena-warn)' : b.cls === 'a-none' ? 'var(--arena-ink-3)' : 'var(--arena-bad)'}`}>{b.label}</span>
                 </div>
-                <dl>
-                  <dt>role</dt><dd><span class={`tag ${role === 'builder' ? 'builder' : ''}`}>{roleLabel[role] || m.role || '—'}</span></dd>
-                  <dt>provider</dt><dd>{m.provider || '—'}</dd>
-                  <dt>played</dt><dd>{m.played != null ? m.played : '—'}</dd>
-                  <dt>avg</dt><dd class="av" style="color:var(--arena-accent-light)">{typeof m.benchmark_score === 'number' ? m.benchmark_score.toFixed(1) : '—'}</dd>
-                  <dt>status</dt><dd>{m.status || '—'}</dd>
-                </dl>
+              ) : <div class="empty">No ranked models yet.</div>}
+            </section>
+
+            <section class="panel" id="match-history" aria-label="Match archive">
+              <div class="p-head">
+                <h2>Match archive</h2>
+                <span class="note">{totalMatches} matches · newest first</span>
               </div>
-            );
-          })}
+              {sortedMatches.length > 0 ? (
+                <div class="p-body tall result-list">
+                  {sortedMatches.map((m) => {
+                    const winner = winnerOf(m);
+                    const gate = m.threshold_met;
+                    return (
+                      <article class="result-card" id={`match-${keyOf(m)}`}>
+                        <div class="rc-top">
+                          <span class="rc-date">{m.date || '—'}</span>
+                          <span class="rc-topic">{m.topic || '—'}</span>
+                          <span class="rc-meta">
+                            <span class="pill">{m.type || '—'}</span>
+                            <span class="pill">{m.lanes_declared ?? rowsOf(m).length} lanes</span>
+                            {gate === true && <span class="status-pill st-ok">pass</span>}
+                            {gate === false && <span class="status-pill st-bad">fail</span>}
+                            {typeof gate !== 'boolean' && <span class="status-pill st-none">unknown</span>}
+                          </span>
+                        </div>
+                        <div class="rc-lanes">
+                          {rowsOf(m).map((r) => (
+                            <div class:list={['rc-row', { 'is-winner': r.model === winner && r.score != null }]}>
+                              <span class="rk">{r.rank === 1 ? '1st' : r.rank === 2 ? '2nd' : r.rank === 3 ? '3rd' : r.rank ? `#${r.rank}` : 'DNF'}</span>
+                              <span class="mdl">{r.model}</span>
+                              <span class="chip">{r.score != null ? `${r.score.toFixed(1)}/10` : (r.status || '—')}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div class="rc-foot">
+                          judge: {judgeOf(m)}{qaLabel(m) ? ` · qa: ${qaLabel(m)}` : ''}{typeof m.drafts === 'number' ? ` · drafts: ${m.drafts}` : ''}
+                          {m.slug ? <> · <a href={`/blog/${m.slug}/`}>read the published post</a></> : null}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : <div class="empty">No matches recorded yet.</div>}
+            </section>
+
+          </div>
         </div>
 
-        {Array.isArray(retired_models) && retired_models.length > 0 && (
-          <details class="strip">
-            <summary><strong>Retired models</strong><span class="sn">{retired_models.length} entries</span></summary>
-            <div class="strip-body">
-              <table class="dt auto" style="font-size:13px">
-                <tbody>
-                  {retired_models.map((r) => (
-                    <tr><td class="mdl">{r.model}</td><td class="prov" style="margin-left:0">{r.provider || '—'}</td><td style="color:var(--arena-ink-2)">{r.reason || '—'}</td></tr>
-                  ))}
-                </tbody>
-              </table>
+        <aside class="sidebar-slot" aria-label="Arena quick stats">
+          <div class="sidebar-inner">
+            <div class="stat-panel">
+              <h3>Quick stats</h3>
+              <div class="stat-rows">
+                <div class="stat-row"><span>Total matches</span><strong>{totalMatches}</strong></div>
+                <div class="stat-row"><span>Ranked models</span><strong>{rankedModels}</strong></div>
+                <div class="stat-row"><span>Model pool</span><strong>{totalModels}</strong></div>
+                <div class="stat-row"><span>Retired models</span><strong>{retiredCount}</strong></div>
+                <div class="stat-row"><span>Distinct lanes</span><strong>{distinctLanes.size}</strong></div>
+                <div class="stat-row"><span>Providers</span><strong>{providers.size}</strong></div>
+                {avgWinner != null && <div class="stat-row"><span>Avg winner score</span><strong class="accent">{avgWinner.toFixed(1)}</strong></div>}
+                {gateRate != null && <div class="stat-row"><span>Threshold cleared</span><strong class="accent">{gateRate}%</strong></div>}
+                {feedback.cleanRate != null && <div class="stat-row"><span>Feedback clean rate</span><strong>{feedback.cleanRate}%</strong></div>}
+              </div>
             </div>
-          </details>
-        )}
+            <div class="stat-panel">
+              <h3>Status line</h3>
+              <div class="status-line">
+                <span class="k">arena:</span> {totalMatches} matches · {rankedModels} ranked<br />
+                <span class="k">pool:</span> {totalModels} models · {retiredCount} retired<br />
+                <span class="k">updated:</span> {lastUpdated}
+              </div>
+            </div>
+          </div>
+        </aside>
 
-        {stability?.model_stats && (
-          <details class="strip">
-            <summary><strong>Availability</strong><span class="sn">updated {stabilityUpdated}</span></summary>
-            <div class="strip-body">
-              <table class="dt auto" style="font-size:13px">
-                <tbody>
+        <div class="pool-slot">
+          <section id="model-pool" aria-label="Model pool">
+            <div class="pool-head">
+              <h2>Model pool</h2>
+              <span class="note">{totalModels} models · {retiredCount} retired · {providers.size} providers</span>
+              <span class="spacer" style="margin-left:auto"></span>
+              <input type="search" id="poolSearch" placeholder="grep model, provider, role…" aria-label="Search model pool" />
+            </div>
+            <div class="pool-grid" id="poolGrid">
+              {poolRows.map((m) => {
+                const role = String(m.role || '').toLowerCase();
+                const b = availBadge(m.model);
+                return (
+                  <div class="pool-card" data-search={`${m.model} ${m.provider || ''} ${role} ${m.status || ''}`.toLowerCase()}>
+                    <div class="pc-head">
+                      <span class="pc-id">{m.model}</span>
+                      <span class:list={['pill', b.cls]}>{b.label}</span>
+                    </div>
+                    <dl>
+                      <dt>role</dt><dd><span class:list={['role-pill', { builder: role === 'builder' }]}>{roleLabel[role] || m.role || '—'}</span></dd>
+                      <dt>provider</dt><dd>{m.provider || '—'}</dd>
+                      <dt>played</dt><dd>{m.played != null ? m.played : '—'}</dd>
+                      <dt>avg</dt><dd class="av">{typeof m.benchmark_score === 'number' ? m.benchmark_score.toFixed(1) : '—'}</dd>
+                      <dt>status</dt><dd>{m.status || '—'}</dd>
+                    </dl>
+                  </div>
+                );
+              })}
+            </div>
+
+            {Array.isArray(retired_models) && retired_models.length > 0 && (
+              <details class="strip">
+                <summary><strong>Retired models</strong><span class="sn">{retired_models.length} entries</span></summary>
+                <div class="strip-body">
+                  {retired_models.map((r) => (
+                    <div class="line"><span class="mono" style="color:var(--ink);font-weight:600">{r.model}</span><span style="color:var(--ink-3)">{r.provider || '—'}</span><span style="color:var(--ink-2)">{r.reason || '—'}</span></div>
+                  ))}
+                </div>
+              </details>
+            )}
+
+            {stability?.model_stats && (
+              <details class="strip">
+                <summary><strong>Availability</strong><span class="sn">updated {stabilityUpdated}</span></summary>
+                <div class="strip-body">
                   {Object.entries(stability.model_stats).map(([name, s]) => {
                     const b = availBadge(name);
                     return (
-                      <tr>
-                        <td class="mdl">{name}</td>
-                        <td class={`num ${b.cls}`}>{typeof s.availability === 'number' ? `${s.availability}%` : '—'}</td>
-                        <td class="prov" style="margin-left:0">{b.label}</td>
-                      </tr>
+                      <div class="line">
+                        <span class="mono" style="color:var(--ink);font-weight:600">{name}</span>
+                        <span class:list={['mono', b.cls]} style="font-variant-numeric:tabular-nums">{typeof s.availability === 'number' ? `${s.availability}%` : '—'}</span>
+                        <span style="color:var(--ink-3)">{b.label}</span>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
-          </details>
-        )}
-      </section>
+                </div>
+              </details>
+            )}
+          </section>
+        </div>
+
       </div>
 
       <details class="strip" id="process-feedback">
@@ -491,7 +562,7 @@ const jsonLd = {
           {feedback.matches.map((f) => (
             <div class="fb-row">
               <div class="fb-top">
-                <span style="color:var(--arena-ink)">{f.topic}</span>
+                <span style="color:var(--ink)">{f.topic}</span>
                 <span class={f.clean ? 'ok' : 'bad'}>{f.clean ? 'Clean' : `${(f.suggestions || []).length} suggestion(s)`}</span>
               </div>
               {!f.clean && (f.suggestions || []).map((s) => <p>[{String(s.severity || '').toUpperCase()}] {s.text}</p>)}
@@ -513,12 +584,10 @@ const jsonLd = {
       (function () {
         function setOffsets() {
           var header = document.querySelector('header');
-          var nav = document.querySelector('.subnav');
+          var nav = document.querySelector('nav.subnav');
           var headerPos = header ? getComputedStyle(header).position : 'static';
           var navH = (headerPos === 'sticky' || headerPos === 'fixed') ? header.offsetHeight : 0;
           document.documentElement.style.setProperty('--nav-h', Math.max(0, navH) + 'px');
-          var nh = nav ? nav.getBoundingClientRect().height : 0;
-          document.documentElement.style.setProperty('--subnav-h', nh + 'px');
         }
         setOffsets();
         if ('ResizeObserver' in window) new ResizeObserver(setOffsets).observe(document.body);
@@ -527,7 +596,7 @@ const jsonLd = {
       })();
 
       (function () {
-        var links = Array.prototype.slice.call(document.querySelectorAll('.subnav a'));
+        var links = Array.prototype.slice.call(document.querySelectorAll('nav.subnav a'));
         if (!links.length) return;
         var ids = links.map(function (a) { return a.getAttribute('href').slice(1); });
         function onScroll() {
@@ -554,41 +623,6 @@ const jsonLd = {
           });
         });
       })();
-
-      (function () {
-        var btn = document.getElementById('archiveToggle');
-        if (!btn) return;
-        var SHOWN = 12;
-        var total = document.querySelectorAll('#match-history table.dt > tbody > tr').length;
-        btn.addEventListener('click', function () {
-          var showingAll = btn.getAttribute('data-state') === 'all';
-          var extras = document.querySelectorAll('#match-history table.dt > tbody > tr[data-extra="1"]');
-          Array.prototype.forEach.call(extras, function (r) { r.hidden = showingAll; });
-          if (showingAll) {
-            Array.prototype.forEach.call(extras, function (r) { var d = r.querySelector('details'); if (d) d.open = false; });
-          }
-          btn.setAttribute('data-state', showingAll ? 'less' : 'all');
-          btn.setAttribute('aria-expanded', showingAll ? 'false' : 'true');
-          btn.textContent = showingAll ? ('Show more matches (' + (total - SHOWN) + ' more)') : 'Show fewer matches';
-        });
-      })();
-
-      if (location.hash && location.hash.indexOf('#match-') === 0) {
-        var d = document.querySelector(location.hash);
-        if (d && d.tagName === 'DETAILS') {
-          var row = d.closest('tr');
-          if (row && row.hidden) {
-            row.hidden = false;
-            var b = document.getElementById('archiveToggle');
-            if (b && b.getAttribute('data-state') === 'less') {
-              b.setAttribute('data-state', 'all');
-              b.setAttribute('aria-expanded', 'true');
-              b.textContent = 'Show fewer matches';
-            }
-          }
-          d.open = true;
-        }
-      }
     </script>
   </body>
 </html>
