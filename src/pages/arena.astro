@@ -267,7 +267,7 @@ const jsonLd = {
       /* ── Leaderboard cards ────────────────── */
       .lb-list { display: flex; flex-direction: column; }
       .leaderboard-card {
-        display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+        display: grid; grid-template-columns: auto auto 1fr;
         grid-template-areas: "rank name pills" "rank bar pills";
         align-items: center; column-gap: 12px; row-gap: 6px;
         padding: 10px 16px; border-bottom: 1px solid var(--border);
@@ -654,16 +654,18 @@ const jsonLd = {
       })();
     </script>
   <script is:inline>
-  const toggle = document.getElementById('archiveToggle');
-  const list = document.getElementById('resultList');
-  if (toggle && list) {
-    toggle.addEventListener('click', () => {
-      const expanded = list.classList.toggle('expanded');
-      toggle.setAttribute('data-state', expanded ? 'expanded' : 'collapsed');
-      toggle.setAttribute('aria-expanded', String(expanded));
-      toggle.textContent = expanded ? 'Show recent' : 'Show all';
-    });
-  }
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggle = document.getElementById('archiveToggle');
+    const list = document.getElementById('resultList');
+    if (toggle && list) {
+      toggle.addEventListener('click', () => {
+        const expanded = list.classList.toggle('expanded');
+        toggle.setAttribute('data-state', expanded ? 'expanded' : 'collapsed');
+        toggle.setAttribute('aria-expanded', String(expanded));
+        toggle.textContent = expanded ? 'Show recent' : 'Show all';
+      });
+    }
+  });
 </script>
 
   </body>
