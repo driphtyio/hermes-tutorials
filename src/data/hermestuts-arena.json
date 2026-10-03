@@ -7286,6 +7286,97 @@
      "status": "dnf"
     }
    ]
+  },
+  {
+   "id": "arena-ht-widescreen-r4-2026-10",
+   "date": "2026-10-02",
+   "type": "design",
+   "topic": "Arena page widescreen + space optimization round 4 (TB/NA-inspired: card-based leaderboard, sticky subnav, two-column, result cards, pill badges)",
+   "winner": "glm-5.3-flash",
+   "winner_provider": "opencode-go",
+   "winner_score": 8.8,
+   "threshold_met": true,
+   "judge_model": "render gate composite (no LLM judge): card-based (no tables) + side-by-side + purple accent + no teal/emoji + data bindings + overflow",
+   "plan_model": "deepseek-v4-pro via commandcode",
+   "research_model": "n/a (orchestrator measured baseline + TB/NA CSS analysis)",
+   "qa_model": "render gate: 0 tables, 14 lb cards, 33 mh cards, 17 mp cards, side-by-side, purple accent, no teal/emoji/images, 0 JS errors",
+   "notes": "7/12 drafts (deepseek empty-CC, minimax 0w, ling/pixel-canary 403, longcat-2.5 timeout, longcat-2.0 truncated = DNFx5). 6/8 build-passed. glm-5.3-flash winner: card-based leaderboard (0 tables), side-by-side layout, purple accent, no teal/emoji/images, 0 JS errors, most compact page (2485px). Plan self-contradiction: specified min(1800px,100%-3rem) cap while contract demanded 0% dead \u2014 all lanes followed the cap (6.3% at 1920, 29.7% at 2560). Subnav not sticky (minor miss). Commit 6d2a5ea, deployed verified.",
+   "results": [
+    {
+     "model": "glm-5.3-flash",
+     "provider": "opencode-go",
+     "score": 8.8,
+     "winner": true,
+     "status": "pass"
+    },
+    {
+     "model": "hy3",
+     "provider": "opencode-go",
+     "score": 8.5,
+     "status": "pass"
+    },
+    {
+     "model": "mimo-v2.6-flash",
+     "provider": "opencode-go",
+     "score": 8.3,
+     "status": "pass"
+    },
+    {
+     "model": "muse-spark-1.3-contributor",
+     "provider": "opencode-go",
+     "score": 8.0,
+     "status": "pass"
+    },
+    {
+     "model": "space-bunny-free",
+     "provider": "opencode-go",
+     "score": 6.5,
+     "status": "fail",
+     "note": "25% dead at 1920, 43.8% at 2560"
+    },
+    {
+     "model": "gpt-6-luna",
+     "provider": "commandcode",
+     "score": null,
+     "status": "dnf-build"
+    },
+    {
+     "model": "longcat-2.0",
+     "provider": "opencode-go",
+     "score": null,
+     "status": "dnf-build"
+    },
+    {
+     "model": "deepseek-v4-flash",
+     "provider": "commandcode",
+     "score": null,
+     "status": "dnf"
+    },
+    {
+     "model": "minimax-m3",
+     "provider": "opencode-go",
+     "score": null,
+     "status": "dnf"
+    },
+    {
+     "model": "ling-3.0-flash-fin-free",
+     "provider": "commandcode",
+     "score": null,
+     "status": "dnf"
+    },
+    {
+     "model": "pixel-canary",
+     "provider": "commandcode",
+     "score": null,
+     "status": "dnf"
+    },
+    {
+     "model": "longcat-2.5-preview-free",
+     "provider": "opencode-go",
+     "score": null,
+     "status": "dnf"
+    }
+   ]
   }
  ],
  "leaderboard": [
@@ -7327,10 +7418,10 @@
    "model": "glm-5.3-flash",
    "provider": "opencode-go",
    "family": "glm",
-   "matches": 12,
-   "wins": 3,
+   "matches": 13,
+   "wins": 4,
    "losses": 9,
-   "avgScore": 8.47,
+   "avgScore": 8.5,
    "bestScore": 9.75,
    "rank": 4
   },
@@ -7338,10 +7429,10 @@
    "model": "hy3",
    "provider": "opencode-go",
    "family": "tencent",
-   "matches": 8,
+   "matches": 9,
    "wins": 2,
-   "losses": 6,
-   "avgScore": 8.91,
+   "losses": 7,
+   "avgScore": 8.86,
    "bestScore": 9.65,
    "rank": 5
   },
@@ -7349,10 +7440,10 @@
    "model": "mimo-v2.6-flash",
    "provider": "xiaomi",
    "family": "mimo",
-   "matches": 6,
+   "matches": 7,
    "wins": 2,
-   "losses": 4,
-   "avgScore": 8.56,
+   "losses": 5,
+   "avgScore": 8.52,
    "bestScore": 9.78,
    "rank": 6
   },
@@ -7393,10 +7484,10 @@
    "model": "muse-spark-1.3-contributor",
    "provider": "opencode-go",
    "family": "muse",
-   "matches": 8,
+   "matches": 9,
    "wins": 0,
-   "losses": 8,
-   "avgScore": 8.41,
+   "losses": 9,
+   "avgScore": 8.36,
    "bestScore": 9.45,
    "rank": 10
   },
@@ -7412,17 +7503,6 @@
    "rank": 11
   },
   {
-   "model": "space-bunny-free",
-   "provider": "opencode-go",
-   "family": "space",
-   "matches": 4,
-   "wins": 0,
-   "losses": 4,
-   "avgScore": 8.1,
-   "bestScore": 9.1,
-   "rank": 12
-  },
-  {
    "model": "ling-3.0-flash-fin-free",
    "provider": "commandcode",
    "family": "ling",
@@ -7431,6 +7511,17 @@
    "losses": 2,
    "avgScore": 8.07,
    "bestScore": 8.22,
+   "rank": 12
+  },
+  {
+   "model": "space-bunny-free",
+   "provider": "opencode-go",
+   "family": "space",
+   "matches": 5,
+   "wins": 0,
+   "losses": 5,
+   "avgScore": 7.78,
+   "bestScore": 9.1,
    "rank": 13
   },
   {
@@ -7445,7 +7536,7 @@
    "rank": 14
   }
  ],
- "last_updated": "2026-10-03T01:22:36Z",
+ "last_updated": "2026-10-03T02:29:56Z",
  "total_matches": 29,
  "retired_models": [
   {
