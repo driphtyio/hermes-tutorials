@@ -285,7 +285,7 @@ const jsonLd = {
 
       <nav class="subnav" aria-label="Arena sections">
         <a href="#leaderboard">Leaderboard<span class="sn-count">{lb.length}</span></a>
-        <a href="#latest-results">Latest results</a>
+        
         <a href="#match-history">Match archive<span class="sn-count">{totalMatches}</span></a>
         <a href="#model-pool">Model pool<span class="sn-count">{totalModels}</span></a>
       </nav>
@@ -340,44 +340,15 @@ const jsonLd = {
           ) : <div class="empty">No ranked models yet.</div>}
         </section>
 
-        <section class="panel" id="latest-results" aria-label="Latest results">
-          <div class="p-head">
-            <h2>Latest results</h2>
-            <span class="note">newest first</span>
-            <span class="spacer"></span>
-            <a href="#match-history" style="font-size:13px;text-decoration:none">full archive →</a>
-          </div>
-          <div class="tw">
-            <table class="dt auto">
-              <thead>
-                <tr><th>Date</th><th>Match</th><th class="num">Result</th></tr>
-              </thead>
-              <tbody>
-                {sortedMatches.slice(0, 8).map((m) => (
-                  <tr>
-                    <td class="date">{m.date || '—'}</td>
-                    <td><a href={`#match-${keyOf(m)}`} class="topic" style="text-decoration:none">{m.topic || '—'}</a></td>
-                    <td class="num">
-                      <span class="badge">{winnerOf(m)}</span>
-                      <span class="best" style="margin-left:6px">{scoreOf(m) != null ? scoreOf(m).toFixed(1) : '—'}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div style="padding:10px 16px;border-top:1px solid var(--arena-border);font-size:13px;color:var(--arena-ink-2);display:flex;gap:8px;flex-wrap:wrap;align-items:baseline">
-            <span class="prompt-label"><b>how-a-match-runs</b></span>
-            <span style="color:var(--arena-ink-3)">Brief → Plan → Build (all lanes) → Judge → QA → Publish</span>
-          </div>
-        </section>
-      </div>
-
-      <section class="panel" id="match-history" style="margin-top:20px" aria-label="Match archive">
+        <section class="panel" id="match-history" style="margin-top:20px" aria-label="Match archive">
         <div class="p-head">
           <h2>Match archive</h2>
           <span class="note">{totalMatches} matches · newest first · click a row for per-model scores</span>
         </div>
+          <div style="padding:10px 16px;border-top:1px solid var(--arena-border);font-size:13px;color:var(--arena-ink-2);display:flex;gap:8px;flex-wrap:wrap;align-items:baseline">
+            <span class="prompt-label"><b>how-a-match-runs</b></span>
+            <span style="color:var(--arena-ink-3)">Brief → Plan → Build (all lanes) → Judge → QA → Publish</span>
+          </div>
         {sortedMatches.length > 0 ? (
           <div class="tw">
             <table class="dt auto">
@@ -504,6 +475,7 @@ const jsonLd = {
           </details>
         )}
       </section>
+      </div>
 
       <details class="strip" id="process-feedback">
         <summary>
