@@ -93,10 +93,8 @@
       "provider": "openrouter",
       "family": "poolside",
       "role": "builder",
-      "status": "retired",
-      "fallback": "openrouter poolside/laguna-s-2.1 (PAID \u2014 the :free tier is rate-limited 3/5; openrouter primary probe-OK 6/6 2026-09-25); commandcode poolside/laguna-s-2.1-free (FALLBACK \u2014 CC returns 0 text deltas on 3/3 probes, intermittent)",
-      "retired_date": "2026-09-25",
-      "retire_reason": "dropped from builder pool 2026-09-25 (fleet-wide consistency with codeintel retirement: 429-prone :free tier, intermittent CC 0-delta fallback)"
+      "status": "active",
+      "fallback": "openrouter poolside/laguna-s-2.1 (PAID \u2014 the :free tier is rate-limited 3/5; openrouter primary probe-OK 6/6 2026-09-25); commandcode poolside/laguna-s-2.1-free (FALLBACK \u2014 CC returns 0 text deltas on 3/3 probes, intermittent)"
     },
     {
       "model": "glm-5.2",
@@ -7948,14 +7946,6 @@
       "reason": "superseded by gpt-6-luna 2026-09-23"
     },
     {
-      "model": "poolside-laguna-s-2.1",
-      "provider": "openrouter",
-      "family": "poolside",
-      "status": "retired",
-      "reason": "removed from active lineup 2026-09-24",
-      "retired_date": "2026-09-24"
-    },
-    {
       "model": "longcat-2.0",
       "provider": "opencode-go",
       "family": "",
@@ -7967,14 +7957,6 @@
       "model": "openai/gpt-6-luna",
       "provider": "openrouter",
       "family": "",
-      "status": "retired",
-      "reason": "removed from active lineup 2026-09-24",
-      "retired_date": "2026-09-24"
-    },
-    {
-      "model": "poolside/laguna-s-2.1-free",
-      "provider": "commandcode",
-      "family": "poolside",
       "status": "retired",
       "reason": "removed from active lineup 2026-09-24",
       "retired_date": "2026-09-24"
