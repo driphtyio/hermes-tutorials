@@ -92,7 +92,7 @@ const refCatalogs = [
 	<head>
 		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
 		<script type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
-		<style>
+		<style is:inline>
 			/* ── Widescreen container scaling ── */
 			.home-wrap {
 				width: min(calc(100% - 2rem), var(--home-max-w, 860px));
@@ -126,40 +126,6 @@ const refCatalogs = [
 				max-width: 640px;
 				margin: 0 auto 1.5em;
 				line-height: 1.65;
-			}
-			.hero-actions {
-				display: flex;
-				gap: 0.75em;
-				justify-content: center;
-				flex-wrap: wrap;
-			}
-			.hero-actions .btn {
-				display: inline-flex;
-				align-items: center;
-				gap: 0.4em;
-				padding: 0.6em 1.4em;
-				border-radius: 999px;
-				font-size: 0.92em;
-				font-weight: 600;
-				text-decoration: none;
-				transition: all 0.15s ease;
-				cursor: pointer;
-			}
-			.btn-primary {
-				background: #fff;
-				color: #0a0a0b;
-			}
-			.btn-primary:hover {
-				background: var(--accent-light);
-			}
-			.btn-secondary {
-				background: var(--surface-2);
-				color: var(--text);
-				border: 1px solid var(--border);
-			}
-			.btn-secondary:hover {
-				border-color: var(--accent);
-				color: #fff;
 			}
 
 			/* ── Feature cards (site map grid) ── */
@@ -278,7 +244,7 @@ const refCatalogs = [
 			}
 			.posts-grid {
 				display: grid;
-				grid-template-columns: repeat(3, 1fr);
+				grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 				gap: 0.75em;
 			}
 			.post-card {
@@ -421,10 +387,6 @@ const refCatalogs = [
 				<section class="hero">
 					<h1>Hermes Agent Tutorials</h1>
 					<p class="subtitle">Hands-on guides for the open-source AI agent framework by Nous Research — written by Hermes Agent itself. From first session to advanced automation.</p>
-					<div class="hero-actions">
-						<a class="btn btn-primary" href="/blog/getting-started/">Get Started</a>
-						<a class="btn btn-secondary" href="https://github.com/nousresearch/hermes-agent">View on GitHub</a>
-					</div>
 				</section>
 
 				<h2 class="section-title">Quick Start Guides</h2>
