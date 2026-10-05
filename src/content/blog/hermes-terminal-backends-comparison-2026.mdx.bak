@@ -1,0 +1,149 @@
+---
+title: "Hermes Terminal Backends: Complete 7-Backend Comparison Guide 2026"
+description: "Hermes supports seven terminal backends—local, docker, ssh, modal, daytona, vercel_sandbox, singularity—selected by terminal.backend. Local executes…"
+pubDate: 2026-10-03
+tags:
+  - hermes agent
+  - terminal backends
+  - configuration
+  - security
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-terminal-backends-comparison-2026-1791052444.webp"
+---
+
+# Hermes Terminal Backends: Complete 7-Backend Comparison Guide 2026
+
+The official Hermes docs state, [“Hermes supports seven terminal backends.”](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools) Those seven — `local`, `docker`, `ssh`, `modal`, `daytona`, `vercel_sandbox`, and `singularity` — are the execution surfaces the agent uses, and the choice determines isolation, persistence, credential exposure, and whether dangerous commands require approval before they run.
+
+## How This Comparison Was Built
+
+This review is based on official documentation, pricing pages, and community reports — we did not run the tool hands-on. We checked the Hermes terminal-backend, configuration, security, Docker, network-isolation, and developer pages on October 3, 2026, alongside the vendor's own [Docker](https://docs.docker.com), [Modal](https://docs.modal.com), [Daytona](https://www.daytona.io/docs), [Vercel Sandbox](https://vercel.com/docs/vercel-sandbox), and [Apptainer](https://apptainer.org/docs/user/latest/) documentation. Internal links point to our deep dives like the [configuration deep dive](/blog/configuration-deep-dive/) and the [cron job patterns guide](/blog/cron-job-patterns-2026/).
+
+## Why Terminal Backend Choice Is a Security Decision
+
+Backend choice sets the process boundary between the agent and your host.
+> “The official Hermes docs at hermes-agent.nousresearch.com state, ‘Hermes supports seven terminal backends.’ Those seven—local, docker, ssh, modal, daytona, vercel_sandbox, and singularity—are the execution surfaces the agent uses, and the choice determines isolation, persistence, credential exposure, and whether dangerous commands require approval before they run.”
+
+## How This Comparison Was Built
+
+This review is based on official documentation, pricing pages, and community reports — we did not run the tool hands-on. We checked the Hermes terminal-backend, configuration, security, Docker, network-isolation, and developer pages on October 3, 2026. Backend-specific references include the official [Docker](https://docs.docker.com), [Modal](https://docs.modal.com), [Daytona](https://www.daytona.io/docs), [Vercel Sandbox](https://vercel.com/docs/vercel-sandbox), and [Apptainer](https://apptainer.org/docs/user/latest/) documentation.
+
+## Why Terminal Backend Choice Is a Security Decision
+
+The backend determines whether terminal commands reach the host directly or run behind a container or cloud boundary. The [Hermes security comparison](https://hermes-agent.nousresearch.com/docs/user-guide/security) states that `local` and `ssh` retain dangerous-command approval, while container and cloud backends skip that check because the execution boundary supplies isolation. Choose the boundary before choosing convenience.
+
+A single release note for context: v0.21.x shipped on 2026-10-02 via `hermes update`, with an upgraded loop that can call the Claude Agent SDK; `get-knowledge-base` parity arrived in v0.20.5, according to the [Hermes project documentation](https://github.com/NousResearch/hermes-agent). For a self-hosted gateway, start with the [Docker setup guide](/blog/hermes-agent-docker-guide/), then check [configuration details](/blog/configuration-deep-dive/). If the agent will run unattended, also review [cron patterns](/blog/cron-job-patterns-2026/) and [background-process behavior](/blog/hermes-background-processes-guide/).
+
+## What Are Terminal Backends?
+
+A terminal backend is the execution surface selected by `terminal.backend`; the [Hermes backend reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools) lists seven valid values: `local`, `docker`, `ssh`, `modal`, `daytona`, `vercel_sandbox`, and `singularity`. Terminal settings can also be overridden with environment variables: each key under `terminal:` has a corresponding `TERMINAL_<KEY_UPPERCASE>` form.
+
+The [terminal configuration guide](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) says the gateway and cron use `cwd` as their working directory, while the CLI always uses its launch directory. The default `timeout` is 180 seconds. `temp_dir`, `home_mode` values `auto`, `real`, or `profile`, and `env_passthrough` shape the shell environment. For setup beyond terminal selection, see the [configuration deep dive](/blog/configuration-deep-dive/) and the [getting-started guide](/getting-started/).
+
+Backends are mutually exclusive in terminal configuration. Built-in backend names are reserved and cannot be shadowed by third-party terminal-environment provider plugins, according to the [plugin guide](https://hermes-agent.nousresearch.com/docs/developer-guide/terminal-environment-plugin). All backends that invoke shells can be affected by non-interactive shell startup behavior. Keep heavy setup out of non-interactive `.bashrc` execution; guard it near the top:
+
+```bash
+case $- in *i*) ;; *) return;; esac
+```
+
+Keep `.zprofile` for login-only setup and `.zshenv` minimal.
+
+## Backend Comparison Table
+
+This table condenses the documented execution location, isolation, approval behavior, and persistence trade-offs; consult the [Hermes security comparison](https://hermes-agent.nousresearch.com/docs/user-guide/security) and [terminal backend documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools) before deployment. “Skipped” means the dangerous-command approval check does not run; it does not mean the backend has no security configuration or that every workload is safe.
+
+| Backend | Where commands run | Isolation | Dangerous-cmd check | Persistence semantics | Best for |
+|---|---|---|---|---|---|
+| [local](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools) | Your machine directly | None | Yes | Native local filesystem | Development or personal use |
+| [docker](https://hermes-agent.nousresearch.com/docs/user-guide/docker) | Persistent Docker container | Full namespaces-cap-drop | Skipped | Persistent bind-mounts or ephemeral tmpfs | Safe sandboxing and CI/CD |
+| [ssh](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools) | Remote server via SSH | Network boundary | Yes | Persistent shell default | Remote development or powerful hardware |
+| [modal](https://docs.modal.com) | Modal cloud sandbox | Full cloud VM | Skipped | Snapshot filesystem only | Ephemeral cloud compute and evals |
+| [daytona](https://www.daytona.io/docs) | Daytona workspace | Full cloud container | Skipped | Stop-resume persistence | Managed cloud dev environments |
+| [vercel_sandbox](https://vercel.com/docs/vercel-sandbox) | Vercel cloud microVM | Full cloud microVM | Skipped | Snapshot-backed filesystem persistence | Cloud execution with snapshot persistence |
+| [singularity](https://apptainer.org/docs/user/latest/) | Singularity/Apptainer container | Namespaces `--containall` | Skipped | SIF image filesystem | HPC clusters and shared machines |
+
+## Local
+
+`local` runs commands directly on your machine, with isolation `None` and dangerous-command approval enabled. The [Hermes security documentation](https://hermes-agent.nousresearch.com/docs/user-guide/security) treats this as direct execution, not a protective sandbox. Local filesystem persistence is native: there is no backend cleanup or snapshot layer to separate changes from the host.
+
+Use it for development or personal workflows where direct host access is acceptable. It is the default development backend, not a production isolation boundary. Commands may read, modify, or delete host files and local credentials, so choose another backend for an unattended gateway that should not reach those resources.
+
+## Docker
+
+Docker gives Hermes a persistent container shared across a session, `/new`, `/reset`, and `delegate_task` subagents. The [Docker guide](https://hermes-agent.nousresearch.com/docs/user-guide/docker) says terminal commands, file tools, and `execute_code` route through `docker exec`. The Configuration page’s comment describes the long-standing `nikolaik/python-nodejs` default as Python 3.13, Node 26, and a display stack; separately, the v0.21 GA Docker guide recommends the official `nousresearch/hermes-sandbox:desktop` image. These are two distinct image descriptions, not interchangeable claims.
+
+With `container_persistent: false`, Hermes creates a fresh container per session and nothing carries over. Persistent mode bind-mounts `/workspace` and `/root` from `~/.hermes/sandboxes/docker/<task_id>/`; ephemeral mode uses tmpfs and loses its contents at cleanup. Container reuse is label-keyed, and an exited matching container is restarted with `docker start`. The orphan reaper only removes Exited containers older than `2x lifetime_seconds`; it never touches running containers.
+
+The documented hardening drops all Linux capabilities, enables no-new-privileges, sets a pids limit of 256, and caps tmpfs at `/tmp 512MB`, `/var/tmp 256MB`, and `/run 64MB`. Workspace data uses volumes rather than the writable root layer. Set `docker_network: false` to air-gap the container with `--network=none`. The [Docker setup and image-channel notes](https://hermes-agent.nousresearch.com/docs/user-guide/docker) cover the supported configuration; Podman works out of the box with `HERMES_DOCKER_BINARY=podman`.
+
+Treat forwarded values as accessible to code in the container: `docker_forward_env` passes host environment variables with `-e`. `docker_env` sets literal `KEY=value` entries; `docker_volumes` supports `:ro`; `docker_extra_args` passes flags verbatim. Keep sensitive host credentials out of forwarded variables unless the workload needs them. For a fuller setup walkthrough, use the [Hermes Docker guide](/blog/hermes-agent-docker-guide/).
+
+## SSH
+
+SSH runs commands on a remote server across a network boundary, but it retains dangerous-command approval. The [Hermes terminal documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools) describes initialization in BATCH mode with `BatchMode=yes` and `StrictHostKeyChecking=accept-new`. The backend can be useful when a remote machine provides development tools or hardware that should not sit on the Hermes host.
+
+Persistent shell is enabled by default: Hermes keeps one `bash -l` alive so the working directory and environment can survive between commands. Stdin and sudo use a one-shot fallback. ControlMaster connections are reused with a five-minute idle keepalive. Configuration keys include `TERMINAL_SSH_HOST`, `TERMINAL_SSH_USER`, `TERMINAL_SSH_PORT` (default 22), `TERMINAL_SSH_KEY`, and `TERMINAL_SSH_PERSISTENT`.
+
+Passthrough variables use OpenSSH `SendEnv` and require a matching remote `AcceptEnv`; otherwise, the server silently drops them. Hermes provider credentials such as `OPENAI_API_KEY` are never forwarded, even if listed. The [security guidance](https://hermes-agent.nousresearch.com/docs/user-guide/security) recommends SSH as a way to keep the agent away from its own code. Verify remote account permissions and server-side environment policy before relying on either boundary.
+
+## Modal
+
+Modal runs commands in a cloud sandbox and uses cloud VM isolation; the [Hermes backend guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools) identifies `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` as supported environment credentials, with `~/.modal.toml` as the file-based alternative. This suits ephemeral cloud compute and evaluation jobs that should not execute on the self-hosted gateway.
+
+When `container_persistent=true`, Hermes snapshots the filesystem on cleanup and restores it for the next session. Snapshot references are stored in `~/.hermes/modal_snapshots.json`; Hermes opts out of the Modal SDK’s 30-day snapshot expiry, according to the [Modal backend documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools). The snapshot preserves filesystem state only—not live processes, PID space, or background jobs. Treat it as a way to carry files forward, not as a suspended running machine.
+
+## Daytona
+
+Daytona requires `DAYTONA_API_KEY`; the [Hermes backend reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools) names it as required. Its workspace is a managed cloud container, making it a fit for managed development environments rather than direct access to a home-server filesystem.
+
+Persistence means stop and resume, not delete and recreate. Sandbox names follow `hermes-{task_id}`, which helps identify the task-associated workspace. Hermes converts memory requests to GiB and caps disk at 10 GiB; a request above that cap is reduced with a warning. Check the [Daytona documentation](https://www.daytona.io/docs) for provider-side workspace behavior, and plan cleanup around stopping or deleting the workspace rather than assuming a temporary session removes it.
+
+## Vercel Sandbox
+
+The documented deployment path for long-running processes on Render, Railway, or Docker hosts uses `VERCEL_TOKEN`, `VERCEL_PROJECT_ID`, and `VERCEL_TEAM_ID`. The [Hermes Vercel backend documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools) distinguishes these access tokens from the short-lived `VERCEL_OIDC_TOKEN`, which is for one-off local development, not a deployment path.
+
+The `vercel_image` default is `vercel/sandbox/universal:latest`, an Ubuntu image with Node.js 24 and Python 3.14; default `cwd` is `/vercel/sandbox`. With `container_persistent=true`, cleanup snapshots the sandbox filesystem and restores it for the same task. That filesystem may include Hermes-synced credentials, skills, or cache, so treat restored data accordingly.
+
+Snapshots do not preserve live processes, PID space, shell state, or background processes. The disk knob is unsupported and must be left unset. The [Vercel Sandbox documentation](https://vercel.com/docs/vercel-sandbox) is the provider reference; do not infer process persistence from filesystem restoration.
+
+## Singularity
+
+Singularity/Apptainer is the container backend for HPC clusters and shared machines where Docker is not the desired runtime. The [Hermes backend documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools) specifies namespace isolation with `--containall`; dangerous-command approval is skipped because the container is the boundary. This makes it a practical choice when administrators provide container images for shared compute.
+
+Build a SIF image with the documented command, then configure `terminal.backend` as `singularity` and set `terminal.singularity_image`:
+
+```bash
+apptainer build ~/python.sif docker://python:3.11-slim
+```
+
+Pre-building a SIF for parallel workers lets the agent run inside that container. Confirm image availability and cluster policy with the HPC administrator; the [Apptainer user guide](https://apptainer.org/docs/user/latest/) explains the container runtime itself.
+
+## Which Backend Should You Use?
+
+For a production gateway, choose `docker`, `modal`, `daytona`, or `vercel_sandbox` when you want agent commands isolated from the gateway host. The [Hermes security page](https://hermes-agent.nousresearch.com/docs/user-guide/security) says, “This eliminates the need for dangerous command approval entirely.” Select among them by where compute should run and whether you need bind mounts, stop-resume, or filesystem snapshots.
+
+Use `local` for default development; `ssh` for remote development, powerful hardware, and a network boundary; `modal` for ephemeral cloud compute and evals; `daytona` for managed cloud development environments; `vercel_sandbox` for cloud execution with snapshot-backed filesystem persistence; and `singularity` for HPC or shared machines. Compare provider details in the [Modal docs](https://docs.modal.com), [Daytona docs](https://www.daytona.io/docs), and [Vercel Sandbox docs](https://vercel.com/docs/vercel-sandbox), rather than selecting based on assumptions about their services.
+
+Unattended gateway and cron sessions enable tool-loop hard stops by default through `non_interactive_hard_stop_enabled` under `tool_loop_guardrails`, per the [Hermes configuration reference](https://hermes-agent.nousresearch.com/docs/user-guide/configuration). This is a separate control from backend isolation. For delegated workloads, read the guides to [subagent arenas](/blog/hermes-subagent-arena-guide/) and [parallel subagent delegation](/blog/hermes-parallel-subagent-delegation/); for scheduled work, revisit [cron job patterns](/blog/cron-job-patterns-2026/). The [Hermes docs](/docs/) and [arena guide](/arena/) provide further orientation.
+
+## FAQ
+
+These answers clarify the configuration and shell details that can otherwise make a backend selection appear inconsistent. The [Hermes configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) and [terminal plugin reference](https://hermes-agent.nousresearch.com/docs/developer-guide/terminal-environment-plugin) are the source for these distinctions; they matter when adapting examples or adding a provider-specific execution environment.
+
+### Can I configure multiple terminal backends at once?
+
+No. Terminal backends are mutually exclusive in the terminal configuration: select one value for `terminal.backend`. You can change that selection when changing deployment configuration, but the terminal setting does not define simultaneous per-command backend routing. Third-party terminal-environment provider plugins also cannot shadow reserved built-in backend names.
+
+### Why do shell startup files behave differently under Hermes?
+
+Shell commands may run in non-interactive shells, which do not necessarily load startup logic as a user expects. Guard expensive `.bashrc` setup with `case $- in *i*) ;; *) return;; esac` near the top. Keep `.zprofile` for login-only setup and make `.zshenv` minimal so non-interactive shell startup remains lightweight.
+
+### Does a persistent snapshot keep a cloud process running?
+
+No. Modal and Vercel persistence restores filesystem state, not a live execution environment. Modal snapshots do not preserve processes, PID space, or background jobs; Vercel snapshots do not preserve processes, PID space, shell state, or background processes. Store needed files in the workspace, and arrange to restart work after restoration.
+
+## The Bottom Line
+
+Choose among `local`, `docker`, `ssh`, `modal`, `daytona`, `vercel_sandbox`, and `singularity` by deciding first whether commands may reach the host directly or need an isolation boundary. The [Hermes security documentation](https://hermes-agent.nousresearch.com/docs/user-guide/security) distinguishes the approval check accordingly: container and cloud backends skip it because the sandbox is the boundary, while `local` and `ssh` keep approval enabled.
+
+For a self-hosted production gateway, begin with Docker unless a cloud workspace or HPC runtime better fits the workload. This comparison is desk research based on official documentation only; no hands-on testing was performed.
+
