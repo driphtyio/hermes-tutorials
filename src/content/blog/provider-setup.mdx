@@ -1,267 +1,256 @@
 ---
-title: "Provider Setup — Connecting LLMs to Hermes Agent"
-description: "Learn how to configure LLM providers for Hermes Agent, manage credential pools, switch models, and verify provider health across cloud and local runtimes."
+title: "Provider Setup 2026: Connecting 100+ LLMs to Hermes Agent"
+description: "Connect 100+ LLM providers to Hermes Agent: Nous Portal OAuth, API keys, credential pools, fallbacks, local models, and exact 2026 commands."
 pubDate: 2026-07-17
-updatedDate: "2026-09-10"
-tags: [providers, llm, hermes-agent, quickstart]
-lastVerified: 2026-07-17
----
-
-Hermes Agent is designed to work with multiple large language model (LLM) providers through a unified configuration system. Whether you're connecting to a hosted API, using a managed routing service, or running models locally, Hermes lets you switch providers without changing your workflows.
-
-This guide covers the fastest setup path, manual configuration, provider settings, credential pools, model switching, local inference, and health verification.
-
+updatedDate: "2026-10-07"
+tags: [guide, hermes-agent, providers, llm, nous-portal, openrouter, ollama, vllm, credential-pools, fallback]
+lastVerified: "2026-10-07"
 ---
 
 ## Provider Overview
 
-Hermes Agent supports more than 20 providers through a consistent interface. Once a provider is configured, every Hermes command uses the active model without requiring provider-specific syntax.
+Hermes Agent speaks to **100+ LLM providers**, and every one of them is wired up through the same configuration layer instead of hand-edited files. A single **Nous Portal** subscription covers **300+ frontier agentic models** — Claude, GPT, Gemini, DeepSeek, Qwen, Kimi, GLM, MiniMax, Grok and more — plus the Tool Gateway for web search, image generation, TTS, and a cloud browser.
 
-Commonly used providers include: OpenRouter, Anthropic, OpenAI, DeepSeek, Groq, Mistral, Google, Together, Cerebras, Ollama, llama.cpp, Fireworks, xAI, Cohere, Azure OpenAI, AWS Bedrock, Vertex AI, AI21, SambaNova, Novita, LM Studio, and OpenAI-compatible endpoints.
+One hard rule gates everything: Hermes requires a model with **at least 64,000 tokens of context** for agent use with tools. Smaller windows are rejected at startup, and that floor explains a large share of "my provider will not connect" reports.
 
-Most providers require only:
-1. An API key
-2. A model identifier
-3. (Optional) A custom base URL
-
-Hermes stores provider settings separately from project configuration, making it easy to reuse the same credentials across multiple repositories.
-
-> **Tip:** If you're just getting started, use the Hermes Portal OAuth flow. It automatically configures credentials without manually copying API keys.
-
----
+Two commands do the work, and they are not interchangeable. `hermes model` runs **outside a session** in your terminal and opens the full setup wizard — add providers, run OAuth, paste API keys, register custom endpoints. `/model` is typed **inside an active chat** and switches only between providers and models already configured; it cannot add a provider, run OAuth, or prompt for a key. To add a provider mid-session: exit with `Ctrl+C` or `/quit`, run `hermes model`, then start a new session. See the [provider integration docs](https://hermes-agent.nousresearch.com/docs/integrations/providers).
 
 ## Fastest Path: Nous Portal OAuth
 
-The quickest way to configure Hermes Agent is through the integrated Portal authentication flow.
+On a fresh install, one command covers login, provider selection, and gateway access: `hermes setup --portal` runs the OAuth flow, sets Nous as your provider, and enables the Tool Gateway. On an existing install, run `hermes model` and pick "Nous Portal" from the list instead.
 
-```bash
-hermes setup --portal
-```
+Use `hermes portal info` to inspect your login state and routing. Portal requests carry an auto-aligned `client=hermes-client-v<version>` tag, so the client version travels with each call. Authentication is JWT-based (`inference:invoke`) and automatic, with the opaque session-key path as the fallback when JWT is unavailable.
 
-Hermes will:
-1. Open the authentication page
-2. Sign you into your account
-3. Request authorization
-4. Download encrypted credentials
-5. Configure your default provider
-6. Verify connectivity
+Install steps are in the [installation guide](https://hermes-agent.nousresearch.com/docs/getting-started/installation), and portal behavior is documented on the [Nous Portal integration page](https://hermes-agent.nousresearch.com/docs/integrations/nous-portal).
 
-A typical setup takes less than a minute. After completion, confirm everything is working:
+## Choosing the Right Setup
 
-```bash
-hermes doctor
-```
+Match the setup to the constraint you actually have — convenience, hardware, privacy, or spend — rather than to whichever vendor page you landed on first.
 
----
+| Setup | Best for | First auth/command | Notes |
+| --- | --- | --- | --- |
+| OpenRouter (default) | "Just make it work" | `OPENROUTER_API_KEY` in `~/.hermes/.env` | Widest model catalog; routing controls below |
+| Nous Portal | One subscription, many frontier models | `hermes setup --portal` | 300+ models plus Tool Gateway; OAuth |
+| Manual API keys | Direct vendor accounts and billing | `hermes model` → provider | Per-vendor env vars; mapping table below |
+| Claude Max + OAuth | Claude Max subscribers with extra credits | `hermes model` → Anthropic | Requires Max **and** purchased extra usage credits |
+| OpenAI Codex via ChatGPT OAuth | ChatGPT plan holders | `hermes model` → OpenAI Codex | Device code by default; `--browser` for loopback PKCE |
+| Local Ollama | Mac, no GPU, or maximum privacy | `OLLAMA_CONTEXT_LENGTH=64000 ollama serve` | Ollama's default context usually sits below the 64k floor — raise it |
+| vLLM or SGLang | Production GPU serving | `vllm serve ...` | Tool calling requires parser flags |
+| OpenRouter routing (or a LiteLLM proxy) | Multi-provider routing | `provider_routing:` block | Sort by price, latency, or throughput |
+| Azure AI Foundry | Enterprise compliance | `hermes model` → Azure AI Foundry | OAuth/enterprise path, no plain env var |
+| Chinese models (z.ai, Kimi, MiniMax, Xiaomi, Tencent TokenHub) | Qwen, Kimi, GLM-class access | `GLM_API_KEY`, `KIMI_API_KEY`, and peers | Separate provider IDs per vendor |
 
 ## Manual Provider Setup
 
-If you prefer direct API keys or your organization manages credentials manually, use the setup wizard.
+### API-key providers
 
-```bash
-hermes setup
-```
+Most vendors are an environment variable plus a provider ID. Keys belong in `~/.hermes/.env`, never in `config.yaml`; the authoritative list is the [environment variables reference](https://hermes-agent.nousresearch.com/docs/reference/environment-variables). Typical examples: DeepSeek (`DEEPSEEK_API_KEY`), MiniMax (`MINIMAX_API_KEY`), xAI (`XAI_API_KEY`), Qwen/Alibaba DashScope (`DASHSCOPE_API_KEY`), Tencent TokenHub (`TOKENHUB_API_KEY`), NVIDIA Build (`NVIDIA_API_KEY`), Google/Gemini (`GOOGLE_API_KEY`, with `GEMINI_API_KEY` as an alias), OpenAI direct (`OPENAI_API_KEY`, provider `openai-api`), Fireworks (`FIREWORKS_API_KEY`), Novita (`NOVITA_API_KEY`), and Hugging Face (`HF_TOKEN`). OpenRouter accepts either `OPENROUTER_API_KEY` or the PKCE flow via `hermes auth add openrouter --type oauth`.
 
-The wizard walks through selecting a provider, entering credentials, choosing a default model, and testing connectivity.
+### OAuth and enterprise providers
 
-Hermes stores provider configuration in your user directory at `~/.hermes/`. Environment variables are commonly stored in `~/.hermes/.env`:
+These are configured through `hermes model` because they need a login flow rather than a static key:
 
-```env
-OPENAI_API_KEY=sk-xxxxxxxx
-ANTHROPIC_API_KEY=***
-OPENROUTER_API_KEY=xxxxxxxx
-DEEPSEEK_API_KEY=xxxxxxxx
-```
+- Nous Portal.
+- OpenAI Codex — ChatGPT/Codex OAuth, device code by default, or `--browser` / `auth.codex_login_flow: browser` for the loopback PKCE flow on `localhost:1455`.
+- GitHub Copilot — device code; token read from `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or `gh auth token`.
+- Anthropic — Claude Max plus purchased extra usage credits via OAuth, or an API key, or manual setup-token.
+- Azure AI Foundry.
+- AWS Bedrock — standard boto3 credential chain.
+- Google Vertex AI — OAuth2 via service-account JSON or ADC, billed to GCP.
 
-After editing the file manually, reload Hermes or rerun `hermes doctor` to validate the configuration.
+### Subscription plans: what actually works
 
----
+The documented plan behavior is narrower than the marketing pages suggest. Under Claude Max, only the extra/overage credits are consumed — the base Max allowance is not.
+
+| Plan | Works with Hermes? | Documented requirement |
+| --- | --- | --- |
+| Claude Max + OAuth | Yes | Requires Claude **Max AND purchased extra usage credits**; only the extra/overage credits are consumed |
+| Claude Pro | No | Use `ANTHROPIC_API_KEY` instead ([providers docs](https://hermes-agent.nousresearch.com/docs/integrations/providers)) |
+| OpenAI Codex via ChatGPT plan OAuth | Yes | Plan-quota semantics are **not documented** ([providers docs](https://hermes-agent.nousresearch.com/docs/integrations/providers)) |
+| xAI SuperGrok / X Premium+ OAuth | Yes | Uses subscription quota; can return HTTP 403 on restricted tiers |
+| Google consumer Gemini plan | No | API-key only; Vertex AI bills to GCP ([providers docs](https://hermes-agent.nousresearch.com/docs/integrations/providers)) |
 
 ## Provider Configuration Table
 
-| Provider | Environment Variable | Base URL | Notes |
-| --- | --- | --- | --- |
-| OpenAI | `OPENAI_API_KEY` | `https://api.openai.com/v1` | Default OpenAI endpoint |
-| Anthropic | `ANTHROPIC_API_KEY` | `https://api.anthropic.com` | Claude models |
-| OpenRouter | `OPENROUTER_API_KEY` | `https://openrouter.ai/api/v1` | Unified access to many models |
-| DeepSeek | `DEEPSEEK_API_KEY` | `https://api.deepseek.com` | Fast reasoning models |
-| Groq | `GROQ_API_KEY` | `https://api.groq.com/openai/v1` | Low-latency inference |
-| Mistral | `MISTRAL_API_KEY` | `https://api.mistral.ai/v1` | Native Mistral APIs |
-| Google | `GOOGLE_API_KEY` | `https://generativelanguage.googleapis.com` | Gemini models |
-| Together | `TOGETHER_API_KEY` | `https://api.together.xyz/v1` | Open-weight models |
-| Cerebras | `CEREBRAS_API_KEY` | `https://api.cerebras.ai/v1` | High-throughput inference |
-| Ollama | None | `http://localhost:11434` | Local inference server |
-| llama.cpp | None | Configurable | Local OpenAI-compatible server |
-| Azure OpenAI | `AZURE_OPENAI_API_KEY` | Deployment URL | Requires deployment configuration |
-| AWS Bedrock | AWS credentials | AWS endpoint | Uses IAM authentication |
-| Vertex AI | Google credentials | Regional endpoint | Google Cloud authentication |
+Every credential below is placed in `~/.hermes/.env` and maps to a provider ID that Hermes recognizes internally.
 
-Only the provider-specific credential is required for most hosted services.
+| Env var | Provider ID | Notes |
+| --- | --- | --- |
+| `OPENROUTER_API_KEY` | `openrouter` | Or `hermes auth add openrouter --type oauth` (PKCE) |
+| `GLM_API_KEY` | `zai` | z.ai / GLM |
+| `KIMI_API_KEY` | `kimi-coding` | China uses `KIMI_CN_API_KEY` → `kimi-coding-cn` |
+| `XIAOMI_API_KEY` | `xiaomi` | Xiaomi MiMo |
+| `COMMANDCODE_API_KEY` | `commandcode` | Claude via `commandcode-anthropic` |
+| `OPENCODE_GO_API_KEY` | `opencode-go` | OpenCode Go |
+| `OPENCODE_ZEN_API_KEY` | `opencode-zen` | OpenCode Zen |
+| `DEEPSEEK_API_KEY` | `deepseek` | [DeepSeek docs](https://api-docs.deepseek.com) |
+| `MINIMAX_API_KEY` | `minimax` | MiniMax |
+| `XAI_API_KEY` | `xai` | Or SuperGrok OAuth |
+| `DASHSCOPE_API_KEY` | Qwen / Alibaba DashScope | Qwen family |
+| `TOKENHUB_API_KEY` | Tencent TokenHub | Tencent |
+| `NVIDIA_API_KEY` | NVIDIA Build | NVIDIA catalog |
+| `GOOGLE_API_KEY` | `google` | Alias: `GEMINI_API_KEY` |
+| `OPENAI_API_KEY` | `openai-api` | OpenAI direct |
+| `FIREWORKS_API_KEY` | Fireworks | Hosted open models |
+| `NOVITA_API_KEY` | Novita | Hosted open models |
+| `HF_TOKEN` | Hugging Face | Hub access |
 
----
+### Optional keys
+
+These unlock features beyond inference: Firecrawl (`FIRECRAWL_API_KEY` or `FIRECRAWL_API_URL`, self-hostable), Browserbase, FAL (`FAL_KEY`), ElevenLabs, `VOICE_TOOLS_OPENAI_KEY`, `MISTRAL_API_KEY` ([Mistral docs](https://docs.mistral.ai)), Honcho (`HONCHO_API_KEY`), and Supermemory (`SUPERMEMORY_API_KEY`). Keep the storage split clean: secrets and tokens in `~/.hermes/.env`, non-secret settings in `~/.hermes/config.yaml` ([configuration docs](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)).
 
 ## Switching Models
 
-Hermes separates provider configuration from model selection.
+Choose your model in the `hermes model` wizard (run outside a session); the selection becomes your active model. To set or persist a default, edit `config.yaml`: the `model:` section accepts either `default:` or `model:` as the key, and the two are equivalent.
 
-The easiest way to change models is the interactive picker:
-
-```bash
-hermes model
-```
-
-The picker displays configured providers, available models, recommended defaults, favorites, and recently used models. Selecting a model immediately updates the active session.
-
-To permanently change the default:
-
-```bash
-hermes config set model.default openai/gpt-5
-hermes config set model.default anthropic/claude-sonnet
-```
-
-Override the model for a single command without changing your default configuration:
-
-```bash
-hermes chat --model openrouter/deepseek-r1
-```
-
----
+Custom endpoints use triple syntax — `/model custom:local:qwen-2.5` names provider, endpoint, and model in one token. A bare `/model custom` auto-selects the single loaded model when only one is present on that endpoint.
 
 ## Credential Pools
 
-Many teams maintain multiple API keys for reliability, cost allocation, or quota management. Hermes supports credential pools that group multiple credentials for the same provider.
+A credential pool holds multiple keys or tokens for the **same** provider. When one key hits a rate limit or a billing quota, Hermes rotates to the next healthy key without stopping the session. The ordering rule matters: **pools are tried first, and a fallback provider fires only after every pool key is exhausted.** Any key already sitting in `.env` is auto-discovered as a one-key pool.
 
-Example configuration:
-
-```yaml
-providers:
-  openrouter:
-    pool:
-    - key: OPENROUTER_KEY_PRIMARY
-    - key: OPENROUTER_KEY_BACKUP
-    - key: OPENROUTER_KEY_TEAM
+```
+hermes auth add openrouter --api-key sk-or-v1-...
+hermes auth add openrouter --type oauth
+hermes auth add <provider> --type api-key --api-key ...
+hermes auth list
+hermes auth
+hermes auth priority <provider> <target> <n>
+hermes auth remove <provider> <index>
+hermes auth reset <provider>
+hermes auth refresh <provider> [target]
 ```
 
-Credential pools provide automatic failover, quota distribution, regional routing, workload separation, and organizational access control. If one key reaches its quota or becomes unavailable, Hermes moves to the next credential without interrupting execution.
+`hermes auth list` marks the selected credential with `←` and shows its `id=` and `priority=` fields; bare `hermes auth` opens an interactive wizard. Rotation behavior is set in `config.yaml`:
 
----
+```yaml
+credential_pool_strategies:
+  openrouter: round_robin
+```
+
+Allowed strategy values are `round_robin`, `least_used`, `fill_first`, and `random`. Credentials are stored in `~/.hermes/auth.json`, and env-borrowed keys appear as `env:` rows that are never persisted.
+
+Two caveats before you build a large pool. Rotating keys resets the provider-side prompt cache, which costs one full-price re-read per rotation on long conversations. For Codex, each `hermes auth add openai-codex` login is its own pool entry, but only **different OpenAI accounts** rotate independently. Full details: [credential pools docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/credential-pools).
 
 ## Fallback Chains
 
-Fallback chains extend this concept across providers:
+Fallbacks handle cross-provider failover, so a rate limit on one vendor does not end the conversation. The canonical shape is a top-level `fallback_providers:` list in `~/.hermes/config.yaml`; the legacy single-pair `fallback_model:` dict is still honored, but `hermes fallback` writes the plural key.
 
-```text
-OpenRouter
-↓
-Anthropic
-↓
-OpenAI
-↓
-Local Ollama
+```yaml
+fallback_providers:
+  - provider: openrouter
+    model: anthropic/claude-sonnet-4
+  - provider: anthropic
+    model: claude-sonnet-4
 ```
 
-If the preferred provider is unavailable, Hermes continues using the next configured provider. Fallback chains are especially useful for CI pipelines, automated agents, long-running workflows, scheduled jobs, and production deployments.
-
-> **Info:** Fallbacks work best when equivalent models are configured across providers.
-
----
+Manage the list interactively with `hermes fallback` and its `add`, `list`/`ls`, `remove`/`rm`, and `clear` subcommands. When a rate-limit response declares a reset time, the primary is benched until then; `fallback.min_switch_reset_seconds: 0` (the default) always switches immediately. The fallback swaps model and provider mid-session without losing the conversation, the chain is tried entry by entry, and activation is one-shot per session — once a fallback engages, it carries that session. See [fallback provider docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers).
 
 ## Local Models
 
-Hermes also supports completely local inference, enabling offline development, reduced latency, and improved privacy.
-
 ### Ollama
 
-Install Ollama and pull a model:
+Ollama serves on port 11434 and does **not** use its full context by default, which is why local models often fail Hermes's startup check.
 
-```bash
-ollama pull llama3.1
+| Available VRAM | Default context |
+| --- | --- |
+| Under 24 GB | 4,096 tokens |
+| 24–48 GB | 32,768 tokens |
+| 48 GB and up | 256,000 tokens |
+
+The first two tiers (4,096 and 32,768) sit below Hermes's 64k floor; only the 48 GB-and-up default of 256,000 clears it. If your GPU reports one of the lower defaults, raise Ollama's context with `OLLAMA_CONTEXT_LENGTH=64000 ollama serve`, a systemd `Environment=` line, or a Modelfile `PARAMETER num_ctx 64000`. You cannot set context through the OpenAI-compatible API — that is the number one integration confusion for local setups. Confirm the running value with `ollama ps`. More at [ollama.com](https://ollama.com).
+
+### vLLM
+
+```
+vllm serve <model> --port 8000 --max-model-len 65536 --tensor-parallel-size 2 --enable-auto-tool-choice --tool-call-parser hermes
 ```
 
-Ensure the Ollama server is running. Hermes detects the default endpoint automatically at `http://localhost:11434`. Select an Ollama model through `hermes model` or specify it directly:
+Tool calling requires both `--enable-auto-tool-choice` and `--tool-call-parser`. Supported parsers include `hermes`, `llama3_json`, `mistral`, `deepseek_v3`, `deepseek_v31`, `xlam`, and `pythonic`. See [vLLM docs](https://docs.vllm.ai).
 
-```bash
-hermes chat --model ollama/llama3.1
+### SGLang
+
 ```
+python -m sglang.launch_server --port 30000 --context-length 65536 --tp 2 --tool-call-parser qwen
+```
+
+Available parsers are `qwen`, `llama3`, `llama4`, `deepseekv3`, `mistral`, and `glm`. Note that SGLang defaults to 128 max output tokens, so raise that for longer agent turns.
 
 ### llama.cpp
 
-Hermes also supports OpenAI-compatible llama.cpp servers:
-1. Start the llama.cpp server
-2. Configure its endpoint
-3. Select the desired local model
-
-```bash
-hermes config set providers.llamacpp.base_url http://localhost:8080
+```
+--jinja -fa -c 64000 -ngl 99 -m model.gguf --port 8080
 ```
 
-Once configured, local models behave like any other provider. Switch between cloud and local inference using the same commands without modifying prompts or workflows.
+`--jinja` is required for tool calling, and `-np` slots divide the total context across parallel requests. Project docs: [llama.cpp](https://github.com/ggml-org/llama.cpp).
 
----
+### LM Studio
+
+Start the server with `lms server start` (port 1234), then load with context: `lms load <model> --context-length 64000`. Hermes exposes `model.lmstudio_load_mode` with `jit` or `explicit` values. See [lmstudio.ai](https://lmstudio.ai).
+
+### WSL2
+
+If your model server runs on the Windows host, `localhost` inside WSL2 resolves to the Linux VM, not to Windows — bridge that network gap before blaming the provider.
+
+## OpenRouter Routing
+
+OpenRouter routing lives in a `provider_routing:` block in `config.yaml` and decides which upstream endpoint serves each request.
+
+```yaml
+provider_routing:
+  sort: "price"
+  data_collection: "deny"
+```
+
+`sort` accepts `"price"` (the default), `"throughput"`, or `"latency"`, alongside `only`, `ignore`, `order`, `require_parameters`, and per-model `models:` pins. Quick shortcuts: append `:nitro` for throughput or `:floor` for price. The experimental `openrouter/pareto-code` router auto-picks the cheapest model above a coding bar, tunable via `openrouter.min_coding_score` (0.0–1.0, default `0.65`). Details in the [OpenRouter docs](https://openrouter.ai/docs); for proxy-style multi-provider routing see [LiteLLM](https://docs.litellm.ai).
 
 ## Verifying Provider Health
 
-After configuring providers, run the diagnostic utility:
-
-```bash
-hermes doctor --fix
-```
-
-The doctor command verifies configuration syntax, environment variables, provider authentication, network connectivity, model availability, local inference endpoints, credential permissions, and cached configuration. The `--fix` option automatically repairs common problems.
-
-Typical output:
-```text
-✔ Configuration
-✔ Credentials
-✔ Provider Connectivity
-✔ Model Access
-✔ Local Endpoints
-✔ Cache
-✔ Default Model
-
-System is healthy.
-```
-
----
+`hermes doctor` verifies configuration, credentials, provider connectivity, model access, local endpoints, cache, and the default model in one pass. For individual values use `hermes config get` and `hermes config set`. After any Hermes update, run `hermes config check` and then `hermes config migrate` so older keys keep working. Remember the storage split: secrets in `~/.hermes/.env`, everything non-secret in `~/.hermes/config.yaml`.
 
 ## Recommended Workflow
 
-For most users, this sequence provides the smoothest onboarding:
+1. **Context check first.** Confirm your intended model exposes at least 64,000 tokens; smaller windows are rejected at startup.
+2. **Pick a default provider.** `hermes setup --portal` on a fresh install, or OpenRouter with `OPENROUTER_API_KEY` in `~/.hermes/.env`.
+3. **Set a session default.** Choose it in the `hermes model` picker, then persist it in `config.yaml` via `default:` or `model:`.
+4. **Add a fallback.** Write a top-level `fallback_providers:` list with at least two entries.
+5. **Add credential pools.** Multiple keys per provider, with a `credential_pool_strategies:` entry.
+6. **Verify.** Run `hermes doctor`, then `hermes config check` and `hermes config migrate` after upgrades.
 
-1. Run `hermes setup --portal`
-2. Verify with `hermes doctor --fix`
-3. Select a preferred model using `hermes model`
-4. Configure fallback providers
-5. Add additional credential pools as needed
-6. Enable local models for offline work
-7. Periodically rerun diagnostics after changing providers
+## FAQ
 
----
+### What is the difference between `hermes model` and `/model`?
 
-## Companion Guides
+`hermes model` runs outside a session and is the full setup wizard: add providers, run OAuth, enter API keys, register custom endpoints. `/model` runs inside an active chat and switches only between providers and models already configured — it cannot add providers, run OAuth, or prompt for keys. To add one, exit with `Ctrl+C` or `/quit`, run `hermes model`, then start a new session.
 
-Continue with these related guides: Installation Guide, First Chat, Project Configuration, Model Selection, Agent Profiles, Authentication, CLI Reference, Troubleshooting, Local Development, and Configuration Reference.
+### Does Nous Portal replace individual API keys?
 
----
+For most work, yes. One Nous Portal subscription covers **300+ frontier agentic models** plus the Tool Gateway, so you do not need per-vendor keys. Direct API keys remain useful for vendor-specific billing, enterprise endpoints, or models outside the portal catalog.
 
-## External Documentation
+### Why does my local Ollama model fail at startup?
 
-- OpenRouter: https://openrouter.ai/docs
-- Anthropic: https://docs.anthropic.com
-- OpenAI: https://platform.openai.com/docs
-- DeepSeek: https://api-docs.deepseek.com
-- Groq: https://console.groq.com/docs
-- Mistral: https://docs.mistral.ai
-- Google AI: https://ai.google.dev
-- Together AI: https://docs.together.ai
-- Cerebras: https://inference-docs.cerebras.ai
-- Ollama: https://ollama.com
-- llama.cpp: https://github.com/ggml-org/llama.cpp
+Because Ollama does not load its full context by default — 4,096 tokens under 24 GB of VRAM, 32,768 between 24 and 48 GB, and 256,000 at 48 GB and up — and the lower two tiers sit below Hermes's 64,000-token floor. Start the server with `OLLAMA_CONTEXT_LENGTH=64000 ollama serve`, set a systemd `Environment=` line, or use a Modelfile `PARAMETER num_ctx 64000`. You cannot raise it through the OpenAI-compatible API.
 
-Review provider-specific documentation for supported models, authentication methods, rate limits, pricing, and advanced capabilities before deploying production workloads.
+### How do credential pools interact with fallbacks?
 
----
+Pools are tried first. A fallback provider fires only after every pool key for the active provider is exhausted, so pools handle same-provider rate limits and billing quotas while fallbacks handle whole-provider outages.
 
-## Summary
+### Can I use Claude Pro or a Google consumer Gemini plan?
 
-Hermes Agent provides a unified experience across hosted and local LLM providers. Whether you authenticate through the Nous Portal, configure API keys manually, or run models on your own hardware, the same commands continue to work. Credential pools improve reliability, fallback chains reduce downtime, interactive model selection simplifies experimentation, and built-in diagnostics help ensure every provider remains healthy. With a single configuration layer abstracting differences between providers, you can focus on building workflows instead of managing infrastructure.
+No. Claude Pro is not supported for OAuth — use `ANTHROPIC_API_KEY`. Google consumer Gemini plans are API-key only, and Vertex AI bills to GCP. Claude Max with OAuth works when Claude Max AND purchased extra usage credits are present; only the extra/overage credits are consumed.
+
+### How do I keep the setup healthy after upgrades?
+
+Run `hermes doctor` to verify config, credentials, connectivity, model access, local endpoints, cache, and the default model. Then run `hermes config check` followed by `hermes config migrate` so any renamed or newly required keys are updated.
+
+## The Bottom Line
+
+In 2026, the safe Hermes provider setup starts with a hard 64,000-token context check, a default provider reachable from one command, and a fallback chain you can actually verify. If you do one thing after reading this, run `hermes doctor`, confirm every configured model clears 64,000 tokens, and add at least one `fallback_providers:` entry before you depend on the setup.
+
+## How This Guide Was Built
+
+This refresh is desk research on the official Hermes Agent documentation fetched 2026-10-07 — no provider account was created, no credential was configured, and no local model was served. Every command, environment variable, and configuration key above traces to the official Hermes documentation and vendor pages cited inline; where the docs are silent, notably on OpenAI Codex plan-quota semantics, this guide says so instead of guessing.
+
+## Companion Guides & External Documentation
+
+Next steps: the [provider integration docs](https://hermes-agent.nousresearch.com/docs/integrations/providers) for the full provider index, [credential pools](https://hermes-agent.nousresearch.com/docs/user-guide/features/credential-pools) and [fallback providers](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers) for resilience, [configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) and the [environment variables reference](https://hermes-agent.nousresearch.com/docs/reference/environment-variables) for exact keys, and vendor docs at [OpenRouter](https://openrouter.ai/docs), [Anthropic](https://docs.anthropic.com), [OpenAI](https://platform.openai.com/docs), [DeepSeek](https://api-docs.deepseek.com), [vLLM](https://docs.vllm.ai), [Ollama](https://ollama.com), [llama.cpp](https://github.com/ggml-org/llama.cpp), and [LM Studio](https://lmstudio.ai).
