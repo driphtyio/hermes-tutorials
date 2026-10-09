@@ -105,7 +105,7 @@ try {
 
 const roleOrder = { builder: 0, judge: 1, qa: 2, research: 3, planner: 4 };
 const roleLabel = { builder: 'Builder', judge: 'Judge', qa: 'QA', research: 'Research', planner: 'Planner' };
-const poolRows = [...model_pool]
+const poolRows = model_pool.filter((m) => m.status === 'active')
   .map((m) => ({ ...m, played: (leaderboard.find((l) => String(l.model).toLowerCase() === String(m.model).toLowerCase()) || {}).matches ?? m.matches_played ?? null }))
   .sort((a, b) => (roleOrder[String(a.role).toLowerCase()] ?? 9) - (roleOrder[String(b.role).toLowerCase()] ?? 9)
     || (b.played ?? -1) - (a.played ?? -1) || String(a.model).localeCompare(String(b.model)));
