@@ -21,7 +21,7 @@
     {
       "model": "mimo-v2.6-flash",
       "provider": "opencode-go",
-      "family": "xiaomi",
+      "family": "mimo",
       "role": "builder",
       "status": "active",
       "context_length": 1048576,
@@ -29,8 +29,8 @@
     },
     {
       "model": "glm-5.3-flash",
-      "provider": "opencode-go",
-      "family": "z-ai",
+      "provider": "zai",
+      "family": "glm",
       "role": "builder",
       "status": "active",
       "context_length": 1310720,
@@ -39,19 +39,11 @@
     {
       "model": "muse-spark-1.3-contributor",
       "provider": "opencode-go",
-      "family": "meta",
+      "family": "muse",
       "role": "builder",
       "status": "active",
       "context_length": 128000,
       "fallback": "commandcode meta/muse-spark-1.3-contributor"
-    },
-    {
-      "model": "minimax-m3",
-      "provider": "commandcode",
-      "family": "minimax",
-      "role": "builder",
-      "status": "active",
-      "fallback": "opencode-go bare minimax-m3 (trace-strip reasoning content)"
     },
     {
       "model": "hy3",
@@ -65,10 +57,85 @@
     {
       "model": "gpt-6-luna",
       "provider": "commandcode",
-      "family": "openai",
+      "family": "gpt",
       "role": "builder",
       "status": "active",
       "fallback": "opencode-go bare gpt-6-luna | openrouter openai/gpt-6-luna"
+    },
+    {
+      "model": "longcat-2.5-preview-free",
+      "provider": "opencode-go",
+      "family": "longcat25",
+      "role": "builder",
+      "status": "active",
+      "context_length": 262144
+    },
+    {
+      "model": "ling-3.0-flash-sante",
+      "provider": "commandcode",
+      "family": "ling",
+      "role": "builder",
+      "status": "active"
+    },
+    {
+      "model": "poolside/laguna-s-2.1-free",
+      "provider": "commandcode",
+      "family": "poolside",
+      "role": "builder",
+      "status": "active",
+      "fallback": "openrouter poolside/laguna-s-2.1 (PAID \u2014 the :free tier is rate-limited 3/5; openrouter primary probe-OK 6/6 2026-09-25); commandcode poolside/laguna-s-2.1-free (FALLBACK \u2014 CC returns 0 text deltas on 3/3 probes, intermittent)"
+    },
+    {
+      "model": "claude-haiku-5-5",
+      "role": "builder",
+      "status": "active",
+      "provider": "claude-cli",
+      "family": "claude"
+    },
+    {
+      "model": "cline-pass/qwen3.8-max",
+      "role": "builder",
+      "status": "active",
+      "provider": "cline-pass",
+      "family": "qwen"
+    },
+    {
+      "model": "minimax-m3",
+      "provider": "cline-pass",
+      "family": "minimax",
+      "role": "builder",
+      "status": "active",
+      "fallback": "opencode-go bare minimax-m3 (trace-strip reasoning content)"
+    },
+    {
+      "role": "research",
+      "model": "mimo-v2.6-pro",
+      "provider": "commandcode",
+      "status": "active"
+    },
+    {
+      "role": "planner",
+      "model": "cline-pass/glm-5.3",
+      "provider": "cline-pass",
+      "status": "active"
+    },
+    {
+      "role": "judge",
+      "model": "qwen/qwen3.7-flash",
+      "provider": "openrouter",
+      "status": "active"
+    },
+    {
+      "role": "qa",
+      "model": "claude-sonnet-5-5",
+      "provider": "claude-cli",
+      "status": "active"
+    },
+    {
+      "role": "qa_fallback",
+      "model": "cline-pass/glm-5.3",
+      "provider": "cline-cli",
+      "status": "active"
     },
     {
       "model": "longcat-2.0",
@@ -85,75 +152,17 @@
       "provider": "opencode-go",
       "family": "space",
       "role": "builder",
-      "status": "active",
+      "status": "retired",
       "fallback": "commandcode stealth/space-bunny-alpha (1M ctx, Stealth route, probe-OK)"
-    },
-    {
-      "model": "poolside/laguna-s-2.1",
-      "provider": "openrouter",
-      "family": "poolside",
-      "role": "builder",
-      "status": "active",
-      "fallback": "openrouter poolside/laguna-s-2.1 (PAID \u2014 the :free tier is rate-limited 3/5; openrouter primary probe-OK 6/6 2026-09-25); commandcode poolside/laguna-s-2.1-free (FALLBACK \u2014 CC returns 0 text deltas on 3/3 probes, intermittent)"
-    },
-    {
-      "model": "glm-5.2",
-      "provider": "zai",
-      "family": "glm",
-      "benchmark_score": 6.6,
-      "benchmark_weight": 0.66,
-      "matches_played": 6,
-      "status": "pass",
-      "role": "qa"
-    },
-    {
-      "model": "qwen3.7-flash",
-      "provider": "openrouter",
-      "family": "qwen",
-      "status": "pass",
-      "role": "judge"
-    },
-    {
-      "model": "mimo-v2.5-pro",
-      "provider": "xiaomi",
-      "family": "xiaomi",
-      "status": "pass",
-      "role": "planner"
-    },
-    {
-      "model": "deepseek-v4-pro",
-      "role": "planner",
-      "provider": "commandcode",
-      "context_length": 131072
-    },
-    {
-      "model": "mimo-v2.6-pro",
-      "provider": "commandcode",
-      "role": "research"
     },
     {
       "model": "ling-3.0-flash-fin-free",
       "provider": "commandcode",
       "family": "ling",
       "role": "builder",
-      "status": "active",
+      "status": "retired",
       "context_length": 262144,
       "fallback": "opencode-go ling-3.0-flash-fin-free (not serving 2026-09-25 - Model is unavailable.; CC-only lane, wire inclusionai/ling-3.0-flash-sante:free, FREE deal)"
-    },
-    {
-      "model": "longcat-2.5-preview-free",
-      "provider": "opencode-go",
-      "family": "longcat25",
-      "role": "builder",
-      "status": "active",
-      "context_length": 262144
-    },
-    {
-      "model": "ling-3.0-flash-sante",
-      "provider": "commandcode",
-      "family": "ling",
-      "role": "builder",
-      "status": "active"
     }
   ],
   "stability": {
@@ -688,8 +697,8 @@
       ],
       "results": [
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "score": 9.07,
           "word_count": 1049,
@@ -790,7 +799,7 @@
           "note": "DNF \u2014 circuit breaker open for xiaomi provider"
         }
       ],
-      "winner": "poolside-laguna-s-2.1",
+      "winner": "poolside/laguna-s-2.1-free",
       "winning_model": "poolside-laguna-s-2.1",
       "qa": {
         "threshold": 8.0,
@@ -894,7 +903,7 @@
           "rank": 2
         },
         {
-          "model": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
           "score": 0.0,
           "word_count": 0,
           "error": "Circuit breaker open for openrouter - DNF",
@@ -1062,8 +1071,8 @@
           "rank": 2
         },
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "score": 6.95,
           "weighted_score": 6.95,
@@ -1254,8 +1263,8 @@
           "rank": 2
         },
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "score": 8.75,
           "weighted_score": 8.75,
@@ -1450,8 +1459,8 @@
           "rank": 2
         },
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "score": 8.62,
           "weighted_score": 8.62,
@@ -1528,8 +1537,8 @@
       ],
       "results": [
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "family": "poolside",
           "score": 8.48,
@@ -1654,7 +1663,7 @@
           "rank": 3
         }
       ],
-      "winner": "poolside-laguna-s-2.1",
+      "winner": "poolside/laguna-s-2.1-free",
       "threshold_met": true,
       "judge_feedback": "Redo iteration 1: all three drafts passed the 8.0 gate on 3-pass mean (poolside 8.48, deepseek 8.45, mimo 8.05). First pass failed (7.67/7.75/7.78) on thin single-paragraph sections; revised brief enforced 40-60 word answer + body prose per H2. Verified-fact preamble prevented cutoff false-negatives. Fabrication gate: no implied hands-on testing; canonical honesty sentence present.",
       "date_range": "2026-07-08 to 2026-08-15",
@@ -1701,8 +1710,8 @@
       ],
       "results": [
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "score": 9.07,
           "weighted_score": 9.07,
@@ -1837,7 +1846,7 @@
           "rank": 3
         }
       ],
-      "winner": "poolside-laguna-s-2.1",
+      "winner": "poolside/laguna-s-2.1-free",
       "winner_score": 9.07,
       "threshold_met": true,
       "qa": {
@@ -1938,8 +1947,8 @@
           "rank": 1
         },
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "score": 8.53,
           "weighted_score": 8.53,
@@ -2163,8 +2172,8 @@
           "rank": 2
         },
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "family": "poolside",
           "score": 8.23,
@@ -2298,8 +2307,8 @@
           "rank": 1
         },
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "score": 8.78,
           "weighted_score": 8.78,
@@ -2538,8 +2547,8 @@
           "rank": 2
         },
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "score": 7.23,
           "weighted_score": 7.23,
@@ -2718,8 +2727,8 @@
           "rank": 2
         },
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "score": 6.18,
           "weighted_score": 6.18,
@@ -2894,8 +2903,8 @@
           "rank": 3
         },
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "score": 8.98,
           "weighted_score": 8.98,
@@ -2939,7 +2948,7 @@
           "rank": 1
         }
       ],
-      "winner": "poolside-laguna-s-2.1",
+      "winner": "poolside/laguna-s-2.1-free",
       "winner_score": 8.98,
       "threshold_met": true,
       "qa": {
@@ -3071,8 +3080,8 @@
           "rank": 2
         },
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "family": "",
           "score": 9.2,
@@ -3117,7 +3126,7 @@
           "rank": 1
         }
       ],
-      "winner": "poolside-laguna-s-2.1",
+      "winner": "poolside/laguna-s-2.1-free",
       "winner_score": 9.2,
       "threshold_met": true,
       "qa": {
@@ -3161,8 +3170,8 @@
       ],
       "results": [
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "family": "",
           "score": 8.18,
@@ -3272,7 +3281,7 @@
           "rank": 3
         }
       ],
-      "winner": "poolside-laguna-s-2.1",
+      "winner": "poolside/laguna-s-2.1-free",
       "winner_score": 8.18,
       "threshold_met": true,
       "qa": {
@@ -3407,8 +3416,8 @@
           "rank": 2
         },
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "family": "poolside",
           "score": 7.98,
@@ -3636,8 +3645,8 @@
           "rank": 3
         },
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "family": "poolside",
           "score": 8.72,
@@ -3811,8 +3820,8 @@
           "rank": 2
         },
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "score": 7.32,
           "weighted_score": 7.32,
@@ -4040,8 +4049,8 @@
           "rank": 2
         },
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "score": 7.87,
           "weighted_score": 7.87,
@@ -4327,8 +4336,8 @@
           ]
         },
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "score": 6.7,
           "weighted_score": 6.7,
@@ -4471,8 +4480,8 @@
           ]
         },
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "family": "poolside",
           "score": 9.28,
@@ -4882,8 +4891,8 @@
           ]
         },
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "family": "poolside",
           "score": 7.4,
@@ -5135,8 +5144,8 @@
           "threshold_met": false
         },
         {
-          "model": "poolside-laguna-s-2.1",
-          "model_id": "poolside-laguna-s-2.1",
+          "model": "poolside/laguna-s-2.1-free",
+          "model_id": "poolside/laguna-s-2.1-free",
           "provider": "openrouter",
           "family": "poolside",
           "score": 7.55,
@@ -8694,15 +8703,14 @@
       "rank": 1
     },
     {
-      "model": "poolside/laguna-s-2.1",
-      "provider": "openrouter",
+      "model": "poolside/laguna-s-2.1-free",
+      "provider": "commandcode",
       "family": "poolside",
       "matches": 25,
       "wins": 6,
       "losses": 19,
       "avgScore": 8.1,
       "bestScore": 9.28,
-      "retired": true,
       "rank": 2
     },
     {
@@ -8883,6 +8891,18 @@
       "status": "retired",
       "reason": "removed from active lineup 2026-09-24",
       "retired_date": "2026-09-24"
+    },
+    {
+      "model": "space-bunny-free",
+      "status": "retired",
+      "reason": "upstream preview ended 2026-10-07",
+      "retired_date": "2026-10-08"
+    },
+    {
+      "model": "ling-3.0-flash-fin-free",
+      "status": "retired",
+      "reason": "removed from 12-lane builder roster 2026-10-08",
+      "retired_date": "2026-10-08"
     }
   ],
   "version": "1.0.5"
