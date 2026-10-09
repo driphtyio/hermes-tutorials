@@ -1,0 +1,170 @@
+---
+title: "How to Integrate Hermes Agent with Google Workspace: Gmail, Calendar, Drive, Sheets & Docs Setup Guide 2026"
+description: "Set up Hermes Agent for Gmail, Calendar, Drive, Sheets, and Docs with OAuth, exact CLI commands, scope guidance, and troubleshooting for headless use."
+pubDate: "2026-10-09"
+lastVerified: "2026-10-09"
+tags: ["hermes agent", "google workspace", "oauth", "integration", "cli"]
+keywords: [hermes agent google workspace, hermes gmail integration, hermes calendar drive sheets, google workspace oauth setup, hermes agent cli commands]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-google-workspace-integration-2026-1791562190.webp"
+---
+
+> **TLDR:** Hermes Agent ships a Google Workspace skill that connects Gmail, Calendar, Drive, Contacts, Sheets, and Docs through OAuth2 with automatic token refresh. You set it up once — one Google Cloud project, one Desktop-app OAuth client, one browser approval — and the agent can then read, send, and reply to mail, manage events, search Drive, and read or write Sheets and Docs from the CLI, chat platforms, or cron.
+
+## What the Google Workspace Skill Actually Does
+
+Hermes Agent's Google Workspace skill connects the agent to Gmail, Calendar, Drive, Contacts, Sheets, and Docs through Google APIs. After authorization, Hermes uses the same integration from a CLI session or an automation entry point such as Telegram, Discord, Slack, or cron, without repeating browser approval for every task.
+
+The skill lives at `skills/productivity/google-workspace/` and uses OAuth2 with automatic token refresh. According to the [Hermes Google Workspace skill documentation](https://hermes-agent.nousresearch.com/docs/user-guide/skills/google-workspace), it prefers the Google Workspace CLI, `gws`, when installed, and otherwise falls back to Google's bundled Python client libraries.
+
+The commands below use `$GAPI`, the skill's command surface, and all of them return JSON. Search results include message IDs, thread IDs, names, and links, which makes the integration suitable for follow-up actions. Still review consequential actions — especially sending mail and deleting calendar events — before delegating them.
+
+## What You Need Before You Start
+
+Prepare a running Hermes Agent environment, access to a Google account, and permission to create or use a Google Cloud project. The setup is agent-driven: ask Hermes to set up Google Workspace, then follow its prompts to enable APIs, create credentials, and authorize access in a browser.
+
+You will need a browser for the consent step and a way to paste the redirect URL back into Hermes. The process creates a Desktop app OAuth client and uses its downloaded client-secret JSON. If you only need email, Hermes documents a lighter path: the [himalaya skill](https://hermes-agent.nousresearch.com/docs/user-guide/skills/google-workspace), which uses a Gmail App Password and needs no Google Cloud project.
+
+The setup covers six APIs: Gmail, Calendar, Drive, Sheets, Docs, and People. People backs the Contacts commands. For Google's own explanation of credential types, see [Create access credentials](https://developers.google.com/workspace/guides/create-credentials).
+
+## Step 1: Create the Google Cloud Project and Enable APIs
+
+Start by asking Hermes to set up Google Workspace; it walks you through creating a Google Cloud project and enabling the APIs the skill needs. The project holds the API enablement and the OAuth client, so keep track of which Google account and project you use.
+
+Create a project in the Google Cloud console if you do not already have one for this integration, then enable the Gmail, Calendar, Drive, Sheets, Docs, and People APIs. An API that is not enabled can produce an "Access Not Configured" error even when OAuth authorization succeeded, because enabling an API and granting a scope are separate steps.
+
+Use the same project for the OAuth credentials in the next step. The [Hermes setup documentation](https://hermes-agent.nousresearch.com/docs/user-guide/skills/google-workspace) describes the agent-guided process and can install dependencies when needed.
+
+## Step 2: Create Desktop-App OAuth Credentials and Authorize
+
+In the Google Cloud project, create an OAuth 2.0 client ID with the application type set to **Desktop app**, then download the client-secret JSON when prompted. Return to Hermes and continue its setup so the agent can use that client configuration.
+
+Hermes generates an authorization URL. Open it in a browser, sign in to the intended account, review and approve the requested access, then paste the resulting redirect URL back into Hermes. Once the exchange completes, the skill is ready and the token refreshes automatically.
+
+One caveat matters: Google's [OAuth 2.0 documentation for native apps](https://developers.google.com/identity/protocols/oauth2/native-app) says manual copy-and-paste redirects are deprecated for shipped consumer apps. Hermes's paste-back flow is a desktop-app-style approach and is presented here as the simplest headless-agent setup, not as Google's preferred method for consumer software. The same page covers PKCE and loopback redirect options.
+
+## Gmail: Search, Read, Send, Reply, and Label
+
+The Gmail commands find messages, retrieve their bodies, compose mail, reply within a thread, and change labels. Use the returned message and thread identifiers to pick the target, and inspect the JSON before sending or modifying mail.
+
+Search unread mail, or use Gmail query operators such as `from:`, `newer_than:1d`, and `has:attachment filename:pdf`:
+
+```bash
+$GAPI gmail search "is:unread" --max 10
+```
+
+Retrieve a message by ID; plain text is preferred, with HTML as a fallback:
+
+```bash
+$GAPI gmail get MESSAGE_ID
+```
+
+Send a plain-text message, or add `--html` for HTML content:
+
+```bash
+$GAPI gmail send --to user@example.com --subject "Hello" --body "..."
+```
+
+Replying uses the original message ID and threads the response automatically:
+
+```bash
+$GAPI gmail reply MESSAGE_ID --body "..."
+```
+
+Inspect labels with `$GAPI gmail labels`, then modify a message with `$GAPI gmail modify MESSAGE_ID --add-labels LABEL_ID` or `--remove-labels UNREAD`. The optional `--cc` adds recipients, and `--from` sets the RFC 5322 From header; a custom display name on your own authenticated address needs no extra configuration, while sending from a different address requires configuring it as a Gmail Send As alias in Settings. See [Gmail's Send mail as guidance](https://support.google.com/mail/answer/22370).
+
+## Calendar, Drive, Sheets, Docs, and Contacts
+
+The same authorization covers the skill's other Workspace tools: listing and creating calendar events, searching Drive, reading and writing spreadsheet ranges, reading document text, and listing contacts. Use the exact resource IDs and ranges for the account.
+
+Calendar lists default to the next seven days, and `--start` and `--end` accept ISO timestamps with an offset. A complete create command is:
+
+```bash
+$GAPI calendar create --summary "Team Standup" \
+  --start 2026-03-01T10:00:00-07:00 --end 2026-03-01T10:30:00-07:00
+```
+
+Optional fields include `--location` and `--attendees "a@co.com,b@co.com"`; delete with `$GAPI calendar delete EVENT_ID`. **Always include a timezone offset or use UTC with `Z`**, because a bare datetime is treated as UTC.
+
+Search Drive by phrase, or use `--raw-query` for raw Drive query syntax:
+
+```bash
+$GAPI drive search "quarterly report" --max 10
+```
+
+Read a Sheets range as a two-dimensional array, update cells, or append rows:
+
+```bash
+$GAPI sheets get SHEET_ID "Sheet1!A1:D10"
+$GAPI sheets update SHEET_ID "Sheet1!A1:B2" --values '[["Name","Score"],["Alice","95"]]'
+$GAPI sheets append SHEET_ID "Sheet1!A:C" --values '[["new","row","data"]]'
+```
+
+Read a document's title and full text, or list contacts:
+
+```bash
+$GAPI docs get DOC_ID
+$GAPI contacts list --max 20
+```
+
+## Security, Scopes, and What You're Granting
+
+OAuth scopes describe what an application may access on a user's behalf. Google's credential guidance distinguishes OAuth client IDs, which access user data with consent, from API keys for public data and service accounts for app-to-app access. During authorization, Google's consent screen lists the scopes the skill is requesting for each service you enabled — read and write access to Gmail, Calendar, Drive, Sheets, Docs, and Contacts — so you can approve exactly those services rather than assuming a narrower grant.
+
+Because the skill requests access to its connected services, this is broader than an email-only setup; choose it only if Calendar, Drive, Sheets, Docs, and Contacts fit your use case. The access token can refresh without repeated consent, but tokens can be revoked, so automatic refresh is not a guarantee of permanent access.
+
+If a command returns `HttpError 403: Insufficient Permission`, the skill documentation's remedy is to revoke the token and re-authorize with the right services so the necessary scope is granted. Keep the downloaded client-secret JSON and the agent's stored credentials private, and never paste them into a chat or commit them to a repository.
+
+## gws CLI vs. Python Client Libraries: Which Path to Pick
+
+Hermes prefers `gws` when it is installed because it offers broader Google Workspace coverage; without it, the skill falls back to bundled Python client libraries. Choose based on your environment and the commands you need, while remembering that the CLI repository explicitly says it is not an officially supported Google product.
+
+| Path | Coverage | Install requirement | Official-support status |
+|---|---|---|---|
+| `gws` CLI | Broader Workspace coverage; includes Drive, Gmail, Calendar, Sheets, Docs, Chat, and Admin | Must be installed for Hermes to prefer it | The [repository](https://github.com/googleworkspace/cli) states it is **not** an officially supported Google product |
+| Bundled Python client libraries | Hermes's fallback for the skill's supported Workspace services | Used automatically when `gws` is not installed; setup can install dependencies | Google-maintained client libraries used as the documented fallback path |
+
+The [Google Workspace CLI repository](https://github.com/googleworkspace/cli) builds its commands dynamically from the Google Discovery Service and ships AI-agent-oriented skills. You do not need to install it to follow the Hermes setup; it is an optional preferred path.
+
+## Troubleshooting: The Five Errors You'll Actually Hit
+
+Most setup failures map to a short list: missing authorization, a revoked token, an insufficient permission, an API that is not enabled, or a missing Python dependency. Match the exact error text to its fix instead of repeating every setup step.
+
+| Error | Fix |
+|---|---|
+| `NOT_AUTHENTICATED` | Re-run Google Workspace setup. |
+| `REFRESH_FAILED` | The token was revoked; re-authorize. |
+| `HttpError 403: Insufficient Permission` | Revoke the token and re-authorize with the right services. |
+| `HttpError 403: Access Not Configured` | Enable the missing API in the Google Cloud console. |
+| `ModuleNotFoundError` | Run setup with `--install-deps`. |
+
+If a permission error persists, check that the required API is enabled as well as that the account approved the right services. Hermes documents these errors in its [Google Workspace skill guide](https://hermes-agent.nousresearch.com/docs/user-guide/skills/google-workspace).
+
+## FAQ
+
+### Can I connect only Gmail?
+
+Yes. If you only need email, Hermes documents the [himalaya skill](https://hermes-agent.nousresearch.com/docs/user-guide/skills/google-workspace), which uses a Gmail App Password and needs no Google Cloud project. The full Google Workspace skill is the better fit when you also need Calendar, Drive, Sheets, Docs, or Contacts.
+
+### Do Calendar timestamps need a timezone?
+
+Yes. Include an offset such as `-07:00` or use UTC with `Z`. According to the [Hermes skill guidance](https://hermes-agent.nousresearch.com/docs/user-guide/skills/google-workspace), bare datetimes are treated as UTC, which can shift an event away from the local time you intended.
+
+### Can I use the integration from cron or chat?
+
+The authorization is set up once and the OAuth token refreshes automatically, which supports using it headlessly from the CLI or an agent entry point such as Telegram, Discord, Slack, or cron — provided the token stays valid and the account retains access.
+
+### Does the setup have to be repeated for every service?
+
+No. The documented setup uses one Google Cloud project and one Desktop app OAuth client for the Workspace skill, with the required APIs enabled in that project. You authorize through the browser once, then Hermes handles token refresh. Re-authorization is only needed if access is revoked or the permissions change.
+
+## The Bottom Line
+
+For an existing Hermes Agent installation, the Workspace skill is one connected route to Gmail, Calendar, Drive, Sheets, Docs, and Contacts, with commands suited to headless workflows. Create the project, enable the APIs, configure the Desktop app client, and approve the browser request; after that, OAuth refresh handles routine access.
+
+Choose the full integration when you need several Workspace services or one agent interface across them; for email alone, the himalaya skill is lighter. Keep the OAuth caveat in view: Hermes uses a paste-back redirect flow that Google marks deprecated for shipped consumer apps, and `gws` is a community CLI rather than an officially supported Google product.
+
+## How This Guide Was Built
+
+This guide is desk research only. No Google Cloud project was created, no OAuth client was configured, and no API call was made. The setup flow, command forms, OAuth caveat, and troubleshooting details were checked against primary sources available on 2026-10-09 — this review is based on official documentation and vendor pages, and we did not run the tool hands-on.
+
+Sources include the [Hermes Google Workspace documentation](https://hermes-agent.nousresearch.com/docs/user-guide/skills/google-workspace), the [Hermes documentation index](https://hermes-agent.nousresearch.com/docs), [Google's credential guide](https://developers.google.com/workspace/guides/create-credentials), [Google's native-app OAuth guide](https://developers.google.com/identity/protocols/oauth2/native-app), the [Google Workspace CLI repository](https://github.com/googleworkspace/cli), and [Gmail's Send As instructions](https://support.google.com/mail/answer/22370).
