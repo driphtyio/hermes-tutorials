@@ -177,30 +177,6 @@
       "status": "retired",
       "context_length": 262144,
       "fallback": "opencode-go ling-3.0-flash-fin-free (not serving 2026-09-25 - Model is unavailable.; CC-only lane, wire inclusionai/ling-3.0-flash-sante:free, FREE deal)"
-    },
-    {
-      "model": "omen-alpha",
-      "provider": "opencode-go",
-      "family": "omen",
-      "role": "builder",
-      "status": "active",
-      "fallback": "NONE - opencode-go only (probed 2026-10-09)"
-    },
-    {
-      "model": "nvidia/nemotron-3-ultra-550b-a55b",
-      "provider": "commandcode",
-      "family": "nemotron",
-      "role": "builder",
-      "status": "active",
-      "fallback": "NONE - commandcode only (probed 2026-10-09)"
-    },
-    {
-      "model": "meituan/LongCat-2.0",
-      "provider": "commandcode",
-      "family": "longcat2",
-      "role": "builder",
-      "status": "active",
-      "fallback": "NONE - commandcode only (probed 2026-10-09)"
     }
   ],
   "stability": {
@@ -9376,7 +9352,7 @@
       "rank": 17
     }
   ],
-  "last_updated": "2026-10-09T16:40:00Z",
+  "last_updated": "2026-10-09",
   "total_matches": 38,
   "retired_models": [
     {
