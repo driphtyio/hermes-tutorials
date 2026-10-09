@@ -98,9 +98,12 @@
     {
       "model": "cline-pass/qwen3.8-max",
       "role": "builder",
-      "status": "active",
+      "status": "retired",
       "provider": "cline-pass",
-      "family": "qwen"
+      "family": "qwen",
+      "fallback": "none (retired)",
+      "reason": "Consistent DNF (empty/timeout responses across recent matches); removed by user directive 2026-10-09",
+      "retired_date": "2026-10-09"
     },
     {
       "model": "minimax-m3",
@@ -9399,6 +9402,10 @@
     {
       "model": "ling-3.0-flash-sante",
       "reason": "CommandCode free tier ended upstream 2026-10-09 (404, no serving wire id); removed by user directive"
+    },
+    {
+      "model": "cline-pass/qwen3.8-max",
+      "reason": "Consistent DNF (empty/timeout responses across recent matches); removed by user directive 2026-10-09"
     }
   ],
   "version": "1.0.5"
