@@ -75,7 +75,10 @@
       "provider": "commandcode",
       "family": "ling",
       "role": "builder",
-      "status": "active"
+      "status": "retired",
+      "fallback": "none (CommandCode free tier ended)",
+      "reason": "CommandCode free tier ended upstream 2026-10-09 (404, no serving wire id); removed by user directive",
+      "retired_date": "2026-10-09"
     },
     {
       "model": "poolside/laguna-s-2.1-free",
@@ -9392,6 +9395,10 @@
       "status": "retired",
       "reason": "removed from 12-lane builder roster 2026-10-08",
       "retired_date": "2026-10-08"
+    },
+    {
+      "model": "ling-3.0-flash-sante",
+      "reason": "CommandCode free tier ended upstream 2026-10-09 (404, no serving wire id); removed by user directive"
     }
   ],
   "version": "1.0.5"
