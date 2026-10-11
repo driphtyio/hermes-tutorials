@@ -113,3 +113,12 @@ Prioritize the component that handles each surface: dashboard, CLI/workspace Git
 This post rests on the v0.21.6 release record and its comparison view, which are the primary sources for the update channels, reported fixes, issue and pull-request identifiers, and deferred-note status. It includes no hands-on testing of v0.21.6, and makes no claims that the fixes were independently reproduced or benchmarked.
 
 Credits, exactly as recorded: Tenable Research (TRA-725..728), 燕涛, @jonpol01, @JoaoMarcos44, Daniel Steele (@keeltrace), @Froraut, @hinotoi-agent, @BearHuddleston.
+
+<!-- crosslinks -->
+
+## 📖 Related Reads
+
+- **[ToolBrain](https://toolbrain.net/)** — tool reviews, LLM comparisons, and AI workflow guides
+- **[CodeIntel Log](https://codeintel.xyz/)** — code quality, debugging, and software engineering benchmarks
+
+*Cross-links automatically generated from Hermes Tutorials.*
