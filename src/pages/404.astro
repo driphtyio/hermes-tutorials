@@ -1,0 +1,36 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title="404 - Page Not Found - Hermes Agent Tutorials" description="The page you were looking for does not exist on Hermes Agent Tutorials." />
+		<meta name="robots" content="noindex" />
+		<style>
+			.content { max-width: var(--content-width); margin: 0 auto; color: var(--text-primary); line-height: 1.8; }
+			.content h1 { font-size: 2.5rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.3em; }
+			.content p, .content ul { color: var(--text-secondary); }
+			.content ul { padding-left: 1.5em; }
+			.content li { margin-bottom: 0.3em; }
+		</style>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<article class="content">
+				<h1>404 - Page not found</h1>
+				<p>The page you were looking for doesn't exist. It may have been moved, renamed, or removed.</p>
+				<p>Try one of these instead:</p>
+				<ul>
+					<li><a href="/blog/">All tutorials</a> - the full archive</li>
+					<li><a href="/">Homepage</a> - the latest posts</li>
+					<li><a href="/skills/">Skills</a> - guides to the Hermes skills system</li>
+				</ul>
+			</article>
+		</main>
+		<Footer />
+	</body>
+</html>
