@@ -7,8 +7,6 @@ heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-tool-regi
 lastVerified: "2026-08-27"
 ---
 
-# Hermes Agent Tool System Internals: How Tools Load and Run
-
 How do Hermes Agent tools load and run internally? You have to trace the lifecycle from self-registration to dispatch: a central registry that tools populate via AST-scanned imports, availability gating through `check_fn`, toolset resolution with dynamic schema patching, and a dispatch pipeline that handles async bridging and error wrapping. This architecture scales to 70+ tools across 28 toolsets while keeping the LLM's system prompt stable.
 
 ## How This Guide Was Built

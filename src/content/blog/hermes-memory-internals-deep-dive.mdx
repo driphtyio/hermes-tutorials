@@ -7,8 +7,6 @@ heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-memory-in
 lastVerified: "2026-08-20"
 ---
 
-# Hermes Agent Memory: How Persistent Memory Actually Works
-
 Hermes Agent memory uses a frozen-snapshot model: two files (MEMORY.md, USER.md) are injected into the system prompt once at session start and never change mid-session. This preserves the LLM's prefix cache for deterministic, cost-efficient performance, while writes to disk persist immediately for the next session.
 
 ## How This Guide Was Built

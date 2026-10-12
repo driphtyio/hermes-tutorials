@@ -118,8 +118,10 @@
       "provider": "opencode-go",
       "family": "step",
       "role": "builder",
-      "status": "active",
-      "fallback": "none (probationary lane 13, added 2026-10-08; re-probe CLEAN 117/119 words)"
+      "status": "retired",
+      "fallback": "none (probationary lane 13, added 2026-10-08; re-probe CLEAN 117/119 words)",
+      "reason": "Retired 2026-10-12 (user decision): 13 of 39 recorded appearances DNF (5 of 7 on Oct 12; upstream 'Endpoint unavailable'). Match history kept.",
+      "retired_date": "2026-10-12"
     },
     {
       "role": "research",
@@ -191,8 +193,10 @@
       "provider": "commandcode",
       "family": "nemotron",
       "role": "builder",
-      "status": "active",
-      "fallback": "NONE - commandcode only (probed 2026-10-09)"
+      "status": "retired",
+      "fallback": "NONE - commandcode only (probed 2026-10-09)",
+      "reason": "Retired 2026-10-12 (user decision, poor performance): mean score 6.73 over 11 scored appearances. Match history kept.",
+      "retired_date": "2026-10-12"
     },
     {
       "model": "meituan/LongCat-2.0",

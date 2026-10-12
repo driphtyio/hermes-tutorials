@@ -7,8 +7,6 @@ heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-gateway-i
 lastVerified: "2026-08-17"
 ---
 
-# Hermes Gateway Internals: Routing, Fallback, and Failover
-
 ## How does the Hermes Agent gateway work?
 
 The Hermes Agent gateway is the always-on messaging bridge that connects chat platforms (Telegram, Discord, Slack) to the single platform-agnostic `AIAgent` core. It handles session routing, authorization, and provider failover so your conversation survives provider outages. Every message flows through two guard layers before reaching the agent, and fallback chains keep sessions alive when a model fails. This is the internals deep dive.
