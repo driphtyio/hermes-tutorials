@@ -5,12 +5,16 @@ Keeps per-tag fields we curated earlier (codename, links, prs, highlights); refr
 Body processing: drop the H1 title and "Release Date" line (the page shows both), HTML comments,
 commit-statistics lines ("**Since vX:** ~N commits...") and any paragraph of an "About this release" section
 that is commit statistics (the rest of that section is kept). Everything else is kept verbatim as markdown; the page renders it.
-Usage: python3 scripts/gen-changelog.py
+Usage: python3 scripts/gen-changelog.py [--check]
+  default : rewrite changelog.ts (+ release-stats.json) and print what changed
+  --check : report only, write nothing (exit 0; prints nothing when up to date)
+Prints one line per change ("NEW vX" / "EDITED vX") so the release-watch cron can announce it.
 """
-import json, re, urllib.request
+import json, re, sys, time, urllib.request
 
 REPO = "NousResearch/hermes-agent"
 TS_PATH = "/home/techgeek/hermes-tutorials/src/data/changelog.ts"
+STATS_PATH = "/home/techgeek/hermes-tutorials/src/data/release-stats.json"
 UA = {"User-Agent": "curl/8.5.0"}
 ARR = "export const changelog: ChangelogEntry[] = "
 STAT = re.compile(r"non-merge commits|changed files|\*\*[\d,~]+ commits|~?[\d,]+ commits|files changed|Measured at commit", re.I)
@@ -86,10 +90,27 @@ def main():
     dates = [e["date"] for e in out]
     assert dates == sorted(dates, reverse=True), "not newest-first"
     head = re.sub(r"\(\d+ releases, [0-9-]+\.\.[0-9-]+\)", f"({len(out)} releases, {min(dates)}..{max(dates)})", head, count=1)
-    head = head.replace("  links: ChangelogLink[];\n}", "  links: ChangelogLink[];\n  body: string; // full release notes (markdown), commit-statistics removed\n}") if "body: string" not in head else head
+    if "body: string" not in head:
+        head = head.replace("  links: ChangelogLink[];\n}", "  links: ChangelogLink[];\n  body: string; // full release notes (markdown), commit-statistics removed\n}")
     head = head.replace("Regenerate via /tmp/ht-changelog-gen.py", "Regenerate via scripts/gen-changelog.py")
-    open(TS_PATH, "w").write(head + ARR + json.dumps(out, indent=2, ensure_ascii=False) + ";\n")
-    print(f"wrote {len(out)} releases; newest {out[0]['version']} {out[0]['date']}; body bytes {sum(len(e['body']) for e in out)}")
+    new_src = head + ARR + json.dumps(out, indent=2, ensure_ascii=False) + ";\n"
+    if new_src == src:
+        return  # up to date: print nothing
+    changes = []
+    for e in out:
+        if e["tag"] not in old:
+            changes.append(f"NEW {e['version']} ({e['tag']}, {e['date']})")
+        elif old[e["tag"]].get("body") != e["body"]:
+            changes.append(f"EDITED {e['version']} ({e['tag']})")
+    print("\n".join(changes) if changes else "CHANGED (metadata only)")
+    if "--check" in sys.argv:
+        return
+    open(TS_PATH, "w").write(new_src)
+    try:
+        stars = fetch(f"https://api.github.com/repos/{REPO}")["stargazers_count"]
+        json.dump({"stars": stars, "fetched": time.strftime("%Y-%m-%d")}, open(STATS_PATH, "w"))
+    except Exception as ex:  # stars are cosmetic; never block a release update
+        print(f"(stars not refreshed: {ex})", file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -5,6 +5,8 @@ import Header from '../components/Header.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 import { getCollection } from 'astro:content';
 import FormattedDate from '../components/FormattedDate.astro';
+import { changelog } from '../data/changelog';
+import releaseStats from '../data/release-stats.json';
 
 const siteURL = Astro.site?.toString() || 'https://your-site.pages.dev';
 
@@ -68,12 +70,14 @@ const features = [
 	{ label: 'Troubleshooting', desc: 'Fix common issues with hermes doctor and /diagnose.', href: '/blog/troubleshooting/' },
 ];
 
-// ── What's new strip (verified 2026-09-10) ──
+// ── What's new strip: release + stars come from src/data (refreshed by scripts/gen-changelog.py via the release-watch cron) ──
+const latestRelease = changelog[0];
+const starsK = Math.floor(releaseStats.stars / 1000);
 const whatsNew = [
-	{ label: 'v0.21.5 — latest release', href: '/changelog/' },
-	{ label: 'Bot Mode is here', href: '/changelog/' },
+	{ label: `${latestRelease.version} — latest release`, href: '/changelog/' },
+	...(latestRelease.prs ? [{ label: `${latestRelease.prs} PRs merged in ${latestRelease.version}`, href: '/changelog/' }] : []),
 	{ label: '88 skills documented', href: '/skills/' },
-	{ label: '244k★ on GitHub', href: 'https://github.com/nousresearch/hermes-agent' },
+	{ label: `${starsK}k★ on GitHub`, href: 'https://github.com/nousresearch/hermes-agent' },
 ];
 
 // ── Reference catalogs data (no emoji ── using SVG icons in template) ──
