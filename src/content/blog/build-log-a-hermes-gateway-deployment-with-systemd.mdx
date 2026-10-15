@@ -180,3 +180,11 @@ Use `hermes gateway restart` while turns are active, because it sends SIGUSR1 to
 ### Why does my gateway loop after I add an ExecStopPost line?
 
 The drop-in `ExecStopPost=/bin/kill -9 $MAINPID` fires on every stop, including clean restarts, so it SIGKILLs the new instance and the cycle repeats. Delete that line with `systemctl --user edit hermes-gateway`, then run `systemctl --user daemon-reload` ([Hermes messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)). Start it again afterward.
+
+{/* crosslinks */}
+
+## 📖 Related Reads
+
+- **[CodeIntel Log](https://codeintel.xyz/)** — code quality, debugging, and software engineering benchmarks
+
+*Cross-links automatically generated from Hermes Tutorials.*
