@@ -1,0 +1,146 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import prices from '../../data/model-prices.json';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'Token Cost Estimator',
+  description: 'Paste a system prompt or message log, estimate tokens, and compare per-call and monthly cost across LLM providers. Free, runs client-side.',
+  url: 'https://hermes-tutorials.dev/utilities/token-cost-estimator/',
+  operatingSystem: 'Any (web browser)',
+  applicationCategory: 'DeveloperApplication',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+};
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <BaseHead title="Token Cost Estimator — hermes-tutorials.dev" description="Paste a system prompt or message log to estimate tokens and compare cost across LLM providers. Free, and everything runs client-side in your browser." />
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+    <style>
+      .tool { max-width: var(--grid-width); margin: 0 auto; color: var(--text-primary); }
+      .tool h1 { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.3em; }
+      .tool h2 { font-size: 1.3rem; margin-top: 2em; }
+      .lede, .note { color: var(--text-secondary); line-height: 1.7; max-width: var(--content-width); }
+      .note { font-size: 0.9rem; color: var(--text-muted); }
+      .panel { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-top: 1rem; }
+      .panel label { display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.3rem; }
+      textarea, input[type=number] { width: 100%; box-sizing: border-box; background: var(--bg); color: var(--text-primary); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.6rem 0.75rem; font-family: var(--font-mono); font-size: 0.85rem; }
+      textarea { min-height: 180px; resize: vertical; }
+      textarea:focus, input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; margin-top: 1rem; }
+      .btns { display: flex; gap: 0.6rem; margin-top: 1rem; flex-wrap: wrap; }
+      button { background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.5rem 1rem; cursor: pointer; font: inherit; }
+      button:hover { border-color: var(--accent); }
+      .stats { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 1rem; }
+      .stat b { display: block; font-size: 1.5rem; color: var(--accent-light); font-family: var(--font-mono); }
+      .stat span { font-size: 0.8rem; color: var(--text-muted); }
+      .how { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.75rem; line-height: 1.6; }
+      .how code { font-family: var(--font-mono); color: var(--text-secondary); }
+      table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.9rem; }
+      th, td { text-align: right; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); }
+      th:first-child, td:first-child { text-align: left; }
+      th { color: var(--text-secondary); font-weight: 600; }
+      td.mono { font-family: var(--font-mono); }
+      .bar { height: 6px; background: var(--accent); border-radius: 3px; margin-top: 4px; min-width: 2px; }
+      .tablewrap { overflow-x: auto; }
+      .links a { color: var(--accent-light); }
+      .links li { margin-bottom: 0.4rem; }
+    </style>
+  </head>
+  <body>
+    <Header />
+    <main>
+      <div class="tool">
+        <p class="note"><a href="/utilities/">← All utilities</a></p>
+        <h1>Token Cost Estimator</h1>
+        <p class="lede">Paste a system prompt or a message log, set how many calls you make, and see the per-call and monthly cost across providers. Free, and everything runs in your browser — your text is never sent anywhere.</p>
+
+        <div class="panel">
+          <label for="text">Input text (system prompt, skills, message log…)</label>
+          <textarea id="text" spellcheck="false"></textarea>
+          <div class="grid">
+            <div><label for="override">Exact input tokens (optional override)</label><input id="override" type="number" min="0" placeholder="use estimate" /></div>
+            <div><label for="outTok">Output tokens per call</label><input id="outTok" type="number" min="0" value="500" /></div>
+            <div><label for="calls">Calls per day</label><input id="calls" type="number" min="0" value="200" /></div>
+            <div><label for="days">Days per month</label><input id="days" type="number" min="0" max="31" value="30" /></div>
+            <div><label for="cache">Cache-hit share of input (%)</label><input id="cache" type="number" min="0" max="100" value="0" /></div>
+          </div>
+          <div class="btns">
+            <button id="example" type="button">Load worked example</button>
+            <button id="reset" type="button">Reset</button>
+          </div>
+          <div class="stats">
+            <div class="stat"><b id="sChars">0</b><span>characters</span></div>
+            <div class="stat"><b id="sWords">0</b><span>words</span></div>
+            <div class="stat"><b id="sTok">0</b><span>estimated input tokens</span></div>
+          </div>
+          <p class="how"><strong>How this is computed:</strong> there is no real tokenizer here. Estimated tokens = <code>max(chars ÷ 4, words × 1.33)</code> — the common rule of thumb for English prose. Code, JSON and non-English text usually tokenize denser, so paste the exact count from your provider's usage field into the override box when you have it.</p>
+        </div>
+
+        <h2>Cost by model</h2>
+        <div class="panel">
+          <div class="tablewrap">
+            <table>
+              <thead><tr><th>Model</th><th>In $/M</th><th>Out $/M</th><th>Cache $/M</th><th>Per call</th><th>Per month</th></tr></thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+          <p class="how"><strong>How this is computed:</strong> per call = <code>I × (1 − h) × P<sub>in</sub> + I × h × P<sub>cache</sub> + O × P<sub>out</sub></code>, where I = input tokens, O = output tokens, h = cache-hit share, and prices are USD per token (table values ÷ 1,000,000). If a model lists no cache-read price, cached tokens are billed at the full input price. Per month = per call × calls/day × days. Sorted cheapest first.</p>
+          <p class="how">Prices: OpenRouter model catalog (<code>{prices.source}</code>), fetched {prices.fetched}, embedded at build time — {prices.unit}. Providers change prices; confirm on the provider's page before budgeting. Routing through OpenRouter may differ from direct-provider pricing. Reasoning/thinking tokens are billed as output and are not estimated here.</p>
+        </div>
+
+        <h2>Related</h2>
+        <ul class="links">
+          <li><a href="/blog/token-cost-optimization/">Token Usage &amp; Cost Optimization</a> — where the tokens go and how to cut them.</li>
+          <li><a href="/blog/provider-setup/">Provider Setup 2026</a> — connect the providers priced above.</li>
+          <li><a href="/blog/cron-job-patterns-2026/">Cron Job Patterns &amp; Best Practices</a> — scheduled jobs are the calls-per-day multiplier.</li>
+          <li><a href="/utilities/">All utilities</a></li>
+        </ul>
+      </div>
+      <div id="price-data" data-prices={JSON.stringify(prices.models)} hidden></div>
+    </main>
+    <Footer />
+    <script>
+      const models = JSON.parse(document.getElementById('price-data')!.dataset.prices!);
+      const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+      const EXAMPLE = `You are Hermes Agent, a helpful assistant running in the user's terminal.\n\nRules:\n- Prefer small, reversible changes.\n- Explain what each tool call will do before running it.\n- Load a skill with skill_view before attempting a task it covers.\n\nAvailable skills: github-pr-workflow, systemd-service-debug, cron-job-patterns, mcp-server-setup.\n\nUser: Why did my nightly cron job stop firing after I upgraded?\nAssistant: Let me check the scheduler logs first.`;
+      const DEFAULTS = { override: '', outTok: '500', calls: '200', days: '30', cache: '0' };
+      const num = (id: string) => Math.max(0, parseFloat($(id).value) || 0);
+      const usd = (v: number) => v < 0.01 ? '$' + v.toFixed(5) : v < 100 ? '$' + v.toFixed(3) : '$' + v.toLocaleString(undefined, { maximumFractionDigits: 0 });
+      const fmt = (v: number | null) => v == null ? '—' : v.toString();
+
+      function render() {
+        const text = $('text').value;
+        const chars = text.length;
+        const words = (text.trim().match(/\S+/g) || []).length;
+        const est = Math.ceil(Math.max(chars / 4, words * 1.33));
+        const I = $('override').value !== '' ? num('override') : est;
+        const O = num('outTok'), h = Math.min(100, num('cache')) / 100, mult = num('calls') * num('days');
+        $('sChars').textContent = chars.toLocaleString();
+        $('sWords').textContent = words.toLocaleString();
+        $('sTok').textContent = I.toLocaleString();
+        const rows = models.map((m: any) => {
+          const pc = m.cacheRead ?? m.input;
+          const call = (I * (1 - h) * m.input + I * h * pc + O * m.output) / 1e6;
+          return { m, call, month: call * mult };
+        }).sort((a: any, b: any) => a.call - b.call);
+        const max = Math.max(...rows.map((r: any) => r.call), 1e-12);
+        $('rows').innerHTML = rows.map((r: any) =>
+          `<tr><td>${r.m.name.replace(/^[^:]+: /, '')}<div class="bar" style="width:${Math.max(1, (r.call / max) * 100)}%"></div></td>` +
+          `<td class="mono">${fmt(r.m.input)}</td><td class="mono">${fmt(r.m.output)}</td><td class="mono">${fmt(r.m.cacheRead)}</td>` +
+          `<td class="mono">${usd(r.call)}</td><td class="mono">${usd(r.month)}</td></tr>`).join('');
+      }
+
+      function setDefaults() { for (const k of Object.keys(DEFAULTS)) $(k).value = (DEFAULTS as any)[k]; }
+      ['text', 'override', 'outTok', 'calls', 'days', 'cache'].forEach(id => $(id).addEventListener('input', render));
+      document.getElementById('example')!.addEventListener('click', () => { setDefaults(); $('text').value = EXAMPLE; render(); });
+      document.getElementById('reset')!.addEventListener('click', () => { setDefaults(); $('text').value = ''; render(); });
+      $('text').value = EXAMPLE;
+      render();
+    </script>
+  </body>
+</html>

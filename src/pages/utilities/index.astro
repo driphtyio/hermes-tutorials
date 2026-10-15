@@ -1,0 +1,38 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+const tools = [
+  { name: 'Token Cost Estimator', href: '/utilities/token-cost-estimator/', description: 'Paste a system prompt or message log, estimate tokens, and compare per-call and monthly cost across providers.' },
+];
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <BaseHead title="Utilities — hermes-tutorials.dev" description="Free interactive Hermes Agent utilities. Everything runs client-side in your browser." />
+    <style>
+      .hub { max-width: var(--content-width); margin: 0 auto; color: var(--text-primary); }
+      .hub h1 { font-size: 2.5rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.3em; }
+      .hub p { color: var(--text-secondary); line-height: 1.7; }
+      .list { list-style: none; padding: 0; display: grid; gap: 1rem; margin-top: 1.5rem; }
+      .list a { display: block; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem 1.25rem; text-decoration: none; color: var(--text-primary); }
+      .list a:hover { border-color: var(--accent); }
+      .list strong { display: block; font-size: 1.1rem; color: var(--accent-light); margin-bottom: 0.25rem; }
+      .list span { color: var(--text-secondary); font-size: 0.95rem; }
+    </style>
+  </head>
+  <body>
+    <Header />
+    <main>
+      <div class="hub">
+        <h1>Utilities</h1>
+        <p>Small, free tools for people learning Hermes Agent. Each one runs entirely in your browser.</p>
+        <ul class="list">
+          {tools.map(t => <li><a href={t.href}><strong>{t.name}</strong><span>{t.description}</span></a></li>)}
+        </ul>
+      </div>
+    </main>
+    <Footer />
+  </body>
+</html>
