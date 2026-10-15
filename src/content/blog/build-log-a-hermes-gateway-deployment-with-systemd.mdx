@@ -1,0 +1,182 @@
+---
+title: "Build Log: A Hermes Gateway Deployment with systemd"
+description: "Run the Hermes messaging gateway under systemd so bots survive crashes and reboots: user vs system service, restart semantics, watchdogs, and fixes."
+pubDate: "2026-10-15"
+lastVerified: 2026-10-15
+tags: ["hermes", "build-log", "systemd", "gateway"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/build-log-a-hermes-gateway-deployment-with-systemd-1792080053.webp"
+---
+
+This guide is assembled from the official Hermes messaging guide and systemd manual pages — we did not run this build ourselves.
+
+The Hermes gateway is one background process that connects every messaging platform you have configured. It also runs the cron scheduler, which ticks every 60 seconds ([Hermes messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)). A terminal session is a poor home for it. This guide covers how to hand the gateway to systemd so it restarts after crashes and, if you choose, returns after a reboot.
+
+## Prerequisites
+
+You need a working Hermes Agent install, at least one configured messaging platform, and a Linux host with systemd. The Hermes messaging guide describes `hermes gateway setup` as the easiest way to configure a platform, so set one up first ([Hermes messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)).
+
+- A Hermes Agent install with the `hermes` command on your PATH.
+- At least one messaging platform configured through `hermes gateway setup`.
+- A host running systemd, with `systemctl` and `journalctl` available.
+
+## Choose between a user and system service
+
+Choose a user service on laptops and development boxes, and a system service on VPS or headless hosts that must come back at boot without anyone logging in. The Hermes messaging guide draws that line, and the loginctl manual explains why a user service needs lingering to start at boot ([loginctl](https://man7.org/linux/man-pages/man1/loginctl.1.html)).
+
+| | User service | System service |
+|---|---|---|
+| Scope | Your user's systemd manager | System-wide systemd manager |
+| Needs root? | No for install, start, and restart. `enable-linger` needs sudo once. | Yes, for install, start, status, and every restart |
+| Starts at boot how? | Only with lingering enabled | Starts from the system manager at boot |
+| Typical host | Laptop, dev box, personal VM | VPS or headless server |
+
+## Install and start the user service
+
+Installing the user service takes one Hermes command, `hermes gateway install`, followed by start and status commands, and `journalctl --user` shows the logs. The Hermes messaging guide documents this flow, and enabling lingering lets the unit start at boot without a login ([Hermes messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)).
+
+```bash
+hermes gateway install
+hermes gateway start
+hermes gateway status
+journalctl --user -u hermes-gateway -f
+```
+
+### Enable lingering for boot without login
+
+Lingering keeps your user manager running after logout, which the user service needs for boot-start without a login. Run this once:
+
+```bash
+sudo loginctl enable-linger $USER
+```
+
+The [systemctl](https://man7.org/linux/man-pages/man1/systemctl.1.html) manual covers the `systemctl --user` commands used above.
+
+## Set up the system service for boot without lingering
+
+A system service starts from the system manager at boot and still runs as your user, so it does not depend on lingering. The Hermes messaging guide gives the install, start, status, and log commands for this path, which need sudo for everything except the logs ([Hermes messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)).
+
+```bash
+sudo hermes gateway install --system
+sudo hermes gateway start --system
+sudo hermes gateway status --system
+journalctl -u hermes-gateway -f
+```
+
+Keep only one scope installed. Hermes warns when both a user and a system unit exist, because `start`, `stop`, and `status` become ambiguous. With a system service, each restart needs root. If passwordless sudo is unavailable, `hermes update` prints the manual `sudo systemctl restart hermes-gateway` command instead.
+
+## Restart and stop semantics
+
+Use `hermes gateway restart` while turns are active, because it sends SIGUSR1 to drain in-flight work before the replacement starts. `systemctl reload` sends the same drain signal and relaunches the process rather than reloading config. The Hermes messaging guide documents both behaviors ([Hermes messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)).
+
+The installed unit sets `KillMode=mixed`, `KillSignal=SIGTERM`, and `Restart=always` with `RestartForceExitStatus`, so updates and `/restart` respawn correctly. It also declares an `ExecStop=` that records a planned-stop marker, so a direct `systemctl restart` or `stop` exits 0 without a failed-result line. The planned-stop behavior is a Hermes guide detail; the `ExecStop=` directive itself is documented in [systemd.service](https://man7.org/linux/man-pages/man5/systemd.service.5.html), and the kill settings in [systemd.kill](https://man7.org/linux/man-pages/man5/systemd.kill.5.html).
+
+- `hermes gateway restart` drains active work, then waits for the replacement. Use it during conversations.
+- `systemctl --user restart hermes-gateway` exits cleanly thanks to the `ExecStop=` marker, but it skips the drain signal and the CLI's wait-and-verify step. Use it when no turns are active.
+- `systemctl --user reload hermes-gateway` sends SIGUSR1 to drain, exit, and relaunch. It is not an in-process config reload.
+
+## Do not add an ExecStopPost kill drop-in
+
+Adding `ExecStopPost=/bin/kill -9 $MAINPID` is a failure mode to avoid, because it runs on every stop, including clean restarts, and SIGKILLs the new instance, which produces an infinite restart loop and a flood of restart messages on Telegram ([Hermes messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)).
+
+Open the drop-in, delete the `ExecStopPost` line, and reload systemd. Drop-in conventions are described in [systemd.unit](https://man7.org/linux/man-pages/man5/systemd.unit.5.html). For a user service, edit with `systemctl --user edit hermes-gateway` and reload with `systemctl --user daemon-reload`. For a system service, use `sudo systemctl edit hermes-gateway` and `sudo systemctl daemon-reload`.
+
+```bash
+systemctl --user edit hermes-gateway
+systemctl --user daemon-reload
+```
+
+## The optional systemd watchdog
+
+The optional watchdog is enabled by setting `gateway: systemd_watchdog_seconds: 120` in `~/.hermes/config.yaml` and running `hermes gateway install --force`, which switches the unit to `Type=notify` with a matching `WatchdogSec` on Linux with systemd ([Hermes messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)). The default value of 0 keeps `Type=simple`, so the watchdog is off unless you opt in.
+
+```yaml
+gateway:
+  systemd_watchdog_seconds: 120
+```
+
+With `Type=notify` and `NotifyAccess=main`, systemd listens for readiness and heartbeat messages from the main process, as described in [sd_notify](https://man7.org/linux/man-pages/man3/sd_notify.3.html). Hermes sends heartbeats only while the event loop makes timely progress. If they stop, systemd restarts the process.
+
+- **Triggers a restart:** the event loop stalls long enough to miss heartbeats.
+- **Does not trigger a restart:** an ordinary platform network disconnect. Hermes does not treat that as an event-loop failure.
+
+## The built-in event-loop watchdog and heartbeat
+
+The built-in event-loop watchdog probes the asyncio loop every 30 seconds by default, and after 3 missed probes it dumps thread stacks and exits with code 75 so the supervisor restarts the gateway ([Hermes messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)). It applies on every platform, not only Linux.
+
+- `gateway.loop_watchdog_probe_interval_s` sets the probe interval (default 30).
+- `gateway.loop_watchdog_max_strikes` sets how many missed probes are allowed (default 3).
+- `gateway.loop_watchdog: false` disables the watchdog.
+- When it fires, the state becomes `gateway_state: degraded` with `exit_reason: loop_liveness_watchdog`.
+
+Exit code 75 is the handoff. The process records why it stopped, and `Restart=always` relaunches it. For background on asyncio event loops, see [asyncio](https://docs.python.org/3/library/asyncio.html).
+
+Housekeeping re-stamps `gateway_state.json` every 60 seconds. If that file is older than 120 seconds while the process is alive, `hermes gateway status` prints a heartbeat-stale warning. Restart the gateway when you see it, with `hermes gateway restart`.
+
+## Diagnostics
+
+Diagnose a gateway with `hermes gateway status`, `journalctl`, `gateway_state.json`, and `gateway.log`, and capture thread stacks on demand with `kill -USR2` without stopping the process ([Hermes messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)). Each signal answers a different question: is the service up, what did it log, and what were its threads doing.
+
+- `hermes gateway status` shows service state and any heartbeat-stale warning.
+- `journalctl --user -u hermes-gateway -f` streams logs for a user service. For a system service, use `journalctl -u hermes-gateway -f` as shown in [journalctl](https://man7.org/linux/man-pages/man1/journalctl.1.html).
+- `~/.hermes/logs/gateway.log` holds platform events. Search it for paused platforms:
+
+```bash
+grep -Ei 'circuit breaker|paused|disabled' ~/.hermes/logs/gateway.log
+```
+
+- `gateway_state.json` holds the current state, `exit_reason`, and the 60-second heartbeat stamp.
+- Stack dump on demand, without restarting:
+
+```bash
+kill -USR2 "$(systemctl --user show -p MainPID --value hermes-gateway)"
+```
+
+Stacks append to `~/.hermes/logs/gateway_faulthandler.log`, and the process keeps running. For general background on dumping Python thread stacks, see the [faulthandler documentation](https://docs.python.org/3/library/faulthandler.html).
+
+## Multiple installs and containers
+
+Each Hermes home gets its own unit, named `hermes-gateway` for the default home and `hermes-gateway-<hash>` for others, and containers refuse user-service installs, so run `hermes gateway run` under a container restart policy instead ([Hermes messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)). Keep only one scope installed on any machine.
+
+- If a unit points at another home, `install --force-unit-path` re-points it at the current home.
+- Inside a container, `hermes gateway install` refuses a user service. Use `hermes gateway run` with a restart policy, as described in [Docker's restart policy docs](https://docs.docker.com/engine/containers/start-containers-automatically/), or use `sudo hermes gateway install --system --run-as-user <user>`.
+
+## Troubleshooting
+
+Five common failures map to the official guidance: a stray ExecStopPost drop-in, an outdated unit, missing lingering, a heartbeat-stale state, and a paused platform. Each has a direct fix in the table below ([Hermes messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)).
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Gateway restarts repeatedly and Telegram floods with restart messages | An `ExecStopPost=/bin/kill -9 $MAINPID` drop-in | Run `systemctl --user edit hermes-gateway` (or `sudo systemctl edit hermes-gateway` for a system service), delete the line, and run `systemctl --user daemon-reload` (or `sudo systemctl daemon-reload`) |
+| A unit-outdated warning appears | The installed unit predates the current Hermes update | Run `hermes gateway restart` once after updating. Use `install --force-unit-path` only if the unit points at another home |
+| Service does not start after reboot | User service without lingering | Run `sudo loginctl enable-linger $USER`, or move to a system service |
+| `hermes gateway status` prints a heartbeat-stale warning | Housekeeping has not refreshed `gateway_state.json` in over 120 seconds while the process is alive | Run `hermes gateway restart`; if it recurs, capture `kill -USR2` stacks first |
+| A platform stops replying | The platform was paused, often after a circuit breaker trip, and does not auto-resume | Grep `gateway.log` for `circuit breaker`, `paused`, or `disabled`, fix the upstream error, then run `/platform list` and `/platform resume <name>` |
+
+## The Bottom Line
+
+Pick the scope by what you need to avoid. A system service starts at boot without lingering, but every restart needs root. A user service with lingering starts at boot and lets `hermes update` restart the gateway without root, which suits a headless VM you never log into. Keep the default restart semantics, skip the ExecStopPost drop-in, and enable the watchdog only if you accept restarts on event-loop stalls ([Hermes messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)).
+
+The unit the installer generates already covers updates, `/restart`, and crashes. Your job is to match the scope to your host, restart through Hermes rather than raw systemctl while turns are live, and read the heartbeat and log signals before you assume the gateway is healthy.
+
+## How This Guide Was Built
+
+This guide is assembled from official documentation and community reports. Its primary sources are the Hermes messaging guide and systemd's service, loginctl, and journalctl manuals. Commands and config keys trace back to those pages.
+
+- [Hermes messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging), the primary source for service commands, watchdog keys, and restart behavior.
+- [systemd.service](https://man7.org/linux/man-pages/man5/systemd.service.5.html), the background reference for unit behavior.
+- [loginctl](https://man7.org/linux/man-pages/man1/loginctl.1.html), the background reference for lingering.
+- [journalctl](https://man7.org/linux/man-pages/man1/journalctl.1.html), the background reference for logs.
+
+## FAQ
+
+### Can the gateway start at boot without a login?
+
+Yes, in two ways: a user service with lingering enabled through `sudo loginctl enable-linger $USER`, or a system service started by the system manager at boot. The Hermes messaging guide describes both, and loginctl documents how lingering keeps the user manager running without an active session ([loginctl](https://man7.org/linux/man-pages/man1/loginctl.1.html)).
+
+### Should I use hermes gateway restart or systemctl restart?
+
+Use `hermes gateway restart` while turns are active, because it sends SIGUSR1 to drain in-flight work before the replacement starts. A raw `systemctl restart` does not send that drain signal first. The Hermes messaging guide makes this recommendation explicitly ([Hermes messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)).
+
+### Why does my gateway loop after I add an ExecStopPost line?
+
+The drop-in `ExecStopPost=/bin/kill -9 $MAINPID` fires on every stop, including clean restarts, so it SIGKILLs the new instance and the cycle repeats. Delete that line with `systemctl --user edit hermes-gateway`, then run `systemctl --user daemon-reload` ([Hermes messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)). Start it again afterward.
