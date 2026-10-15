@@ -4,6 +4,7 @@ description: "A practical operator guide to Hermes Agent v0.21.6: dashboard auth
 pubDate: 2026-10-11
 tags: [release notes, Hermes Agent, security, updates]
 lastVerified: 2026-10-11
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/2026-10-11-hermes-v0216-release-update-1792082635.webp"
 ---
 ## Update now: operator checklist
 
