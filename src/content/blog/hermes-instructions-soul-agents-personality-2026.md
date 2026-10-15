@@ -157,3 +157,11 @@ This guide was compiled from official Hermes documentation pages and the agents.
 - Built-in `/personality` preset names were not extracted.
 - Session persistence of `/personality` across restarts is not stated on the pages we read.
 - The AGENTS.override.md conflict between the two context pages is unresolved on the docs side.
+
+<!-- crosslinks -->
+
+## 📖 Related Reads
+
+- **[ToolBrain](https://toolbrain.net/)** — tool reviews, LLM comparisons, and AI workflow guides
+
+*Cross-links automatically generated from Hermes Tutorials.*
