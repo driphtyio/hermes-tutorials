@@ -39,22 +39,55 @@ fi
 MIME=$(file --mime-type -b "$LOCAL_FILE" 2>/dev/null || echo "image/jpeg")
 FILENAME="${SLUG}-$(date +%s).${LOCAL_FILE##*.}"
 
-# Upload via Cloudflare API v4
+# Upload via Cloudflare API v4, with an R2 S3-compatible API fallback.
+# The CF path depends on the shared CLOUDFLARE_API_TOKEN, which can be revoked or
+# invalid fleet-wide (2026-10-15: "Invalid API Token" broke hero uploads on every
+# blog). The R2 access keys are separate credentials and usually still valid.
 echo "  → Uploading $FILENAME ..." >&2
-RESPONSE=$(curl -s -X PUT \
-  "https://api.cloudflare.com/client/v4/accounts/${R2_ACCOUNT_ID}/r2/buckets/${R2_BUCKET}/objects/${FILENAME}" \
-  -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-  -H "Content-Type: ${MIME}" \
-  --data-binary @"${LOCAL_FILE}")
+PUBLIC_URL="${R2_PUBLIC_URL}/${FILENAME}"
+UPLOADED=""
 
-if echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if d.get('success') else 1)" 2>/dev/null; then
-  PUBLIC_URL="${R2_PUBLIC_URL}/${FILENAME}"
-  echo "$PUBLIC_URL"
+if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
+  RESPONSE=$(curl -s -X PUT \
+    "https://api.cloudflare.com/client/v4/accounts/${R2_ACCOUNT_ID}/r2/buckets/${R2_BUCKET}/objects/${FILENAME}" \
+    -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+    -H "Content-Type: ${MIME}" \
+    --data-binary @"${LOCAL_FILE}")
+  if echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if d.get('success') else 1)" 2>/dev/null; then
+    UPLOADED="cloudflare-api"
+  else
+    echo "  Cloudflare API upload failed — falling back to R2 S3 API" >&2
+  fi
 else
-  echo "Error: Upload failed" >&2
-  echo "$RESPONSE" >&2
+  echo "  CLOUDFLARE_API_TOKEN not set — using R2 S3 API" >&2
+fi
+
+if [ -z "$UPLOADED" ]; then
+  if [ -n "${R2_ACCESS_KEY_ID:-}" ] && [ -n "${R2_SECRET_ACCESS_KEY:-}" ]; then
+    S3_CODE=$(curl -s -X PUT \
+      "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${R2_BUCKET}/${FILENAME}" \
+      --aws-sigv4 "aws:amz:auto:s3" \
+      --user "${R2_ACCESS_KEY_ID}:${R2_SECRET_ACCESS_KEY}" \
+      -H "Content-Type: ${MIME}" \
+      --data-binary @"${LOCAL_FILE}" \
+      -o /dev/null -w "%{http_code}" || echo "000")
+    if [ "$S3_CODE" = "200" ]; then
+      UPLOADED="r2-s3"
+    else
+      echo "  R2 S3 upload failed (HTTP ${S3_CODE})" >&2
+    fi
+  else
+    echo "  R2 S3 keys absent from .env.r2 — no fallback available" >&2
+  fi
+fi
+
+if [ -z "$UPLOADED" ]; then
+  echo "Error: Upload failed (Cloudflare API and R2 S3 API both failed)" >&2
+  echo "${RESPONSE:-<no Cloudflare API response>}" >&2
   exit 1
 fi
+
+echo "$PUBLIC_URL"
 
 # Cleanup temp file
 if [[ "$SOURCE" =~ ^https?:// ]]; then
