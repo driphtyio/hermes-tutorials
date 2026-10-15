@@ -47,19 +47,25 @@ echo "  → Uploading $FILENAME ..." >&2
 PUBLIC_URL="${R2_PUBLIC_URL}/${FILENAME}"
 UPLOADED=""
 
-if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
+# Token may live in .env.r2 OR centrally in ~/.hermes/.env. A rotation that updates
+# only the central copy leaves every .env.r2 stale, so try each token we can find
+# before falling back to the R2 S3 API.
+CENTRAL_TOKEN=""
+[ -f "$HOME/.hermes/.env" ] && CENTRAL_TOKEN=$(sed -n 's/^CLOUDFLARE_API_TOKEN=//p' "$HOME/.hermes/.env" 2>/dev/null | head -1 | tr -d '"'"'"' \r')
+for TOK in "${CLOUDFLARE_API_TOKEN:-}" "$CENTRAL_TOKEN"; do
+  [ -n "$TOK" ] || continue
   RESPONSE=$(curl -s -X PUT \
     "https://api.cloudflare.com/client/v4/accounts/${R2_ACCOUNT_ID}/r2/buckets/${R2_BUCKET}/objects/${FILENAME}" \
-    -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+    -H "Authorization: Bearer ${TOK}" \
     -H "Content-Type: ${MIME}" \
     --data-binary @"${LOCAL_FILE}")
   if echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if d.get('success') else 1)" 2>/dev/null; then
     UPLOADED="cloudflare-api"
-  else
-    echo "  Cloudflare API upload failed — falling back to R2 S3 API" >&2
+    break
   fi
-else
-  echo "  CLOUDFLARE_API_TOKEN not set — using R2 S3 API" >&2
+done
+if [ -z "$UPLOADED" ]; then
+  echo "  Cloudflare API upload failed (every token) — falling back to R2 S3 API" >&2
 fi
 
 if [ -z "$UPLOADED" ]; then
