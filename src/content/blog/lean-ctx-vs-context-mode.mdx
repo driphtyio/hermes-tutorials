@@ -1,0 +1,74 @@
+---
+title: "lean-ctx vs context-mode: The Two Halves of Context Management in Hermes Agent"
+description: "Input-side compression (lean-ctx) vs output-side sandboxing (context-mode): what each intercepts, measured numbers from a real fleet, when you need both."
+pubDate: "2026-10-16"
+tags: ["context-window", "mcp", "lean-ctx", "context-mode", "tokens", "hermes-agent"]
+keywords: [lean-ctx vs context-mode, context window optimization, MCP context consumption, token compression, hermes agent context, FTS5 session memory]
+lastVerified: "2026-10-16"
+---
+
+**Who this is for:** Hermes Agent operators burning tokens on tool output — especially anyone running MCP-heavy sessions or long cron loops.
+
+**Honesty note:** The context-mode numbers below come from its published benchmark of real captured fixtures, not our own runs — and one limitation a Hacker News reader verified in the code matters a lot, so we lead with it. The lean-ctx numbers are our own, measured on this site's working fleet (Hermes Agent running 172 cron jobs across 16 Astro blogs).
+
+## The Problem Statement
+
+Every AI agent context window dies the same two deaths: too much data flows **in** (raw file reads, full pages, complete JSON blobs), and too much flows **back** (tool outputs that belong in a log file, not in the model's working memory). A Playwright snapshot costs ~56 KB. Twenty GitHub issues cost ~59 KB. Thirty minutes later, 40% of the window is gone — and when the runtime compacts the conversation, working state goes with it.
+
+The 2026 wave of "context optimization" tools splits cleanly along those two failure modes. [lean-ctx](https://github.com/yvgude/lean-ctx) compresses the **input side** — what your agent reads. [context-mode](https://github.com/mksglu/context-mode) (29.9k GitHub stars, #1 on Hacker News, Elastic License 2.0) sandboxes the **output side** — what your agent's tools return. They are complements, not competitors. This guide maps which is which, with measured numbers, and ends with a concrete recommendation for Hermes setups.
+
+## Options Considered
+
+### Option 1: lean-ctx — input-side compression (what the agent reads)
+
+lean-ctx is a Rust MCP server with 10 read modes that collapse files into maps, signatures, or aggressive summaries. The key property is **cache-friendly re-reads**: after the first read, re-reading the same file costs roughly 13 tokens because the full content was already cached upstream.
+
+Measured on our fleet right now, reading a 115 KB README in each mode:
+
+| Mode | Bytes returned | Use for |
+|---|---|---|
+| full | 115,860 (raw + ~34 B overhead) | first read, exact content |
+| map | 555 | structure overview, 99.5% reduction |
+| signatures | 33 | "what's in this file" in one line |
+| aggressive | 91,577 | stripped prose, kept code |
+
+Lifetime dashboard on this machine after ~1,500 commands: **6.6M tokens saved, 55.5% average compression, ~$17.46 at our blended model rates.**
+
+Where it shines in a Hermes setup: big JSON state files (a 1.3 MB `jobs.json` reads as a 59-byte map when you only need structure), cron-log post-mortems, and code navigation during builds. Where it does not help: tool outputs already in flight — lean-ctx never sees them.
+
+### Option 2: context-mode — output-side sandboxing (what tools return)
+
+[context-mode](https://github.com/mksglu/context-mode) is an MCP server plus a hook layer for 17 agent platforms. Tool output never enters the conversation: a sandbox runs the command, a short summary comes back, and the full raw output lands in a local SQLite FTS5 index the model can query on demand with `ctx_search`. Outputs over 100 KB auto-externalize to a pointer instead of truncating.
+
+Its published benchmark — real captured fixtures, worth reading in full — reports 315 KB of raw tool data collapsed to 5.5 KB of context (98%) for summarizable data (logs, test output, build output, browser snapshots), and 50–93% for exact-retrieval data (docs, API references) where code examples must come back verbatim, not summarized. That honesty about the tradeoff is a good sign.
+
+**The limitation you should know before installing:** a Hacker News commenter read the source and confirmed empirically that the routing hook only matches `Bash|Read|Grep|Glob|WebFetch|WebSearch|Task` — it does **not** intercept responses from other MCP servers. The 98% headline is benchmarked on context-mode's own sandbox tools, not on arbitrary MCP traffic. If your flood comes from a Jira or Notion MCP call, context-mode nudges the model to wrap that call in its sandbox rather than transparently compressing it.
+
+Its second pillar is **session continuity**: every tool call, user decision, error, and git operation lands in a per-project SQLite database; a `PreCompact` hook builds a priority-tiered snapshot (≤2 KB) right before compaction, and `SessionStart` restores it so the model resumes from the last prompt instead of asking what it was doing.
+
+## Tradeoffs
+
+| Dimension | lean-ctx | context-mode |
+|---|---|---|
+| Side of the problem | Input (what the agent reads) | Output (what tools return) |
+| Interception point | MCP tool call (your agent asks lean-ctx) | Platform hooks (Bash/Read/Grep/etc. + sandbox tools) |
+| MCP output interception | n/a (it IS the MCP layer) | **No** — routes/nudges, doesn't intercept other MCP servers |
+| Exactness | map/signatures lose verbatim text | FTS5 returns exact chunks on search |
+| Session memory | none (pair with agentmemory) | built-in, tiered snapshots |
+| License | check the repo | Elastic License 2.0 (source-available; no hosted-service repackaging) |
+| Install surface | one MCP server entry | plugin + 5–6 hooks + npm runtime |
+
+Two subtler tradeoffs worth weighing:
+
+- **Prompt caches.** The context-mode author's answer on HN is the important one: sandboxed output never enters the conversation history, so there is nothing to invalidate. Output-side sandboxing composes with (rather than fights) the cache-warming tricks you may already run — in our arena pipeline, staggering parallel lane starts by 1.5s to warm upstream prompt caches measured a 2.0× wall-clock win, and that composes with output sandboxing rather than conflicting with it.
+- **Brevity enforcement.** context-mode deliberately routes data flow but never tells the model how to write its final answer, citing evidence that aggressive brevity prompts degrade reasoning benchmarks. Keep that principle in your own configs: compress the data path, not the model's voice.
+
+## Recommendation
+
+For Hermes Agent specifically:
+
+1. **Start with lean-ctx** (input side). It is one MCP entry in `config.yaml`, zero hooks, and the re-read economics apply to every session. Pair it with [Hermes' built-in session memory](/blog/hermes-agent-context-compaction-guide/) so compaction state lives somewhere queryable.
+2. **Add context-mode only if you run Claude Code or another hook-capable platform** interactively and your floods are Bash/Read/Grep-shaped. For MCP-heavy sessions, know that its hooks route rather than intercept — the sandbox still helps, but the 98% figure is not what you will see on foreign MCP traffic.
+3. **The "think in code" rule costs nothing and helps everywhere:** instead of reading 50 files into context to count something, write the script that counts and print only the result. lean-ctx's read modes, context-mode's sandbox, and Hermes' own code-execution tooling all reward the same habit.
+
+Further reading: [Cloudflare's Code Mode](https://blog.cloudflare.com/code-mode-mcp/) tackles the remaining third of the problem — compressing the MCP tool *schemas* themselves on the input side — and pairs naturally with both tools above. For the Hermes-native view of the same problem space, see our [MCP servers guide](/blog/mcp-servers-guide/) and [token cost optimization](/blog/token-cost-optimization/).
