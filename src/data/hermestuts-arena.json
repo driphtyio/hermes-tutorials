@@ -81,14 +81,6 @@
       "retired_date": "2026-10-09"
     },
     {
-      "model": "poolside/laguna-s-2.1-free",
-      "provider": "commandcode",
-      "family": "poolside",
-      "role": "builder",
-      "status": "active",
-      "fallback": "openrouter poolside/laguna-s-2.1 (PAID — the :free tier is rate-limited 3/5; openrouter primary probe-OK 6/6 2026-09-25); commandcode poolside/laguna-s-2.1-free (FALLBACK — CC returns 0 text deltas on 3/3 probes, intermittent)"
-    },
-    {
       "model": "claude-haiku-5-5",
       "role": "builder",
       "status": "active",
@@ -206,6 +198,15 @@
       "role": "builder",
       "status": "active",
       "fallback": "NONE - commandcode only (probed 2026-10-09)"
+    },
+    {
+      "model": "poolside/laguna-s-2.1-free",
+      "provider": "commandcode",
+      "family": "poolside",
+      "role": "builder",
+      "status": "retired",
+      "reason": "lane removed — it ran on PAID OpenRouter",
+      "retired_date": "2026-10-16"
     }
   ],
   "stability": {
@@ -443,13 +444,6 @@
         "availability": 100.0,
         "last_failure": null
       },
-      "poolside/laguna-xs-2.1:free": {
-        "total_calls": 0,
-        "successes": 0,
-        "failures": 0,
-        "availability": 100.0,
-        "last_failure": null
-      },
       "google/gemma-4-26b-a4b-it:free": {
         "total_calls": 0,
         "successes": 0,
@@ -660,11 +654,6 @@
         "last_failure": null
       },
       "qwen3.7-flash": {
-        "availability": 100,
-        "total_calls": 1,
-        "successes": 1
-      },
-      "poolside-laguna-s-2.1": {
         "availability": 100,
         "total_calls": 1,
         "successes": 1
