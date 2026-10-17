@@ -1,0 +1,173 @@
+---
+title: "Hermes Agent Email Gateway: Let People Email Your Agent and Get Replies (IMAP/SMTP Setup Guide 2026)"
+description: "Learn how to connect your Hermes agent to any inbox with IMAP and SMTP, set secure access controls, and get threaded email replies working step by step."
+pubDate: 2026-10-17
+tags: [hermes-agent, email-gateway, imap-smtp, tutorial]
+lastVerified: 2026-10-17
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-email-gateway-setup-guide-1792250911.webp"
+---
+
+Imagine opening the email app on your phone, sending a normal message to your agent's address, and getting a helpful reply back in the same thread. No dashboard, no chat app, just email. That is what the Hermes email gateway makes possible for beginners.
+
+> **Why you can trust this guide:** This tutorial synthesizes the [official Email setup page](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/email) and the [Hermes docs root](https://hermes-agent.nousresearch.com/docs). It covers only documented settings and defaults. No lab testing, screenshots, or runtime claims are included.
+
+## What Is the Hermes Email Gateway?
+
+The Hermes email gateway lets your agent receive real emails over IMAP and reply over SMTP, using Python's built-in imaplib, smtplib, and email modules — no extra packages needed. It works with Gmail, Outlook, Yahoo, Fastmail, or any IMAP/SMTP provider, so your agent becomes reachable from any inbox.
+
+Think of it as IMAP polling plus SMTP replies. Hermes checks the agent's inbox for new UNSEEN messages, passes them to the agent, then sends the answer back through your SMTP provider. It uses the [Python imaplib docs](https://docs.python.org/3/library/imaplib.html), [Python smtplib docs](https://docs.python.org/3/library/smtplib.html), and [Python email docs](https://docs.python.org/3/library/email.html), so there is nothing extra to install beyond Hermes itself.
+
+See the [GitHub repo](https://github.com/nousresearch/hermes-agent) for the project source and the [official Email setup page](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/email) for authoritative details.
+
+## Email Gateway vs. the Himalaya Email Skill: Which Do You Need?
+
+The gateway and the Himalaya skill are two different things. The gateway is the transport layer: it connects your agent's email account to Hermes so people can message the agent and get replies. The Himalaya skill is the agent operating an email client from the terminal, requiring the himalaya CLI and ~/.config/himalaya/config.toml. Most beginners want the gateway.
+
+Use this decision rule: if you want people to email your agent, set up the gateway. If you want your agent to triage and manage your own mailbox from the terminal, that is the Himalaya skill. The skill depends on the external himalaya CLI and its config at `~/.config/himalaya/config.toml`, which is a separate workflow. This guide covers only the gateway, where your agent gets its own address and answers incoming mail.
+
+## Prerequisites Before You Start
+
+You need three things: a dedicated email account for the agent (not your personal one), IMAP enabled on that account, and an app password if the account uses 2FA. Everything else — hosts, ports, and credentials — gets configured through the setup wizard or the ~/.hermes/.env file, and the gateway handles the rest with secure defaults.
+
+Create a fresh mailbox just for the agent, for example `agent@yourdomain.com` or a dedicated Gmail account. Do not reuse your personal inbox, because the gateway will poll it and reply from it. Confirm IMAP is enabled in your provider settings — check your provider's documentation for where IMAP is switched on. If the account uses two-factor authentication, plan to generate an app password for Hermes.
+
+## Getting an App Password: Gmail, Outlook, and Other Providers
+
+For Gmail, enable 2FA, then create a 16-character App Password at myaccount.google.com/apppasswords (choose Mail or Other) and use that as EMAIL_PASSWORD. For Outlook, create an app password under Additional security options and use outlook.office365.com for IMAP and smtp.office365.com for SMTP. Other providers follow the same pattern: app password plus their IMAP/SMTP hostnames.
+
+For Gmail, turn on 2-Step Verification first, then visit the [Gmail App Passwords page](https://myaccount.google.com/apppasswords) and choose Mail or Other. Paste the 16-character password into `EMAIL_PASSWORD`, not your normal login.
+
+For Outlook and Microsoft 365, create the app password from the Microsoft security page under Additional security options. Use `outlook.office365.com` for IMAP and `smtp.office365.com` for SMTP, as the Hermes Email page lists them. Most providers use IMAP port 993 over SSL and SMTP port 587 over STARTTLS; check yours. Proton Mail Bridge and similar local relays use loopback STARTTLS with a self-signed certificate; overrides live in `config.yaml` under `platforms.email.extra`, and you should only disable `tls_verify` for loopback hosts. See the [official Email setup page](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/email) for those override keys.
+
+## Running the Setup Wizard: `hermes gateway setup`
+
+The easiest path is running `hermes gateway setup` and choosing Email. The wizard walks you through address, app password, IMAP and SMTP hosts, and allowed senders. Beginners should use the wizard first; the manual .env route below is for when you already know your values or want to script setup.
+
+Open a terminal and run:
+
+```bash
+hermes gateway setup
+```
+
+Choose Email when prompted, then enter the agent address, the app password, and the IMAP and SMTP hostnames. If you already know your provider hosts and want repeatable configuration, skip to the manual `.env` method below. Otherwise, complete the wizard before continuing to access control and startup.
+
+## Manual Setup: The .env File and Every Variable
+
+Manual setup means editing ~/.hermes/.env with four required variables — EMAIL_ADDRESS, EMAIL_PASSWORD (your app password), EMAIL_IMAP_HOST, and EMAIL_SMTP_HOST — plus optional ones like ports, poll interval, and allowlist. Protect the file with chmod 600 so only you can read the password. The full variable reference is below.
+
+Create or edit `~/.hermes/.env`, then lock it down:
+
+```bash
+chmod 600 ~/.hermes/.env
+```
+
+Use this reference. Only the first four rows are required for a basic connection, plus `EMAIL_AUTHSERV_ID` unless sender authentication is off:
+
+| Variable | Required? | Example / Default |
+|---|---|---|
+| `EMAIL_ADDRESS` | Yes | `agent@example.com` |
+| `EMAIL_PASSWORD` | Yes, app password | 16-character app password |
+| `EMAIL_IMAP_HOST` | Yes | `imap.gmail.com` |
+| `EMAIL_SMTP_HOST` | Yes | `smtp.gmail.com` |
+| `EMAIL_AUTHSERV_ID` | Required unless sender auth off | `mx.google.com` for Gmail |
+| `EMAIL_ALLOWED_USERS` | Recommended | `you@example.com,friend@example.com` |
+| `EMAIL_IMAP_PORT` | Optional | `993` |
+| `EMAIL_SMTP_PORT` | Optional | `587` |
+| `EMAIL_POLL_INTERVAL` | Optional | `15` seconds |
+| `EMAIL_HOME_ADDRESS` | Optional | default cron delivery target |
+| `EMAIL_ALLOW_ALL_USERS` | Optional | `false` |
+
+Set `EMAIL_ALLOWED_USERS` to your own address while testing. Keep `EMAIL_ALLOW_ALL_USERS=false` unless you truly want a public agent. Full field definitions are on the [official Email setup page](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/email).
+
+## Why EMAIL_AUTHSERV_ID Matters (Don't Skip This One)
+
+EMAIL_AUTHSERV_ID is required unless sender authentication is off. For Gmail it's mx.google.com. It must match the exact authserv-id of the topmost Authentication-Results header, and the receiving server must strip inbound claims of that id so senders can't spoof authentication results. Without it, the gateway drops every message that needs an authenticated `From:`, so set it before your first run. If your mail server cannot provide a stable id, the docs describe an explicit opt-out, `platforms.email.require_authenticated_sender: false` (or `EMAIL_TRUST_FROM_HEADER=true`), and warn that `From:` is then trusted as written.
+
+Every incoming message can carry `Authentication-Results` headers added by receivers. They record SPF, DKIM, and DMARC checks. Hermes looks at the topmost header and compares its `authserv-id` to your `EMAIL_AUTHSERV_ID` value to decide which result to trust. The pin must equal that id exactly, and the gateway log reports a mismatch. Your receiving server must also strip inbound claims using that same id, otherwise an outside sender could inject a forged authentication header. Gmail users can simply set `mx.google.com`. To find the value, open a delivered message's raw source ("show original") and copy the token before the first `;` of the topmost `Authentication-Results` header. If that token changes between messages, configure your mail server to stamp one stable authserv-id and pin that.
+
+## Access Control: Who Is Allowed to Email Your Agent
+
+Access control runs in a fixed order. If EMAIL_ALLOWED_USERS is set, only those addresses get through. With no allowlist, unknown senders are ignored silently. EMAIL_ALLOW_ALL_USERS=true accepts anyone. And unauthorized_dm_behavior decides what happens next: pair sends a pairing code, while decline sends one polite refusal then silence for 24 hours. Allowlist entries must be whole addresses.
+
+The docs list these checks in order: first, if `EMAIL_ALLOWED_USERS` is set, only those addresses plus `GATEWAY_ALLOWED_USERS` or approved pairing get answers. Second, with no allowlist, unknown senders are ignored silently. Third, `EMAIL_ALLOW_ALL_USERS=true` accepts anyone. Fourth, with `platforms.email.unauthorized_dm_behavior: pair`, the sender gets a pairing code. Fifth, with `platforms.email.unauthorized_dm_behavior: decline`, the sender gets one polite refusal, then silence for 24 hours. Matching is exact — enter `alice@example.com`, not just `alice`, because a bare name never matches any domain. Start narrow with only your address, then widen later.
+
+## Starting the Gateway: Foreground, User Service, or System Service
+
+Three commands cover every deployment style. Run `hermes gateway` for a foreground session you can watch. Run `hermes gateway install` to install it as a user service that keeps running for you. On Linux, run `sudo hermes gateway install --system` to make it a boot service that starts with the machine. Start with foreground to verify, then install.
+
+Always verify in the foreground first:
+
+```bash
+hermes gateway
+```
+
+On startup Hermes tests IMAP and SMTP, marks existing inbox messages as seen so only new mail is processed, then polls UNSEEN every `EMAIL_POLL_INTERVAL` seconds, default 15. That means mail already sitting in the inbox before startup will not be answered — send a fresh message for testing. Once replies work, install persistence with `hermes gateway install` for a user service, or `sudo hermes gateway install --system` on Linux for a boot service.
+
+## How Receiving and Replies Work
+
+The gateway polls for UNSEEN mail on your interval, filters junk, and hands the message to the agent with the subject as context. Replies go out over SMTP with In-Reply-To and References headers so threads stay connected, a single Re: prefix, and plain UTF-8 text. Automated mail like bounces and bulk sends is ignored automatically.
+
+On receive, the subject is included as `[Subject: ...]` context, except messages already starting with `Re:` skip the extra prefix. HTML-only mail is stripped to readable text, and self-messages from the agent address are filtered for loop prevention. On reply, Hermes sets `In-Reply-To` and `References` for threading, keeps only a single `Re:` in the subject, uses the agent domain for `Message-ID`, and sends plain UTF-8 text. The ignore list covers `noreply@`, `mailer-daemon@`, `bounce@`, `no-reply@` addresses, plus `Auto-Submitted`, `Precedence: bulk`, and `List-Unsubscribe` mail.
+
+## Attachments In and Out
+
+Attachments work in both directions. Incoming attachments are cached — images go to the vision tool, documents to file access — unless you set skip_attachments: true under platforms.email in config.yaml, which still processes the body. To send a file back, the agent includes MEDIA:/path/to/file in its response, and the gateway attaches it to the outgoing email.
+
+## A Clean Beginner Path from Zero to First Reply
+
+Here is the shortest safe route: create a dedicated email account, generate an app password, run `hermes gateway setup` and choose Email, set EMAIL_ALLOWED_USERS to your own address, then run `hermes gateway` in the foreground and send yourself a test email. When the reply lands in your inbox as a proper thread, install it as a service.
+
+Follow this checklist in order:
+
+1. Create a dedicated agent mailbox and enable IMAP.
+2. Generate an app password and save it for `EMAIL_PASSWORD`.
+3. Run `hermes gateway setup` and choose Email.
+4. Set `EMAIL_AUTHSERV_ID` (for Gmail, `mx.google.com`) and set `EMAIL_ALLOWED_USERS` to your own address.
+5. Run `hermes gateway` in the foreground.
+6. Send a brand-new email to the agent — old inbox mail was marked seen.
+7. Confirm the threaded reply, then run `hermes gateway install`.
+
+This is a configuration walkthrough based on documented commands, not a hands-on test report. If a reply does not arrive, re-check hosts, ports, and allowlist entries against the [official Email setup page](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/email).
+
+## FAQ
+
+The answers below cover provider choice, allowlist behavior, and old inbox mail, using only documented defaults.
+
+### Can I use Gmail, Outlook, Yahoo, or Fastmail for my agent?
+
+Yes, any provider with standard IMAP and SMTP works, including Gmail, Outlook, Yahoo, and Fastmail. The docs list IMAP port 993 over SSL and SMTP port 587 over STARTTLS as the usual defaults, unless your provider documents different hosts. For Gmail use imap.gmail.com and smtp.gmail.com, and for Outlook use outlook.office365.com and smtp.office365.com with an app password.
+
+### Why didn't my agent answer the old emails in its inbox?
+
+Your agent only answers new UNSEEN mail received after startup, because startup tests the IMAP and SMTP connections, then marks existing inbox messages as seen. Send a fresh message after running hermes gateway in the foreground. Automated mail, self-messages, and unallowlisted senders are also filtered, so test from an allowlisted address.
+
+### Who is allowed to email my agent by default?
+
+Access depends on your allowlist. If EMAIL_ALLOWED_USERS lists whole addresses, only those senders reach the agent. Without an allowlist, unknown senders are ignored silently unless EMAIL_ALLOW_ALL_USERS is true. Pairing mode sends a code, while decline mode sends one polite refusal then stays silent for 24 hours. Bare names never match.
+
+## How This Guide Was Built
+
+This guide is based on the official Hermes Agent Email setup page, read in full, and the Hermes docs. We did not run the gateway hands-on.
+
+We relied on the [official Email setup page](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/email), the [Hermes docs root](https://hermes-agent.nousresearch.com/docs), and the [GitHub repo](https://github.com/nousresearch/hermes-agent) for protocol details, environment variables, and access-control order. The source file behind the page is the [email docs on GitHub](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/messaging/email.md). The page says the gateway needs no external packages and relies on Python's built-in [email module](https://docs.python.org/3/library/email.html). Provider steps reference the [Gmail App Passwords page](https://myaccount.google.com/apppasswords) and the Microsoft security page. No runtime behavior was asserted beyond documented polling, threading, and filtering.
+
+## Troubleshooting and Security Checks
+
+The official page lists these common failures. Check the matching row first.
+
+- **"IMAP connection failed" at startup:** verify `EMAIL_IMAP_HOST` and `EMAIL_IMAP_PORT`, and confirm IMAP is enabled. For Gmail, enable it under Settings → Forwarding and POP/IMAP.
+- **"SMTP connection failed" at startup:** verify `EMAIL_SMTP_HOST`, `EMAIL_SMTP_PORT`, and the password (use an App Password for Gmail).
+- **Messages not received:** confirm `EMAIL_ALLOWED_USERS` includes the sender. If the log shows `authserv-id is not configured`, set `EMAIL_AUTHSERV_ID` to the exact id. Check the spam folder too.
+- **"Authentication failed":** Gmail requires an App Password, and 2FA must be on first.
+- **Duplicate replies:** make sure only one gateway instance runs, and check `hermes gateway status`.
+- **Slow response:** the default poll interval is 15 seconds. `EMAIL_POLL_INTERVAL=5` is faster but opens more IMAP connections.
+- **Replies not threading:** some web-based clients do not thread automated messages correctly.
+
+**Security warning:** the agent stores the password in `~/.hermes/.env` and has full inbox access via IMAP. Use a dedicated account, App Passwords, `EMAIL_ALLOWED_USERS`, and `chmod 600` on the .env file.
+
+## The Bottom Line
+
+The Hermes email gateway turns any IMAP/SMTP inbox into a chat channel for your agent, with no extra packages and secure defaults — IMAP over SSL 993, SMTP over STARTTLS 587. Set your four required variables, add EMAIL_AUTHSERV_ID, allowlist your users, and run `hermes gateway install`. After that, your agent answers email.
+
+Three steps matter most: credentials, access control, and service install. Get the app password right, lock `~/.hermes/.env` with `chmod 600`, allowlist whole addresses, and start in the foreground before installing. For authoritative updates, re-check the [official Email setup page](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/email) and check its Troubleshooting and Security sections for edge cases.
+
