@@ -178,8 +178,10 @@
       "provider": "opencode-go",
       "family": "omen",
       "role": "builder",
-      "status": "active",
-      "fallback": "NONE - opencode-go only (probed 2026-10-09)"
+      "status": "retired",
+      "fallback": "NONE - opencode-go only (probed 2026-10-09)",
+      "reason": "removed from builder by user directive 2026-10-16 (was opencode-go lane)",
+      "retired_date": "2026-10-16"
     },
     {
       "model": "nvidia/nemotron-3-ultra-550b-a55b",
@@ -207,6 +209,14 @@
       "status": "retired",
       "reason": "lane removed — it ran on PAID OpenRouter",
       "retired_date": "2026-10-16"
+    },
+    {
+      "model": "beam-free",
+      "provider": "opencode-go",
+      "family": "beam",
+      "role": "builder",
+      "status": "active",
+      "fallback": "NONE - opencode-go only (smoke-OK 2026-10-16; promo id, re-probe before use)"
     }
   ],
   "stability": {
