@@ -1,6 +1,6 @@
 ---
 title: "Hermes Agent v0.22: What the 0.22 Release Line Changed, Upgrade Notes, and What to Do First"
-description: "Hermes Agent v0.22.0 to v0.22.2 (October 13–15, 2026): what changed, which defaults move under you on upgrade, why v0.22.1 is skipped, and a practical upgrade checklist."
+description: "Hermes Agent v0.22.0 to v0.22.2 (Oct 13–15, 2026): what changed, which defaults move on upgrade, why to skip v0.22.1, and an upgrade checklist."
 pubDate: 2026-10-18
 tags: ["news", "hermes-agent", "upgrade", "release-notes"]
 draft: false
@@ -193,3 +193,11 @@ Confidence is high on version numbers, dates, and install paths, because they co
 This guide is built from the official GitHub release notes for Hermes Agent v0.22.0, v0.22.1, and v0.22.2, and for v0.21.7, fetched October 18, 2026. It also draws on the [official Hermes Agent docs](https://hermes-agent.nousresearch.com/docs). The author did NOT run the upgrade or try the features hands-on. This is a documentation-based guide, not a hands-on review. Where the release notes are silent, this guide says so rather than filling the gap.
 
 HERO_IMAGE_PROMPT: A photorealistic desk scene with a laptop showing a clean developer terminal beside a coffee mug and a printed upgrade checklist, soft morning light, no text in image.
+
+<!-- crosslinks -->
+
+## 📖 Related Reads
+
+- **[ToolBrain](https://toolbrain.net/)** — tool reviews, LLM comparisons, and AI workflow guides
+
+*Cross-links automatically generated from Hermes Tutorials.*
