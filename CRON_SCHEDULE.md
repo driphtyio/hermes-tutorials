@@ -1,8 +1,8 @@
 # Hermes Cron Schedule
 
 **Domain:** hermes-tutorials.dev
-**Last updated:** 2026-10-17 21:41
-**Total jobs:** 7
+**Last updated:** 2026-10-17 22:13
+**Total jobs:** 8
 
 ## Schedule
 
@@ -15,6 +15,7 @@
 | Hermes - Core Refresh (Wed 8am) | `0 8 * * 3` | Yes |
 | Hermes — Build Log | `30 8 * * 4` | Yes |
 | Hermes - Build/Integration (Fri 8:30am) | `30 8 * * 5` | Yes |
+| Hermes Agent Release Watch -> hermes-tutorials (changelog + homepage) | `17 */6 * * *` | Yes |
 
 ## Notes
 
