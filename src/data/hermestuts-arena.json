@@ -719,7 +719,7 @@
         "status": "pass"
       }
     },
-    "last_updated": "2026-10-17"
+    "last_updated": "2026-10-18"
   },
   "matches": [
     {
@@ -10771,6 +10771,313 @@
         "Muse draft initially carried 4 dead links (404) and invented provenance (email.parser, ssl, Yahoo/Fastmail/Google help pages); replaced/removed, linkcheck re-run 0 dead.",
         "Scanner: the job's Step 1b/JEV plan gate was not run (no jev-plan-gate record for this match)."
       ]
+    },
+    {
+      "id": "arena-hermestuts-news_release",
+      "match_id": "arena-hermestuts-news_release",
+      "date": "2026-10-18",
+      "timestamp": "2026-10-18T15:00:00",
+      "type": "news",
+      "category": "release",
+      "pipeline": "cron-subagent-arena",
+      "orchestrator": "cron claude-haiku-5-5",
+      "topic": "Hermes Agent v0.22: What the 0.22 Release Line Changed, Upgrade Notes, and What to Do First",
+      "slug": "hermes-v022-release-update",
+      "plan_model": "glm-5.3",
+      "plan_route": "cline-pass/glm-5.3 (2,490-word plan; MUST include / MUST NOT include both present; truncation check passed)",
+      "research_model": "in-session GitHub Releases API (no research lane dispatched)",
+      "research_lane": "skipped",
+      "research_source": "in-session",
+      "brief_contract": true,
+      "judge": {
+        "model": "qwen3.7-flash",
+        "mode": "multipass x3 (judge-draft-batch.py)",
+        "rubric": "content",
+        "preamble": "none"
+      },
+      "judge_model": "qwen3.7-flash",
+      "models_competed": [
+        "claude-haiku-5-5",
+        "gemini-3.8-flash-medium",
+        "mimo-v2.6-flash",
+        "glm-5.3-flash",
+        "beam-free",
+        "longcat-2.5-preview-free",
+        "gpt-6-luna",
+        "muse-spark-1.3-contributor",
+        "deepseek-v4.1-flash",
+        "cline-pass/minimax-m3",
+        "hy3"
+      ],
+      "builder_dnf": [],
+      "total_models": 11,
+      "successful": 11,
+      "winner": "claude-haiku-5-5",
+      "winner_provider": "claude-cli",
+      "winner_family": "claude",
+      "winner_score": 8.57,
+      "winner_decision_rule": "highest pre-QA judge mean among drafts within the 2,500-body-word cap, >=1,500 words, HERO line present, no code-fence wrapper; winner >= 8.0",
+      "threshold_met": true,
+      "final_judge_mean_post_qa": 8.3,
+      "qa_model": "claude-sonnet-5-5",
+      "qa_provider": "claude-cli",
+      "qa_verdict": "FAIL on first pass (6 defects). Applied 4 verified defects (false 'cut off' claim, wrong v0.22.0 link, v0.22.1 unreleased-work omission, missing v0.22.1 remediation). Rejected 2 false positives (v0.21.7 Oct 11 date and 'forks'/'Settings' wording are present in the release notes). QA was NOT re-run on the final text.",
+      "linkcheck": "arena-linkcheck on final text: 37 OK / 0 dead / 0 blocked (pre-QA draft: 36 OK)",
+      "notes": [
+        "Research: no research lane was dispatched. Primary sources = GitHub Releases API for v0.22.0, v0.22.1, v0.22.2 and v0.21.7 (fetched 2026-10-18), saved to a scratch dossier. Recorded as research_source in-session.",
+        "Over-cap drafts agy (3,458), beam (2,808) and muse (2,973) were NOT trimmed and are ineligible. Deviation from 'trim every top scorer': trimming was not run because each needed a 300-1,000-word cut. Disclosed here.",
+        "deepseek and mimo were trimmed to 2,444 and 2,471 words and re-judged. The trimmed deepseek re-judges were noisy (7.47, 7.68, spread 2.85) and below winner either way.",
+        "Winner pre-QA 8.57 (spread 0.2) on the untrimmed 2,307-word draft; first noisy judge pass gave 7.72 (spread 1.75), re-judge gave 8.57. Both recorded in judge_passes history here.",
+        "Post-QA re-judge of the shipped text: 8.3 (spread 0.35). Pre-QA winner score is the one that picked the winner.",
+        "heroImage omitted: gen-image-verified.sh failed (Lumenfall retries and HF FLUX.1-schnell retries both failed; OpenRouter paid phase disabled).",
+        "Builder formatting defects: minimax wrapped the whole document in a code fence; glm wrapped frontmatter in a yaml fence. Neither shipped.",
+        "gpt-6-luna CommandCode route returned 'no credits' and fell to opencode-go per the runner's rescue path (served_by opencode-go).",
+        "Leaderboard: applied per-lane deltas to the HEAD board rather than raw canonical recalc (recalc undercounts this blog's board)."
+      ],
+      "results": [
+        {
+          "model": "claude-haiku-5-5",
+          "provider": "claude-cli",
+          "family": "claude",
+          "label": "claude-haiku-5-5",
+          "score": 8.57,
+          "judge_mean": 8.57,
+          "judge_mean_preQA": 8.57,
+          "judge_passes": [
+            8.7,
+            8.5,
+            8.5
+          ],
+          "judge_spread": 0.2,
+          "body_words": 2307,
+          "eligible": true,
+          "eligibility_note": "re-judged after noisy first run (7.72, spread 1.75); re-judge 8.57 spread 0.2",
+          "triaged_skipped": false,
+          "link_gate": "see notes",
+          "winner": true,
+          "rank": 1
+        },
+        {
+          "model": "gemini-3.8-flash-medium",
+          "provider": "agy",
+          "family": "gemini",
+          "label": "gemini-3.8-flash-medium",
+          "score": 8.42,
+          "judge_mean": 8.42,
+          "judge_mean_preQA": 8.42,
+          "judge_passes": [
+            8.35,
+            8.25,
+            8.65
+          ],
+          "judge_spread": 0.4,
+          "body_words": 3458,
+          "eligible": false,
+          "eligibility_note": "INELIGIBLE: 3,458 body words, over the 2,500 cap; not trimmed",
+          "triaged_skipped": false,
+          "link_gate": "see notes",
+          "winner": false,
+          "rank": 2
+        },
+        {
+          "model": "mimo-v2.6-flash",
+          "provider": "opencode-go",
+          "family": "mimo",
+          "label": "mimo-v2.6-flash",
+          "score": 8.25,
+          "judge_mean": 8.25,
+          "judge_mean_preQA": 8.25,
+          "judge_passes": [
+            8.05,
+            8.7,
+            8.0
+          ],
+          "judge_spread": 0.7,
+          "body_words": 2471,
+          "eligible": true,
+          "eligibility_note": "scored on TRIMMED text (untrimmed 8.35 at 2,525 words, 25 over cap); trimmed 8.25, spread 0.7; eligible but second to the winner",
+          "triaged_skipped": false,
+          "link_gate": "see notes",
+          "winner": false,
+          "rank": 3
+        },
+        {
+          "model": "glm-5.3-flash",
+          "provider": "opencode-go",
+          "family": "glm",
+          "label": "glm-5.3-flash",
+          "score": 8.15,
+          "judge_mean": 8.15,
+          "judge_mean_preQA": 8.15,
+          "judge_passes": [
+            8.55,
+            8.25,
+            7.65
+          ],
+          "judge_spread": 0.9,
+          "body_words": 766,
+          "eligible": false,
+          "eligibility_note": "INELIGIBLE: 766 body words (below the 1,500 floor); draft also wraps frontmatter in a yaml code fence; re-judge 8.15",
+          "triaged_skipped": false,
+          "link_gate": "see notes",
+          "winner": false,
+          "rank": 4
+        },
+        {
+          "model": "beam-free",
+          "provider": "opencode-go",
+          "family": "beam",
+          "label": "beam-free",
+          "score": 8.08,
+          "judge_mean": 8.08,
+          "judge_mean_preQA": 8.08,
+          "judge_passes": [
+            8.6,
+            7.25,
+            8.4
+          ],
+          "judge_spread": 1.35,
+          "body_words": 2808,
+          "eligible": false,
+          "eligibility_note": "INELIGIBLE: 2,808 body words, over the 2,500 cap; not trimmed",
+          "triaged_skipped": false,
+          "link_gate": "see notes",
+          "winner": false,
+          "rank": 5
+        },
+        {
+          "model": "longcat-2.5-preview-free",
+          "provider": "opencode-go",
+          "family": "longcat25",
+          "label": "longcat-2.5-preview-free",
+          "score": 7.88,
+          "judge_mean": 7.88,
+          "judge_mean_preQA": 7.88,
+          "judge_passes": [
+            6.7,
+            8.55,
+            8.4
+          ],
+          "judge_spread": 1.85,
+          "body_words": 2238,
+          "eligible": false,
+          "eligibility_note": "re-judged after noisy first run (7.55, spread 2.45); re-judge 7.88, spread 1.85 (still noisy)",
+          "triaged_skipped": false,
+          "link_gate": "see notes",
+          "winner": false,
+          "rank": 6
+        },
+        {
+          "model": "gpt-6-luna",
+          "provider": "commandcode",
+          "family": "gpt",
+          "label": "gpt-6-luna",
+          "score": 7.87,
+          "judge_mean": 7.87,
+          "judge_mean_preQA": 7.87,
+          "judge_passes": [
+            7.1,
+            8.6,
+            7.9
+          ],
+          "judge_spread": 1.5,
+          "body_words": 2362,
+          "eligible": false,
+          "eligibility_note": "below 8.0; CommandCode route returned 'no credits' and fell to opencode-go per runner (served by opencode-go)",
+          "triaged_skipped": false,
+          "link_gate": "see notes",
+          "winner": false,
+          "rank": 7
+        },
+        {
+          "model": "muse-spark-1.3-contributor",
+          "provider": "opencode-go",
+          "family": "muse",
+          "label": "muse-spark-1.3-contributor",
+          "score": 7.8,
+          "judge_mean": 7.8,
+          "judge_mean_preQA": 7.8,
+          "judge_passes": [
+            7.6,
+            7.4,
+            8.4
+          ],
+          "judge_spread": 1.0,
+          "body_words": 2973,
+          "eligible": false,
+          "eligibility_note": "INELIGIBLE: 2,973 body words, over cap; not trimmed",
+          "triaged_skipped": false,
+          "link_gate": "see notes",
+          "winner": false,
+          "rank": 8
+        },
+        {
+          "model": "deepseek-v4.1-flash",
+          "provider": "commandcode",
+          "family": "deepseek",
+          "label": "deepseek-v4.1-flash",
+          "score": 7.68,
+          "judge_mean": 7.68,
+          "judge_mean_preQA": 7.68,
+          "judge_passes": [
+            9.05,
+            7.8,
+            6.2
+          ],
+          "judge_spread": 2.85,
+          "body_words": 2444,
+          "eligible": false,
+          "eligibility_note": "scored on TRIMMED text (untrimmed 8.43 at 2,605 words, over cap); trimmed re-judges 7.47 and 7.68, spread 2.85 (noisy); mean not trustworthy",
+          "triaged_skipped": false,
+          "link_gate": "see notes",
+          "winner": false,
+          "rank": 9
+        },
+        {
+          "model": "cline-pass/minimax-m3",
+          "provider": "cline-pass",
+          "family": "minimax",
+          "label": "cline-pass/minimax-m3",
+          "score": 7.2,
+          "judge_mean": 7.2,
+          "judge_mean_preQA": 7.2,
+          "judge_passes": [
+            7.9,
+            7.7,
+            6.0
+          ],
+          "judge_spread": 1.9,
+          "body_words": 2702,
+          "eligible": false,
+          "eligibility_note": "INELIGIBLE: draft wraps the whole document in a markdown code fence (would render as code); re-judge 7.2, spread 1.9 (noisy)",
+          "triaged_skipped": false,
+          "link_gate": "see notes",
+          "winner": false,
+          "rank": 10
+        },
+        {
+          "model": "hy3",
+          "provider": "opencode-go",
+          "family": "tencent",
+          "label": "hy3",
+          "score": 4.8,
+          "judge_mean": 4.8,
+          "judge_mean_preQA": 4.8,
+          "judge_passes": [
+            4.0,
+            5.85,
+            4.55
+          ],
+          "judge_spread": 1.85,
+          "body_words": 1524,
+          "eligible": false,
+          "eligibility_note": "below 8.0 and under 1,500 words; re-judge 4.8, spread 1.85 (noisy)",
+          "triaged_skipped": false,
+          "link_gate": "see notes",
+          "winner": false,
+          "rank": 11
+        }
+      ]
     }
   ],
   "leaderboard": [
@@ -10778,10 +11085,10 @@
       "model": "deepseek-v4.1-flash",
       "provider": "commandcode",
       "family": "deepseek",
-      "matches": 34,
+      "matches": 35,
       "wins": 11,
-      "losses": 23,
-      "avgScore": 8.32,
+      "losses": 24,
+      "avgScore": 8.3,
       "bestScore": 9.78,
       "rank": 1
     },
@@ -10811,10 +11118,10 @@
       "model": "glm-5.3-flash",
       "provider": "opencode-go",
       "family": "glm",
-      "matches": 21,
+      "matches": 22,
       "wins": 4,
-      "losses": 17,
-      "avgScore": 8.27,
+      "losses": 18,
+      "avgScore": 8.26,
       "bestScore": 9.75,
       "rank": 4
     },
@@ -10822,10 +11129,10 @@
       "model": "gpt-6-luna",
       "provider": "commandcode",
       "family": "openai",
-      "matches": 14,
+      "matches": 15,
       "wins": 4,
-      "losses": 10,
-      "avgScore": 8.21,
+      "losses": 11,
+      "avgScore": 8.19,
       "bestScore": 9.73,
       "rank": 5
     },
@@ -10844,10 +11151,10 @@
       "model": "hy3",
       "provider": "opencode-go",
       "family": "tencent",
-      "matches": 19,
+      "matches": 20,
       "wins": 2,
-      "losses": 17,
-      "avgScore": 8.54,
+      "losses": 18,
+      "avgScore": 8.35,
       "bestScore": 9.65,
       "rank": 7
     },
@@ -10855,12 +11162,23 @@
       "model": "muse-spark-1.3-contributor",
       "provider": "opencode-go",
       "family": "muse",
-      "matches": 19,
+      "matches": 20,
       "wins": 2,
-      "losses": 17,
-      "avgScore": 8.02,
+      "losses": 18,
+      "avgScore": 8.01,
       "bestScore": 9.45,
       "rank": 8
+    },
+    {
+      "model": "claude-haiku-5-5",
+      "provider": "claude-cli",
+      "family": "claude",
+      "matches": 8,
+      "wins": 2,
+      "losses": 6,
+      "avgScore": 7.9,
+      "bestScore": 9.15,
+      "rank": 9
     },
     {
       "model": "minimax-m3",
@@ -10871,28 +11189,17 @@
       "losses": 4,
       "avgScore": 9.12,
       "bestScore": 9.72,
-      "rank": 9
+      "rank": 10
     },
     {
       "model": "longcat-2.5-preview-free",
       "provider": "opencode-go",
       "family": "",
       "wins": 1,
-      "losses": 4,
-      "matches": 5,
-      "avgScore": 8.77,
+      "losses": 5,
+      "matches": 6,
+      "avgScore": 8.62,
       "bestScore": 9.2,
-      "rank": 10
-    },
-    {
-      "model": "claude-haiku-5-5",
-      "provider": "claude-cli",
-      "family": "claude",
-      "matches": 7,
-      "wins": 1,
-      "losses": 6,
-      "avgScore": 7.8,
-      "bestScore": 9.15,
       "rank": 11
     },
     {
@@ -10907,6 +11214,17 @@
       "rank": 12
     },
     {
+      "model": "mimo-v2.6-flash",
+      "provider": "opencode-go",
+      "family": "mimo",
+      "matches": 2,
+      "wins": 0,
+      "losses": 2,
+      "avgScore": 8.09,
+      "bestScore": 8.25,
+      "rank": 13
+    },
+    {
       "model": "ling-3.0-flash-fin-free",
       "provider": "commandcode",
       "family": "ling",
@@ -10915,7 +11233,7 @@
       "losses": 2,
       "avgScore": 8.07,
       "bestScore": 8.22,
-      "rank": 13
+      "rank": 14
     },
     {
       "model": "space-bunny-free",
@@ -10926,39 +11244,28 @@
       "losses": 6,
       "avgScore": 8.01,
       "bestScore": 9.13,
-      "rank": 14
-    },
-    {
-      "model": "mimo-v2.6-flash",
-      "provider": "opencode-go",
-      "family": "mimo",
-      "matches": 1,
-      "wins": 0,
-      "losses": 1,
-      "avgScore": 7.93,
-      "bestScore": 7.93,
       "rank": 15
-    },
-    {
-      "model": "cline-pass/minimax-m3",
-      "provider": "cline-pass",
-      "family": "minimax",
-      "matches": 5,
-      "wins": 0,
-      "losses": 5,
-      "avgScore": 7.85,
-      "bestScore": 8.32,
-      "rank": 16
     },
     {
       "model": "beam-free",
       "provider": "opencode-go",
       "family": "beam",
-      "matches": 1,
+      "matches": 2,
       "wins": 0,
-      "losses": 1,
-      "avgScore": 7.8,
-      "bestScore": 7.8,
+      "losses": 2,
+      "avgScore": 7.94,
+      "bestScore": 8.08,
+      "rank": 16
+    },
+    {
+      "model": "cline-pass/minimax-m3",
+      "provider": "cline-pass",
+      "family": "minimax",
+      "matches": 6,
+      "wins": 0,
+      "losses": 6,
+      "avgScore": 7.74,
+      "bestScore": 8.32,
       "rank": 17
     },
     {
@@ -10976,11 +11283,11 @@
       "model": "gemini-3.8-flash-medium",
       "provider": "agy",
       "family": "gemini",
-      "matches": 4,
+      "matches": 5,
       "wins": 0,
-      "losses": 4,
-      "avgScore": 7.25,
-      "bestScore": 8.23,
+      "losses": 5,
+      "avgScore": 7.48,
+      "bestScore": 8.42,
       "rank": 19
     },
     {
@@ -11017,8 +11324,8 @@
       "rank": 22
     }
   ],
-  "last_updated": "2026-10-17",
-  "total_matches": 43,
+  "last_updated": "2026-10-18",
+  "total_matches": 44,
   "retired_models": [
     {
       "model": "mimo-v2.5",
