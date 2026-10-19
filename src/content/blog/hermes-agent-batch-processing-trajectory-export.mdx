@@ -1,0 +1,171 @@
+---
+title: "Hermes Agent Batch Processing: Generate Trajectory Training Data at Scale (2026)"
+description: "Learn how Hermes Agent's batch_runner.py turns a JSONL prompt file into ShareGPT trajectories, with its flags, resume behavior and output files explained."
+pubDate: 2026-10-19
+tags: ["hermes-agent", "batch-processing", "trajectory-data", "tutorial", "fine-tuning"]
+heroImage: https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-batch-processing-trajectory-export-1792425316.webp
+lastVerified: 2026-10-19
+---
+
+Hermes Agent's batch runner (`batch_runner.py`) turns a JSONL file of prompts into structured, ShareGPT-format trajectories — complete with tool-usage statistics — by running each prompt through a full isolated agent session, and this guide walks through what it does, how to configure it, and exactly what its output looks like.
+
+The feature is documented on the [batch-processing page](https://hermes-agent.nousresearch.com/docs/user-guide/features/batch-processing), which is the primary source for this guide.
+
+## What Batch Processing Is For
+
+Batch processing runs the Hermes agent across hundreds or thousands of prompts in parallel and generates structured trajectory data. Its primary documented use is training-data generation: ShareGPT-format trajectories with tool usage statistics, suitable for fine-tuning or evaluation. Each prompt runs through a full agent session with tool access in its own isolated environment.
+
+The [batch-processing docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/batch-processing) describe this use case directly. For background on the project, see the [Hermes docs landing page](https://hermes-agent.nousresearch.com/docs) and the [GitHub repository](https://github.com/NousResearch/hermes-agent). The landing page also lists trajectory export and RL training with Atropos as features. This guide covers only the batch and export parts.
+
+## The Runner at a Glance — `batch_runner.py`
+
+The runner is a single script, `batch_runner.py`, that processes a JSONL dataset of prompts. Every prompt gets a full agent session with tool access in its own isolated environment, and the run produces per-batch files, a checkpoint, aggregate statistics, and a combined trajectories file. JSONL goes in; trajectories come out.
+
+The docs index gives a curl install-script command and the repository URL, but the batch page does not give where `batch_runner.py` sits inside the repository, so this guide does not supply that path. Check the [GitHub repository](https://github.com/NousResearch/hermes-agent) for the current layout before you run anything.
+
+## Quick Start Command
+
+The documented quick-start invocation sets five flags on the script. Three are required: `--dataset_file`, `--batch_size`, and `--run_name`. The other two, `--model` and `--num_workers`, are set explicitly here. The other options are optional and are listed in the table below with their documented defaults or accepted values.
+
+```bash
+python batch_runner.py --dataset_file=data/prompts.jsonl --batch_size=10 --run_name=my_first_run --model=anthropic/claude-sonnet-4.6 --num_workers=4
+```
+
+- `--dataset_file` points at your JSONL prompt file.
+- `--batch_size=10` sets how many prompts go into each batch.
+- `--run_name=my_first_run` names the output directory and the checkpoint, so output lands under `data/my_first_run/`.
+- `--model` takes a model slug. The slug in this example is only an example.
+
+To resume an interrupted run, the docs say to reuse the same dataset, batch size and run name, plus `--resume`. To see the available distributions, use `--list_distributions`. For the surrounding command-line tooling, see the [CLI reference](https://hermes-agent.nousresearch.com/docs/reference/cli-commands).
+
+## Dataset Format — Preparing Your Prompts JSONL
+
+The dataset is a JSONL file with one JSON object per line. The `prompt` field is required. Two optional fields change the execution environment: `image` (or `docker_image`) selects a sandbox container image, and `cwd` overrides the working directory for the task's terminal session.
+
+```jsonl
+{"prompt": "your prompt text here", "image": "python:3.11-slim"}
+{"prompt": "your prompt text here", "image": "rust:1.75"}
+{"prompt": "your prompt text here", "image": "node:20-alpine", "cwd": "/app"}
+```
+
+The `image` field works with the Docker, Modal, and Singularity backends, and the runner verifies that Docker images are accessible before running each prompt. For the container side, see the [Docker backend docs](https://hermes-agent.nousresearch.com/docs/user-guide/docker).
+
+## Configuration Flags Reference
+
+Apart from the three required flags, every option is optional, so a minimal run needs only those three. The table below lists each flag, its default or accepted values, as documented on the batch-processing page. Use it as a reference when you tune a run.
+
+| Flag | Default / Values |
+|---|---|
+| `--dataset_file` | required — path to JSONL dataset |
+| `--batch_size` | required — prompts per batch |
+| `--run_name` | required — names output dir and checkpoint |
+| `--distribution` | `"default"` |
+| `--model` | `claude-sonnet-4.6` |
+| `--base_url` | `https://openrouter.ai/api/v1` |
+| `--api_key` | from env var |
+| `--max_turns` | `10` (max tool-calling iterations per prompt) |
+| `--num_workers` | `4` |
+| `--resume` | `false` |
+| `--verbose` | `false` |
+| `--max_samples` | all |
+| `--providers_allowed` / `--providers_ignored` / `--providers_order` | comma-separated OpenRouter provider routing |
+| `--provider_sort` | `price`, `throughput`, or `latency` |
+| `--reasoning_effort` | `none, minimal, low, medium, high, xhigh, max, ultra` |
+| `--reasoning_disabled` | reasoning off |
+| `--ephemeral_system_prompt` | used during execution, NOT saved to trajectories |
+| `--log_prefix_chars` | `100` |
+| `--prefill_messages_file` | JSON few-shot priming |
+| `--list_distributions` | list available distributions |
+
+For file-level settings and providers, see the [configuration docs](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
+
+## Toolset Distributions — How Tool Sampling Actually Works
+
+Toolset distributions are not a hand-authored table of fixed tool combinations. Each toolset has its own independent probability, the sampler flips each toolset independently, and then at least one toolset is guaranteed to be enabled. Run `--list_distributions` to see which distributions are available.
+
+Because the sampler decides each toolset on its own, do not read `--distribution` as a menu of pre-set toolkits. The default distribution is `"default"`. The batch page does not list the other distribution names in its text, so check `--list_distributions` for those. For the individual tools involved, see the [toolsets reference](https://hermes-agent.nousresearch.com/docs/reference/toolsets-reference) and the [tools overview](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools).
+
+## Output Layout — What Lands in `data/<run_name>/`
+
+Every run writes to a directory named after `--run_name` under `data/`. The directory holds four kinds of artifacts: `trajectories.jsonl`, the combined final output; `batch_0.jsonl`, `batch_1.jsonl`, and so on, the per-batch files; `checkpoint.json`, the resume state; and `statistics.json`, the aggregate tool usage.
+
+```text
+data/my_first_run/
+├── batch_0.jsonl
+├── batch_1.jsonl
+├── checkpoint.json
+├── statistics.json
+└── trajectories.jsonl
+```
+
+The page's layout lists these names, and the per-batch files continue as the run progresses. The [batch-processing docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/batch-processing) are the source for each artifact's role.
+
+## Trajectory Format — Field by Field
+
+Each line in `trajectories.jsonl` is one prompt's trajectory record. The documented fields are `prompt_index`, `conversations`, `metadata`, `completed`, `partial`, `api_calls`, `toolsets_used`, `tool_stats`, and `tool_error_counts`. The breakdown below explains each one without adding example values. Read it alongside the batch-processing page, which is the source for every field name here.
+
+- **`prompt_index`**: the index of the prompt that produced the record.
+- **`conversations`**: a list of `{from, value}` objects. Turns labeled `gpt` may carry `tool_calls`.
+- **`metadata`**: contains `batch_num`, `timestamp`, and `model`.
+- **`completed`**: whether the prompt completed.
+- **`partial`**: whether the record is partial.
+- **`api_calls`**: the recorded API call count for the prompt.
+- **`toolsets_used`**: the toolsets used for the prompt.
+- **`tool_stats`**: per tool, a `count`, a `success` value, and a `failure` value.
+- **`tool_error_counts`**: error counts recorded for the prompt.
+
+The docs index links a developer reference for the trajectory format at [trajectory-format docs](https://hermes-agent.nousresearch.com/docs/developer-guide/trajectory-format). This guide did not fetch that page, so treat it as a pointer only: see the developer guide for the full reference.
+
+## Checkpointing, Resume, and Quality Filtering
+
+The runner saves a checkpoint after each batch. On `--resume` it scans existing `batch_*.jsonl` files and matches completed prompts by text content rather than index, so resuming survives dataset reordering. Failed prompts are retried, and only successful completions are marked done. Two quality filters then screen the output.
+
+- **Resume matching:** by text content, not index, so reordering the dataset does not break a resumed run.
+- **Retries:** failed prompts are retried on resume; only successful completions are marked done.
+- **No-reasoning filter:** discards samples where zero assistant turns contain reasoning, meaning no `REASONING_SCRATCHPAD` and no native thinking tokens.
+- **Corrupted-entry filter:** drops entries with hallucinated tool names that are not in the valid tool list, during the final merge.
+- **Final merge:** on completion, all batch files, including those from earlier runs, merge into `trajectories.jsonl`.
+
+The [batch-processing docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/batch-processing) do not say how duplicate prompt text is handled during text-based matching.
+
+## Statistics, Cost, and Documented Use Cases
+
+On completion the runner prints tool usage (calls, success and failure rates), reasoning coverage percentage, samples discarded for lacking reasoning, and duration, and these statistics are saved to `statistics.json`. Batch runs open many concurrent agent sessions, each making model and tool calls, so cost grows with the number of prompts. The batch page suggests a Nous Portal subscription, set up with `hermes setup --portal`, for more stable cost-per-trajectory.
+
+The page gives two documented use cases:
+
+- **Training data generation:** `--batch_size=20 --num_workers=8 --max_turns=15`
+- **Model evaluation:** `--model=openai/gpt-4o`, comparing tool use across a standardized prompt suite
+
+The model slugs in these examples are examples, not recommendations. Review how dangerous-command approval works in the [security docs](https://hermes-agent.nousresearch.com/docs/user-guide/security) before you start one. The batch page also links the [tool gateway docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway), which this guide does not cover.
+
+## FAQ
+
+### Can I resume a batch run after reordering my dataset?
+
+Yes. Resume matches completed prompts by text content, not by index, so reordering the JSONL file does not break it. Failed prompts are retried.
+
+### What happens to samples where the model never reasons?
+
+The no-reasoning filter discards any sample where zero assistant turns contain reasoning, meaning no `REASONING_SCRATCHPAD` and no native thinking tokens. Reasoning-coverage stats are tracked across the run, and discarded counts appear in the completion statistics.
+
+### Does the system prompt get saved into my trajectories?
+
+Not if you pass `--ephemeral_system_prompt`. That prompt is used during execution but is not saved to trajectories.
+
+## How This Guide Was Built
+
+This guide was built from official Hermes Agent documentation fetched on 2026-10-19; we did not run batch_runner.py ourselves. No batch run was executed, so no runtime observations, timings, or outputs are claimed here. Factual claims are linked to the source they come from in the sections above.
+
+- **Sources:** the [batch-processing page](https://hermes-agent.nousresearch.com/docs/user-guide/features/batch-processing) and the [docs landing page](https://hermes-agent.nousresearch.com/docs), both fetched 2026-10-19. The full docs index is available as an [llms.txt index](https://hermes-agent.nousresearch.com/docs/assets/files/llms-b4c4b58a7933861a0a38fec16a3afa92.txt).
+- **Atropos:** the landing page names the Atropos RL-training integration. The batch-processing page does not describe it, so this guide makes no claim about how Atropos consumes the output.
+- **Trajectory developer reference:** linked from the docs index but not fetched. It is cited as a pointer only.
+- **Install and source location:** not verified. This guide gives no install step and no source path for `batch_runner.py`.
+- **Model slugs:** the examples are examples, not recommendations.
+
+## The Bottom Line
+
+`batch_runner.py` is a documented, checkpointed, quality-filtered pipeline that turns prompt datasets into ShareGPT-format trajectories with tool statistics. It suits training-data generation and standardized evaluation, and resume-by-text-content is its standout robustness feature. Two caveats apply: this guide was not hands-on tested, and cost grows with prompt count.
+
+- Confirm the batch_runner.py source location yourself, since the batch page does not document it.
+- Verify the developer-guide [trajectory-format reference](https://hermes-agent.nousresearch.com/docs/developer-guide/trajectory-format) before relying on downstream format details.
