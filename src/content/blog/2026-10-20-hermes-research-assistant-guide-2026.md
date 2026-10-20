@@ -1,0 +1,180 @@
+---
+title: "Hermes Agent as a Research Assistant: A Source-Cited Literature Review Workflow (Beginner Guide 2026)"
+description: "A beginner's guide to Hermes Agent as a source-cited research assistant: web search, page extraction, memory, skills and a weekly cron digest."
+pubDate: 2026-10-20
+tags: ["guide", "hermes-agent", "research", "use-case", "skills", "cron"]
+draft: false
+---
+
+## 1. What Hermes Agent Is (and Isn't) as a Research Assistant
+
+Hermes Agent is a general-purpose AI agent with a web toolset (`web_search`, `web_extract`), a browser toolset for interactive pages, persistent memory, context files, and an installable skills system — all documented in the official [Tools reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools). That makes it a plausible research assistant: it can find pages, pull their content, and write summaries.
+
+What it is **not**: it is not an accuracy guarantee, not a citation manager, and — importantly for this guide — not a built-in arXiv tool. The documentation we fetched lists none, though the Skills page mentions a browse.sh catalog that includes arXiv, so check the [Skills Hub](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills) before you assume a literature-search skill exists or does not. Citation quality is a workflow *you* verify, never a product guarantee.
+
+One honesty note up front: this guide is desk research on the official Hermes Agent documentation, fetched 2026-10-20. No Hermes instance was run to write it, and no benchmarks were measured. Everything below traces to the official docs.
+
+## 2. Prerequisites: Setup and Model Choice
+
+Before you can run a single search, you need a working Hermes installation with a chosen model and a clean configuration. This section covers the two commands that get you there: `hermes setup` for interactive first-run configuration, and `hermes model` for selecting your provider and model. Both come straight from the official [Quickstart](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart).
+
+Run:
+
+```bash
+hermes setup
+```
+
+This is the interactive first-run setup. Then choose your provider and model:
+
+```bash
+hermes model
+```
+
+Save your choice and chat with the agent. The Quickstart is explicit on one point beginners skip: **verify with a real chat before adding anything else** (such as fallback routing). A short test chat confirms your keys work and the model responds.
+
+Where does configuration live? Per the [Configuration guide](https://hermes-agent.nousresearch.com/docs/user-guide/configuration), API keys, bot tokens, and passwords go in `.env`. Model, terminal backend, compression, memory limits, and toolsets go in `config.yaml`. To write a config value from the CLI:
+
+```bash
+hermes config set <key> <value>
+```
+
+## 3. The 10-Minute Path: Your First Cited Summary
+
+You do not need automation, skills, or cron jobs to get value from Hermes as a research assistant. The fastest path is a single, well-structured prompt that asks the agent to search the web, extract the top pages, and return a summary where every claim carries an inline markdown link. This section gives you that prompt pattern.
+
+Try a prompt in this shape:
+
+> "Search the web for [your topic]. Extract the content of the three most relevant pages using web_extract. Then write a summary where **every factual claim is followed by an inline markdown link** to the specific page that supports it."
+
+Once the summary arrives, the critical step is yours: **open every link**. Hermes can be instructed to attach citations, but the documentation provides no accuracy guarantee, and the fetched docs give no benchmark for research accuracy. The reader — you — is the verification layer. If a link doesn't support the sentence it's attached to, discard that claim or re-run the search with sharper wording. That habit is the entire difference between "AI-generated summary" and "source-cited literature review."
+
+## 4. The Research Loop: web_search → web_extract → Summarize → Verify
+
+The core loop for any research task uses two web tools. Per the [Tools documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools), the Tools page describes the web toolset as "Search the web and extract page content." — `web_search` finds candidate pages, and `web_extract` pulls the actual content so the agent can summarize from the source rather than from memory. For interactive pages where plain extraction is not enough, the browser toolset — `browser_navigate`, `browser_snapshot`, and `browser_vision` — lets the agent open a page, take a structural snapshot, and reason about what it sees visually.
+
+Here are three repeatable prompt patterns, described as instructions to give (not as fabricated outputs):
+
+- **Literature review:** "Search for recent work on [topic]. Extract the top five pages. For each, summarize the main claim, method, and limitation, with an inline link per claim."
+- **Paper summarization:** "Extract the content of this paper's page [URL]. Summarize the abstract, key findings, and stated limitations. Every claim must link to the section it comes from."
+- **Competitive analysis:** "Search for [company/product] and its top three competitors. Extract each product's page. Produce a comparison noting each source, with one inline link per product claim."
+
+Then the loop closes with the step only you can do: verify. Open the links, confirm each linked page supports its sentence, and re-run any search that returned ambiguous results. Search → extract → summarize → verify. Repeat.
+
+## 5. Persistent Conventions: MEMORY.md, USER.md, and AGENTS.md
+
+Research workflows improve when the agent remembers your standards between sessions. Hermes supports this through memory files and project context files — but with specific limits and behaviors you should know before relying on them, because memory does **not** auto-compact and over-limit writes fail loudly.
+
+Per the [Memory documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory):
+
+- **MEMORY.md** is the agent's notes, capped at 2,200 characters (~800 tokens).
+- **USER.md** is your user profile, capped at 1,375 characters (~500 tokens).
+- Both are stored under `~/.hermes/memories/`.
+- They are injected into the system prompt as a **frozen snapshot at session start**.
+- Memory does **not** auto-compact: when a write would exceed the limit, the memory tool returns an error. There is no graceful trimming.
+- `session_search` fills gaps from past sessions once old context is gone.
+
+For project-level conventions, the [Context files documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/context-files) describes `AGENTS.md` (project conventions, loaded from the current working directory and subdirectories), `AGENTS.override.md` (personal per-directory override), `.hermes.md`/`HERMES.md` (highest-priority project instructions, resolved by walking up to the git root), and `SOUL.md` (a global personality file loaded only from HERMES_HOME). Crucially, **only one project-context type loads per session — first match wins**.
+
+Practical tip: put your citation-format rules in `AGENTS.md` at your research project's root — for example, "every claim in a summary must carry an inline markdown link to its source." That convention then applies to the project's sessions without you repeating it. Caveat: only one project-context file loads per session (first match wins: `.hermes.md`, then `AGENTS.override.md`, then `AGENTS.md`), so if the project already has a `.hermes.md`, your `AGENTS.md` rules will not load.
+
+## 6. A Reusable Research Skill
+
+Once a prompt pattern works, you shouldn't retype it every session. Hermes skills let you package reusable behaviors, install them from a hub, and invoke them as slash commands. This section explains where skills live, how installation works, and one honest gap to check before you build a literature workflow around a skill that may not exist.
+
+Per the [Skills documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills):
+
+- The primary skills directory is `~/.hermes/skills/`; hub-installed and agent-created skills both go there.
+- Hub installs use the `hermes skills install` command, and installs pass a security scan.
+- Optional skills are addressed as `official/...`.
+- Skills can be invoked as slash commands, such as `/github-pr-workflow`.
+
+The honest gap, repeated from Section 1: there is no built-in arXiv tool in the documentation we fetched. The browse.sh catalog includes arXiv among its site-specific skills; check the Skills Hub before assuming more. If nothing fits, your fallback is the manual prompt patterns from Section 4 — which work fine and teach you the verification habit anyway.
+
+## 7. Automate the Weekly Digest: `hermes cron create`
+
+You've produced one verified, cited summary by hand. Now — and only now — does automation make sense. Hermes includes a cron system for scheduled agent runs, which suits a recurring task like a weekly digest of new material on your research topic. This section covers what the CLI reference documents for `hermes cron`.
+
+Per the [CLI commands reference](https://hermes-agent.nousresearch.com/docs/reference/cli-commands), `hermes cron create` creates a scheduled job from a prompt, and the repeatable `--skill` flag attaches one or more skills to it. `hermes cron edit` updates a job's schedule, prompt, name, delivery, or attached skills. The reference does not show `create`'s exact flag syntax or a schedule argument, so check it before you copy any command.
+
+The `--deliver` and `--deliver-only` flags that appear in some guides are documented under `hermes webhook subscribe`, not `hermes cron`, so do not copy them into a cron job.
+
+For lifecycle management, `hermes cron` has subcommands: `list`, `create`, `edit`, `pause`, `resume`, `run`, `remove`, `status`, `runs`, `incidents`, `doctor`, and `tick`. They exist; consult the [CLI reference](https://hermes-agent.nousresearch.com/docs/reference/cli-commands) for exact usage rather than guessing at flags.
+
+## 8. Verification: How to Check What Hermes Found
+
+Automation and good prompts don't remove the verification burden — they make it more important, because scheduled runs produce summaries nobody watched being written. This section gives you a short, repeatable checklist for auditing anything Hermes hands you, using only documented features.
+
+Your checklist:
+
+1. **Open every inline link.** A citation you haven't clicked is decoration, not verification.
+2. **Confirm the linked page supports the sentence.** A real URL attached to an unsupported claim is worse than no citation.
+3. **Re-run ambiguous searches.** If a summary hedges or the same claim appears with conflicting sources, search again with narrower terms.
+4. **Use `session_search` when context is gone.** Per the [Memory documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory), `session_search` fills gaps from past sessions — useful when you need to trace where an earlier claim came from.
+
+To be explicit about limits: no fetched source gives a benchmark for research accuracy, and this guide makes no claim that Hermes is more accurate than any other tool. Verification is a human step in both manual and Hermes-assisted workflows; the tool changes the speed of gathering, not your responsibility for checking.
+
+## 9. Manual vs. Hermes-Assisted Research (Comparison Table)
+
+Choosing between fully manual research and a Hermes-assisted loop depends on what you value: breadth and repeatability, or direct control at every step. The table below compares the two approaches on qualitative criteria only — no benchmarks, no measured numbers, because none exist in the fetched documentation.
+
+| Criterion | Manual research | Hermes-assisted research |
+|---|---|---|
+| Search breadth | Limited by your time and patience per pass | Capped per turn: the configuration docs set `max_web_searches: 50` (0 = unlimited) |
+| Extraction of page content | You read and copy each page yourself | `web_extract` pulls page content into the agent's context |
+| Consistency of citation format | Depends on your discipline each session | Can be written as rules in `AGENTS.md` |
+| Persistence across sessions | Your notes, kept wherever you keep them | `MEMORY.md`/`USER.md` snapshots injected at session start |
+| Repeatability | You restart from scratch each cycle | `hermes cron create` schedules recurring runs |
+| Human effort per pass | High — every search, read, and note is manual | Lower for gathering; higher-value effort shifts to checking |
+| Who verifies accuracy | You | Still you — the tool provides no accuracy guarantee |
+
+The last row is the one that matters most: verification stays with you in both columns.
+
+## 10. Common Pitfalls
+
+Most beginner frustration with Hermes as a research assistant comes from expecting behaviors the documentation explicitly doesn't promise. This section lists the pitfalls we identified directly from the fetched docs, so you can avoid them before they cost you a session.
+
+- **Expecting auto-compaction.** Memory does not auto-compact; over-limit writes return an error ([Memory docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory)).
+- **Assuming an arXiv tool is built in.** The fetched docs list no built-in arXiv tool; the browse.sh catalog includes arXiv skills — check the [Skills Hub](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills) first.
+- **Trusting citations without opening them.** Inline links are instructions to verify, not proof.
+- **Multiple project-context files and confusion about which loads.** Only one project-context type loads per session; first match wins ([Context files docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/context-files)).
+- **Skipping the "verify with a real chat" step** from the [Quickstart](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart) before building workflows on top.
+- **Letting memory fill up silently.** With a 2,200-character cap on `MEMORY.md`, plan what belongs in persistent notes versus session context.
+
+## 11. FAQ
+
+Quick answers to the questions beginners most often ask about using Hermes Agent for research — each drawn directly from the official documentation, with links for the details.
+
+**Does Hermes auto-compact memory?**
+No. When a write would exceed the memory limit, the memory tool returns an error. See the [Memory documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory).
+
+**Can it cite automatically?**
+It can be *instructed* to attach inline links to claims, but citation quality is a workflow you verify — the docs provide no accuracy guarantee.
+
+**Does it have an arXiv tool?**
+Not a built-in one. The Skills page mentions a browse.sh catalog of site-specific browser skills that includes arXiv. Check the [Skills Hub](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills) for current options.
+
+**Where do API keys go?**
+In `.env`. Model, terminal backend, compression, memory limits, and toolsets go in `config.yaml`. See the [Configuration guide](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
+
+**Is `--deliver-only` a cron flag?**
+No. The CLI reference documents it under `hermes webhook subscribe`, where it sends the rendered prompt with no agent run and requires a real `--deliver` target. See the [CLI commands reference](https://hermes-agent.nousresearch.com/docs/reference/cli-commands).
+
+## 12. The Bottom Line
+
+Hermes Agent gives a beginner researcher four concrete capabilities: web search and page extraction, persistent conventions through memory and context files, reusable packaged skills, and scheduled runs via cron. What it does not give you is a substitute for judgment — the citation standard remains a human verification loop you run yourself, every time. And a final honesty reminder: this guide is desk research on official documentation fetched 2026-10-20, with no hands-on run and no benchmarks. Start with the 10-minute path, verify your first summary link by link, and automate only after that habit is solid.
+
+If your research has to reach internal systems rather than the public web, the [MCP feature page](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp) explains what MCP is, and the [MCP guide](https://hermes-agent.nousresearch.com/docs/guides/use-mcp-with-hermes) lists when MCP is the right tool for connecting Hermes to internal APIs and databases.
+
+## 13. How This Guide Was Built
+
+This guide is **desk research only**. It was written from the official Hermes Agent documentation, fetched 2026-10-20 (UTC), with all pages returning HTTP 200. **No Hermes instance was run** for this guide: no searches were executed, no summaries generated, no cron jobs created, and no screenshots taken. No benchmarks were measured, and no accuracy comparisons are made. Every command shown is limited to those documented in the official CLI reference, and every factual claim about Hermes traces to the pages linked throughout: the [documentation root](https://hermes-agent.nousresearch.com/docs), [Tools](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools), [Memory](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory), [Context files](https://hermes-agent.nousresearch.com/docs/user-guide/features/context-files), [Skills](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills), [MCP feature](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp), [MCP guide](https://hermes-agent.nousresearch.com/docs/guides/use-mcp-with-hermes), [CLI commands](https://hermes-agent.nousresearch.com/docs/reference/cli-commands), [Quickstart](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart), and [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration). Anything beyond those pages is framed as "check the official docs."
+
+<!-- crosslinks -->
+
+## 📖 Related Reads
+
+- **[CodeIntel Log](https://codeintel.xyz/)** — code quality, debugging, and software engineering benchmarks
+- **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools, agents, and APIs
+- **[NiteAgent](https://niteagent.com/)** — AI agent development, frameworks, and production patterns
+
+*Cross-links automatically generated from Hermes Tutorials.*
