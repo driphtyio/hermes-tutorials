@@ -1,0 +1,166 @@
+---
+title: "Security & Privacy Configuration"
+description: "Hermes Agent v0.22.2 security: approval modes, hardline blocklist, approvals.deny, protected write paths, SSRF protection and secret redaction."
+pubDate: "2026-05-14"
+updatedDate: "2026-10-21"
+lastVerified: "2026-10-21"
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/security-privacy-1792596231.webp"
+tags: ["security", "privacy", "configuration", "advanced"]
+keywords: [hermes security, command approval, approvals.deny, hardline blocklist, secret redaction, SSRF, protected paths, hermes auth, safety]
+---
+
+> **TLDR:** Hermes security is a stack of layers. An always-on hardline blocklist sits at the bottom, `approvals.mode: smart` is the default approval layer, and `approvals.deny`, protected write paths and SSRF protection add operator-controlled limits on top. Secret redaction is on by default. YOLO mode and `approvals.mode: off` do not bypass the hardline blocklist.
+
+## Introduction: the layered security model
+
+The [Hermes Security docs](https://hermes-agent.nousresearch.com/docs/user-guide/security) describe eight layers:
+
+1. **User authorization.** Allowlists and DM pairing control who can talk to the agent.
+2. **Dangerous command approval.** Risky terminal commands need your sign-off, unless policy allows them.
+3. **File write safety.** A denylist of protected paths, plus an optional write sandbox for `write_file` and `patch`.
+4. **Container isolation.** Docker, Singularity and Modal backends can confine execution.
+5. **MCP credential filtering.** MCP subprocesses get environment variable isolation, and MCP error messages are sanitized before they reach the model.
+6. **Context file scanning.** Files such as `AGENTS.md`, `.cursorrules` and `SOUL.md` are scanned for prompt injection before they enter the system prompt.
+7. **Cross-session isolation.** Sessions cannot read each other's data, and cron storage paths are hardened against path traversal.
+8. **Input sanitization.** Terminal working-directory parameters are validated against an allowlist.
+
+This guide covers the layers you configure as an operator: approvals, your own deny and allow lists, write protection, cron safety, network policy and redaction.
+
+## What changed since the last version
+
+The previous version of this guide described an older model. These points are current as of 2026-10-21:
+
+- **Default approval mode is `smart`, not `manual`.** `smart` uses an auxiliary LLM to classify each command's risk.
+- **Secret redaction is on by default.** `security.redact_secrets` defaults to on. The code comment in `agent/redact.py` (line 91, Hermes v0.22.2) says so.
+- **TIRITH is removed.** The external TIRITH scanner no longer exists. Upgrading drops any `security.tirith_*` settings and nothing replaces them. The docs do not give the version that removed it.
+- **New features the previous guide did not cover:** the hardline blocklist, `approvals.deny`, scoped approval modes, `command_allowlist` with `hermes approvals suggest`, protected write paths, the `HERMES_WRITE_SAFE_ROOT` sandbox, SSRF protection with `security.allow_private_urls`, `security.website_blocklist`, and context-file injection scanning.
+
+If you upgraded from an older install, any `security.tirith_*` settings were dropped and nothing replaced them. A config that still references TIRITH is stale.
+
+## The hardline blocklist
+
+The hardline blocklist is a fixed set of command patterns that Hermes refuses to run. No flag overrides it. The documented entries are:
+
+- `rm -rf /` and obvious variants
+- `rm -rf --no-preserve-root /`
+- the bash fork bomb
+- `mkfs.*` on a mounted root device
+- `dd if=/dev/zero of=/dev/sd*`
+- piping untrusted URLs to `sh` at the rootfs top level
+
+The docs say the blocklist is not bypassed by `--yolo`, `/yolo`, `HERMES_YOLO_MODE=1`, `approvals.mode: off`, cron approve mode, or "allow always". The docs also say the list is not exhaustive, so do not assume these entries are the only commands Hermes blocks.
+
+## Approval modes and YOLO
+
+`approvals.mode` takes three values:
+
+- **`smart`** (default). Low-risk commands are auto-approved for that one command. Genuinely dangerous commands are auto-denied. Uncertain cases prompt you.
+- **`manual`**. Risky commands always prompt you.
+- **`off`**. No approval prompts. The hardline blocklist still applies.
+
+YOLO mode, started with `hermes --yolo`, the `/yolo` toggle, or `HERMES_YOLO_MODE=1`, skips approval prompts for the session. It does not skip the hardline blocklist.
+
+Approval prompts time out after `approvals.timeout` seconds (default 300). A timed-out command is denied. The docs say a timeout is not counted as a denial, so asking again is never penalized.
+
+## Scoped approval modes: cron, single-query, unattended
+
+Nobody is at the keyboard for scheduled or programmatic runs, so Hermes scopes approval behavior by context. Three settings control this, and all default to `deny`:
+
+- `approvals.cron_mode` for scheduled cron jobs
+- `approvals.single_query_mode` for one-shot `hermes chat -q` runs
+- `approvals.unattended_mode` for webhook, `msgraph_webhook` and `api_server` sessions. An `api_server` client that can answer the approval card (`/v1/runs` and streaming chat completions) still receives the approval request.
+
+With `deny`, a command that needs approval is blocked and the agent must find another path. `approve` allows it. To pre-authorize a specific command for unattended runs, add it to `command_allowlist` (see below). The docs say rule-key entries in `command_allowlist` are honored under `cron_mode: deny`.
+
+Two confirmations default to true: `mcp_reload_confirm` (asks before `/reload-mcp` rebuilds the MCP tool set) and `destructive_slash_confirm` (asks before `/clear`, `/new`, `/reset` and `/undo` discard state).
+
+## Your own deny and allow lists
+
+**`approvals.deny`** is a list of glob patterns that block matching terminal commands with no prompt. It is checked before `--yolo`, `/yolo` and `approvals.mode: off`, so a deny rule still applies in YOLO mode:
+
+```yaml
+approvals:
+  deny:
+    - "git push --force*"
+```
+
+Notes from the docs:
+
+- Quote every pattern in YAML. A bare leading `*` is a YAML alias and fails to parse.
+- Patterns are case-insensitive fnmatch globs. They match the command text and each executable candidate.
+- Deny rules are a shell-command policy, not a sandbox. Renamed binaries, scripts and shell aliases can get around them. For containment, use OS permissions and an isolated backend. Deny rules apply to every terminal backend, including containers.
+- Changes take effect immediately. No restart is needed.
+
+**`command_allowlist`** holds permanent approvals. Answering "always" to a prompt adds an entry. An entry can be exact command text, a shell glob, or a rule key such as `script execution via heredoc`. Review or edit the list with `hermes config edit`. Hermes reads the list at startup. A removed entry stays approved in a running session until Hermes next writes the file or you restart, so restart if you removed it for safety reasons.
+
+## `hermes approvals suggest`
+
+`hermes approvals suggest` mines the past 90 days of approval decisions from `state.db` into proposed `command_allowlist` entries. The default window is 90 days, set with `--days N`. The command is a dry run by default. To accept specific proposals, run `hermes approvals suggest --apply N[,M]`.
+
+The tool never proposes destructive classes, however often they were approved. These include recursive deletes, `sudo`, disk writes, pipe-to-shell, SQL `DROP` and `TRUNCATE`, and process kills. Credentials in mined commands are masked in the output.
+
+## File write safety
+
+`write_file` and `patch` are hard-blocked for protected paths. Blocked writes return an error with no approval prompt:
+
+- `~/.ssh/`, including keys and `authorized_keys`
+- `~/.aws/`, `~/.kube/`, `~/.netrc` and `/etc/sudoers`
+- Hermes secret stores under `HERMES_HOME`: `.env`, `.anthropic_oauth.json`, `auth/google_oauth.json`, `cache/bws_cache.json`, `vault/`, `browser-profile/`, `mcp-tokens/` and `pairing/`
+
+Three details from the docs:
+
+1. Control files `auth.json`, `config.yaml` and `webhook_subscriptions.json` are read-denied for the agent but still writable.
+2. Project-local `.env`, `.env.local`, `.env.production` and `.envrc` files are read-denied anywhere on disk.
+3. `~/.ssh/config` is approval-gated, not hard-blocked. It can carry `ProxyCommand` directives, so writes to it are never silent.
+
+**`HERMES_WRITE_SAFE_ROOT`** is an optional sandbox. When set, `write_file` and `patch` may write only inside the listed directories, separated by `:` on Unix. It is a hard block, not an approval. Do not set it in `~/.hermes/.env` casually: if it points at a project, the agent cannot write to `~/.hermes/cron/jobs.json` or to profile skills outside that prefix. The docs also say the denylist "reduces accidental damage" but does not sandbox a hostile agent, because the `terminal` tool runs as the same OS user.
+
+## Cron state
+
+Do not patch `~/.hermes/cron/jobs.json` directly. The docs direct you to the supported interfaces: `hermes cron`, the `cronjob_manage` tool, or `/cron`.
+
+## Network safety: SSRF protection and the website blocklist
+
+SSRF protection is on by default and needs no configuration. It blocks private and reserved destinations: RFC 1918 ranges, loopback, link-local (including the cloud metadata address `169.254.169.254`), the CGNAT range `100.64.0.0/10`, and cloud metadata hostnames. DNS failures are treated as blocked. Redirects are re-checked at each hop.
+
+The global opt-out is `security.allow_private_urls: true` (default `false`). The docs call this a deliberate trust boundary, so enable it only where agent-driven requests to internal networks are an acceptable risk. If a local proxy answers DNS with a sentinel range such as `198.18.0.0/15`, declare that range under `security.fake_ip_ranges` so requests are not blocked as private. That exemption is narrower than `allow_private_urls`.
+
+**`security.website_blocklist`** blocks domains you list. It supports `enabled`, `domains` (glob patterns) and `shared_files`. The docs say it is enforced across `web_search`, `web_extract`, `browser_navigate` and other URL-capable tools. The docs do not state a default for `enabled`; the example config sets it to `true`.
+
+## Secrets and PII
+
+**Secret redaction is on by default.** To turn it off:
+
+```bash
+hermes config set security.redact_secrets false
+```
+
+Redaction is a separate mechanism from the MCP sanitizer. The MCP docs say error messages from MCP tools are sanitized before they reach the model. Patterns replaced with `[REDACTED]` in that path include `ghp_` tokens, `sk-` keys, `Bearer` tokens, and `token=`, `key=` and `password=` parameters. The docs do not say that `security.redact_secrets` controls that list.
+
+Approval checks also flag two content shapes: `curl` or `wget` requests whose body carries a secret (a `-d` flag with a secret variable, `-F file=@.env`, or `-T ~/.ssh/id_rsa`), and commands that contain invisible or bidirectional Unicode characters.
+
+The docs do not specify what `privacy.redact_pii` does to user IDs, phone numbers or email addresses. The gateway reads the setting, so check the current docs before relying on it.
+
+## `hermes auth`
+
+`hermes auth` manages credentials. The subcommands in v0.22.2 are `add`, `list`, `remove`, `reset`, `priority`, `refresh`, `status`, `logout` and `upgrade`. The [CLI command reference](https://hermes-agent.nousresearch.com/docs/reference/cli-commands) describes `hermes auth` as the credential-management command and lists `add`, `list`, `remove`, `reset`, `status` and `logout`. The other subcommands are shown only by `hermes auth --help` in v0.22.2, so check there for their options.
+
+## Key takeaways
+
+- **The hardline blocklist is the floor.** YOLO, `approvals.mode: off`, cron mode and "allow always" do not override it.
+- **`smart` is the default approval mode.** Timed-out prompts are denied.
+- **Scoped modes deny by default.** Cron, single-query and unattended runs deny commands that need approval unless `command_allowlist` covers them.
+- **`approvals.deny` is evaluated before YOLO.** It is a shell-command policy, not a sandbox.
+- **Redaction is on by default.** Disable it only with a clear reason.
+- **Protected paths are hard-blocked for `write_file` and `patch`.** SSH, AWS, kube, sudoers, netrc and Hermes secret stores cannot be written through those tools. The `terminal` tool runs as your OS user and is not covered by this denylist.
+- **SSRF protection is on by default.** `security.allow_private_urls: true` is the global opt-out. A narrow `security.fake_ip_ranges` entry relaxes it for a proxy sentinel range only.
+- **TIRITH is removed.** Upgrading drops its `security.tirith_*` settings, and nothing replaces them.
+
+{/* crosslinks */}
+
+## 📖 Related Reads
+
+- **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools, agents, and APIs
+- **[ToolBrain](https://toolbrain.net/)** — tool reviews, LLM comparisons, and AI workflow guides
+
+*Cross-links automatically generated from Hermes Tutorials.*

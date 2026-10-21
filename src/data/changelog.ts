@@ -1,4 +1,4 @@
-// AUTO-GENERATED from NousResearch/hermes-agent GitHub releases (42 releases, 2026-03-12..2026-10-21).
+// AUTO-GENERATED from NousResearch/hermes-agent GitHub releases (43 releases, 2026-03-12..2026-10-21).
 // Regenerate via scripts/gen-changelog.py — do not hand-edit entries.
 export interface ChangelogLink {
   url: string;
@@ -20,6 +20,24 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  {
+    "tag": "v0.22.4",
+    "version": "v0.22.4",
+    "codename": "",
+    "date": "2026-10-21",
+    "summary": "Patch release. Desktop stops showing suggestion pills above the composer, plus small plugin and dashboard fixes, for the CLI and installer, the Microsoft Store app, Docker and Hermes Cloud.",
+    "highlights": [],
+    "prs": "13",
+    "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.4",
+    "compare": "https://github.com/NousResearch/hermes-agent/compare/v0.22.3...v0.22.4",
+    "links": [
+      {
+        "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.4",
+        "label": "Release notes (v0.22.4)"
+      }
+    ],
+    "body": "> Patch release. Desktop stops showing suggestion pills above the composer, plus small plugin and dashboard fixes, for the CLI and installer, the Microsoft Store app, Docker and Hermes Cloud.\n\n## Fixes\n\n- **Desktop no longer shows suggestion pills above the composer.** The pills appeared for no clear reason, mostly nudging you to set up MCP servers. They and the helpers that only they used are gone. ([#142559](https://github.com/NousResearch/hermes-agent/pull/142559))\n- **Plugins that install nothing skip the dependency consent step.** A plugin that declares no dependencies, or whose `pyproject.toml` installs nothing, now enables without an empty consent prompt. ([#142569](https://github.com/NousResearch/hermes-agent/pull/142569))\n- **Dashboard: WhatsApp can be safely re-paired after logging out.** ([#142439](https://github.com/NousResearch/hermes-agent/pull/142439))\n- **Desktop plugin review:** the surface lint no longer flags prototype writes; reviewers check them by hand. ([#142586](https://github.com/NousResearch/hermes-agent/pull/142586))\n- **Desktop: the approval-mode chip follows the active profile's mode.** ([#142565](https://github.com/NousResearch/hermes-agent/pull/142565))\n- **Release builds:** the desktop bundle's pre-build check gets enough time to verify archived build inputs when storage is slow. ([#142623](https://github.com/NousResearch/hermes-agent/pull/142623))\n\nAlso new in the plugin catalog: bubblewrap (bwrap terminal backend on Linux), Singularity/Apptainer, mcp-serve (Hermes as an MCP server), agent-importers (`hermes import-agent`, now with Cursor), inbox and workflow-record from Hermes Labs. Telegram Business moves to the Hermes Labs community tier.\n\n## Updating\n\n- Microsoft Store app: updates through the Store.\n- Desktop app installed from the installer (.exe / .dmg): no change in this release; it updates with the next bundled release.\n- CLI: `hermes update`, or re-run the installer one-liner.\n- Docker / Hermes Cloud: `nousresearch/hermes-agent:stable` (or `:latest`).\n\n**Full Changelog**: [v0.22.3...v0.22.4](https://github.com/NousResearch/hermes-agent/compare/v0.22.3...v0.22.4)"
+  },
   {
     "tag": "v0.22.3",
     "version": "v0.22.3",
