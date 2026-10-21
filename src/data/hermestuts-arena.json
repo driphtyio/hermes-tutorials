@@ -734,7 +734,7 @@
         "status": "untested"
       }
     },
-    "last_updated": "2026-10-20"
+    "last_updated": "2026-10-21"
   },
   "matches": [
     {
@@ -11681,6 +11681,264 @@
           "dnf": true
         }
       ]
+    },
+    {
+      "id": "arena-hermes-core-refresh-20261021",
+      "match_id": "arena-hermes-core-refresh-20261021",
+      "date": "2026-10-21",
+      "timestamp": "2026-10-21T08:00:00",
+      "type": "content",
+      "category": "core-refresh",
+      "pipeline": "cron-subagent-arena",
+      "orchestrator": "cron (claude-haiku-5-5)",
+      "topic": "Hermes Agent security and privacy configuration: refreshed core guide",
+      "slug": "security-privacy",
+      "plan_model": "glm-5.3",
+      "plan_route": "cline-pass/glm-5.3 (1,699 words; MUST include and MUST NOT include both present)",
+      "research_model": "in-session fetch of hermes-agent docs (user-guide/security, reference/cli-commands) + installed code grep",
+      "research_lane": "skipped",
+      "research_source": "in-session",
+      "brief_contract": true,
+      "judge": {
+        "model": "qwen3.7-flash",
+        "mode": "multipass x3 (tb-judge-multipass.py / judge-draft-batch.py)",
+        "rubric": "content",
+        "preamble": "none"
+      },
+      "judge_model": "qwen3.7-flash",
+      "models_competed": [
+        "gemini-3.8-flash-medium",
+        "claude-haiku-5-5",
+        "deepseek-v4.1-flash",
+        "gpt-6-luna",
+        "beam-free",
+        "glm-5.3-flash",
+        "hy3",
+        "longcat-2.5-preview-free",
+        "mimo-v2.6-flash",
+        "minimax-m3.1-flash-free",
+        "muse-spark-1.3-contributor",
+        "ling-3.1-flash",
+        "qwen3.8-flash"
+      ],
+      "builder_dnf": [],
+      "total_models": 13,
+      "successful": 13,
+      "winner": "glm-5.3-flash",
+      "winner_provider": "opencode-go",
+      "winner_family": "glm",
+      "winner_score": 8.1,
+      "threshold_met": true,
+      "winner_decision_rule": "highest pre-QA 3-pass mean among eligible drafts (<=2,500 body words, HERO line present); claude-haiku-5-5 (8.07) excluded for missing HERO line",
+      "final_judge_mean_post_qa": 8.02,
+      "qa_model": "claude-sonnet-5-5",
+      "qa_provider": "claude-cli",
+      "qa_verdict": "FAIL (defects fixed in 2 rounds; the 2nd-round re-QA findings partly applied, see notes)",
+      "linkcheck": {
+        "tool": "arena-linkcheck.py",
+        "ok": 2,
+        "dead": 0,
+        "blocked_unverified": 0
+      },
+      "heroImage": "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/security-privacy-1792596231.webp",
+      "notes": "Refresh-in-place of security-privacy (rotation week 2026-10-21). Stale claims fixed: default approvals.mode is smart; redact_secrets on by default; TIRITH removed. Post-QA judge mean 8.02 measured BEFORE the final 4 QA patches (auth wording, takeaways). Winner has only 2 verified external links. Haiku draft excluded (no HERO line). Noisy lanes re-judged: agy 4.10, muse 5.73, qwen3.8 5.50.",
+      "results": [
+        {
+          "model": "gemini-3.8-flash-medium",
+          "provider": "agy",
+          "family": "gemini",
+          "label": "gemini-3.8-flash-medium",
+          "score": 4.1,
+          "judge_mean": 4.1,
+          "judge_mean_preQA": 4.1,
+          "judge_spread": null,
+          "rejudged_noisy": true,
+          "eligible": true,
+          "eligibility_note": "eligible",
+          "winner": false,
+          "rank": 12
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "provider": "claude-cli",
+          "family": "claude",
+          "label": "claude-haiku-5-5",
+          "score": 8.07,
+          "judge_mean": 8.07,
+          "judge_mean_preQA": 8.07,
+          "judge_spread": 0.7,
+          "rejudged_noisy": false,
+          "eligible": false,
+          "eligibility_note": "HERO_IMAGE_PROMPT line missing - ineligible (re-run not done)",
+          "winner": false,
+          "rank": 2
+        },
+        {
+          "model": "deepseek-v4.1-flash",
+          "provider": "commandcode",
+          "family": "deepseek",
+          "label": "deepseek-v4.1-flash",
+          "score": 6.77,
+          "judge_mean": 6.77,
+          "judge_mean_preQA": 6.77,
+          "judge_spread": 0.35,
+          "rejudged_noisy": false,
+          "eligible": true,
+          "eligibility_note": "eligible",
+          "winner": false,
+          "rank": 8
+        },
+        {
+          "model": "gpt-6-luna",
+          "provider": "commandcode",
+          "family": "gpt",
+          "label": "gpt-6-luna",
+          "score": 7.07,
+          "judge_mean": 7.07,
+          "judge_mean_preQA": 7.07,
+          "judge_spread": 1.5,
+          "rejudged_noisy": false,
+          "eligible": true,
+          "eligibility_note": "eligible",
+          "winner": false,
+          "rank": 4
+        },
+        {
+          "model": "beam-free",
+          "provider": "opencode-go",
+          "family": "beam",
+          "label": "beam-free",
+          "score": 6.77,
+          "judge_mean": 6.77,
+          "judge_mean_preQA": 6.77,
+          "judge_spread": 0.7,
+          "rejudged_noisy": false,
+          "eligible": true,
+          "eligibility_note": "eligible",
+          "winner": false,
+          "rank": 7
+        },
+        {
+          "model": "glm-5.3-flash",
+          "provider": "opencode-go",
+          "family": "glm",
+          "label": "glm-5.3-flash",
+          "score": 8.1,
+          "judge_mean": 8.1,
+          "judge_mean_preQA": 8.1,
+          "judge_spread": 0.5,
+          "rejudged_noisy": false,
+          "eligible": true,
+          "eligibility_note": "eligible",
+          "winner": true,
+          "rank": 1
+        },
+        {
+          "model": "hy3",
+          "provider": "opencode-go",
+          "family": "tencent",
+          "label": "hy3",
+          "score": 3.78,
+          "judge_mean": 3.78,
+          "judge_mean_preQA": 3.78,
+          "judge_spread": 1.15,
+          "rejudged_noisy": false,
+          "eligible": true,
+          "eligibility_note": "eligible",
+          "winner": false,
+          "rank": 13
+        },
+        {
+          "model": "longcat-2.5-preview-free",
+          "provider": "opencode-go",
+          "family": "longcat25",
+          "label": "longcat-2.5-preview-free",
+          "score": 6.92,
+          "judge_mean": 6.92,
+          "judge_mean_preQA": 6.92,
+          "judge_spread": 1.25,
+          "rejudged_noisy": false,
+          "eligible": true,
+          "eligibility_note": "eligible",
+          "winner": false,
+          "rank": 5
+        },
+        {
+          "model": "mimo-v2.6-flash",
+          "provider": "opencode-go",
+          "family": "mimo",
+          "label": "mimo-v2.6-flash",
+          "score": 7.7,
+          "judge_mean": 7.7,
+          "judge_mean_preQA": 7.7,
+          "judge_spread": 1.1,
+          "rejudged_noisy": false,
+          "eligible": true,
+          "eligibility_note": "eligible",
+          "winner": false,
+          "rank": 3
+        },
+        {
+          "model": "minimax-m3.1-flash-free",
+          "provider": "opencode-go",
+          "family": "minimax",
+          "label": "minimax-m3.1-flash-free",
+          "score": 5.35,
+          "judge_mean": 5.35,
+          "judge_mean_preQA": 5.35,
+          "judge_spread": 0.25,
+          "rejudged_noisy": false,
+          "eligible": true,
+          "eligibility_note": "eligible",
+          "winner": false,
+          "rank": 11
+        },
+        {
+          "model": "muse-spark-1.3-contributor",
+          "provider": "opencode-go",
+          "family": "muse",
+          "label": "muse-spark-1.3-contributor",
+          "score": 5.73,
+          "judge_mean": 5.73,
+          "judge_mean_preQA": 5.73,
+          "judge_spread": null,
+          "rejudged_noisy": true,
+          "eligible": true,
+          "eligibility_note": "eligible",
+          "winner": false,
+          "rank": 9
+        },
+        {
+          "model": "ling-3.1-flash",
+          "provider": "tokenharbor",
+          "family": "ling",
+          "label": "ling-3.1-flash",
+          "score": 6.83,
+          "judge_mean": 6.83,
+          "judge_mean_preQA": 6.83,
+          "judge_spread": 0.45,
+          "rejudged_noisy": false,
+          "eligible": true,
+          "eligibility_note": "eligible",
+          "winner": false,
+          "rank": 6
+        },
+        {
+          "model": "qwen3.8-flash",
+          "provider": "tokenharbor",
+          "family": "qwen",
+          "label": "qwen3.8-flash",
+          "score": 5.5,
+          "judge_mean": 5.5,
+          "judge_mean_preQA": 5.5,
+          "judge_spread": null,
+          "rejudged_noisy": true,
+          "eligible": true,
+          "eligibility_note": "eligible",
+          "winner": false,
+          "rank": 10
+        }
+      ]
     }
   ],
   "leaderboard": [
@@ -11688,12 +11946,23 @@
       "model": "deepseek-v4.1-flash",
       "provider": "commandcode",
       "family": "deepseek",
-      "matches": 37,
+      "matches": 38,
       "wins": 11,
-      "losses": 26,
-      "avgScore": 8.28,
+      "losses": 27,
+      "avgScore": 8.24,
       "bestScore": 9.78,
       "rank": 1
+    },
+    {
+      "model": "glm-5.3-flash",
+      "provider": "opencode-go",
+      "family": "glm",
+      "matches": 25,
+      "wins": 6,
+      "losses": 19,
+      "avgScore": 8.23,
+      "bestScore": 9.75,
+      "rank": 2
     },
     {
       "model": "poolside/laguna-s-2.1-free",
@@ -11704,7 +11973,7 @@
       "losses": 25,
       "avgScore": 7.89,
       "bestScore": 9.28,
-      "rank": 2
+      "rank": 3
     },
     {
       "model": "mimo-v2.5",
@@ -11715,27 +11984,16 @@
       "losses": 16,
       "avgScore": 8.42,
       "bestScore": 9.42,
-      "rank": 3
-    },
-    {
-      "model": "glm-5.3-flash",
-      "provider": "opencode-go",
-      "family": "glm",
-      "matches": 24,
-      "wins": 5,
-      "losses": 19,
-      "avgScore": 8.24,
-      "bestScore": 9.75,
       "rank": 4
     },
     {
       "model": "gpt-6-luna",
       "provider": "commandcode",
       "family": "openai",
-      "matches": 17,
+      "matches": 18,
       "wins": 4,
-      "losses": 13,
-      "avgScore": 8.14,
+      "losses": 14,
+      "avgScore": 8.08,
       "bestScore": 9.73,
       "rank": 5
     },
@@ -11754,10 +12012,10 @@
       "model": "claude-haiku-5-5",
       "provider": "claude-cli",
       "family": "claude",
-      "matches": 10,
+      "matches": 11,
       "wins": 3,
-      "losses": 7,
-      "avgScore": 7.91,
+      "losses": 8,
+      "avgScore": 7.92,
       "bestScore": 9.15,
       "rank": 7
     },
@@ -11765,10 +12023,10 @@
       "model": "hy3",
       "provider": "opencode-go",
       "family": "tencent",
-      "matches": 22,
+      "matches": 23,
       "wins": 2,
-      "losses": 20,
-      "avgScore": 8.21,
+      "losses": 21,
+      "avgScore": 8.02,
       "bestScore": 9.65,
       "rank": 8
     },
@@ -11776,10 +12034,10 @@
       "model": "muse-spark-1.3-contributor",
       "provider": "opencode-go",
       "family": "muse",
-      "matches": 22,
+      "matches": 23,
       "wins": 2,
-      "losses": 20,
-      "avgScore": 7.93,
+      "losses": 21,
+      "avgScore": 7.83,
       "bestScore": 9.45,
       "rank": 9
     },
@@ -11799,9 +12057,9 @@
       "provider": "opencode-go",
       "family": "",
       "wins": 1,
-      "losses": 7,
-      "matches": 8,
-      "avgScore": 8.49,
+      "losses": 8,
+      "matches": 9,
+      "avgScore": 8.32,
       "bestScore": 9.2,
       "rank": 11
     },
@@ -11842,23 +12100,12 @@
       "model": "mimo-v2.6-flash",
       "provider": "opencode-go",
       "family": "mimo",
-      "matches": 4,
+      "matches": 5,
       "wins": 0,
-      "losses": 4,
-      "avgScore": 7.98,
+      "losses": 5,
+      "avgScore": 7.92,
       "bestScore": 8.25,
       "rank": 15
-    },
-    {
-      "model": "beam-free",
-      "provider": "opencode-go",
-      "family": "beam",
-      "matches": 4,
-      "wins": 0,
-      "losses": 4,
-      "avgScore": 7.86,
-      "bestScore": 8.08,
-      "rank": 16
     },
     {
       "model": "cline-pass/minimax-m3",
@@ -11869,18 +12116,18 @@
       "losses": 7,
       "avgScore": 7.75,
       "bestScore": 8.32,
-      "rank": 17
+      "rank": 16
     },
     {
-      "model": "minimax-m3.1-flash-free",
+      "model": "beam-free",
       "provider": "opencode-go",
-      "family": "minimax",
-      "matches": 1,
+      "family": "beam",
+      "matches": 5,
       "wins": 0,
-      "losses": 1,
-      "avgScore": 7.72,
-      "bestScore": 7.72,
-      "rank": 18
+      "losses": 5,
+      "avgScore": 7.64,
+      "bestScore": 8.08,
+      "rank": 17
     },
     {
       "model": "omen-alpha",
@@ -11891,18 +12138,7 @@
       "losses": 4,
       "avgScore": 7.54,
       "bestScore": 8.32,
-      "rank": 19
-    },
-    {
-      "model": "gemini-3.8-flash-medium",
-      "provider": "agy",
-      "family": "gemini",
-      "matches": 6,
-      "wins": 0,
-      "losses": 6,
-      "avgScore": 7.27,
-      "bestScore": 8.42,
-      "rank": 20
+      "rank": 18
     },
     {
       "model": "cline-pass/qwen3.8-max",
@@ -11913,7 +12149,40 @@
       "losses": 1,
       "avgScore": 7.01,
       "bestScore": 7.01,
+      "rank": 19
+    },
+    {
+      "model": "ling-3.1-flash",
+      "provider": "tokenharbor",
+      "family": "ling",
+      "matches": 1,
+      "wins": 0,
+      "losses": 1,
+      "avgScore": 6.83,
+      "bestScore": 6.83,
+      "rank": 20
+    },
+    {
+      "model": "gemini-3.8-flash-medium",
+      "provider": "agy",
+      "family": "gemini",
+      "matches": 7,
+      "wins": 0,
+      "losses": 7,
+      "avgScore": 6.82,
+      "bestScore": 8.42,
       "rank": 21
+    },
+    {
+      "model": "minimax-m3.1-flash-free",
+      "provider": "opencode-go",
+      "family": "minimax",
+      "matches": 2,
+      "wins": 0,
+      "losses": 2,
+      "avgScore": 6.54,
+      "bestScore": 7.72,
+      "rank": 22
     },
     {
       "model": "ling-3.0-flash-sante",
@@ -11924,7 +12193,18 @@
       "losses": 1,
       "avgScore": 5.55,
       "bestScore": 5.55,
-      "rank": 22
+      "rank": 23
+    },
+    {
+      "model": "qwen3.8-flash",
+      "provider": "tokenharbor",
+      "family": "qwen",
+      "matches": 1,
+      "wins": 0,
+      "losses": 1,
+      "avgScore": 5.5,
+      "bestScore": 5.5,
+      "rank": 24
     },
     {
       "model": "pixel-canary",
@@ -11935,11 +12215,11 @@
       "matches": 0,
       "avgScore": 0,
       "bestScore": 0,
-      "rank": 23
+      "rank": 25
     }
   ],
-  "last_updated": "2026-10-20",
-  "total_matches": 46,
+  "last_updated": "2026-10-21",
+  "total_matches": 47,
   "retired_models": [
     {
       "model": "mimo-v2.5",
