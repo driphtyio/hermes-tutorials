@@ -1,0 +1,76 @@
+---
+title: "Hermes Agent Connectors: Linear, Notion and Gmail Setup (2026)"
+description: "Hermes Agent connectors act in Linear, Notion and Gmail through the Nous tool gateway. Here is how to connect them, manage accounts and turn them off."
+pubDate: 2026-10-22
+tags: ["hermes-agent", "connectors", "tutorial", "setup", "beginner"]
+heroImage: https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-connectors-guide-2026-1792682565.webp
+draft: false
+lastVerified: 2026-10-22
+---
+
+## Quick Answer
+Hermes Agent connectors let Hermes act inside hosted apps such as Linear, Notion and Gmail through the [Nous tool gateway](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway). You sign in once in your browser and the tools are usable in the same turn. You do not need a Nous account to start: first use creates a free connectors-only identity. Each app can have several named accounts, such as work and home.
+
+## What Are Hermes Agent Connectors?
+Connectors are hosted apps that Hermes reaches through the Nous tool gateway, so Hermes can act inside them without you wiring API keys yourself. The [v0.22.0 release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.0) list connectors as a headline feature of that release. Connector tools are never registered locally. The agent finds them through tool search, which sends each query to the gateway.
+
+The desktop Connectors page replaces the old MCP tab and lists hosted apps and MCP servers together. The TUI and CLI show the same setup card.
+
+### Connectors vs Tool Gateway
+| | Connectors | Tool Gateway |
+|---|---|---|
+| What it is | Hosted apps such as Linear, Notion and Gmail | The Nous service that carries connector calls, plus web search, image generation, text-to-speech and cloud browsers |
+| Account to start | A free connectors-only identity, created on first use | A paid [Nous Portal subscription](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway#eligibility); some accounts get a free tool pool |
+| Managed in | Desktop Connectors page, TUI `/connectors`, CLI `hermes connectors` | `hermes tools` and `hermes portal info` |
+
+### How the agent finds connector tools
+Connector tools are named `connectors__<connector>__<tool>`. The agent finds them with `tool_search`, loads their schemas with `tool_describe`, and runs them with `tool_call`. The [connectors section of the Tool Search documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-search#connectors-remote-tools) describes this flow.
+
+## How Do You Connect Linear, Notion or Gmail?
+Open the Connectors page in the desktop app, or run `/connectors` in the TUI, or ask the agent to use the app. If the account is not connected yet, the call returns `CONNECTION_REQUIRED` with a sign-in link. Complete the browser sign-in, and the tools are usable in the same turn.
+
+In the desktop app, the `manage_connections` tool shows a card and waits until each app is connected or skipped. Elsewhere it returns a connect link per app for you to open.
+
+### Manage connections from the CLI
+`hermes connectors` lists, connects, renames and disconnects connector accounts, and `/connectors` does the same in the TUI. `hermes portal info` shows Portal auth and gateway routing. This guide does not list flags for these commands, so check each command's help output for exact syntax.
+
+### The free identity and how to opt out
+If you have no Nous account, the first `manage_connections` action, or opening the desktop Connectors page, creates a free Nous identity. It does not change your model provider. Until that identity exists, `tool_search` sends nothing to the gateway. To keep it from being created, set `nous.guest: false`, as the [Tool Search documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-search#connectors-remote-tools) describes.
+
+## How Do Multiple Accounts Work?
+Several named accounts per app are supported, for example `work` and `home`. Hermes has no default account. When an app has several named accounts, the agent must pick one with the `connector_alias` field. The [Tool Gateway documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway#multiple-connector-accounts) sets out these rules.
+
+### Naming rules
+Names are 1 to 32 characters: lowercase letters, digits or hyphens, starting with a letter or digit. An unnamed account shows the app's own label. The agent names a new account from what you said, asks if it is unsure, and tells you the name it chose.
+
+### How connector_alias works
+The field is required when every active account is named and optional when some are unnamed. The call fails if it is left out while several accounts are named, or if it names an account that does not exist. The error lists the valid names.
+
+### Reconnect and removal
+Reconnecting a broken account replaces it under the same name. The old account is kept automatically as retired. The agent never removes an account. You remove accounts yourself, one at a time.
+
+## What Happens When Connectors Are Off or the Gateway Is Down?
+With `tools.connectors.enabled` set to `false`, connector routes are never touched, and the tool-search bridge behaves as if the connector feature did not exist. A signed-in account that the gateway does not serve for connectors sees no connector tools either. Local tools keep working in both cases.
+
+### Slow or unreachable gateway
+The gateway call is bounded at 30 seconds. A slow or unreachable gateway degrades connector search to local results only, with no error shown to the model.
+
+### Stopping a batch mid-run
+A `/stop` between entries leaves the unstarted ones unsent, and their slots report `INTERRUPTED`, according to the [Tool Search documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-search#connectors-remote-tools). [PR #106842](https://github.com/NousResearch/hermes-agent/pull/106842) describes unstarted calls never leaving the machine.
+
+## How Do You Turn Connectors Off?
+Set `tools.connectors.enabled` to `false`. To stop the free identity from being created, set `nous.guest: false`. Advanced deployments can pin `CONNECTOR_GATEWAY_URL` to a custom connectors origin. The [self-hosted gateway section](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway#self-hosted-gateway-advanced) covers that for custom infrastructure only.
+
+## FAQ
+
+### Do I need a Nous account to use connectors?
+No account is needed to start. On first use, Hermes creates a free connectors-only identity. Set `nous.guest: false` if you want to block that identity from being created.
+
+### Can I connect work and personal accounts to the same app?
+Yes. Account names are 1 to 32 lowercase letters, digits or hyphens, starting with a letter or digit; the agent names new accounts from what you say. When an app has several named accounts, the agent must pass `connector_alias` to choose one.
+
+### What happens if the agent uses the wrong account?
+A wrong alias fails, and the error lists valid account names. Ask for the account by name. Reconnecting a broken account replaces it under the same name, and the old one is kept as retired.
+
+## How This Guide Was Built
+This guide is based on official documentation and the v0.22.0 release notes; we did not run the connectors hands-on. We consulted the [release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.0), the [Tool Gateway docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway), the [Tool Search docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-search), the [CLI reference](https://hermes-agent.nousresearch.com/docs/reference/cli-commands#hermes-connectors) and [PR #106842](https://github.com/NousResearch/hermes-agent/pull/106842), which predates the release. Exact CLI flags, the connector list beyond Gmail, Linear and Notion, and pricing beyond the documented subscription were not verified.
