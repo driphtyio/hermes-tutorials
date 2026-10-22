@@ -1,0 +1,104 @@
+---
+title: "Build Log: A Hermes Skill for Automated Weekly Reports"
+description: "How to package a weekly report as a Hermes skill: SKILL.md layout, a helper script, a blueprint schedule, and the deliver field that sets the destination."
+pubDate: "2026-10-22"
+tags: ["hermes", "build-log"]
+lastVerified: "2026-10-22"
+---
+
+A weekly report is a repeated chore: gather the same inputs, summarize them in the same shape, and deliver the result. Hermes packages this pattern as a **skill**, a folder with a `SKILL.md` procedure the agent loads when needed. This guide shows the layout, the fields you set, and how a skill can carry a schedule.
+
+This guide is assembled from official documentation and community reports — we did not run this build ourselves. Items marked *illustrative* are example shapes, not tested output.
+
+## When should a weekly report be a skill?
+
+The official guide says to make something a Skill when "the capability can be expressed as instructions + shell commands + existing tools", and when it wraps a CLI or API the agent can call through `terminal` or `web_extract`. It says to make something a Tool when it needs end-to-end integration with API keys or auth flows, custom processing that must execute precisely every time, or binary or streaming data.
+
+A weekly report usually needs both kinds of work: judgment about what matters this week, and mechanical collection. A skill suits that mix. The judgment goes in `SKILL.md`; the mechanical steps go in a script the skill calls.
+
+## What does the skill directory look like?
+
+Installed skills live in `~/.hermes/skills/`. `SKILL.md` is the required file. The official guide shows optional `scripts/` and `references/` directories beside it.
+
+```text
+~/.hermes/skills/weekly-report/
+├── SKILL.md
+└── scripts/
+    └── collect_metrics.sh
+```
+
+*Illustrative.* `scripts/` holds the collection code. The [Creating Skills](https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills) page documents the full structure. Inside `SKILL.md`, `${HERMES_SKILL_DIR}` expands to the skill's absolute directory, so the procedure can call `${HERMES_SKILL_DIR}/scripts/collect_metrics.sh` without a hard-coded path.
+
+## Which frontmatter fields matter?
+
+The creating-skills reference lists `name`, `description`, `version`, `author`, `license`, and `platforms`, plus a `metadata.hermes` block. That block holds `tags`, `related_skills`, `requires_toolsets`, `requires_tools`, `config`, and `blueprint`. Required environment variables are declared separately, as covered below.
+
+*Illustrative* minimum for a report skill:
+
+```yaml
+---
+name: weekly-report
+description: Builds the weekly status report from collected metrics.
+version: 0.1.0
+author: your-name
+license: MIT
+metadata:
+  hermes:
+    tags: [reporting, automation]
+    requires_toolsets: [terminal]
+    blueprint:
+      schedule: "0 8 * * 1"
+      deliver: origin
+---
+```
+
+The `description` field matters because of progressive disclosure: the agent sees it at the `skills_list()` level before it loads the body. The skills overview names three levels: `skills_list()`, then `skill_view(name)`, then `skill_view(name, path)` for one reference file.
+
+## How should the body be structured?
+
+The official guide recommends five sections: When to Use, Quick Reference, Procedure, Pitfalls, and Verification. For a report skill, write them as follows.
+
+- **When to Use:** name the exact trigger, such as "weekly metrics report", so the skill does not fire on unrelated report requests.
+- **Procedure:** gather data, summarize, write the output file. Name the script to run.
+- **Pitfalls:** record known failure modes, such as a missing input file.
+- **Verification:** state how success is checked, for example that the output file exists and is non-empty.
+
+## Why keep collection logic in a script?
+
+The official guide advises helper scripts in `scripts/` for parsing and complex logic rather than having the model write them inline each run. A script can also be run and checked on its own, outside the agent, which makes the Procedure's "gather" step easier to debug.
+
+## How does the schedule work?
+
+A blueprint is the skill's automation block. The `schedule` field takes a cron expression, and `deliver` sets where output goes; the source gives `origin` as the default and `telegram` as an example. The `"0 8 * * 1"` example above means 08:00 every Monday, so check how your deployment interprets the timezone before relying on a local time.
+
+Scheduling is opt-in. Installing a skill with a `blueprint` block registers a **suggested** cron job and does not create one. You accept it with `/suggestions accept N`, or run it as a cron job with `hermes cron create --skill weekly-report`. Until you do, nothing runs on the schedule.
+
+Decide whether you want the report file or its contents delivered, because that changes the last step of the Procedure.
+
+## How do secrets reach the script?
+
+Declare credentials in `required_environment_variables`, each with `name`, `prompt`, `help`, and `required_for`. Missing values do not hide the skill. The local CLI prompts for them securely, and gateway or messaging sessions show setup guidance instead. Declared variables that are set pass through to `terminal` and `execute_code` sandboxes, so the script can read them from its environment without the value appearing in `SKILL.md`.
+
+## How do you run it on demand?
+
+Every installed skill is a slash command, such as `/weekly-report`. Up to five leading `/skill` tokens can be stacked in one message. The `/learn` command can also create a skill from a source, such as a directory, a URL, or a described procedure, and saves it through `skill_manage`.
+
+## FAQ
+
+### Does a missing environment variable hide the skill?
+
+No. The creating-skills reference says missing values do not hide the skill. The CLI prompts for them, and gateway sessions show setup guidance.
+
+### Does installing a blueprint skill start the schedule?
+
+No. Installing registers a suggested cron job. You accept it with `/suggestions accept N` or create it with `hermes cron create --skill <name>`.
+
+### Can the report run before its scheduled time?
+
+Yes. Every installed skill can be invoked as a slash command, so the same procedure runs on demand and on its scheduled run.
+
+## The Bottom Line
+
+A weekly report fits a Hermes skill: judgment in `SKILL.md`, collection in `scripts/`, timing in the `blueprint` block, and destination in its `deliver` field. The schedule stays inactive until you accept the suggested job. This guide describes the official pieces; assembling them into a working report is your build to make, and this guide does not claim to have run one.
+
+Start with [Creating Skills](https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills) and the [Skills System overview](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills). The [Bundled Skills Catalog](https://hermes-agent.nousresearch.com/docs/reference/skills-catalog) lists shipped examples, and the [agentskills.io specification](https://agentskills.io/specification) is the open format the skills system follows. The [Official Optional Skills Catalog](https://hermes-agent.nousresearch.com/docs/reference/optional-skills-catalog) lists optional examples, and third-party skills are published through the [Skills Hub](https://hermes-agent.nousresearch.com/docs/skills); the [skills catalog source](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/reference/skills-catalog.md) is also on GitHub.
