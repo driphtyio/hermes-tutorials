@@ -1,6 +1,7 @@
 
 .astro/
-*.bak-*\n*.bak
+*.bak-*
+*.bak
 # build output
 # dependencies
 dist/
