@@ -1,0 +1,245 @@
+---
+title: "Connecting Hermes Agent to Microsoft Teams"
+description: "Connect Hermes Agent to Microsoft Teams as a bot: install the Teams CLI, expose a public HTTPS tunnel, set credentials, and control mentions and access."
+pubDate: 2026-10-23
+lastVerified: 2026-10-23
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-teams-gateway-setup-1792772566.webp"
+tags: ["hermes-agent", "microsoft-teams", "bots", "webhooks", "self-hosting"]
+---
+
+Hermes Agent can run as a Microsoft Teams bot, answering DMs and channel messages through its gateway. This guide walks through the setup documented in the official docs: installing the Teams CLI, exposing the gateway over a public HTTPS tunnel, creating the bot app, configuring credentials, and controlling who can talk to the bot.
+
+A quick honesty note up front: this guide is based on the official Hermes Agent documentation ([Teams messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/teams)); it was not run hands-on for this post. The docs page renders its code blocks collapsed, so the commands below are reproduced from the docs. If a command wraps or breaks on your terminal, check the docs page for the original text.
+
+## Answer
+
+You connect Hermes Agent to Teams by installing `@microsoft/teams.cli`, creating a bot app that points at a public HTTPS tunnel to the gateway's port 3978 ([Teams messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/teams)), setting Teams credentials in `~/.hermes/.env`, and restarting the gateway. Direct messages need no mention; group and channel messages require an @mention unless resource-specific consent grants full message delivery.
+
+## Prerequisites
+
+Before starting, you need a working Hermes Agent installation, a way to expose the gateway publicly, and Node.js for the Teams CLI. Teams calls your gateway over the internet, so a purely local setup will not receive anything.
+
+- **Hermes Agent installed.** Follow the [installation docs](https://hermes-agent.nousresearch.com/docs/getting-started/installation). The gateway can run via Docker or natively.
+- **The Teams SDK extra.** The SDK is optional. When policy permits, the gateway requests the `teams` extra on first start.
+- **A publicly reachable endpoint.** Teams delivers messages by calling a public HTTPS webhook, unlike Slack's Socket Mode. For local development you need a dev tunnel; for production, a real domain ([Teams messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/teams)).
+- **Node and npm** for the Teams CLI.
+
+## Step 1: Log in with the Teams CLI
+
+The Teams CLI handles both Microsoft authentication and bot app creation. Install it globally, log in, and note your AAD object ID from the status output. You will need it for the `TEAMS_ALLOWED_USERS` allowlist.
+
+```bash
+npm install -g @microsoft/teams.cli@preview
+```
+
+```bash
+teams login
+```
+
+Then verify your identity:
+
+```bash
+teams status --verbose
+```
+
+The verbose status output includes your AAD object ID. Save it now; it goes into `TEAMS_ALLOWED_USERS` in Step 4.
+
+## Step 2: Expose the gateway with a tunnel
+
+The gateway's Teams webhook listens on port 3978 by default, configurable via `TEAMS_PORT` ([Teams messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/teams)). Because Teams must reach it over the public internet, you need a tunnel that terminates TLS and forwards to your local listener. The docs list three options.
+
+**devtunnel** ([Microsoft dev tunnels overview](https://learn.microsoft.com/en-us/azure/developer/dev-tunnels/overview)):
+
+```bash
+devtunnel create hermes-bot --allow-anonymous
+```
+
+```bash
+devtunnel port create hermes-bot -p 3978 --protocol http
+```
+
+```bash
+devtunnel host hermes-bot
+```
+
+**ngrok** ([ngrok docs](https://ngrok.com/docs)):
+
+```bash
+ngrok http 3978
+```
+
+**cloudflared** ([Cloudflare Tunnel docs](https://developers.cloudflare.com/tunnel/)):
+
+```bash
+cloudflared tunnel --url http://localhost:3978
+```
+
+The tunnel terminates TLS, and the local gateway listener stays plain HTTP. Do not configure the tunnel port as HTTPS. The [Teams messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/teams) warns that forwarding HTTPS to Hermes' plain HTTP listener produces `"UNKNOWN / HTTP/1.0" 400` errors when Teams sends a message.
+
+Whichever tool you use, note the public URL it assigns; you will paste it into the bot app creation command in the next step.
+
+For a permanent server, the [Teams messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/teams) recommends a reverse proxy instead of a tunnel: terminate TLS at the proxy and forward plain HTTP to `http://127.0.0.1:3978`. The proxy's public HTTPS certificate must be valid, because Teams rejects self-signed certificates.
+
+## Step 3: Create the bot app
+
+The Teams CLI creates the bot app registration in one command, pointing it at your tunnel URL plus the `/api/messages` path that Hermes listens on ([Teams messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/teams)).
+
+```bash
+teams app create --name "Hermes" --endpoint "https://<your-tunnel-url>/api/messages"
+```
+
+The command outputs three values, `CLIENT_ID`, `CLIENT_SECRET`, and `TENANT_ID`, plus an install link. The client secret is shown once and won't be shown again, so save it immediately.
+
+## Step 4: Configure Hermes
+
+Hermes needs the three credentials from Step 3, and you should restrict who can talk to the bot. Configuration goes in `~/.hermes/.env` (or the `config.yaml` alternative below).
+
+Add the required variables:
+
+```bash
+TEAMS_CLIENT_ID=<client id from step 3>
+TEAMS_CLIENT_SECRET=<client secret from step 3>
+TEAMS_TENANT_ID=<tenant id from step 3>
+```
+
+Recommended: the allowlist of AAD object IDs you collected in Step 1:
+
+```bash
+TEAMS_ALLOWED_USERS=<aad-object-id-1>,<aad-object-id-2>
+```
+
+Then lock the file down:
+
+```bash
+chmod 600 ~/.hermes/.env
+```
+
+**Alternative: `config.yaml`.** If you prefer file-based configuration, the docs document this structure:
+
+```yaml
+platforms:
+  teams:
+    enabled: true
+    extra:
+      client_id: <client id>
+      client_secret: <client secret>
+      tenant_id: <tenant id>
+      port: 3978
+    require_mention: false
+```
+
+## Step 5: Start the gateway
+
+With credentials in place, start (or restart) the gateway and confirm the Teams webhook is listening. The exact command depends on how you run Hermes.
+
+**Docker:** run this from the hermes-agent repo directory, not from `~`, as the docs specify ([Hermes Agent repo](https://github.com/NousResearch/hermes-agent)):
+
+```bash
+HERMES_UID=$(id -u) HERMES_GID=$(id -g) docker compose up -d gateway
+```
+
+**Native:**
+
+```bash
+hermes gateway restart
+```
+
+Or run in the foreground:
+
+```bash
+hermes gateway run
+```
+
+Verify the webhook is up. A health check should return `ok`:
+
+```bash
+curl http://localhost:3978/health
+```
+
+The logs should contain this line:
+
+```
+[teams] Webhook server listening on * (all interfaces, IPv4+IPv6):3978/api/messages
+```
+
+For a full status view:
+
+```bash
+hermes gateway status -l
+```
+
+## Step 6: Install and test in Teams
+
+The bot app is registered; now install it into your Teams client and send it a message. The install link from Step 3 (or the CLI command below) opens the install flow directly in Teams.
+
+```bash
+teams app get <teamsAppId> --install-link
+```
+
+Once installed, send the bot a direct message to test it. If the gateway is wired correctly, it should respond. If not, the troubleshooting section below covers the common failure points.
+
+One caveat: depending on your organization, Teams admin or policy steps may be needed to make custom apps installable. The docs don't specify these, so check with your Teams admin if the install link doesn't work in your tenant.
+
+## Mention behavior and RSC
+
+When the bot responds depends on where the message arrives and whether resource-specific consent (RSC) is configured. Understanding this before launch avoids most "the bot ignores me" confusion.
+
+- **Direct messages:** the bot responds to every message, no @mention needed.
+- **Group chats and channels:** the bot responds only when @mentioned, or when a message replies to one of its own messages.
+- **Mention tags:** Teams sends mentions as `<at>BotName</at>` tags; Hermes strips them before processing.
+
+The RSC nuance matters for channels and group chats. Without resource-specific consent, Teams only delivers messages that @mention the bot, so everything else never reaches Hermes. If you grant `ChannelMessage.Read.Group` (for channels) or `ChatMessage.Read.Chat` (for group chats) in the app manifest, Teams delivers every message in that scope. In that case, set `require_mention` to true (`TEAMS_REQUIRE_MENTION=true`) so the bot answers only when mentioned. Personal chats are never gated by these permissions.
+
+## Configuration reference
+
+All Teams-related environment variables, in one place. The three credential variables are required; the rest control access, ports, and delivery behavior.
+
+| Variable | Purpose |
+|---|---|
+| `TEAMS_CLIENT_ID` | Bot app client ID (required) |
+| `TEAMS_CLIENT_SECRET` | Bot app client secret (required) |
+| `TEAMS_TENANT_ID` | Microsoft tenant ID (required) |
+| `TEAMS_ALLOWED_USERS` | Comma-separated AAD object IDs allowed to interact (recommended) |
+| `TEAMS_ALLOW_ALL_USERS` | Set `true` to skip the allowlist entirely |
+| `TEAMS_HOME_CHANNEL` | Conversation ID for cron/proactive delivery |
+| `TEAMS_HOME_CHANNEL_NAME` | Human-readable name for the home channel |
+| `TEAMS_PORT` | Webhook port, default `3978` |
+| `TEAMS_REQUIRE_MENTION` | Require @mention even when RSC delivers all messages, default `false` |
+
+## Security
+
+A Teams bot is a public internet endpoint, so access control matters. The docs make three points, and each is simple to apply.
+
+- **Set `TEAMS_ALLOWED_USERS`** to the AAD object IDs of people who should be able to use the bot. Skip it (via `TEAMS_ALLOW_ALL_USERS=true`) only if you intend an open bot.
+- **Rotate the client secret** periodically, and keep credentials in the protected env file.
+- **Protect the env file itself:** `chmod 600 ~/.hermes/.env` so only your user can read it.
+
+The endpoint is authenticated by the Bot Framework: requests without a valid JWT are rejected. Messages from users outside `TEAMS_ALLOWED_USERS` are silently dropped.
+
+## Troubleshooting
+
+Match your symptom to the fix below before digging deeper.
+
+**`[teams] Failed to connect` in the logs.** The SDK authentication failed. Double-check your credentials and that the tenant ID matches the account you used in `teams login`.
+
+**No response in group chats or channels.** Revisit the mention rules and RSC section. Without RSC permissions, Teams only delivers @mention messages. Either @mention the bot, or grant `ChannelMessage.Read.Group` / `ChatMessage.Read.Chat` and manage behavior with `TEAMS_REQUIRE_MENTION`.
+
+**No messages arriving at all.** The tunnel must be publicly reachable. Verify the health endpoint returns `ok` (`curl http://localhost:3978/health`) and that the logs show the `[teams] Webhook server listening on ... :3978/api/messages` line.
+
+**`"UNKNOWN / HTTP/1.0" 400` in the logs when Teams sends a message.** The tunnel or proxy is forwarding HTTPS to Hermes' plain HTTP listener, per the [Teams messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/teams). Terminate TLS at the tunnel or proxy and forward HTTP to port `3978`.
+
+**Tunnel URL changed after a restart.** devtunnel URLs persist if you use a named tunnel. ngrok and cloudflared generate a new URL each run unless you have a paid plan. Update the bot endpoint with `teams app update --id <teamsAppId> --endpoint "https://<new-url>/api/messages"`.
+
+## FAQ
+
+### Does the bot see images or files?
+
+Per the messaging platforms capability table ([messaging index](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/)), Teams support is: Voice no, Images yes, Files no, Threads yes, Reactions no, Typing yes, Streaming no. You can share screenshots with the bot, but the table lists no file or voice support for Teams.
+
+### Can I approve actions without typing /approve?
+
+Yes. According to the [Teams messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/teams), Hermes sends Adaptive Card approvals in Teams with four buttons: **Allow Once**, **Allow Session**, **Always Allow**, and **Deny**. Clicking a button resolves the approval inline.
+
+### Can Hermes post meeting summaries to Teams?
+
+Yes, via the `teams_pipeline` plugin, with delivery mode `graph` (targeting a `chat_id` or `team_id` plus `channel_id`) or `incoming_webhook`. This is a separate setup; see the [Teams meetings guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/teams-meetings) for details, as it is outside the scope of this post.

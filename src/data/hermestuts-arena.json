@@ -12298,6 +12298,192 @@
         }
       ],
       "status": "shipped-below-threshold"
+    },
+    {
+      "id": "arena-hermes-teams-gateway-setup-20261023",
+      "match_id": "arena-hermes-teams-gateway-setup-20261023",
+      "date": "2026-10-23",
+      "timestamp": "2026-10-23T08:30:00",
+      "type": "content",
+      "category": "tutorial",
+      "pipeline": "cron-subagent-arena",
+      "orchestrator": "cron (claude-haiku-5-5)",
+      "topic": "Connecting Hermes Agent to Microsoft Teams",
+      "slug": "hermes-teams-gateway-setup",
+      "plan_model": "glm-5.3",
+      "plan_route": "cline-pass/glm-5.3 (1,125 words; MUST include and MUST NOT include both present)",
+      "brief_contract": true,
+      "research_model": "in-session web_extract of hermes-agent Teams and messaging docs (dossier in scratch)",
+      "research_lane": "not-dispatched",
+      "research_source": "in-session",
+      "judge": {
+        "model": "qwen/qwen3.7-flash",
+        "provider": "openrouter",
+        "mode": "tb-judge-multipass x3 (judge-draft-batch.py pre-QA round 1 and round 2; tb-judge-multipass.py post-QA)",
+        "rubric": "content"
+      },
+      "builder_dnf": [
+        "longcat-2.5-preview-free (Endpoint is unavailable, round 1 and 2)"
+      ],
+      "builder_flags": [
+        "omen-alpha was in the cron array but is RETIRED 2026-10-16; run as given, flagged"
+      ],
+      "total_models": 13,
+      "successful": 11,
+      "winner": "glm-5.3-flash",
+      "winner_provider": "opencode-go",
+      "winner_family": "glm",
+      "winner_score": 7.83,
+      "winner_decision_rule": "highest round-1 3-pass mean (7.83, spread 1.1); round-2 best claude-haiku 7.82 (spread 1.1) is a tie within noise, round-1 kept",
+      "threshold_met": false,
+      "final_judge_mean_post_qa": 7.68,
+      "final_judge_spread_post_qa": 1.25,
+      "qa_model": "claude-sonnet-5-5",
+      "qa_provider": "claude-cli",
+      "qa_verdict": "PASS (minor fixes recommended): 10 defects listed (overstated source claims, unsourced quantifiers, mention rule incomplete, missing teams app update and 400 troubleshooting). All applied by the orchestrator.",
+      "qa_note": "Post body was rewritten by the orchestrator from the QA defect list, not by a builder. Judge score reflects the builder draft; the shipped text was re-judged at 7.68 (spread 1.25, not noisy).",
+      "linkcheck": {
+        "tool": "arena-linkcheck.py",
+        "ok": 8,
+        "dead": 0,
+        "blocked_unverified": 0,
+        "note": "npmjs 403 was dropped from the post"
+      },
+      "redo_iterations": 2,
+      "redo_note": "Round 2 re-dispatched all 13 lanes with a PREVIOUS ISSUES block. Round-2 means were lower for most lanes (noise spreads 1.5-3.4), so round-1 winner kept. Only 2 of the 3 allowed redo iterations were run (time budget).",
+      "rounds": {
+        "round1_best": 7.83,
+        "round2_best": 7.82
+      },
+      "scores": [
+        {
+          "model": "glm-5.3-flash",
+          "mean": 7.83,
+          "round": 1
+        },
+        {
+          "model": "gpt-6-luna",
+          "mean": 7.63,
+          "round": 1
+        },
+        {
+          "model": "ling-3.1-flash",
+          "mean": 7.6,
+          "round": 1
+        },
+        {
+          "model": "beam-free",
+          "mean": 7.35,
+          "round": 1
+        },
+        {
+          "model": "deepseek-v4.1-flash",
+          "mean": 7.42,
+          "round": 1
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "mean": 7.23,
+          "round": 1
+        },
+        {
+          "model": "omen-alpha",
+          "mean": 6.82,
+          "round": 1
+        },
+        {
+          "model": "mimo-v2.6-flash",
+          "mean": 6.55,
+          "round": 1
+        },
+        {
+          "model": "qwen3.8-flash",
+          "mean": 6.5,
+          "round": 1
+        },
+        {
+          "model": "hy3",
+          "mean": 6.43,
+          "round": 1
+        },
+        {
+          "model": "gemini-3.8-flash-medium",
+          "mean": 6.23,
+          "round": 1
+        },
+        {
+          "model": "muse-spark-1.3-contributor",
+          "mean": 6.0,
+          "round": 1
+        },
+        {
+          "model": "longcat-2.5-preview-free",
+          "mean": 0.0,
+          "round": 1
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "mean": 7.82,
+          "round": 2
+        },
+        {
+          "model": "qwen3.8-flash",
+          "mean": 7.52,
+          "round": 2
+        },
+        {
+          "model": "glm-5.3-flash",
+          "mean": 7.15,
+          "round": 2
+        },
+        {
+          "model": "omen-alpha",
+          "mean": 6.85,
+          "round": 2
+        },
+        {
+          "model": "gpt-6-luna",
+          "mean": 6.93,
+          "round": 2
+        },
+        {
+          "model": "mimo-v2.6-flash",
+          "mean": 5.95,
+          "round": 2
+        },
+        {
+          "model": "muse-spark-1.3-contributor",
+          "mean": 5.95,
+          "round": 2
+        },
+        {
+          "model": "deepseek-v4.1-flash",
+          "mean": 5.63,
+          "round": 2
+        },
+        {
+          "model": "beam-free",
+          "mean": 5.63,
+          "round": 2
+        },
+        {
+          "model": "ling-3.1-flash",
+          "mean": 6.22,
+          "round": 2
+        },
+        {
+          "model": "hy3",
+          "mean": 3.6,
+          "round": 2
+        },
+        {
+          "model": "gemini-3.8-flash-medium",
+          "mean": 3.48,
+          "round": 2
+        }
+      ],
+      "status": "shipped-below-threshold",
+      "leaderboard": "NOT REBUILT: hermestuts has no canonical leaderboard rebuilder in arena-finalize.py (pitfall). Match appended to matches[]; leaderboard counts unresolved."
     }
   ],
   "leaderboard": [
