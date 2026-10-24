@@ -12484,6 +12484,195 @@
       ],
       "status": "shipped-below-threshold",
       "leaderboard": "NOT REBUILT: hermestuts has no canonical leaderboard rebuilder in arena-finalize.py (pitfall). Match appended to matches[]; leaderboard counts unresolved."
+    },
+    {
+      "id": "arena-hermes-agent-mattermost-setup-guide-2026-20261024",
+      "match_id": "arena-hermes-agent-mattermost-setup-guide-2026-20261024",
+      "date": "2026-10-24",
+      "timestamp": "2026-10-24T09:30:00",
+      "type": "content",
+      "category": "tutorial",
+      "pipeline": "cron-subagent-arena",
+      "orchestrator": "cron (claude-haiku-5-5)",
+      "topic": "Hermes Agent + Mattermost: A Beginner's Setup Guide (2026)",
+      "slug": "hermes-agent-mattermost-setup-guide-2026",
+      "plan_model": "glm-5.3",
+      "plan_route": "cline-pass/glm-5.3 (MUST include + MUST NOT include present; truncation check passed)",
+      "brief_contract": true,
+      "research_model": "in-session web_extract of Hermes Mattermost docs + cron docs (dossier in scratch)",
+      "research_lane": "not-dispatched",
+      "research_source": "in-session",
+      "research_note": "No tool-capable research lane was dispatched; the facts dossier was built in-session from fetched docs (14 URLs HTTP 200 via arena-linkcheck).",
+      "judge": {
+        "model": "qwen3.7-flash",
+        "provider": "tokenharbor (judge route per 2026-10-15 directive; tb-judge-multipass.py)",
+        "mode": "tb-judge-multipass x3 per draft; winner re-judged x3 (pre-QA r2) and x3 (r4); final text judged x3 twice (r3 + judge-b)",
+        "rubric": "content"
+      },
+      "builder_dnf": [
+        "gpt-6-luna (round 2: API error, peer could not complete)",
+        "qwen3.8-flash (round 2: hung, no draft)"
+      ],
+      "builder_flags": [
+        "omen-alpha is RETIRED 2026-10-16 but was in the cron array; run as given and flagged",
+        "poolside/laguna-s-2.1-free is removed from the 2026-10-16 canonical roster but was in the cron array; run as given and flagged",
+        "poolside/laguna-s-2.1-free round 1 fell back from commandcode to kilo (provider capacity error)"
+      ],
+      "total_models": 13,
+      "successful": 13,
+      "successful_round2": 11,
+      "winner": "deepseek-v4.1-flash",
+      "winner_provider": "commandcode",
+      "winner_family": "deepseek",
+      "winner_score": 8.27,
+      "winner_decision_rule": "highest 6-pass pre-QA mean across both rounds (8.27 vs round-1 mimo 3-pass 8.28 whose re-judge fell to 7.43)",
+      "final_judge_mean_post_qa": 8.05,
+      "final_judge_passes": [
+        7.92,
+        8.17
+      ],
+      "final_judge_spread_post_qa": 1.0,
+      "final_judge_note": "two independent 3-pass runs on the shipped text: 7.92 and 8.17; mean of 6 passes 8.05 (marginal pass)",
+      "threshold_met": true,
+      "verification_status": "confirmed",
+      "verification_note": "disprove_pass.py (glm-5.3 via cline-pass, a different family from the deepseek winner) on the shipped text: confirmed.",
+      "qa_model": "claude-sonnet-5-5",
+      "qa_provider": "claude-cli",
+      "qa_verdict": "FAIL on first pass: 12 defect groups (e.g. the curl route returns the bot ID with a bot token; DM sentence contradicted the allowlist; unsourced ping/--version/open-source/Team-Edition claims; filler checkables). All applied by the orchestrator.",
+      "qa_note": "Post body rewritten by the orchestrator from the QA defect list, not by a builder. Link count was then raised to 14 verified URLs (policy >=12); the H2 lead paragraphs were restructured to the 40-60 word answer rule and re-judged.",
+      "linkcheck": {
+        "tool": "arena-linkcheck.py",
+        "ok": 14,
+        "dead": 0,
+        "blocked_unverified": 0
+      },
+      "hero": {
+        "tool": "gen-image-verified.sh (Lumenfall)",
+        "url": "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-mattermost-setup-guide-2026-1792857604.webp",
+        "http": 200
+      },
+      "redo_iterations": 2,
+      "redo_note": "Round 2 re-dispatched 13 lanes with a PREVIOUS ISSUES block (11 drafts; gpt-6-luna failed, qwen3.8 hung). Round-2 winner was deepseek at 8.07 (3-pass); the 6-pass mean 8.27 stays above the round-1 best. Only 2 of 3 redo budget was used.",
+      "rounds": {
+        "round1_best_3pass": 8.32,
+        "round2_best_3pass": 8.07,
+        "winner_6pass": 8.27
+      },
+      "results": [
+        {
+          "model": "deepseek-v4.1-flash",
+          "provider": "commandcode",
+          "family": "deepseek",
+          "round1_mean": 8.32,
+          "round2_mean": 8.07,
+          "status": "success",
+          "note": "WINNER: round-2 draft. 6-pass pre-QA mean 8.27 (r2 3-pass 8.07 + re-judge 8.47). Round-1 deepseek 6-pass 7.88."
+        },
+        {
+          "model": "mimo-v2.6-flash",
+          "provider": "opencode-go",
+          "family": "mimo",
+          "round1_mean": 8.28,
+          "round2_mean": 7.93,
+          "status": "success"
+        },
+        {
+          "model": "glm-5.3-flash",
+          "provider": "opencode-go",
+          "family": "glm",
+          "round1_mean": 7.9,
+          "round2_mean": 6.8,
+          "status": "success"
+        },
+        {
+          "model": "ling-3.1-flash",
+          "provider": "tokenharbor",
+          "family": "ling",
+          "round1_mean": 7.7,
+          "round2_mean": 6.15,
+          "status": "success"
+        },
+        {
+          "model": "beam-free",
+          "provider": "opencode-go",
+          "family": "beam",
+          "round1_mean": 7.32,
+          "round2_mean": 7.52,
+          "status": "success"
+        },
+        {
+          "model": "muse-spark-1.3-contributor",
+          "provider": "opencode-go",
+          "family": "muse",
+          "round1_mean": 7.07,
+          "round2_mean": 7.27,
+          "status": "success"
+        },
+        {
+          "model": "poolside/laguna-s-2.1-free",
+          "provider": "commandcode",
+          "family": "poolside",
+          "round1_mean": 7.07,
+          "round2_mean": 5.4,
+          "status": "success"
+        },
+        {
+          "model": "hy3",
+          "provider": "opencode-go",
+          "family": "tencent",
+          "round1_mean": 6.92,
+          "round2_mean": 5.88,
+          "status": "success"
+        },
+        {
+          "model": "gpt-6-luna",
+          "provider": "commandcode",
+          "family": "gpt",
+          "round1_mean": 6.85,
+          "round2_mean": null,
+          "status": "success",
+          "round2_status": "failed: API error \"Oops, peer could not complete the request\""
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "provider": "claude-cli",
+          "family": "claude",
+          "round1_mean": 6.83,
+          "round2_mean": 6.98,
+          "status": "success"
+        },
+        {
+          "model": "qwen3.8-flash",
+          "provider": "tokenharbor",
+          "family": "qwen",
+          "round1_mean": 6.27,
+          "round2_mean": null,
+          "status": "success",
+          "round2_status": "no draft: lane hung past 25 min (retry 1/1 after timeout), excluded"
+        },
+        {
+          "model": "omen-alpha",
+          "provider": "opencode-go",
+          "family": "omen",
+          "round1_mean": 5.77,
+          "round2_mean": 7.1,
+          "status": "success"
+        },
+        {
+          "model": "gemini-3.8-flash-medium",
+          "provider": "agy",
+          "family": "gemini",
+          "round1_mean": 5.43,
+          "round2_mean": 6.52,
+          "status": "success"
+        }
+      ],
+      "ledger_notes": [
+        "Leaderboard NOT rebuilt: hermestuts has no arena-finalize support; recalc is unresolved (rebuild needed).",
+        "Builder Bearer *** leak normalized to YOUR_TOKEN in all drafts before judging (applies to all lanes equally).",
+        "Post also had HERO_IMAGE_PROMPT stripped before judging and shipping.",
+        "No hands-on testing: the post says so, and the fabrication gate was respected."
+      ]
     }
   ],
   "leaderboard": [

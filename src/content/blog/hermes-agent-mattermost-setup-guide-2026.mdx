@@ -1,0 +1,129 @@
+---
+title: "Hermes Agent + Mattermost: A Beginner's Setup Guide (2026)"
+description: "Connect a Hermes Agent bot to your self-hosted Mattermost server: bot token, user ID, gateway config, and first message, step by step."
+pubDate: 2026-10-24
+lastVerified: "2026-10-24"
+tags: ["hermes-agent", "mattermost", "gateway", "setup"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-mattermost-setup-guide-2026-1792857604.webp"
+---
+
+You can have a Hermes Agent answering direct messages inside your own Mattermost server in a few steps, with no external Mattermost library and no Mattermost Cloud subscription, just a bot token and a few lines in an `.env` file. This guide walks a self-hoster through creating the bot account, copying the token, finding the IDs Hermes needs, configuring the gateway, sending the first message, and fixing the problems people hit most often. Everything here is documentation-based, drawn from the [official Hermes Mattermost guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/mattermost) and Mattermost's public docs.
+
+## What You Need Before You Start
+
+You need a self-hosted Mattermost instance, System Admin rights or a cooperative admin, Hermes Agent installed, and a terminal. Team Edition and Enterprise Edition both work, and no Mattermost Cloud subscription is required, per the [Hermes Mattermost documentation](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/mattermost). No extra Mattermost library is needed, because the adapter uses aiohttp, which Hermes already depends on. Before you paste any token anywhere, read our notes on [handling bot tokens and secrets safely](/blog/security-privacy/).
+
+## How the Hermes–Mattermost Integration Works
+
+Hermes talks to Mattermost through the REST API v4 plus a WebSocket for real-time events. It handles text, file attachments, images, and slash commands. Direct messages get a reply without an @mention, channels get one only when the bot is mentioned, and thread replies are optional, as the [Hermes Mattermost documentation](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/mattermost) describes. The API surface is documented in the [Mattermost API reference](https://api.mattermost.com/).
+
+Mattermost itself is open source, with its code in the [Mattermost GitHub repository](https://github.com/mattermost/mattermost), and Hermes is in the [hermes-agent GitHub repository](https://github.com/NousResearch/hermes-agent). If you also run Telegram, our [Telegram integration walkthrough](/blog/hermes-telegram-integration-guide/) and the [Hermes Telegram docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/telegram) cover that platform.
+
+### DMs vs Channels vs Threads — Behaviour at a Glance
+
+Which context triggers a reply, and how sessions are kept apart, depends on where the message arrives.
+
+| Context | What triggers a reply | Session model |
+|---|---|---|
+| Direct message | Every message, no @mention needed | Its own session per DM |
+| Public or private channel | @mention only, by default | Per-user session inside the channel (default) |
+| Thread | Only when `MATTERMOST_REPLY_MODE=thread` is set, and the thread is isolated from the parent channel | Its own session namespace per thread |
+
+When you @mention the bot, the mention is stripped before the message is processed. This behaviour is documented, not something we observed on a live bot.
+
+### Per-User Sessions vs One Shared Channel Session
+
+Each person in a shared channel gets their own session by default. The Hermes Mattermost guide's example config sets `group_sessions_per_user: true`. Setting it to `false` gives the whole channel one shared conversation, and the guide warns that shared context growth and token cost then fall on every participant, so one long tool-heavy task can bloat everyone's context.
+
+## Step 1 — Enable Bot Account Creation
+
+Bot accounts must be enabled before anyone can create one, so a System Admin turns the setting on first. In System Console → Integrations → Bot Accounts, set Enable Bot Account Creation to `true`, as the [Hermes Mattermost documentation](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/mattermost) describes. Without System Admin rights, ask your administrator to do it; Mattermost's [documentation](https://docs.mattermost.com/) covers the admin side.
+
+## Step 2 — Create the Bot and Copy Your Token
+
+Create the bot from the ☰ menu under Integrations → Bot Accounts → Add Bot Account, with a username such as `hermes` and the Role **Member**, which the Hermes guide says is sufficient. Mattermost shows the token only once, so copy it immediately into a password manager. If you would rather Hermes post as your own user, create a personal access token instead (Profile → Security → Personal Access Tokens). Anyone holding the token can act as that account, so never commit the value.
+
+## Step 3 — Add the Bot to Your Channels
+
+Each channel where you want the bot needs a membership step. Open the channel name, choose **Add Members**, and add the bot account, following the [Hermes Mattermost documentation](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/mattermost). DMs need no channel setup and work once the gateway is running and your user is allowed (see Step 5).
+
+## Step 4 — Find Your User ID and Channel ID
+
+Read your User ID from the Profile dialog. It is a 26-character alphanumeric string, not your @username. The Hermes guide also shows an API route, `curl -H "Authorization: Bearer YOUR_TOKEN" https://your-mattermost-server/api/v4/users/me | jq .id`, but that call returns the ID of whoever owns the token you pass. With the bot token you get the bot's ID, so use the Profile dialog for `MATTERMOST_ALLOWED_USERS`. For a channel ID, open the channel name and choose **View Info**.
+
+**Checkable step:** confirm the ID you copied from Profile is 26 characters and contains no `@`.
+
+## Step 5 — Configure the Gateway
+
+Run `hermes gateway setup`, choose Mattermost, and paste your server URL, bot token, and user ID. That is Option A in the [Hermes Mattermost documentation](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/mattermost). Option B is editing `~/.hermes/.env` directly:
+
+```bash
+# ~/.hermes/.env — Mattermost gateway configuration
+MATTERMOST_URL=https://mm.example.com
+MATTERMOST_TOKEN=<your-bot-token>
+MATTERMOST_ALLOWED_USERS=<your-26-char-user-id>   # comma-separated for multiple users
+```
+
+> **Security callout: always set `MATTERMOST_ALLOWED_USERS`.** Without it, the gateway denies all users by default. Authorized users get full agent capabilities, including tool use and system access, which is exactly why the allowlist exists. Our [security and privacy notes](/blog/security-privacy/) cover the wider picture.
+
+If you also wire up Microsoft Teams, our [Teams gateway setup guide](/blog/hermes-teams-gateway-setup/) covers that platform separately. For the general `config.yaml` layout that holds keys like `group_sessions_per_user`, see the [Hermes configuration documentation](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
+
+### Optional Settings Worth Knowing
+
+The Hermes guide lists these optional keys. The defaults shown are the documented ones.
+
+| Setting | Documented default | What it changes |
+|---|---|---|
+| `MATTERMOST_REPLY_MODE` | `off` (flat messages) | `thread` nests replies under the original message |
+| `MATTERMOST_REQUIRE_MENTION` | `true` | `false` makes the bot respond to all channel messages, not just mentions |
+| `MATTERMOST_FREE_RESPONSE_CHANNELS` | unset | Comma-separated channel IDs that respond without an @mention |
+| `MATTERMOST_HOME_CHANNEL` | unset | Target channel for proactive messages such as cron output |
+| `MATTERMOST_ALLOWED_CHANNELS` | unset | Non-empty means the bot answers only in those channels; DMs are exempt, and other channels are silently ignored even when the bot is @mentioned |
+
+The channel allowlist is checked before mention gating, so an @mention in an unlisted channel gets silence rather than an error. Per-channel prompts use `mattermost:` → `channel_prompts:`, keyed by channel ID. Each prompt is injected as an ephemeral system instruction on every turn and is never saved to the transcript.
+
+**Checkable step:** if you set `MATTERMOST_ALLOWED_CHANNELS`, confirm each channel ID in the comma-separated string matches the one shown under View Info.
+
+## Start the Gateway and Send Your First Message
+
+Start the gateway with `hermes gateway`, and the bot connects within a few seconds, per the Hermes guide. The guide says it can also run in the background or as a systemd service. Send the bot a DM to test it. Then type `/sethome` in a channel where the bot is present, or set `MATTERMOST_HOME_CHANNEL`, so proactive messages such as cron output have a destination, as the [Hermes cron documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) describes. The [slash-commands reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands) lists the other commands. For the Slack equivalent, see our [Slack integration guide](/blog/hermes-slack-integration-guide/) and the [Hermes Slack docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack).
+
+## Troubleshooting Common Problems
+
+Most failures map to one of five causes, and the [Hermes Mattermost documentation](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/mattermost) lists each one. Check the bot's membership and your allowlist first, then the token. Start with the symptom in the list below that matches yours.
+
+- **Bot not responding:** the bot is not in the channel, your user ID is missing from `MATTERMOST_ALLOWED_USERS`, or the channel is excluded by `MATTERMOST_ALLOWED_CHANNELS`.
+- **403 Forbidden:** the token is invalid, or the bot lacks permission to post in that channel.
+- **WebSocket reconnect loops:** the adapter retries with exponential backoff from 2s to 60s. A reverse proxy such as nginx needs a `/api/v4/websocket` location with `Upgrade` and `Connection` headers and `proxy_read_timeout 600s`.
+- **"Failed to authenticate" or "Bot is offline":** a wrong URL or token, or the gateway is not running.
+- **"User not allowed":** your user ID is absent from `MATTERMOST_ALLOWED_USERS`.
+
+For the wider security context, see the [Hermes security documentation](https://hermes-agent.nousresearch.com/docs/user-guide/security).
+
+## FAQ
+
+Four questions come up most often about running Hermes in Mattermost. Each answer below names the documented behaviour and the one setting that changes it.
+
+### Does Hermes work with the free Mattermost Team Edition?
+
+Yes. The [Hermes Mattermost documentation](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/mattermost) states that it works with both Team Edition (free) and Enterprise Edition, on any self-hosted instance, with no Mattermost Cloud subscription required. You can compare Mattermost's own offerings on the [Mattermost homepage](https://mattermost.com/).
+
+### Do I need to @mention the bot in DMs?
+
+No. DMs get a reply to every message without an @mention, and each DM has its own session, per the [Hermes Mattermost documentation](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/mattermost). Channels are the opposite: mention-gated by default, with the mention stripped before processing.
+
+### Can the bot answer every message in a channel, not just mentions?
+
+Yes. Set `MATTERMOST_REQUIRE_MENTION=false`, or list channel IDs in `MATTERMOST_FREE_RESPONSE_CHANNELS`. Every message in those channels then enters the agent's context, so start with one low-traffic channel.
+
+### I lost my bot token. What now?
+
+The token is shown once, so regenerate it from the bot account settings, as the Hermes guide describes. Then update `MATTERMOST_TOKEN` in `~/.hermes/.env` and restart the gateway so the new value loads.
+
+## The Bottom Line
+
+Mattermost is a good fit for Hermes if you self-host and want an agent in your team's workspace. The integration needs no extra library, its channel defaults are conservative (mention-gated channels, flat replies), and the gateway denies all users until `MATTERMOST_ALLOWED_USERS` is set. It suits beginners who are comfortable with a terminal and an `.env` file. If you run more than one platform, compare the [Hermes messaging overview](https://hermes-agent.nousresearch.com/docs/user-guide/messaging) first.
+
+## How This Guide Was Built
+
+This guide is based on the official Hermes Agent documentation and Mattermost's public documentation, fetched on 2026-10-24. We did not install Mattermost or run the bot ourselves. Configuration keys, defaults, and troubleshooting causes come from the linked Hermes Mattermost guide. Where a behaviour is described only qualitatively in the docs, we keep it qualitative. The [Hermes documentation root](https://hermes-agent.nousresearch.com/docs) and the [Mattermost documentation](https://docs.mattermost.com/) are the starting points for further reading.
