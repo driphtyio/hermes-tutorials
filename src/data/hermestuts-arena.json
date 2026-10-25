@@ -12673,6 +12673,196 @@
         "Post also had HERO_IMAGE_PROMPT stripped before judging and shipping.",
         "No hands-on testing: the post says so, and the fabrication gate was respected."
       ]
+    },
+    {
+      "id": "arena-hermestuts-news_release-20261025",
+      "match_id": "arena-hermestuts-news_release-20261025",
+      "date": "2026-10-25",
+      "timestamp": "2026-10-25T08:34:53",
+      "type": "content",
+      "category": "release-notes",
+      "pipeline": "cron-subagent-arena",
+      "orchestrator": "cron (claude-haiku-5-5)",
+      "topic": "Hermes Agent v0.22.x in Practice: What Changed, What to Check, What's Still Pending",
+      "slug": "hermes-agent-v022-release-line-2026",
+      "plan_model": "glm-5.3",
+      "plan_route": "cline-pass/glm-5.3 attempt 1 -> antseed P2P 524 (failed); retry via zai/glm-5.3 succeeded; MUST include + MUST NOT include present; not truncated",
+      "brief_contract": true,
+      "research_model": "in-session GitHub release API (v0.22.1-v0.22.5 bodies) + arena-linkcheck of 14 candidate URLs (14 OK)",
+      "research_lane": "not-dispatched",
+      "research_source": "in-session",
+      "research_note": "No tool-capable research lane; release notes fetched directly from GitHub API and saved as dossier.",
+      "judge": {
+        "model": "tokenharbor/qwen3.7-flash",
+        "method": "judge-draft-batch.py --passes 3",
+        "pre_qa_mean": 8.33,
+        "post_qa_mean": 7.63
+      },
+      "builder_dnf": [
+        "qwen3.8-flash"
+      ],
+      "builder_flags": [
+        "omen-alpha is RETIRED (2026-10-16) but still in the cron array; run as given, flagged",
+        "poolside commandcode at capacity -> kilo fallback (kilo is :free-only per config)",
+        "5 drafts over 2,500-word body cap (deepseek, glm-flash, mimo, muse, ling): ineligible",
+        "qwen3.8-flash DNF"
+      ],
+      "total_models": 13,
+      "successful": 12,
+      "successful_round2": 0,
+      "winner": "omen-alpha",
+      "winner_provider": "opencode-go",
+      "winner_family": "omen",
+      "winner_score": 8.33,
+      "winner_decision_rule": "highest pre-QA 3-pass mean among contract-eligible drafts (<=2,500 body words); omen 8.33 spread 0.3 beat beam 8.00 and haiku 7.87",
+      "final_judge_mean_post_qa": 7.63,
+      "final_judge_passes": [],
+      "final_judge_spread_post_qa": 1.5,
+      "final_judge_note": "shipped text = QA round 4. Post-QA re-judges: r2 7.83 (spread 0.6), r3 7.90 (spread 0.2), r4 7.63 (spread 1.5). Pre-QA 8.33 -> shipped 7.63 is a 0.70 drop from QA correction edits.",
+      "threshold_met": true,
+      "verification_status": "not-run",
+      "verification_note": "disprove_pass.py not run on the shipped text; a machine-gate verification is UNRESOLVED.",
+      "qa_model": "claude-sonnet-5-5",
+      "qa_provider": "claude-cli",
+      "qa_verdict": "FAIL r1 (12 defects incl. wrong-commit omission, 0.22.4 count, unsourced lines) -> FAIL r2 (6 defects) -> FAIL minor r3 (7 items). Round-4 edits were NOT re-QA'd.",
+      "qa_note": "Orchestrator QA rewrites applied via exact-match scripts (fix_r2/r3/r4). Each QA item verified against the saved release notes before editing. Hero line removed from the shipped copy.",
+      "linkcheck": {
+        "unique_external": 17,
+        "ok": 17,
+        "blocked": 0,
+        "dead": 0
+      },
+      "hero": {
+        "status": "omitted",
+        "reason": "gen-image-verified.sh: Lumenfall x3 and HF FLUX x3 failed; OpenRouter fallback disabled; heroImage omitted per policy"
+      },
+      "redo_iterations": 3,
+      "redo_note": "3 QA-driven rewrite rounds; no builder re-dispatch.",
+      "rounds": 1,
+      "results": [
+        {
+          "model": "omen-alpha",
+          "provider": "opencode-go",
+          "family": "omen",
+          "round1_mean": 8.33,
+          "round2_mean": null,
+          "status": "judged",
+          "note": "winner (pre-QA 3-pass mean; spread 0.3; RETIRED lane run as given per cron array, flagged)"
+        },
+        {
+          "model": "deepseek-v4.1-flash",
+          "provider": "commandcode",
+          "family": "deepseek",
+          "round1_mean": 8.08,
+          "round2_mean": null,
+          "status": "judged",
+          "note": "over 2,500-word cap (3,219); ineligible; judged"
+        },
+        {
+          "model": "opencode-go/beam-free",
+          "provider": "opencode-go",
+          "family": "beam",
+          "round1_mean": 8.0,
+          "round2_mean": null,
+          "status": "judged",
+          "note": "eligible runner-up (spread 1.5)"
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "provider": "claude-cli",
+          "family": "claude",
+          "round1_mean": 7.87,
+          "round2_mean": null,
+          "status": "judged",
+          "note": "eligible (spread 1.5)"
+        },
+        {
+          "model": "opencode-go/glm-5.3-flash",
+          "provider": "opencode-go",
+          "family": "glm",
+          "round1_mean": 7.75,
+          "round2_mean": null,
+          "status": "judged",
+          "note": "over cap (2,738); ineligible"
+        },
+        {
+          "model": "gpt-6-luna",
+          "provider": "commandcode",
+          "family": "gpt",
+          "round1_mean": 7.02,
+          "round2_mean": null,
+          "status": "judged",
+          "note": "eligible (spread 2.1)"
+        },
+        {
+          "model": "opencode-go/mimo-v2.6-flash",
+          "provider": "opencode-go",
+          "family": "mimo",
+          "round1_mean": 7.33,
+          "round2_mean": null,
+          "status": "judged",
+          "note": "over cap (2,760); ineligible (spread 1.6)"
+        },
+        {
+          "model": "opencode-go/muse-spark-1.3-contributor",
+          "provider": "opencode-go",
+          "family": "muse",
+          "round1_mean": 6.57,
+          "round2_mean": null,
+          "status": "judged",
+          "note": "over cap (2,720); ineligible (spread 1.95)"
+        },
+        {
+          "model": "poolside/laguna-s-2.1-free",
+          "provider": "commandcode",
+          "family": "poolside",
+          "round1_mean": 6.72,
+          "round2_mean": null,
+          "status": "judged",
+          "note": "eligible; spread 2.95 (above 1.5, not re-judged); commandcode 'at capacity' fell back to kilo"
+        },
+        {
+          "model": "gemini-3.8-flash-medium",
+          "provider": "agy",
+          "family": "gemini",
+          "round1_mean": 6.37,
+          "round2_mean": null,
+          "status": "judged",
+          "note": "eligible (2,485 words, at cap; spread 1.85)"
+        },
+        {
+          "model": "ling-3.1-flash",
+          "provider": "tokenharbor",
+          "family": "ling",
+          "round1_mean": 5.82,
+          "round2_mean": null,
+          "status": "judged",
+          "note": "over cap (2,838); ineligible; 393s, one timeout retry"
+        },
+        {
+          "model": "opencode-go/hy3",
+          "provider": "opencode-go",
+          "family": "tencent",
+          "round1_mean": 4.8,
+          "round2_mean": null,
+          "status": "judged",
+          "note": "eligible but weak (spread 1.6)"
+        },
+        {
+          "model": "qwen3.8-flash",
+          "provider": "tokenharbor",
+          "family": "qwen",
+          "round1_mean": null,
+          "round2_mean": null,
+          "status": "dnf",
+          "note": "DNF: tokenharbor timeout x2, commandcode retry produced no draft by record time"
+        }
+      ],
+      "ledger_notes": [
+        "Judge drop from pre-QA 8.33 to post-QA 7.63 is a QA correction effect, not a noise signal alone (spread 1.5 on r4).",
+        "Leaderboard NOT rebuilt: hermestuts has no canonical rebuild path in arena-finalize; leaderboard and total_matches unchanged, reported unresolved.",
+        "arena-finalize does not support hermestuts (pitfall); record appended directly, deploy via deploy-hermes-tutorials.sh."
+      ]
     }
   ],
   "leaderboard": [

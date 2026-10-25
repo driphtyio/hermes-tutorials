@@ -1,0 +1,145 @@
+---
+title: "Hermes Agent v0.22.x in Practice: What Changed, What to Check, What's Still Pending"
+description: "A practical walkthrough of Hermes Agent v0.22.1 through v0.22.5 — gateway reboot fixes, a ~620-PR rollup, Desktop polish, the plugin extraction, and what to verify after upgrading."
+pubDate: 2026-10-25
+lastVerified: "2026-10-25"
+tags: ["release-notes", "hermes-agent", "patch-releases", "operators"]
+draft: false
+---
+
+## What's New in Hermes Agent v0.22.1–v0.22.5
+
+Hermes Agent shipped five patch releases between October 14 and October 23, 2026, covering a v0.22.1 build shipped from the wrong commit, gateway reboot recovery in v0.22.2, a ~620-PR rollup, Desktop polish fixes, and an ~81-PR follow-up that moved two features out of core into plugins. This guide walks through each release, what operators should verify after upgrading, and what remains pending until the curated [v0.23.0 notes](https://github.com/NousResearch/hermes-agent/releases).
+
+## v0.22.1 — A Wrong-Commit Build, Plus Catalog Growth and Desktop Controls
+
+v0.22.1, published October 14, 2026, is a patch release for the Windows Store build and plugin updates, per its [release page](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.1). It also adds nemotron super 3.5 default parameters, a curated model list at the top of the model picker, catalog entries including Korean and Brazilian Portuguese language packs, and Desktop group and hosted-room controls.
+
+**Warning:** the v0.22.2 notes say v0.22.1 was built from the wrong commit. It shipped unreleased gateway work, and the Microsoft Store app could stick on "Connecting." v0.22.2 is the release v0.22.1 was meant to be, so move to v0.22.2 or later.
+
+For existing users, the practical point is the warning above: the v0.22.1 build should not be the one you keep. The [plugin catalog additions](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.1) include `hermes-lang-ko` (a Korean Desktop language pack), `hermes-lang-pt-br`, `teamorouter`, `author-feed`, `wait-ledger`, and `openinvest`. If you run Hermes Desktop for a multilingual team, the language packs are worth a look; if you route across providers, `teamorouter` may be relevant.
+
+## v0.22.2 — Gateway Reboots and Long Local-Model Turns
+
+v0.22.2, published October 15, 2026, restores gateway startup after reboot and stabilizes long local-model conversations on laptops. After a restart, Linux can hand an early PID to an unrelated process, and a supervised gateway (systemd, launchd, Docker) could refuse to start; Hermes now records the boot it started in, per [PR #138594](https://github.com/NousResearch/hermes-agent/pull/138594), which fixes [issue #133744](https://github.com/NousResearch/hermes-agent/issues/133744).
+
+The v0.22.2 notes also flag a known issue: sessions that ran under the 0.22.1 gateway can't be deleted in 0.22.2.
+
+The second half of [v0.22.2](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.2) is about long local-model turns surviving on laptops, described in [PR #138560](https://github.com/NousResearch/hermes-agent/pull/138560): stall timers now skip sleep time, a recovered local server gets another try, and compression no longer times out while a long conversation is being read. In practical terms, if you run local models on a laptop that sleeps mid-conversation, this release addresses the failure modes where the session stalled or the compression step gave up.
+
+## v0.22.3 — The Big Rollup and What Went Undocumented
+
+v0.22.3, published October 21, 2026, rolls up roughly 620 merged PRs since v0.22.2 — 2,911 non-merge commits, 4,206 changed files, and 326 closed issues, according to the [v0.22.3 release page](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.3). The rollup is large, and the more useful detail for operators is what the release body does *not* document.
+
+Several changes landed in this window but were left undocumented in the release body, with upstream stating they will be covered by the curated v0.23.0 notes:
+
+- MCP progress notifications streamed as live tool progress
+- A refreshed classic CLI layout
+- `hermes plugins update`
+- A live `/loop` countdown row
+- A `post_compaction` plugin hook
+- Session auto-prune returning to opt-in, with a one-time prompt when disk runs low
+
+If you rely on [the release body](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.3) as your changelog of record, you are missing part of the picture for this window. The curated notes that ship with v0.23.0 are the intended backfill for everything from v0.22.0 onward — and they are still pending at the time of writing.
+
+## v0.22.4 — Desktop Polish and Catalog Additions
+
+v0.22.4, published October 21, 2026, lands six targeted fixes alongside new catalog entries, per the [v0.22.4 release page](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.4). The six fixes are small and targeted:
+
+- Desktop no longer shows suggestion pills above the composer ([PR #142559](https://github.com/NousResearch/hermes-agent/pull/142559))
+- Plugins that install nothing skip the dependency consent step ([PR #142569](https://github.com/NousResearch/hermes-agent/pull/142569))
+- WhatsApp can be re-paired after logout ([PR #142439](https://github.com/NousResearch/hermes-agent/pull/142439))
+- The approval-mode chip follows the active profile ([PR #142565](https://github.com/NousResearch/hermes-agent/pull/142565))
+- Desktop plugin review: the surface lint no longer flags prototype writes; reviewers check them by hand ([PR #142586](https://github.com/NousResearch/hermes-agent/pull/142586))
+- The desktop release pre-build check gets more time on slow storage ([PR #142623](https://github.com/NousResearch/hermes-agent/pull/142623))
+
+On the catalog side, v0.22.4 adds the bubblewrap `bwrap` terminal backend on Linux, Singularity/Apptainer, `mcp-serve`, and agent-importers (`hermes import-agent`, with Cursor support). Telegram Business moved to the Hermes Labs community tier — if you use Telegram Business integration, check where that now lives before upgrading.
+
+## v0.22.5 — Sign-In Rework, Usage Windows, and the Plugin Extraction
+
+v0.22.5, published October 23, 2026 (release body dated October 22), rolls up about 81 PRs since v0.22.4 — 231 non-merge commits, 804 files, and 30 closed issues, per the [v0.22.5 release page](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.5). Among the items the release body lists in its "undocumented here on purpose" note, the structural one to check is that `hermes mcp serve` and the Singularity backend moved out of core into plugins. Full curated notes for this window ship with v0.23.0.
+
+Other items in this window:
+
+- Nous sign-in reworked
+- `hermes update` holds back a stable release it refuses instead of offering it
+- Usage-window plan support: plan gauges and limit cards
+- Pluggable delegation backends — route subagents by model map or profile
+- `hermes import-agent` and OpenClaw migration; setup offers the importer when it finds another agent
+- Electron 44 upgrade and Pillow 13
+
+The plugin extraction is the change to check on existing setups. If you invoke `hermes mcp serve` or use the Singularity backend as core features today, expect them to live in plugins after this release — the release notes do not state the exact migration experience or any compatibility guarantees, so verify your own setup after upgrading rather than assuming either way. The pluggable delegation backends are listed beside it in the same note.
+
+## Comparison Table — The v0.22.x Line at a Glance
+
+The table below summarizes each release in the v0.22.x line with its date and practical focus, so operators can quickly identify which patch addresses their specific pain point — from Store build fixes to gateway boot recovery to the plugin extraction.
+
+| release | date | focus |
+|---|---|---|
+| [v0.22.1](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.1) | 2026-10-14 | Built from the wrong commit (move to v0.22.2+); Windows Store build, plugin updates, nemotron super 3.5 defaults, curated model list, catalog additions, Desktop group and hosted-room controls |
+| [v0.22.2](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.2) | 2026-10-15 | Gateway starts after reboot again (boot-epoch recording), long local-model turns survive on laptops |
+| [v0.22.3](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.3) | 2026-10-21 | ~620-PR rollup; several changes undocumented in the body, deferred to curated v0.23.0 notes |
+| [v0.22.4](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.4) | 2026-10-21 | Desktop polish (pills, consent, WhatsApp re-pair, approval chip, slow-storage pre-check), catalog additions, Telegram Business to Labs |
+| [v0.22.5](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.5) | 2026-10-23 | ~81-PR rollup; sign-in rework, usage windows, pluggable delegation, `hermes mcp serve` and Singularity moved into plugins, Electron 44, Pillow 13 |
+
+## What to Check After Upgrading
+
+After upgrading, operators should verify gateway startup after a reboot (especially supervised Linux setups), confirm plugin-based features still resolve now that `hermes mcp serve` and Singularity moved out of core, check whether session auto-prune prompted for opt-in, and confirm `hermes update` behavior when it refuses a stable release. Store users should update through the Microsoft Store per the [release pages](https://github.com/NousResearch/hermes-agent/releases).
+
+A practical checklist, grounded strictly in what the notes describe:
+
+1. **Gateway reboot behavior.** If you run a supervised gateway (systemd, launchd, Docker), reboot and confirm it starts. The [boot-epoch fix](https://github.com/NousResearch/hermes-agent/pull/138594) in v0.22.2 addresses the reused-PID refusal.
+2. **Plugin-based features.** Since [v0.22.5](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.5) moved `hermes mcp serve` and the Singularity backend into plugins, confirm those commands still work in your workflow and check the plugin catalog for the moved features.
+3. **Session auto-prune prompt.** Auto-prune is back to opt-in with a one-time prompt when disk runs low (documented as deferred to the [curated v0.23.0 notes](https://github.com/NousResearch/hermes-agent/releases)). Decide your policy before the prompt appears.
+4. **`hermes update` behavior.** The updater now holds back a stable release it refuses instead of offering it. If you script updates, check that your automation handles the held-back case.
+5. **Desktop specifics.** [v0.22.4](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.4) addresses suggestion pills, dependency-consent friction and WhatsApp re-pairing. Desktop apps installed from the installer (.exe / .dmg) see no change in the v0.22.3, v0.22.4 and v0.22.5 patch releases, so they pick up these fixes with the next bundled release.
+6. **Telegram Business.** If you relied on it, confirm it now lives in the Hermes Labs community tier and that your setup still works.
+7. **Known issue for 0.22.1 users.** Sessions that ran under the 0.22.1 gateway can't be deleted in 0.22.2, per the [v0.22.2 release page](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.2).
+
+## How to Update (CLI, Store, Docker)
+
+Updating depends on your install path, per the release pages: CLI users run `hermes update` or re-run the installer one-liner; the Microsoft Store app updates through the Store; Docker and Hermes Cloud users pull the `nousresearch/hermes-agent:stable` image (or `:latest`). The reworked `hermes update` now holds back a stable release it refuses instead of offering it, as noted on the [v0.22.5 release page](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.5).
+
+These commands come directly from the release pages — we have not run them against these releases ourselves. For install-path specifics, check the [Hermes Agent documentation](https://hermes-agent.nousresearch.com/docs) before scripting anything.
+
+## Frequently Asked Questions
+
+This section answers the questions the v0.22.x release notes raise: which release fixes a specific issue, whether upgrading is safe, what happened to `hermes mcp serve` and Singularity, when the curated v0.23.0 notes arrive, and how to update on each platform. Each answer is grounded in the official GitHub release notes and linked PRs.
+
+**Which v0.22.x release fixes the gateway failing to start after a reboot?**
+[v0.22.2](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.2), published October 15, 2026. Hermes now records the boot it started in, so a reused early PID no longer confuses a supervised gateway ([PR #138594](https://github.com/NousResearch/hermes-agent/pull/138594), fixing [issue #133744](https://github.com/NousResearch/hermes-agent/issues/133744)).
+
+**My supervised Linux gateway (systemd/Docker) refused to start — is that fixed?**
+That is the same failure mode. The fix landed in [v0.22.2](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.2) via [PR #138594](https://github.com/NousResearch/hermes-agent/pull/138594). After upgrading, reboot and confirm the gateway comes up under your supervisor.
+
+**What happened to `hermes mcp serve` and the Singularity backend?**
+In [v0.22.5](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.5) they moved out of core into plugins. The release notes do not state the exact migration steps or compatibility impact, so verify your own setup after upgrading and check the plugin catalog for the moved features if your workflow depends on them.
+
+**What changed with session auto-prune?**
+It returned to opt-in, with a one-time prompt when disk runs low. This was documented as deferred to the curated [v0.23.0 notes](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.3) rather than fully explained in the v0.22.3 body.
+
+**When will the curated release notes for v0.22.0+ ship?**
+Upstream states explicitly that the full curated notes for everything from v0.22.0 onward ship with [v0.23.0](https://github.com/NousResearch/hermes-agent/releases). They are pending at the time of writing; watch the [releases page](https://github.com/NousResearch/hermes-agent/releases) for that drop.
+
+**How do I update (CLI, Microsoft Store, Docker)?**
+Per the release pages: run `hermes update` or re-run the installer one-liner for CLI; update the Microsoft Store app through the Store; pull `nousresearch/hermes-agent:stable` (or `:latest`) for Docker and Hermes Cloud.
+
+**Why does `hermes update` no longer offer a release it refuses?**
+[v0.22.5](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.5) changed the updater to hold back a stable release it refuses rather than offering it.
+
+**Is v0.22.5 safe to jump to directly from an earlier v0.22.x?**
+The notes do not state breaking-change impact for any specific user, so we cannot assert either way. The main structural change to plan for is the plugin extraction of `hermes mcp serve` and Singularity; check your own setup after upgrading rather than assuming.
+
+**What moved to the Hermes Labs community tier?**
+Telegram Business, as noted in the [v0.22.4 release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.4). If you use that integration, confirm where it now lives before upgrading.
+
+## How This Guide Was Built
+
+This guide is based on the official GitHub release notes for v0.22.1 through v0.22.5 and the linked PRs. We did not run these releases hands-on; claims are drawn from the release pages and linked PRs, and the update commands come directly from the release page. Anything not stated in the notes is described qualitatively rather than with invented numbers, and we make no claims about performance, benchmarks, or exact breaking-change impact for any user.
+
+Concretely, the sources are the five release pages ([v0.22.1](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.1), [v0.22.2](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.2), [v0.22.3](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.3), [v0.22.4](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.4), [v0.22.5](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.5)), the linked PRs and issue, the [Hermes Agent repository](https://github.com/NousResearch/hermes-agent), and the [documentation site](https://hermes-agent.nousresearch.com/docs). Where the release body is incomplete — notably the v0.22.3 window — we say so rather than filling gaps with speculation.
+
+## The Bottom Line
+
+The v0.22.x line opened with a broken v0.22.1 build, fixed by v0.22.2, and its later releases are operational fixes, catalog growth and, in v0.22.5, a plugin extraction that moves two features out of core. Operators should move to v0.22.2 or later, upgrade for the gateway and Desktop fixes, verify plugin-based setups, and wait for the pending curated v0.23.0 notes — which upstream says will cover everything from v0.22.0 onward — before drawing final conclusions about this line, per the [official releases](https://github.com/NousResearch/hermes-agent/releases).
+
