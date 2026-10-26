@@ -225,6 +225,15 @@
       "role": "builder",
       "status": "active",
       "fallback": "commandcode minimax/minimax-m3.1-flash:free (og primary; smoke 2026-10-18: og 3/3 short median 1.4s + 3/3 sustained median 33s; cc direct 3/3 short + 2/2 sustained at 32k budget; ccwire 502s on long generation)"
+    },
+    {
+      "model": "minimax-m3.1-flash",
+      "provider": "opencode-go",
+      "family": "minimax",
+      "role": "builder",
+      "status": "active",
+      "context_length": 1048576,
+      "fallback": "commandcode minimax/minimax-m3.1-flash (bench 2026-10-23: og 164-188s / CC 2-184s, 4/4 clean both providers; CC reasoning floor 32K via _cc_budget_for 'minimax' substring)"
     }
   ],
   "stability": {
@@ -727,6 +736,13 @@
         "status": "pass"
       },
       "minimax-m3.1-flash-free": {
+        "total_calls": 0,
+        "successes": 0,
+        "availability": 0,
+        "reliability": 0,
+        "status": "untested"
+      },
+      "minimax-m3.1-flash": {
         "total_calls": 0,
         "successes": 0,
         "availability": 0,
