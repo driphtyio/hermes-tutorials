@@ -1,0 +1,124 @@
+---
+title: "Hermes Agent Code Execution: The execute_code Programmatic Tool Calling Guide (2026)"
+description: "Learn how Hermes Agent's execute_code tool collapses multi-step tool workflows into one turn, when to choose it over terminal, and the settings that matter."
+pubDate: 2026-10-26
+tags: ["hermes-agent", "tutorial", "execute-code", "tool-calling"]
+heroImage: https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-execute-code-guide-2026-1793028300.webp
+lastVerified: "2026-10-26"
+---
+
+# Hermes Agent Code Execution: The execute_code Programmatic Tool Calling Guide (2026)
+
+Hermes Agent can do more than fire off one tool at a time. Its `execute_code` tool lets the agent write a Python script that calls other Hermes tools programmatically, turning what would be a long chain of individual tool calls into a single LLM turn. This guide walks through how it works, when to use it, and every configuration knob that matters, based on the official [Code Execution docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/code-execution).
+
+## What execute_code Actually Does
+
+The `execute_code` tool lets the agent write a Python script that calls Hermes tools programmatically, collapsing a multi-step workflow into a single LLM turn, and only the script's `print()` output returns to the model, so intermediate tool results never enter the context window, per the [Code Execution docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/code-execution). Mechanically, the script runs in a child process on the agent host and talks to Hermes over a Unix domain socket RPC; on Windows, a loopback TCP socket is used instead because `AF_UNIX` is unreliable there. Hermes generates a `hermes_tools.py` stub module, and the script does `from hermes_tools import ...` to get at the tools. If you want the broader picture of where this fits among Hermes's other capabilities, start with the [main documentation](https://hermes-agent.nousresearch.com/docs).
+
+## The Tools You Can Call Inside a Script
+
+Exactly seven tools are callable from inside a script: `web_search`, `web_extract`, `read_file`, `write_file`, `search_files`, `patch`, and `terminal`. The `terminal` tool is foreground only — it accepts no background or pty parameters — so long-running or interactive commands still belong on the normal terminal path rather than inside a script. Those seven are the script whitelist, per the [Code Execution docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/code-execution).
+
+## When to Use execute_code Instead of terminal
+
+The documentation's rule of thumb is to use `execute_code` for three or more tool calls with processing logic between them — bulk filtering, conditional branching, or loops over results — and to use `terminal` for shell commands, builds, test suites, and interactive or background processes ([Code Execution docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/code-execution)). The comparison below condenses the docs table:
+
+| Dimension | execute_code | terminal |
+|---|---|---|
+| Multi-step workflow with tool calls between steps | Yes | No |
+| Simple shell command | Not the fit | Yes |
+| Build or test suite | Not the fit | Yes |
+| Interactive or background process | No (terminal inside scripts is foreground only) | Yes |
+| Filtering or processing large tool outputs | Yes | No |
+| Looping over search results | Yes | No |
+| Needs API keys in the environment | Only via passthrough (`terminal.env_passthrough` or skill `required_environment_variables`) | Mostly passes through |
+
+## Execution Modes: project and strict
+
+Execution mode is set by `code_execution.mode` in `~/.hermes/config.yaml`. The default, `project`, runs in the session working directory using the active `VIRTUAL_ENV` or `CONDA_PREFIX` interpreter, falling back to Hermes's own Python if that interpreter is unset, broken, or older than Python 3.8. The `strict` mode stages the script in a temp directory isolated from the project and runs it with `sys.executable`. Importantly, the docs state that the security invariants are identical in both modes — `strict` is not "more secure," it is just more isolated from your project files.
+
+## The Persistent Session Kernel
+
+On the local backend, `execute_code` calls reuse a Python child process — a session kernel — whenever the session, execution mode, interpreter, working directory, and tool set all match. Imports, variables, and loaded data persist between calls, so you can load a dataset once and keep working with it. Passing `reset: true` discards the kernel state; a timeout or interrupt kills the kernel and loses its state by design; and the environment is frozen at spawn, so variables you newly allowlist are invisible to an existing kernel until you reset it. Kernel lifecycle rules: kernels die with the session, after `code_execution.kernel_idle_timeout` idle seconds (default 1800), or when more than `code_execution.max_session_kernels` (default 4) top-level session kernels are alive, in which case the oldest is evicted. Subagent kernels live only as long as the subagent and are disposed when it finishes.
+
+## Remote Backends: Docker, SSH, and Modal
+
+Remote backends run a remote kernel with the same persistence contract as the local one. Docker, SSH, and Modal backends use a file-based RPC transport and require Python 3 inside the backend. If the remote kernel cannot spawn, Hermes falls back to one standalone script per call and says so in the result — so persistence is not silently lost; the agent is told. This is documented in the [Code Execution docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/code-execution).
+
+## Resource Limits: Timeouts, Output Caps, and Tool-Call Budgets
+
+Resource defaults are generous but bounded: 300 seconds per execution via `code_execution.timeout`, with the process killed by SIGTERM and then SIGKILL after a 5-second grace period. Stdout is capped at 50 KB shown head-and-tail, with the full output saved under `~/.hermes/cache/exec/` and the path included in the result. Stderr is capped at 10 KB and included on non-zero exit. Finally, scripts are limited to 50 tool calls per execution via `code_execution.max_tool_calls`; hitting the limit returns an error message to the agent ([Code Execution docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/code-execution)).
+
+## Security: Env Scrubbing and the Tool Whitelist
+
+The child process runs with a minimal environment. Variables whose names contain `KEY`, `TOKEN`, `SECRET`, `PASSWORD`, `CREDENTIAL`, `PASSWD`, or `AUTH` are excluded; safe system variables such as `PATH`, `HOME`, `LANG`, `SHELL`, `PYTHONPATH`, and `VIRTUAL_ENV` pass through. Scripts also cannot call `execute_code` recursively, `delegate_task`, or MCP tools — the whitelist is the seven tools listed earlier.
+
+## The HERMES_* Passthrough Change and How to Work Around It
+
+HERMES_* passthrough was tightened for security. Earlier versions passed every `HERMES_`-prefixed variable to the child; now only `HERMES_HOME`, `HERMES_PROFILE`, `HERMES_CONFIG`, and `HERMES_ENV` pass through by exact name (plus `HERMES_RPC_DIR`, `HERMES_RPC_SOCKET`, `TZ`, and `HOME`, injected by Hermes). Any other name — `HERMES_BASE_URL` being the canonical example — is unset in the child, and Hermes logs the debug line `execute_code: dropped N non-allowlisted HERMES_* var(s)` when it drops one. Two workarounds are documented: add exact names to `terminal.env_passthrough` in `config.yaml`, or declare `required_environment_variables` in a [skill's frontmatter](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills), which passes them to `execute_code` and `terminal` children automatically. The kernel environment is frozen when it spawns, so a newly allowlisted passthrough variable stays invisible to an existing kernel until you reset it.
+
+## Approvals: Who Sees the Whole Script
+
+Approval behaviour depends on the session type. Gateway sessions approve the whole script before it runs. In a local CLI, TUI, Desktop, or ACP session, a user-typed turn gets no whole-script prompt — Python-level file and process operations run unprompted, and only `terminal()` calls ask for approval. Injected and automation turns keep the whole-script prompt. This asymmetry is worth knowing before you run automation locally; it is spelled out in the [Code Execution docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/code-execution).
+
+## Errors, Interruptions, and Result Shape
+
+Every `execute_code` response carries four fields: `status` (one of `success`, `error`, `timeout`, `interrupted`), `output`, `tool_calls_made`, and `duration_seconds`. Non-zero exits include stderr, so the agent sees the Python traceback directly. A timeout produces the message `Script timed out after 300s and was killed.` If you send a new user message while a script is running, it is terminated with the notice `[execution interrupted — user sent a new message]`. Exceeding the tool-call limit returns an error as well. All of this comes from the [Code Execution docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/code-execution).
+
+## Configuring code_execution in config.yaml
+
+Five keys control everything described in this guide: `code_execution.mode`, `code_execution.timeout`, `code_execution.max_tool_calls`, `code_execution.kernel_idle_timeout`, and `code_execution.max_session_kernels`. Here is a complete example against `~/.hermes/config.yaml`:
+
+```yaml
+code_execution:
+  mode: project              # project (default) | strict
+  timeout: 300               # seconds; SIGTERM, then SIGKILL after 5s grace
+  max_tool_calls: 50         # per execution
+  kernel_idle_timeout: 1800  # seconds idle before the kernel is reaped (default 1800)
+  max_session_kernels: 4     # default 4; oldest session kernel evicted
+
+terminal:
+  env_passthrough:
+    - HERMES_BASE_URL        # exact names only; no wildcards documented
+```
+
+The `terminal.env_passthrough` block exists because only `HERMES_HOME`, `HERMES_PROFILE`, `HERMES_CONFIG`, and `HERMES_ENV` survive into the child by default — everything else under that prefix is unset. See also the [Configuration reference](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) for the surrounding config file.
+
+## Example Patterns from the Docs
+
+The documentation shows four reusable patterns ([Code Execution docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/code-execution)):
+
+1. **Data pipeline:** run `search_files`, call `read_file` on each match, and emit a JSON summary with `json.dumps`.
+2. **Multi-step web research:** call `web_search(query, limit=5)`, then `web_extract` each result, and print the summaries as JSON.
+3. **Bulk refactor:** run `search_files` for an old API call, then `patch(..., replace_all=True)` on each match and count the files fixed.
+4. **Build-and-test run:** call `terminal("cd /project && python -m pytest --tb=short -q 2>&1", timeout=120)` and parse the pass/fail counts from the output.
+
+These four shapes cover most of what `execute_code` is for: orchestration with logic in between, not single commands.
+
+## FAQ
+
+### Does execute_code save tokens compared with a chain of tool calls?
+
+The docs describe the saving qualitatively: only the script's `print()` output returns to the model, so intermediate tool results stay out of the context window and the whole workflow fits into a single LLM turn, per the [Code Execution docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/code-execution). However, no benchmark or percentage figure is published, so any specific number you see elsewhere is an estimate, not a documented fact.
+
+### Why did my HERMES_BASE_URL variable disappear inside the script?
+
+Security hardening narrowed HERMES_* passthrough to `HERMES_HOME`, `HERMES_PROFILE`, `HERMES_CONFIG`, and `HERMES_ENV`; any other HERMES_-prefixed name is unset in the child. Add the exact variable to `terminal.env_passthrough` in config.yaml, or declare it in a skill's `required_environment_variables` frontmatter, then reset the kernel so the frozen environment is re-spawned ([Code Execution docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/code-execution)).
+
+### When should I still use terminal instead of execute_code?
+
+Use `terminal` for simple shell commands, builds, test suites, and any interactive or background process, because the `terminal` tool inside a script is foreground only and takes no background or pty parameters ([Code Execution docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/code-execution)).
+
+## The Bottom Line
+
+The decision rule is simple: reach for `execute_code` when a workflow needs three or more tool calls with logic between them — filtering, branching, or looping over results. Reach for `terminal` for shell commands, builds, test suites, and anything interactive or background.
+
+Why it helps, stated qualitatively: intermediate tool results never enter the context window, so a chain of round trips collapses into a single LLM turn. The docs publish no token-savings percentage, cost figure, or latency number, and this guide will not invent one.
+
+Operational caution: kernel state is deliberate and disposable. It dies on `reset: true`, on a timeout or interrupt, after the 1800-second idle timeout, and when a fifth session kernel pushes past the default `max_session_kernels` of 4 and the oldest is evicted — and the environment is frozen at spawn, so plan the `HERMES_*` passthrough workaround up front rather than debugging a missing variable mid-session.
+
+The mental model to keep: **scripts for orchestration, terminal for shells.**
+
+## How This Guide Was Built
+
+This guide is based on the official Hermes documentation page at [hermes-agent.nousresearch.com/docs/user-guide/features/code-execution](https://hermes-agent.nousresearch.com/docs/user-guide/features/code-execution), fetched in-session on 2026-10-26 via `web_extract`. The author did **not** run any of this hands-on: no scripts were executed and no configurations were validated on a live agent host. Where the docs are silent — token-savings figures, per-model cost, latency — this guide says so instead of estimating. The project repository at [github.com/NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent) is included as a pointer only and was not fetched; no repo file paths are cited. Related pages, linked as pointers only (no claim in this guide rests on them): the [main docs](https://hermes-agent.nousresearch.com/docs), [Security](https://hermes-agent.nousresearch.com/docs/user-guide/security), [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration), [Skills](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills), and [Tools](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools).
