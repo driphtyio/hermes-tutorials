@@ -750,6 +750,125 @@
         "availability": 0,
         "reliability": 0,
         "status": "untested"
+      },
+      "deepseek-v4.1-flash": {
+        "total_calls": 43,
+        "successes": 38,
+        "availability": 88.4,
+        "reliability": 0.88,
+        "status": "partial"
+      },
+      "longcat-2.5-preview-free": {
+        "total_calls": 23,
+        "successes": 9,
+        "availability": 39.1,
+        "reliability": 0.39,
+        "status": "partial"
+      },
+      "ling-3.0-flash-sante": {
+        "total_calls": 4,
+        "successes": 1,
+        "availability": 25.0,
+        "reliability": 0.25,
+        "status": "partial"
+      },
+      "claude-haiku-5-5": {
+        "total_calls": 14,
+        "successes": 11,
+        "availability": 78.6,
+        "reliability": 0.79,
+        "status": "partial"
+      },
+      "cline-pass/qwen3.8-max": {
+        "total_calls": 2,
+        "successes": 1,
+        "availability": 50.0,
+        "reliability": 0.5,
+        "status": "partial"
+      },
+      "minimax-m3": {
+        "total_calls": 7,
+        "successes": 5,
+        "availability": 71.4,
+        "reliability": 0.71,
+        "status": "partial"
+      },
+      "step-5-preview-free": {
+        "total_calls": 2,
+        "successes": 0,
+        "availability": 0,
+        "reliability": 0.0,
+        "status": "fail"
+      },
+      "mimo-v2.6-pro": {
+        "total_calls": 0,
+        "successes": 0,
+        "availability": 0,
+        "reliability": 0,
+        "status": "untested"
+      },
+      "cline-pass/glm-5.3": {
+        "total_calls": 0,
+        "successes": 0,
+        "availability": 0,
+        "reliability": 0,
+        "status": "untested"
+      },
+      "qwen/qwen3.7-flash": {
+        "total_calls": 0,
+        "successes": 0,
+        "availability": 0,
+        "reliability": 0,
+        "status": "untested"
+      },
+      "claude-sonnet-5-5": {
+        "total_calls": 0,
+        "successes": 0,
+        "availability": 0,
+        "reliability": 0,
+        "status": "untested"
+      },
+      "space-bunny-free": {
+        "total_calls": 10,
+        "successes": 6,
+        "availability": 60.0,
+        "reliability": 0.6,
+        "status": "partial"
+      },
+      "ling-3.0-flash-fin-free": {
+        "total_calls": 5,
+        "successes": 2,
+        "availability": 40.0,
+        "reliability": 0.4,
+        "status": "partial"
+      },
+      "omen-alpha": {
+        "total_calls": 7,
+        "successes": 4,
+        "availability": 57.1,
+        "reliability": 0.57,
+        "status": "partial"
+      },
+      "nvidia/nemotron-3-ultra-550b-a55b": {
+        "total_calls": 0,
+        "successes": 0,
+        "availability": 0,
+        "reliability": 0,
+        "status": "untested"
+      },
+      "meituan/LongCat-2.0": {
+        "total_calls": 0,
+        "successes": 0,
+        "availability": 0,
+        "reliability": 0,
+        "status": "untested"
+      },
+      "poolside/laguna-s-2.1-free": {
+        "total_calls": 35,
+        "successes": 31,
+        "availability": 88.6,
+        "reliability": 0.89,
+        "status": "partial"
       }
     },
     "last_updated": "2026-10-21"
