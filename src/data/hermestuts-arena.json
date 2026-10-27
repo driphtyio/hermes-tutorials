@@ -738,11 +738,16 @@
         "status": "pass"
       },
       "minimax-m3.1-flash-free": {
-        "total_calls": 0,
-        "successes": 0,
-        "availability": 0,
-        "reliability": 0,
-        "status": "untested"
+        "total_calls": 3,
+        "successes": 3,
+        "availability": 100.0,
+        "reliability": 0.699,
+        "status": "pass",
+        "matches": 2,
+        "wins": 0,
+        "losses": 2,
+        "avg_score": 6.54,
+        "best_score": 7.72
       },
       "minimax-m3.1-flash": {
         "total_calls": 0,
