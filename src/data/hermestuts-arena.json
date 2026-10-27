@@ -223,8 +223,10 @@
       "provider": "opencode-go",
       "family": "minimax",
       "role": "builder",
-      "status": "active",
-      "fallback": "commandcode minimax/minimax-m3.1-flash:free (og primary; smoke 2026-10-18: og 3/3 short median 1.4s + 3/3 sustained median 33s; cc direct 3/3 short + 2/2 sustained at 32k budget; ccwire 502s on long generation)"
+      "status": "retired",
+      "fallback": "commandcode minimax/minimax-m3.1-flash:free (og primary; smoke 2026-10-18: og 3/3 short median 1.4s + 3/3 sustained median 33s; cc direct 3/3 short + 2/2 sustained at 32k budget; ccwire 502s on long generation)",
+      "reason": "upstream deprecated — opencode-go returns ModelDeprecated for minimax-m3.1-flash-free (verified 2026-10-26); retired by user directive 2026-10-26",
+      "retired_date": "2026-10-26"
     },
     {
       "model": "minimax-m3.1-flash",
@@ -13411,6 +13413,14 @@
     {
       "model": "cline-pass/qwen3.8-max",
       "reason": "Consistent DNF (empty/timeout responses across recent matches); removed by user directive 2026-10-09"
+    },
+    {
+      "model": "minimax-m3.1-flash-free",
+      "provider": "opencode-go",
+      "family": "minimax",
+      "status": "retired",
+      "reason": "upstream deprecated — opencode-go returns ModelDeprecated for minimax-m3.1-flash-free (verified 2026-10-26); retired by user directive 2026-10-26",
+      "retired_date": "2026-10-26"
     }
   ],
   "version": "1.0.5"
