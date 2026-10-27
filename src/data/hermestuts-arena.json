@@ -13204,6 +13204,232 @@
         "Leaderboard NOT rebuilt: hermestuts has no finalizer (arena-finalize.py has no hermestuts entry). Leaderboard rebuild UNRESOLVED.",
         "Post committed and deployed by the deploy script (see run report)."
       ]
+    },
+    {
+      "id": "arena-hermes-usecase-customer-support",
+      "match_id": "arena-hermes-usecase-customer-support",
+      "slug": "hermes-agent-customer-support-automation",
+      "topic": "Hermes Agent for Customer Support Automation: ticket triage, FAQ answers, and human handoff (2026 setup guide)",
+      "category": "use-case",
+      "type": "use-case",
+      "date": "2026-10-27",
+      "timestamp": "2026-10-27T08:28:27",
+      "winner": "hy3",
+      "winner_provider": "opencode-go",
+      "winner_family": "tencent",
+      "winner_score": 8.33,
+      "final_judge_mean_post_qa": 7.63,
+      "final_judge_spread_post_qa": 1.6,
+      "threshold_met": true,
+      "threshold_note": "shipped text (QA round 3) multipass mean 7.63, spread 1.60 (noisy >1.5; not re-judged a 4th time)",
+      "judge": "tb-judge-multipass qwen3.7-flash x3 passes; pre-QA batch via judge-draft-batch x3",
+      "research_lane": "ok",
+      "research_model": "mimo-v2.6-pro",
+      "research_source": "lane",
+      "plan_model": "glm-5.3",
+      "plan_route": "cline-pass",
+      "brief_contract": true,
+      "qa_model": "claude-sonnet-5-5",
+      "qa_provider": "claude-cli",
+      "qa_verdict": "FAIL r1 (10 defects) and FAIL r2 (7 defects) remediated from sources by orchestrator rewrites; r3 PASS with 6 minor non-blocking notes",
+      "qa_note": "Post-QA ORCHESTRATOR REWRITES (not builder output), 2 rounds. Round 1 fixed: handoff recipe contradicting silence-token source, unsupported absence claims, email env placeholders, cron example, --skill scope, Skills Hub vs agentskills.io, duplicate disclaimer, body H1. Round 2 fixed: OS/thread claims, misattributed toolset line, FAQ skill-loading claim, unsupported beginner claims. Re-judged each round in-session.",
+      "redo_iterations": 2,
+      "verification_status": "not-run",
+      "verification_note": "disprove_pass not run in this session (budget); citations checked by arena-linkcheck (10 OK, 0 DEAD) and QA against saved source pages",
+      "linkcheck": {
+        "ok": 10,
+        "blocked": 0,
+        "dead": 0
+      },
+      "hero": {
+        "status": "omitted",
+        "reason": "gen-image-verified.sh: Lumenfall and HF FLUX both failed; OpenRouter fallback disabled"
+      },
+      "builder_dnf": [
+        "gemini-3.8-flash-medium"
+      ],
+      "builder_flags": [
+        "retired lanes present in cron array: poolside/laguna-s-2.1-free, omen-alpha (ran as given; both ineligible on link floor)"
+      ],
+      "total_models": 15,
+      "successful": 14,
+      "results": [
+        {
+          "model": "commandcode-stealth-glyph-cluster:free",
+          "pre_qa_judge_mean": 8.38,
+          "pre_qa_spread": 0.65,
+          "pre_qa_passes": [
+            8.6,
+            8.6,
+            7.95
+          ],
+          "eligible": false,
+          "eligibility_note": "ineligible: 2,655 body words (>2,500 cap)"
+        },
+        {
+          "model": "opencode-go-hy3",
+          "pre_qa_judge_mean": 8.33,
+          "pre_qa_spread": 0.45,
+          "pre_qa_passes": [
+            8.25,
+            8.6,
+            8.15
+          ],
+          "eligible": true,
+          "eligibility_note": "eligible"
+        },
+        {
+          "model": "claude-cli-claude-haiku-5-5",
+          "pre_qa_judge_mean": 8.25,
+          "pre_qa_spread": 1.05,
+          "pre_qa_passes": [
+            8.6,
+            7.55,
+            8.6
+          ],
+          "eligible": true,
+          "eligibility_note": "eligible"
+        },
+        {
+          "model": "tokenharbor-ling-3.1-flash",
+          "pre_qa_judge_mean": 8.2,
+          "pre_qa_spread": 0.95,
+          "pre_qa_passes": [
+            7.75,
+            8.7,
+            8.15
+          ],
+          "eligible": true,
+          "eligibility_note": "eligible"
+        },
+        {
+          "model": "commandcode-deepseek-v4.1-flash",
+          "pre_qa_judge_mean": 8.08,
+          "pre_qa_spread": 1.15,
+          "pre_qa_passes": [
+            8.0,
+            8.7,
+            7.55
+          ],
+          "eligible": true,
+          "eligibility_note": "eligible"
+        },
+        {
+          "model": "opencode-go-omen-alpha",
+          "pre_qa_judge_mean": 8.05,
+          "pre_qa_spread": 0.1,
+          "pre_qa_passes": [
+            8.05,
+            8.1,
+            8.0
+          ],
+          "eligible": false,
+          "eligibility_note": "ineligible: 7 distinct external links (<10 policy); lane retired 2026-10-16"
+        },
+        {
+          "model": "opencode-go-mimo-v2.6-flash",
+          "pre_qa_judge_mean": 8.02,
+          "pre_qa_spread": 0.35,
+          "pre_qa_passes": [
+            7.9,
+            8.25,
+            7.9
+          ],
+          "eligible": true,
+          "eligibility_note": "eligible"
+        },
+        {
+          "model": "opencode-go-glm-5.3-flash",
+          "pre_qa_judge_mean": 8.0,
+          "pre_qa_spread": 0.45,
+          "pre_qa_passes": [
+            8.25,
+            7.8,
+            7.95
+          ],
+          "eligible": true,
+          "eligibility_note": "eligible"
+        },
+        {
+          "model": "opencode-go-minimax-m3.1-flash",
+          "pre_qa_judge_mean": 7.83,
+          "pre_qa_spread": 1.3,
+          "pre_qa_passes": [
+            7.6,
+            7.3,
+            8.6
+          ],
+          "eligible": true,
+          "eligibility_note": "eligible"
+        },
+        {
+          "model": "commandcode-poolside-laguna-s-2.1-free",
+          "pre_qa_judge_mean": 7.73,
+          "pre_qa_spread": 0.65,
+          "pre_qa_passes": [
+            7.55,
+            8.15,
+            7.5
+          ],
+          "eligible": false,
+          "eligibility_note": "ineligible: 7 distinct external links (<10 policy)"
+        },
+        {
+          "model": "commandcode-gpt-6-luna",
+          "pre_qa_judge_mean": 7.35,
+          "pre_qa_spread": 2.55,
+          "pre_qa_passes": [
+            7.9,
+            8.35,
+            5.8
+          ],
+          "eligible": true,
+          "eligibility_note": "eligible"
+        },
+        {
+          "model": "tokenharbor-qwen3.8-flash",
+          "pre_qa_judge_mean": 7.13,
+          "pre_qa_spread": 1.9,
+          "pre_qa_passes": [
+            7.9,
+            6.0,
+            7.5
+          ],
+          "eligible": true,
+          "eligibility_note": "eligible"
+        },
+        {
+          "model": "opencode-go-beam-free",
+          "pre_qa_judge_mean": 6.5,
+          "pre_qa_spread": 1.2,
+          "pre_qa_passes": [
+            5.85,
+            6.6,
+            7.05
+          ],
+          "eligible": true,
+          "eligibility_note": "eligible"
+        },
+        {
+          "model": "opencode-go-muse-spark-1.3-contributor",
+          "pre_qa_judge_mean": 5.6,
+          "pre_qa_spread": 1.15,
+          "pre_qa_passes": [
+            6.3,
+            5.35,
+            5.15
+          ],
+          "eligible": false,
+          "eligibility_note": "ineligible: 2,856 body words (>2,500 cap)"
+        },
+        {
+          "model": "gemini-3.8-flash-medium",
+          "status": "dnf",
+          "note": "agy lane produced no draft (no success line in run log)"
+        }
+      ],
+      "pipeline": "hermestuts use-case rotation; customer-support topic (no prior dedicated post)",
+      "orchestrator": "hermes cron (claude-haiku-5-5)"
     }
   ],
   "leaderboard": [
