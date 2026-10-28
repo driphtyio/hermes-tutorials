@@ -13662,7 +13662,7 @@
           "eligible": true
         }
       ],
-      "scope_note": "Refresh in place of src/content/blog/web-search-backends.mdx (same slug, same pubDate, updatedDate/lastVerified 2026-10-28). Not a new post."
+      "scope_note": "Refresh in place of src/content/blog/web-search-backends.mdx (same slug, same pubDate, updatedDate/lastVerified 2026-10-28). Not a new post. LATE DRAFT: tokenharbor/qwen3.8-flash finished after the batch snapshot; judged afterwards at multipass mean 8.00 (passes 7.80/7.90/8.30, spread 0.50) but 3,394 words total, so ineligible under the length cap. Winner unchanged. All 15 lanes drafted; the 'successful: 14' field is superseded by this note."
     }
   ],
   "leaderboard": [
