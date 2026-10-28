@@ -1,11 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <!-- Hermes Tutorials favicon: solid brand tile + bold H with wing accents -->
+  <!-- Hermes Tutorials favicon: brand tile + single bold prompt chevron (header wordmark glyph) -->
   <rect width="128" height="128" rx="28" fill="#6c5ce7"/>
-  <!-- Wing hints (subtle, top corners) -->
-  <path d="M38 34 C24 22 14 26 30 42" stroke="#ffffff" stroke-opacity="0.55" stroke-width="7" stroke-linecap="round" fill="none"/>
-  <path d="M90 34 C104 22 114 26 98 42" stroke="#ffffff" stroke-opacity="0.55" stroke-width="7" stroke-linecap="round" fill="none"/>
-  <!-- Bold H -->
-  <line x1="48" y1="34" x2="48" y2="94" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/>
-  <line x1="80" y1="34" x2="80" y2="94" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/>
-  <line x1="48" y1="64" x2="80" y2="64" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/>
+  <polyline points="42 96 78 64 42 32" fill="none" stroke="#ffffff" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
