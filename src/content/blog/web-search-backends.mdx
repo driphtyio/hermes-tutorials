@@ -1,155 +1,192 @@
 ---
-title: "Web Search Backends for Hermes Agent"
-description: "This web search configuration guide covers Firecrawl, Tavily, SearXNG, Brave Search, and custom endpoints."
+title: "Web Search Backends for Hermes Agent: Firecrawl, SearXNG, Tavily & More"
+description: "Configure Hermes Agent web search and extract: Firecrawl (default), SearXNG, Tavily, Brave, DDGS and more, with the auto-detection order and keyless fallback."
 pubDate: "2026-05-15"
+updatedDate: "2026-10-28"
+lastVerified: "2026-10-28"
 tags: ["web-search", "providers", "configuration", "toolsets"]
 keywords: [hermes web search, search provider, Firecrawl, Tavily, SearXNG, Brave Search, web toolset, hermes search backend, web search configuration]
 ---
 
-> **TLDR:** This web search configuration guide covers every search backend Hermes supports. Use the `web` toolset for internet search. Default providers are Firecrawl and Tavily.
+> **TLDR:** Hermes Agent ships two model-callable web tools, `web_search` and `web_extract`, configured through one backend selection in `hermes tools` or `config.yaml`. Firecrawl is the labeled default backend. With no credentials and nothing selected, a keyless ring (Exa, Parallel, Firecrawl, Keenable) serves requests, so web tools work out of the box. See the [official docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/web-search) for the authoritative reference.
 
-## Key Takeaways
+## Introduction: one config surface, two tools
 
-- The `web` toolset enables internet search — enable with `hermes tools enable web`
-- Firecrawl and Tavily are the default search backends
-- SearXNG is the most-requested provider (self-hosted, free, private)
-- Brave Search is available via API key
-- `/reset` after enabling the web toolset for changes to take effect
+Hermes Agent includes two model-callable web tools backed by multiple providers: `web_search` (ranked results) and `web_extract` (readable content from URLs). Both are configured through a single backend selection, made with `hermes tools` or directly in `config.yaml` ([docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/web-search)). Search-only backends such as SearXNG, Brave, and DDGS need a separate extract-capable provider for `web_extract`. A fresh install with no credentials still gets working web tools through the keyless ring described below.
 
-## Enabling Web Search
+## How This Guide Was Built
 
-The web toolset is not enabled by default on all platforms:
+This guide is based on the official docs page [Hermes Web Search](https://hermes-agent.nousresearch.com/docs/user-guide/features/web-search). It was **not run hands-on**: no commands were executed and no outputs were observed on a live install. Treat the documentation as the authoritative source, and consult it for any detail beyond this summary.
 
-```bash
-# Enable
-hermes tools enable web
+## The Backends at a Glance
 
-# Verify
-hermes tools list
+The table below reproduces the backend list from the [official docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/web-search):
 
-# Reset session to apply
-# (Type /reset or exit and relaunch)
+| Provider | Env Var | Search | Extract | Free tier |
+| --- | --- | --- | --- | --- |
+| **Firecrawl** (default) | `FIRECRAWL_API_KEY` (optional, keyless when selected) | ✔ | ✔ | 500 credits/mo |
+| **SearXNG** | `SEARXNG_URL` | ✔ | — | Free (self-hosted) |
+| **Brave Search** (free tier) | `BRAVE_SEARCH_API_KEY` | ✔ | — | 2 000 queries/mo |
+| **DDGS** (DuckDuckGo) | none | ✔ | — | Free |
+| **Exa** | `EXA_API_KEY` (optional) | ✔ | ✔ | Keyless ring member; 1 000 searches/mo with key |
+| **Parallel** | `PARALLEL_API_KEY` (optional) | ✔ | ✔ | Keyless ring member; paid with key |
+| **Tavily** | `TAVILY_API_KEY` (optional) | ✔ | ✔ | Opt-in keyless when selected |
+| **Perplexity** | `PERPLEXITY_API_KEY` | ✔ | ✔ (query-relevant snippets) | Paid |
+| **Keenable** | `KEENABLE_API_KEY` (optional) | ✔ | ✔ | Keyless ring member; paid with key |
+| **xAI (Grok)** | `XAI_API_KEY` or `hermes auth add xai-oauth` | ✔ | — | Paid (SuperGrok or per-token) |
+| **OpenAI Native (Codex)** | `hermes auth add openai-codex` | ✔ | — | Requires a ChatGPT/Codex subscription |
+
+Firecrawl is the labeled default backend. Only when no credentials are set and nothing is selected do requests rotate across the keyless free tiers described below. Brave Search, DDGS, xAI, and OpenAI Native are **search-only**, so pair them with an extract-capable provider when you also need `web_extract`. DDGS uses the [`ddgs` Python package](https://pypi.org/project/ddgs/) under the hood.
+
+## Quick Setup
+
+Run `hermes tools`, open **Web Search & Extract**, and pick a provider. The wizard asks for any required URL or API key and writes it to your config. Confirm the result with `hermes setup`, which prints the detected backend, for example `Web Search & Extract (searxng)`.
+
+Nous subscribers get managed web search through the [Tool Gateway](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway) with no API key. New installs can run `hermes setup --portal` to log in and enable all gateway tools at once; existing installs can enable only web through `hermes tools`.
+
+## Configuration: one backend or a search/extract split
+
+Each capability accepts the same value set: `firecrawl | searxng | brave-free | ddgs | tavily | perplexity | keenable | exa | parallel | xai | nous`, where `nous` selects the managed Tool Gateway.
+
+```yaml
+# ~/.hermes/config.yaml
+web:
+  backend: "searxng"
 ```
 
-Once enabled, the agent can search the internet, extract content from URLs, and fetch data from APIs.
+To split the two capabilities, set them separately. This example uses SearXNG (free) for search and Firecrawl for extraction:
 
-## Default Search Providers
+```yaml
+# ~/.hermes/config.yaml
+web:
+  search_backend: "searxng"     # used by web_search
+  extract_backend: "firecrawl"  # used by web_extract
+```
 
-### Firecrawl
+Priority per capability is: (1) `web.search_backend` or `web.extract_backend`, (2) the shared `web.backend`, (3) auto-detection from environment variables. Once a shared selection exists, adding a key to `.env` does not reroute web traffic. A per-capability key affects only its own capability.
 
-Firecrawl is the default web search backend. It's great for general web search and content extraction.
+## Auto-Detection Order
+
+If no shared backend has ever been selected, Hermes picks the first available backend based on which credentials are set:
+
+| Credential present | Auto-selected backend |
+| --- | --- |
+| `TAVILY_API_KEY` | tavily |
+| `PERPLEXITY_API_KEY` | perplexity |
+| `EXA_API_KEY` | exa |
+| `PARALLEL_API_KEY` | parallel |
+| `FIRECRAWL_API_KEY` or `FIRECRAWL_API_URL` | firecrawl |
+| Nous Tool Gateway ready (Portal subscription) | managed web search via the Tool Gateway |
+| `SEARXNG_URL` | searxng |
+| `BRAVE_SEARCH_API_KEY` | brave-free |
+| `ddgs` package importable | ddgs |
+| Nous identity present (any account, including guests) | managed web search (`web_search` only) |
+| Nothing set | keyless ring: exa / parallel / firecrawl / keenable (round-robin) |
+
+xAI is not in the auto-detection chain. You must opt in with `web.backend: "xai"`.
+
+## The Keyless Free-Tier Ring
+
+A fresh install with no web credentials works out of the box. Requests rotate round-robin across Exa, Parallel, Firecrawl, and Keenable. When a vendor rate-limits a request, the request retries on the next vendor in the ring. A search that a vendor refuses with a 401, 402, 403, or 5xx response retries the same way. The ring is strictly a last resort: any configured backend or present API key takes precedence. Requests carry no user identifiers, only a random per-process session ID that rotates on restart. To turn the tier off, set `web.keyless_fallback: false`.
+
+In `hermes tools`, Exa, Parallel, and Keenable each appear as a **Free (keyless)** row and a **Paid (API key)** row. Choosing Free pins that vendor's anonymous endpoint, and choosing Paid pins the keyed path. The choice is stored as `web.provider_tier.<name>: free|paid`. If you leave it unset, a present key means paid and no key means the keyless ring. Free tiers are rate-limited under burst load, but sustained normal use works. Pinning one vendor stops the rotation, and the ring then serves only as failover on throttles.
+
+A one-shot keyless rescue also applies to keyed backends. If your chosen backend fails a single call, that call retries on the keyless ring, and the result notes `rescued_from` and `backend_error`. The failover is never sticky, so the next call tries your chosen backend again. Disable it with `web.keyless_rescue: false`, which is also off whenever `keyless_fallback` is off.
+
+## Provider Walkthroughs
+
+### Firecrawl (default)
+
+Firecrawl offers full-featured search and extraction and is the recommended choice for most users. Get a key at [firecrawl.dev](https://firecrawl.dev/); the free tier includes 500 credits per month. To self-host, set `FIRECRAWL_API_URL` (for example `http://localhost:3002`). When that variable is set, the API key is optional, and you can disable server auth with `USE_DB_AUTHENTICATION=false`.
+
+### SearXNG (free, self-hosted)
+
+SearXNG is a privacy-respecting metasearch engine that aggregates 70+ engines. It needs no API key and is search-only. Self-host it with Docker Compose on port 8888 (container port 8080) using the `searxng/searxng:latest` image. JSON output is disabled by default, so copy `settings.yml` out of the container, add `search: formats: [html, json]`, copy it back, and restart. Then verify:
 
 ```bash
-# Firecrawl works out of the box for basic search
-# For higher rate limits, set:
-export FIRECRAWL_API_KEY="fcp-..."
+curl -s "http://localhost:8888/search?q=test&format=json" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'{len(d[\"results\"])} results')"
 ```
+
+A 403 response means JSON is still disabled. Set `SEARXNG_URL=http://localhost:8888` in `~/.hermes/.env`, then set `web.search_backend: "searxng"`. Public instances are listed at [searx.space](https://searx.space/); filter for JSON-enabled ones. Their rate limits and uptime vary, so self-host for production use. Pair SearXNG with an extract backend, as shown in the configuration section.
 
 ### Tavily
 
-Tavily is an alternative search API optimized for AI agents.
+Tavily is an AI-optimised search and extract API. Select it in `hermes tools` or set `web.backend: tavily` to use it keyless, which is rate-limited. For higher limits, set `TAVILY_API_KEY` from [app.tavily.com](https://app.tavily.com/home). The [Tavily keyless docs](https://docs.tavily.com/documentation/keyless) cover the keyless option.
 
-```bash
-export TAVILY_API_KEY="tvly-..."
+### Perplexity
+
+Perplexity's Search API returns ranked, date-stamped results. For `web_extract`, it returns query-relevant snippets with elisions marked `…` rather than full pages. Get a key at [perplexity.ai/account/api](https://www.perplexity.ai/account/api) and read the [quickstart](https://docs.perplexity.ai/docs/search/quickstart). For full-page extraction, set Firecrawl, Exa, or Parallel as `web.extract_backend`.
+
+### Exa and Parallel
+
+Exa offers neural search with semantic understanding. Get a key at [exa.ai](https://exa.ai/); the free tier includes 1 000 searches per month with a key. Parallel offers AI-native search and extraction. Get access at [parallel.ai](https://parallel.ai/).
+
+### Brave Search (free tier)
+
+`BRAVE_SEARCH_API_KEY` enables Brave Search with a 2 000 queries-per-month free tier. It is search-only; select it with `web.backend: "brave-free"`, and pair it with an extract backend if you need `web_extract`.
+
+### DDGS
+
+DDGS needs no key and uses the [`ddgs` package](https://pypi.org/project/ddgs/). Hermes can lazy-install it on first use. If you prefer to install it yourself from a [PM-prepared source checkout](https://hermes-agent.nousresearch.com/docs/reference/package-management#developer-workflow), run the package-management sync for `ddgs`, then reactivate the checkout and restart Hermes.
+
+### Keenable
+
+Keenable is a keyless ring member. Set `KEENABLE_API_KEY` for the paid tier. The official docs do not include separate setup steps for it.
+
+## xAI (Grok) and OpenAI Native: search-only, with a trust caveat
+
+xAI routes `web_search` through Grok's server-side search tool on the Responses API. Authenticate with `XAI_API_KEY` or `hermes auth add xai-oauth`, then set `web.backend: "xai"`. Optional knobs sit under `web: xai:`:
+
+```yaml
+# ~/.hermes/config.yaml
+web:
+  backend: "xai"
+  xai:
+    model: grok-build-0.1        # default
+    allowed_domains: [arxiv.org] # optional, max 5; mutually exclusive with excluded_domains
+    timeout: 90                  # seconds (default)
 ```
 
-## Self-Hosted: SearXNG
+On a 401 with OAuth credentials, the provider performs one forced token refresh and retries. Environment-variable credentials (`XAI_API_KEY`) skip that retry. The trust caveat matters: unlike index-backed providers such as Brave, Tavily, and Exa, xAI is an LLM that chooses the URLs and writes the titles and descriptions. A crafted query could in principle steer it toward attacker-chosen URLs, so validate returned URLs before fetching, especially when the query came from untrusted input.
 
-SearXNG is the most requested web search provider. It's a free, self-hosted, privacy-respecting metasearch engine. No API keys, no rate limits, no tracking.
+OpenAI Native declares the provider-executed `web_search` tool on the Codex Responses endpoint. Set `web.search_backend: "openai-native"` and authenticate with `hermes auth add openai-codex`; it has no API key of its own. The built-in works only on that endpoint, and it covers search only, so pair it with an extract backend through `web.extract_backend`. Selecting it replaces the client-side `web_search` function rather than adding to it. The same trust caveat applies, because the model drives the search and folds the results into its own answer.
 
-### Setup
+## How web_extract handles long pages
 
-```bash
-# Deploy SearXNG via Docker
-docker run -d --name searxng -p 8080:8080 searxng/searxng
-```
+Backends return raw page markdown, which can be very large. `web_extract` applies a deterministic character budget and does no LLM summarization. The default budget is 15,000 characters. Over-budget pages are cut to a head-and-tail window (about 75% head, 25% tail) on markdown line boundaries, with a `[TRUNCATED]` footer that names the stored file and the exact `read_file` call to page through the middle. Configure the budget with `web.extract_char_limit` (default 15000, clamped 2000 to 500000), or pass `char_limit` on a single call. The per-provider timeout is `web.extract_timeout` (default 120 seconds; `0` disables it). For JavaScript-heavy pages, use `browser_exec` with `new_tab(url)` and `wait_for_load()`, then read the live DOM with `page_info()` or `js()`.
 
-Then configure Hermes to use it:
+## Result Caching
 
-```bash
-hermes config set web.search_provider "searxng"
-hermes config set web.searxng_base_url "http://localhost:8080"
-```
+Repeated web calls within a short window are served from cache. The `web_search` memo is per process and matches the same query and provider. `web_extract` stores full text under `~/.hermes/cache/web/`, shared across the CLI, gateway, cron, and subagents. Concurrent identical searches are coalesced into one backend request. Only successful responses are cached. Keyless-rescue responses are never cached, and URLs on your `security.website_blocklist` are never served from cache.
 
-### Why SearXNG?
+Local and private URLs bypass the extract cache entirely. That covers localhost, `127.0.0.1`, `*.local`, single-label LAN hosts, and private or link-local IP ranges. For public staging or tunnel hosts, list them in `web.cache_exempt_hosts`. Caching is controlled by `web.cache_enabled` (default true) and `web.cache_ttl_minutes` (default 20, clamped 1 to 1440). For live data such as scores or prices, lower the TTL or disable the cache.
 
-| Feature | SearXNG | Firecrawl | Tavily |
-|---------|---------|-----------|--------|
-| Self-hosted | ✅ | ❌ | ❌ |
-| Free | ✅ | Freemium | Freemium |
-| Private (no tracking) | ✅ | ❌ | ❌ |
-| No API key needed | ✅ | ❌ | ❌ |
-| Multiple search sources | ✅ (aggregates) | ❌ | ❌ |
-| Easy to deploy | ✅ (Docker) | SaaS | SaaS |
+## Verify Your Setup
 
-If you run Hermes on a server or local machine, SearXNG is the best option for unlimited, private web search.
-
-## Brave Search
-
-Brave Search is another popular option — it has its own search index (not Bing/Google dependent).
-
-```bash
-export BRAVE_SEARCH_API_KEY="BSA-..."
-```
-
-Then configure:
-
-```bash
-hermes config set web.search_provider "brave"
-```
-
-## Custom Search Endpoints
-
-For custom search backends:
-
-```bash
-hermes config set web.search_provider "custom"
-hermes config set web.custom_search_url "https://your-search-api.com/search"
-hermes config set web.custom_search_api_key "your-key"
-```
-
-## Comparison Table
-
-| Provider | Cost | Privacy | Setup | Quality |
-|----------|------|---------|-------|---------|
-| Firecrawl (default) | Freemium | Moderate | None (default) | Good |
-| Tavily | Freemium | Moderate | Set API key | Good |
-| SearXNG | Free (self-host) | Excellent | Docker run | Very good (aggregates) |
-| Brave Search | Freemium | Good | Set API key | Good (independent index) |
-| Custom | Varies | Varies | Config setup | Varies |
+Run `hermes setup`. It reports the detected backend, for example `✅ Web Search & Extract (searxng)`. From a source checkout, activate the environment with `source ./activate` and run `python -m tools.web_tools`. That prints the active backend and its status.
 
 ## Troubleshooting
 
-**Web search not working after enabling:**
+When using SearXNG, if `web_search` returns `{"success": false}`, first check that the JSON endpoint responds. An HTTP 403 means JSON is disabled: add `json` to `formats` in `settings.yml` and restart. A connection error usually means the container is not running, so check with `docker ps | grep searxng`. If `web_extract` reports a "search-only backend", set `web.extract_backend` to an extract-capable provider such as firecrawl, tavily, perplexity, keenable, exa, or parallel. If SearXNG returns zero results or a public instance rate-limits you, try a different query or a different [searx.space](https://searx.space/) instance, or self-host. A `[TRUNCATED]` footer is expected; raise `web.extract_char_limit` or pass a larger `char_limit`.
 
-```bash
-# 1. Verify toolset is enabled
-hermes tools list | grep web
+## Optional Skill: `searxng-search`
 
-# 2. Check if API keys are set
-hermes config env-path
-cat ~/.hermes/.env | grep -i SEARCH
-
-# 3. Test manually
-curl -s "https://api.firecrawl.dev/v0/search?query=test"
-
-# 4. Reset session
-/reset
-```
+Install it with `hermes skills install official/research/searxng-search`. The skill teaches the agent to call the SearXNG JSON API directly through curl or Python, filter by category (`general`, `news`, `science`), handle pagination and errors, and fall back gracefully when SearXNG is unreachable.
 
 ## FAQ
 
-**Q: Which search provider should I use?**
-For most users: Firecrawl (default, works out of the box). For heavy users: SearXNG (free, self-hosted, no rate limits). For privacy-focused: SearXNG or Brave Search.
+**Q: Can I use different providers for search and extract?**
+A: Yes. Set `web.search_backend` and `web.extract_backend` independently, for example SearXNG for search and Firecrawl for extraction.
 
-**Q: Can I use multiple search providers at once?**
-Not simultaneously — Hermes uses one provider at a time. Switch with `hermes config set web.search_provider`.
+**Q: Does Hermes need any credential for web tools to work?**
+A: No. With no credentials and nothing selected, the keyless ring described above provides working `web_search` and `web_extract`.
 
-**Q: Does the browser tool also search the web?**
-Yes — the browser tool navigates to URLs directly. Web search finds URLs; the browser tool visits them. They're complementary.
+**Q: How do I disable the keyless fallback?**
+A: Set `web.keyless_fallback: false`. To disable only the one-shot rescue for keyed backends, set `web.keyless_rescue: false`.
 
-## Next Steps
+**Q: Is xAI used automatically if I have XAI_API_KEY?**
+A: No. xAI is not in the auto-detection chain, so you must opt in with `web.backend: "xai"`.
 
-- **[Plugins Guide](/blog/hermes-plugins/)** — extend Hermes further
-- **[Token Usage & Cost Optimization](/blog/token-cost-optimization/)** — manage API costs
-- **[Commands Reference](/blog/commands-reference/)** — more CLI commands
+**Q: Where is the authoritative reference?**
+A: The [official docs page](https://hermes-agent.nousresearch.com/docs/user-guide/features/web-search) is the primary source for this guide.
+
