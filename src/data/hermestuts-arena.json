@@ -13468,8 +13468,8 @@
         "dead": 0
       },
       "hero": {
-        "status": "omitted",
-        "reason": "gen-image-verified.sh: Lumenfall and HF FLUX both failed (run 2026-10-28); OpenRouter fallback disabled. Refresh keeps the original post's no-heroImage state."
+        "status": "backfilled",
+        "reason": "Root cause was a slug-alias gap: cron passed hermestuts, wrapper case maps only knew htmles -> instant exit misread as provider outage. Maps aliased 2026-10-28; hero regenerated via Lumenfall on the exact original invocation and wired into the post (commit 4c95283)."
       },
       "builder_dnf": [],
       "builder_flags": [
