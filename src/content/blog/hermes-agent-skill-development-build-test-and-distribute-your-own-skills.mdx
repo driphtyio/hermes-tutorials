@@ -1,0 +1,199 @@
+---
+title: "Hermes Agent Skill Development: Build, Test, and Distribute Your Own Skills"
+description: "Learn how to write, test, and publish your own Hermes Agent skill, from SKILL.md structure and conditional activation through to tap-based sharing for others."
+pubDate: "2026-10-30"
+tags: ["hermes-agent", "skills", "tutorial", "automation"]
+keywords: [hermes skills, hermes skill development, SKILL.md, hermes skill publish, build hermes skill]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-skill-development-build-test-and-distribute-your-own-skills-1793376242.webp"
+lastVerified: "2026-10-30"
+---
+
+If you have been using Hermes Agent for a while, you already know the rhythm: type a slash command, watch a skill load its instructions into context, and let the agent work. This post moves you to the other side of that interaction — deciding what deserves to be a skill, writing its `SKILL.md`, testing it, and publishing it to a repository other people can install from.
+
+This guide is based on the official Hermes Agent documentation and the agentskills.io specification; we did not run these commands hands-on for this article. Everything below is written from those sources, so treat the commands as documented rather than measured.
+
+## Why Trust This Guide
+
+The Hermes-specific claims here trace back to three published sources: the official [Creating Skills](https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills) page, the [Skills System](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills) page, and the [agentskills.io specification](https://agentskills.io/specification) those docs reference. This guide is for Hermes Agent users who are comfortable in a terminal and editing Markdown.
+
+You will build one small example skill end to end: **`git-branch-cleanup`**, a skill that wraps the `git` CLI, lists merged local branches, excludes protected names, confirms with the user, and deletes safely. It is deliberately small and has no dependencies. It covers the core authoring features: frontmatter, config, body sections, and a reference file.
+
+Commands and flags can vary with the version you have installed. Confirm anything you are unsure about against your own install before relying on it.
+
+## Skill or Tool? Choosing the Right Extension
+
+A skill suits work you can express as instructions plus shell commands wrapping a CLI or API you already run; a tool suits work that needs API-key auth, precise custom processing, binary or streaming data, or real-time events. Start by asking which side your idea falls on.
+
+The developer guide draws the line with concrete examples. Skills cover arXiv search, git workflows, Docker management, and PDF processing. Tools cover browser automation, text-to-speech, and vision analysis. The deciding factor is how much integration the capability needs: a skill instructs the agent and leans on existing tools, with no key management baked in, while a tool does the end-to-end work itself.
+
+A quick checklist:
+
+- Does the work reduce to shell commands against a CLI you already have? Skill.
+- Does it need its own API key, auth flow, or credential handling? Tool.
+- Is the payload binary, streaming, or real-time? Tool.
+- Is it a repeatable procedure the agent should read rather than execute natively? Skill.
+
+`git-branch-cleanup` is a clean skill: it runs ordinary `git` commands, needs no keys, and returns plain text.
+
+## Anatomy of a Skill: Files and Folders
+
+A skill is a folder containing a `SKILL.md` file plus optional `scripts/` and `references/` subfolders. The primary directory and source of truth is `~/.hermes/skills/`, and hub-installed and agent-created skills also go there.
+
+The layout bundled skills use nests each skill under a category name, which keeps a growing collection readable:
+
+```
+~/.hermes/skills/
+└── git/
+    └── git-branch-cleanup/
+        ├── SKILL.md
+        └── references/
+            └── branch-naming.md
+```
+
+`SKILL.md` is the only required file. `scripts/` holds helpers when instructions alone are not enough, and `references/` holds supporting detail the agent loads only when it needs it.
+
+Precedence matters if you keep skills in more than one place. Project-level skills win, then your local `~/.hermes/skills/`, then a configured create directory, then external directories; the higher-precedence copy of a given name wins everywhere. Project skills require trust: run `hermes skills trust` from inside the repository if a project skill is not loading.
+
+## Frontmatter: Making Your Skill Discoverable and Conditional
+
+Frontmatter controls who finds the skill, which platforms it targets, when it appears at all, and what configuration or environment values it expects. `name` and `description` are what a user sees in skill search results, so they carry most of the discovery weight.
+
+The documented keys cover `name`, `description`, `version`, `author`, `license`, and `platforms` (macos, linux, windows; omit it to target all). A `metadata.hermes` block holds `tags`, `related_skills`, `requires_toolsets`, `requires_tools`, `fallback_for_toolsets`, `fallback_for_tools`, and `config`. Environment variables are declared separately under `required_environment_variables`.
+
+Conditional activation has a direction you must get right:
+
+- `requires_toolsets` / `requires_tools` **hide** the skill when the listed item is **not** available.
+- `fallback_for_toolsets` / `fallback_for_tools` **hide** the skill when the listed item **is** available.
+
+The developer guide's example is a `duckduckgo-search` skill with `fallback_for_tools: [web_search]`. It is a stand-in that disappears once a real web search tool exists. Our git skill needs no conditional field, but it does use configuration:
+
+```yaml
+metadata:
+  hermes:
+    tags: [git, maintenance, cleanup]
+    config:
+      - key: protected_branches
+        description: Comma-separated branch names never to delete
+        default: "main,develop"
+        prompt: Which branches should be treated as protected?
+```
+
+Config values are stored in `config.yaml` under `skills.config.<key>` and appended to the skill message at runtime. Required environment variables use a parallel structure of `name`, `prompt`, `help`, and `required_for`.
+
+## Writing the Body: The Recommended Section Order
+
+The developer guide recommends a fixed order: intro, When to Use, Quick Reference, Procedure, Pitfalls, Verification. Follow the order rather than inventing your own.
+
+Keep Quick Reference to a short list of command shapes and the config key. In the example below, each Procedure step covers a single action. Verification should state how the agent proves the result, not merely that it finished.
+
+Here is the complete `SKILL.md`:
+
+```markdown
+---
+name: git-branch-cleanup
+description: List merged local git branches, exclude protected names, confirm with the user, then delete them safely.
+version: 0.1.0
+author: Hermes Tutorials
+license: MIT
+platforms: [macos, linux]
+metadata:
+  hermes:
+    tags: [git, maintenance, cleanup]
+    config:
+      - key: protected_branches
+        description: Comma-separated branch names never to delete
+        default: "main,develop"
+        prompt: Which branches should be treated as protected?
+---
+
+# Git Branch Cleanup
+
+Safely remove local git branches that have already been merged.
+
+## When to Use
+
+Use this skill when the user asks to clean up or delete merged local branches.
+Do not use it for remote branches or for branches that are not yet merged.
+
+## Quick Reference
+
+- List merged branches: `git branch --merged main`
+- Delete one branch: `git branch -d <branch>`
+- Config key: `protected_branches` (default: main,develop)
+
+## Procedure
+
+1. Confirm the working directory is a git repository.
+2. Run `git branch --merged main` (the default branch as base) and note the current branch; it is never a deletion candidate.
+3. Filter out anything matching `protected_branches`, plus names reserved in
+   references/branch-naming.md.
+4. Show the user the remaining list and ask for explicit confirmation.
+5. Delete each confirmed branch with `git branch -d`. A refusal means the branch
+   is not fully merged — stop and report rather than forcing.
+
+## Pitfalls
+
+- Never force a delete here; a refusal means work would be lost.
+- In a detached HEAD state, ask the user before treating anything as merged.
+
+## Verification
+
+Run `git branch --merged main` again and confirm none of the deleted names remain,
+then show the user the shortened list.
+```
+
+The `references/branch-naming.md` file holds your team's naming conventions, keeping the main file short. A minimal version might look like this:
+
+```markdown
+# Branch naming
+
+- `release/*` branches are never deleted by this skill.
+- `hotfix/*` branches are reported but require an explicit user request to delete.
+```
+
+## Progressive Disclosure: Keep Level 0 Lean
+
+Hermes loads skills in three levels. Level 0 is a listing of names, descriptions, and categories, which the docs put at roughly 3k tokens. Level 1 loads the full `SKILL.md` when the agent requests it. Level 2 loads one reference file when extra detail is needed. Keeping `SKILL.md` lean and moving supporting material into `references/` keeps that flow cheap.
+
+That structure also matches how skills are invoked. Every installed skill is a slash command, and up to five leading skill tokens can be stacked in a single message, with parsing stopping at the first non-skill token. The `/learn` command follows the same pattern for large sources: it produces a lean `SKILL.md` plus `references/` files rather than one enormous document, saved through the `skill_manage` tool.
+
+## Testing Your Skill
+
+The documented smoke test is a one-shot chat invocation scoped to the skills toolset: `hermes chat --toolsets skills -q "Use the X skill to do Y"`, with the placeholders swapped for your skill name and task. Read the reply carefully. What the agent chose to do tells you whether the description and procedure are clear.
+
+Environment variables deserve attention during testing. A missing value does **not** hide the skill: Hermes prompts for it securely when the skill loads in the local CLI, while gateway and messaging sessions show local setup guidance instead. Values that are set pass through to `execute_code` and terminal sandboxes, and Hermes never exposes the raw secret to the model. If the agent authored the skill itself through `/learn`, the `skills.write_approval` gate applies when it is enabled.
+
+## Publishing and Sharing
+
+`hermes skills publish` sends a skill to a GitHub repository, and other people add that repository as a tap so they can search and install from it. Installs pass security scanning: non-dangerous findings can be overridden with `--force`, while dangerous verdicts stay blocked.
+
+```bash
+hermes skills publish <path-to-your-skill-folder> --to github --repo owner/repo
+hermes skills tap add owner/repo
+```
+
+Hub-installed skills land in `~/.hermes/skills/` alongside your own, so precedence rules decide which copy wins. Beyond taps, the docs describe third-party discovery through GitHub identifiers such as `openai/skills/k8s`, skills.sh identifiers, and `/.well-known/skills/index.json` endpoints. These are useful places to browse other people's skills before writing your own.
+
+## Common Pitfalls
+
+Most authoring problems come from the same handful of mistakes, and each has a direct fix:
+
+- **Reversed conditional fields.** `requires_*` hides when something is missing; `fallback_*` hides when something is present. Swap them and your skill vanishes exactly when you wanted it.
+- **A bloated `SKILL.md`.** Long reference material in the main file makes every full load bigger. Move it to `references/` and let Level 2 load it on demand.
+- **Undeclared environment variables or config keys.** If a value is not declared, nothing prompts for it. Declare `required_environment_variables` for secrets and `metadata.hermes.config` for tunables.
+- **A vague description.** The description is what appears in skill search results, so write it as a complete sentence describing the outcome.
+- **The precedence gotcha.** A same-named project skill shadows your local one everywhere, so you may be editing a copy that never runs.
+
+## FAQ
+
+### Do I need to write Python to make a skill?
+
+No. Skills are instructions plus shell commands that wrap a CLI or API you already have, with no custom Python integration and no baked-in key management. If your idea needs auth handling, custom processing, binary or streaming data, or real-time events, it belongs in a tool instead.
+
+### Can the Hermes agent write skills for me?
+
+Yes. The `/learn` command authors a skill from a local directory, a URL, a described workflow, or a large corpus, and the agent saves the result with the `skill_manage` tool. When the `skills.write_approval` gate is enabled, that write is subject to it.
+
+### How do I stop bundled skills from cluttering my setup?
+
+Run `hermes skills opt-out`, which writes a `.no-bundled-skills` marker. If you later want to clean up, `hermes skills opt-out --remove` deletes only bundled skills that are unmodified, so anything you have edited is left alone.
