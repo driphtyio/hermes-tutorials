@@ -128,7 +128,7 @@ The sources describe mechanisms, not a schedule, so the routine below is qualita
 
 **How do I turn memory off completely?** Set both `memory_enabled: false` and `user_profile_enabled: false`; when both built-in stores are disabled the built-in `memory` tool is automatically hidden. That is a different control from gating.
 
-**Will anything tell me the queue is growing?** Not according to these sources. Staged writes are silent and discoverable only through the two pending commands, and the default `💾 Memory updated` chat line governed by `display.memory_notifications` (`off | on (default) | verbose`) is not a queue indicator. Proactive surfacing is what the triage comment tracks as a duplicate of #58834.
+**Will anything tell me the queue is growing?** None of the sources this guide reviewed reports such a signal. Staged writes are silent and discoverable only through the two pending commands, and the default `💾 Memory updated` chat line governed by `display.memory_notifications` (`off | on (default) | verbose`) in the [memory docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory#background-review-notifications-displaymemory_notifications) is not a queue indicator. Proactive surfacing is what the triage comment tracks as a duplicate of [#58834](https://github.com/NousResearch/hermes-agent/issues/58834).
 
 ## The Bottom Line
 
