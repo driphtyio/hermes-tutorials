@@ -116,7 +116,7 @@ The sources describe mechanisms, not a schedule, so the routine below is qualita
 
 ## FAQ
 
-**Does the gate ever refuse a write outright?** No. Per `tools/write_approval.py`, the gate only ever delays a write and never silently refuses it; `blocked` appears only when the user actively denies the inline prompt, which prints `Memory write denied by user. The change was not saved.` Skills never prompt inline at all — they stage.
+**Does the gate ever refuse a write outright?** No. In the installed source (`tools/write_approval.py`), `evaluate_gate()` returns a decision whose docstring states the gate "only ever delays a write, never silently refuses it", and the `blocked` flag is produced only when the user actively denies the inline prompt, which prints `Memory write denied by user. The change was not saved.` Skills never prompt inline at all — they stage.
 
 **Are background writes gated too?** Yes. `memory.write_approval` applies to both foreground turns and the background review. Because a background write runs in a daemon thread with no user, it always stages when the gate is on, and the listing tags it ` [auto]`.
 
