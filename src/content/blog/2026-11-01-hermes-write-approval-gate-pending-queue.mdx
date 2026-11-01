@@ -1,0 +1,139 @@
+---
+title: "Turning on the Hermes Write-Approval Gate and Reading the Pending Queue"
+description: "Learn what memory.write_approval and skills.write_approval gate, how staged writes land in ~/.hermes/pending/, and how to review them via /memory and /skills."
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-write-approval-gate-pending-queue-1793550900.webp"
+pubDate: 2026-11-01
+lastVerified: "2026-11-01"
+tags: ["tutorial", "hermes-agent", "write-approval", "memory", "skills"]
+draft: false
+---
+
+Hermes learns between sessions. After a turn, a background self-improvement review can quietly save a memory or update a skill, and foreground turns can write to `MEMORY.md`, `USER.md`, or a `SKILL.md` without asking. That is the consent-aware learning loop described in the [Persistent Memory docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory), and by default it writes freely. The control is a single boolean per subsystem — `memory.write_approval` and `skills.write_approval` — described in the [write_approval section](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory#controlling-memory-writes-write_approval). Turning either on does not block writes; it delays them into a file-backed review queue under `~/.hermes/pending/` that nothing announces. This runbook covers what the gate does and never does, how to enable it, exactly what a staged record contains, how to review staged writes with the `/memory` and `/skills` subcommands, and the three gaps the sources document.
+
+## What the gate is (and isn't)
+
+A per-subsystem boolean gates the agent's cross-session writes — memory (`MEMORY.md` / `USER.md`) and skills (`SKILL.md` + files) — from either origin: a `foreground` turn or a `background_review` fork. This is stated in the module docstring of `tools/write_approval.py`. With `false` (the default) the agent writes freely, the pre-gate behaviour. With `true` the gate never commits directly: it prompts inline for memory in the interactive CLI, or it stages the write under `<HERMES_HOME>/pending/{memory,skills}/<id>.json` for out-of-band review.
+
+Two properties matter for operators. First, the key is intentionally a single boolean with no "block all writes" state — the source comment says so explicitly. To disable a subsystem entirely you use its own enable flag (for example `memory.memory_enabled`), not the gate. Second, the gate only ever delays a write; it never silently refuses one. The decision object in `tools/write_approval.py` carries exactly one of `allow`, `blocked`, `stage`, plus a `message`, and `blocked` is produced only when the user actively denies the inline prompt. Everything else is either allowed or staged.
+
+Origin detection is not a separate subsystem. `current_origin()` reuses the skill-provenance ContextVar that the background review fork sets; foreground turns leave it at the default `foreground`. So the same write path is labelled consistently no matter which fork produced it.
+
+## Turning it on
+
+The supported interactive path is the slash subcommand, which persists the boolean:
+
+```
+/memory approval on         # turn the gate on (or 'off') and persist it
+/skills approval on         # turn the gate on (or 'off') and persist it
+```
+
+The docs' recommended config shape is equally direct:
+
+```
+skills:  write_approval: false     # false = write freely (default) | true = require approval
+```
+
+Both subcommands share one dispatcher in `hermes_cli/write_approval_commands.py`. It returns `None` for arguments that are not write-approval subcommands so the caller falls through to its other handling (for example `/skills search`), and it keeps `mode` as a back-compat alias of `approval`. Accepted values are generous: `on`, `true`, `yes`, `1`, `enable`, `enabled` turn the gate on; `off`, `false`, `no`, `0`, `disable`, `disabled` turn it off. Anything else prints `Invalid value '{arg}'. Use: on or off.`
+
+Where no setter exists on a surface, the command does not silently fail — it prints the fallback line `To change the {subsystem} approval gate, run:` followed by `hermes config set {subsystem}.write_approval {val}` (for example `hermes config set memory.write_approval true`). Config resolution itself is forgiving: `write_approval_enabled()` reads `<subsystem>.write_approval`, and any unset or invalid value means the gate is off. Hand-edited string configs are coerced against `_TRUTHY_STRINGS` — `"on"`, `"true"`, `"yes"`, `"1"`, `"approve"`, `"enabled"` — while YAML already parses bare `on`/`off`/`yes`/`no`. Unknown values coerce to `False`.
+
+Gating is not the same as switching memory off. To turn memory off entirely, set both `memory_enabled: false` and `user_profile_enabled: false`; when both built-in stores are disabled the built-in `memory` tool is automatically hidden, as the [memory docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory) note.
+
+## Memory writes: inline prompt vs. staging
+
+With `memory.write_approval: true`, behaviour splits by surface. In the interactive CLI, foreground memory writes prompt you inline, because entries are small enough to read in full. Everywhere else — messaging platforms, scripts, and the background self-improvement review — writes are staged for review with `/memory pending`. The [write_approval table](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory#controlling-memory-writes-write_approval) states this split directly.
+
+The inline path is deliberately narrow. `tools/write_approval.py` routes it through the per-thread CLI approval callback (`tools.terminal_tool.set_approval_callback`) rather than `prompt_dangerous_approval`, because that wrapper falls back to `input()` — deadlock-prone under prompt_toolkit and a silent deny in gateway sessions — and converts callback errors into a deny. Here a missing channel or a failed prompt must stage instead. The callback contract is `allow_permanent=False`, and the recognised outcomes are `once`, `session`, and `deny`, mapping to approve, approve, and deny. An unknown outcome maps to stage rather than drop, and an active deny produces exactly: `Memory write denied by user. The change was not saved.`
+
+Headless contexts get a different hint. `hermes chat -q` (and therefore every kanban worker), cron, and the unattended programmatic platforms can register an approval callback too, but nobody answers it — so they stage at once instead of waiting out an approval timeout (tracked in the source as issue #15216). The staged message template is `Staged for approval ({subsystem}.write_approval is on). Not yet saved — {where}.` On surfaces where a human can type the slash command (interactive CLI, TUI/desktop exec route, chat-gateway sessions), `{where}` is `review with /memory pending`. On headless workers — cron (`HERMES_CRON_SESSION`), kanban (`HERMES_KANBAN_TASK`), and the unattended platforms `webhook`, `msgraph_webhook`, `api_server` — the hint instead names the pending directory and tells you to review from an interactive CLI session, because no one at a prompt can deliver a command (issue #98330).
+
+Separately, the background review's chat signal is cosmetic, not a queue indicator. By default it surfaces a short `💾 Memory updated` line; the knob is `display:  memory_notifications: on    # off | on (default) | verbose`, with the three values `off | on | verbose`, as covered under [Background review notifications](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory#background-review-notifications-displaymemory_notifications).
+
+## What's inside ~/.hermes/pending/
+
+The pending store is file-backed. `_pending_path()` returns `get_hermes_home() / "pending" / subsystem / f"{pending_id}.json"`, and pending ids are `uuid.uuid4().hex[:8]` — the short eight-hex-character identifiers you see in listings. The docs and the GitHub thread refer to the same layout as `~/.hermes/pending/{memory,skills}/`.
+
+A staged record contains exactly seven fields: `id`, `subsystem`, `action`, `summary`, `origin`, `created_at`, and `payload`. The `payload` is the exact kwargs replayed when you approve, so approval re-runs the intended write rather than re-deriving it. `origin` is either `foreground` or `background_review`. Listings are oldest first — `list_pending()` sorts by `created_at` — and unreadable records are skipped with a warning rather than crashing the listing.
+
+Staging is best-effort by design. If the disk write fails, `stage_write()` logs the error and still returns a record; the write itself is lost. That is the safe failure for an approval gate: nothing is silently committed on the way to the queue.
+
+## Reviewing memory: /memory pending | approve | reject
+
+The review verbs are documented and shared:
+
+```
+/memory pending             # list staged memory writes (auto ones tagged [auto])
+/memory approve <id>        # apply one (or 'all')
+/memory reject <id>         # drop one (or 'all')
+```
+
+`/memory pending` tags background-review records with ` [auto]` and, for memory, extends each line with the full matched entry that every staged `replace`, `patch`, or `remove` is pinned to. That pinning is the safety mechanism: approval applies to exactly the pinned entry, not to a search string. If the entry changed after the write was staged, the write is refused and stays pending for you to reject, as the [memory docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory#controlling-memory-writes-write_approval) describe. A `replace`/`patch`/`remove` staged before pinning existed has no verifiable target and is refused too; the listing renders it as `unpinned legacy target — reject and recreate before approving`.
+
+Approval is transparent about destruction. `/memory approve` lists the full text of every entry it overwrote or removed, because a memory `replace` overwrites the WHOLE matched entry (issue #117952) and the approver is the last person who can notice a missing clause. The output sections are `Overwrote entire entry (re-add anything you still need):`, `Patched entry (as it was before the edit):` — a patch keeps the rest of the entry, so it is shown as it was — and `Removed entry (re-add anything you still need):`. `all` is accepted as a target, and individual failures are collected under `Failed:` rather than aborting the batch.
+
+## Reviewing skills: /skills pending | diff | approve | reject
+
+Skills use the same on/off gate, but the review UX differs because a `SKILL.md` is far too large to read in a chat bubble, and a background write runs in a daemon thread with no user to prompt. So when `skills.write_approval` is `true`, skill writes — `create`, `edit`, `patch`, `write_file`, `delete` — always stage regardless of origin, per [Controlling skill writes](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory#controlling-skill-writes-skillswrite_approval) and the dedicated [Gating agent skill writes](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills#gating-agent-skill-writes-skillswrite_approval) section of the [skills docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills).
+
+```
+/skills pending             # list staged skill writes + a one-line gist each
+/skills diff <id>           # full unified diff (best viewed in CLI or dashboard)
+/skills approve <id>        # apply it (or 'all')
+/skills reject <id>         # drop it (or 'all')
+```
+
+The one-line gist is a heuristic with no model call. `create`/`edit` use the frontmatter `description:` value, truncated to 140 characters, plus a size (`N chars` or `X KB`); `patch` renders as `patch '{name}' {file_path or 'SKILL.md'} (+{added}/-{removed} lines)`; `write_file`, `remove_file`, and `delete` use fixed templates. `/skills diff <id>` renders the full content for a `create`, or a unified diff against the base file for `edit`/`patch`/`write_file`. A staged `batch` renders each op's diff under its gist header (`## op {i + 1}/{total}: {gist}`), with ops applying in order so op *i* diffs against the content ops 1..*i−1* left behind — which is why a patch to a skill an earlier op created shows a real diff.
+
+The preview is faithful by construction. A patch preview folds through the same matcher the approve path runs (`tools/fuzzy_match.fuzzy_find_and_replace`), so a previewed diff is exactly what approval would commit. Patches the approve path would reject — a repeated anchor without `replace_all`, a whitespace-only anchor, escape drift, or `old_string == new_string` — render as an explicit `(patch would fail: …)` note instead of a fabricated folded result. On a messaging platform you can approve from the gist plus metadata, or open the full diff on the CLI, the dashboard, or the staged file at `~/.hermes/pending/skills/<id>.json`.
+
+## Memory vs. skills at a glance
+
+| Dimension | Memory | Skills |
+| --- | --- | --- |
+| Config key / default | `memory.write_approval`, default `false` | `skills.write_approval`, default `false` |
+| What is written | `MEMORY.md` / `USER.md` | `SKILL.md` + files |
+| Gate on, interactive CLI, foreground | Inline prompt (`once`/`session`/`deny`) | Always staged |
+| Gate on, platforms / scripts | Staged | Staged |
+| Gate on, background review | Staged, tagged ` [auto]` | Staged, tagged ` [auto]` |
+| Listing | `/memory pending`, shows the full pinned matched entry | `/skills pending`, one-line heuristic gist |
+| Diff affordance | Shared handler dispatches `diff` for skills only; memory review relies on the pinned-entry listing | `/skills diff <id>`: full content or unified diff; batch ops render in order |
+| Destructive-op safety | `replace`/`patch`/`remove` pinned to the matched entry; changed entry refused; unpinned legacy refused | Patch preview folds through the same matcher approval runs; failing patches render `(patch would fail: …)` |
+| Summary format | Summary plus ` [auto]` tag for background origin | Gist from frontmatter `description:` (≤140 chars) or `+added/−removed` lines |
+
+## The gaps you should plan around
+
+Three gaps are documented, and all three are about discovery and staleness rather than enforcement.
+
+First, the queue is silent. Staged writes land in `~/.hermes/pending/{memory,skills}/` and are discoverable only by running `/memory pending` or `/skills pending` — nothing announces them. That is the core complaint in [GitHub issue #105770](https://github.com/NousResearch/hermes-agent/issues/105770), where one reporter found 77 pending memory and 164 pending skill writes after roughly eight weeks with both switches on. Treat that as a single user report, not a typical rate.
+
+Second, background replace/remove staging happens even with the gate off. A second reporter's queue grew to 21 unreviewed memory proposals while `write_approval` was at its default off, because `_background_delete_gate` in `tools/memory_tool.py` stages `replace`/`remove` from unattended background-review forks ([issue #105921](https://github.com/NousResearch/hermes-agent/issues/105921)); a 2026-09-21 comment in the same [thread](https://github.com/NousResearch/hermes-agent/issues/105770) reports pending memory records with the gate off via background replace/remove. The docs corroborate the mechanism: a staged `patch` or `remove` — which the background review stages even with the gate off — records the full entry it targets, and `/memory pending` shows it, as noted in [Controlling memory writes](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory#controlling-memory-writes-write_approval).
+
+Third, stale items can become un-applyable, so `approve` can fail. Later patches can leave a pending record pointed at content that no longer matches, and failures surface under `Failed:`. The maintainer triage in [issue #105770](https://github.com/NousResearch/hermes-agent/issues/105770) maps the silence to a duplicate of [#58834](https://github.com/NousResearch/hermes-agent/issues/58834) (proactive surfacing of pending items) and the stale-anchor / un-applyable-patch half to [#75130](https://github.com/NousResearch/hermes-agent/issues/75130). Again, the counts above are anecdotes from one thread, not measured growth rates.
+
+## A sane review routine
+
+The sources describe mechanisms, not a schedule, so the routine below is qualitative operator hygiene built on those mechanisms. Check both `/memory pending` and `/skills pending` after any unsupervised session — overnight runs, cron, and kanban workers are exactly when background writes accumulate. Review oldest first, because the oldest items are the most likely to have gone stale against later edits, and the listing already presents them in that order. Reject superseded items rather than approving them, since a refused write simply stays pending. For memory, read the pinned matched entry in the listing, not just the summary, and check the `Overwrote entire entry` list after approving a `replace`, because replace discards the whole matched entry. For skills, open `/skills diff <id>` instead of trusting the gist, and watch for `(patch would fail: …)` notes. No retention or cleanup policy for the queue is documented in these sources, and none should be assumed — the queue does not clear itself.
+
+## FAQ
+
+**Does the gate ever refuse a write outright?** No. Per `tools/write_approval.py`, the gate only ever delays a write and never silently refuses it; `blocked` appears only when the user actively denies the inline prompt, which prints `Memory write denied by user. The change was not saved.` Skills never prompt inline at all — they stage.
+
+**Are background writes gated too?** Yes. `memory.write_approval` applies to both foreground turns and the background review. Because a background write runs in a daemon thread with no user, it always stages when the gate is on, and the listing tags it ` [auto]`.
+
+**What if the entry changed after staging?** For memory, approval applies to exactly the pinned entry; if it changed since staging, the write is refused and stays pending for you to reject. A `replace`/`patch`/`remove` staged before pinning existed is refused as `unpinned legacy target — reject and recreate before approving`.
+
+**Can I approve everything at once?** The subcommands accept `all` (for example `/memory approve all`), but approval is not guaranteed to succeed for every item: stale records can become un-applyable, and individual failures are listed under `Failed:`. Do not treat `all` as an atomic sweep.
+
+**Where do pending files live — can I read them directly?** Yes. The store is file-backed at `<HERMES_HOME>/pending/{memory,skills}/<id>.json`, referred to in the docs and the GitHub thread as `~/.hermes/pending/{memory,skills}/` and `~/.hermes/pending/skills/<id>.json`. Each file is the JSON record described above, so you can inspect a staged skill write without the CLI.
+
+**How do I turn memory off completely?** Set both `memory_enabled: false` and `user_profile_enabled: false`; when both built-in stores are disabled the built-in `memory` tool is automatically hidden. That is a different control from gating.
+
+**Will anything tell me the queue is growing?** Not according to these sources. Staged writes are silent and discoverable only through the two pending commands, and the default `💾 Memory updated` chat line governed by `display.memory_notifications` (`off | on (default) | verbose`) is not a queue indicator. Proactive surfacing is what the triage comment tracks as a duplicate of #58834.
+
+## The Bottom Line
+
+The write-approval gate is a reliable single-boolean delay mechanism with a faithful preview pipeline: memory review pins approval to a matched entry and refuses on change, and skill review folds patch previews through the same matcher approval runs, so what you read is what commits. Its weak point is discovery, not enforcement — the queue is file-backed and silent, background replace/remove can stage even with the gate off, and stale records can make approval fail. It is worth enabling on any instance that runs unsupervised, provided you budget a review habit around the two pending commands and do not assume the queue manages itself.
+
+## How This Guide Was Built
+
+This guide is based on the Hermes source files `tools/write_approval.py` and `hermes_cli/write_approval_commands.py`, read from an installed v0.22.4 checkout, together with the official [memory docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory), all read in-session. The author did not run a live gateway test, and no command output, screenshot, or trial result is claimed beyond the quoted strings and the callback contract in those sources. Queue figures — 77 memory plus 164 skill writes after roughly eight weeks, and 21 memory proposals with the gate off — are user reports from the [GitHub thread](https://github.com/NousResearch/hermes-agent/issues/105770), not measured rates. v0.22.4 is only the source snapshot that was read; nothing here states which release introduced the feature.
