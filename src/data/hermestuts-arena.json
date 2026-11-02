@@ -14323,6 +14323,169 @@
           "note": "3-pass mean 7.23 (spread 1.15)."
         }
       ]
+    },
+    {
+      "id": "arena-hermes-agent-mixture-of-agents-presets-guide-2026",
+      "match_id": "arena-hermes-agent-mixture-of-agents-presets-guide-2026",
+      "slug": "hermes-agent-mixture-of-agents-presets-guide-2026",
+      "topic": "Hermes Agent Mixture of Agents (MoA) presets: configure, select, and use them",
+      "category": "tutorial",
+      "type": "tutorial",
+      "date": "2026-11-02",
+      "winner": "glm-5.3-flash",
+      "winner_provider": "opencode-go",
+      "winner_family": "glm",
+      "winner_score": 8.03,
+      "judge_initial_mean": 8.03,
+      "judge_initial_spread": 0.9,
+      "judge_rejudge_mean": null,
+      "judge_rejudge_spread": null,
+      "pre_qa_judge_mean": 8.03,
+      "shipped_text_judge_means": [
+        8.0
+      ],
+      "shipped_text_judge_spreads": [
+        0.45
+      ],
+      "threshold": 7.5,
+      "threshold_met": true,
+      "threshold_note": "Cron gate 7.5. Field of 9 scored drafts ranged 7.25-8.03; the winner clears the gate on the pre-edit text (8.03) and on the shipped text (8.00, spread 0.45). mimo-v2.6-flash was judged three times (7.50 / 8.32 / 6.80) and excluded from ranking as unstable.",
+      "judge": "tb-judge-multipass qwen3.7-flash x3 via judge-draft-batch.py (9 eligible drafts, 4 workers) + fresh-dir re-judges for the noisy draft + a shipped-text re-judge of the winner. Judge label as printed by the tooling; actual route unverified.",
+      "research_lane": "dispatched",
+      "research_model": "mimo-v2.6-pro",
+      "research_route": "xiaomi -> load-balanced to opendesign (served_by opendesign)",
+      "research_source": "research lane pack: 21 sourced facts, 10 reader questions, 2 angles, 12-entry do-not-claim list, built from an in-session dossier of 52 fetched facts (Hermes docs pages fetched 2026-11-02)",
+      "plan_model": "glm-5.3",
+      "plan_route": "cline-pass -> load-balanced to zai (first attempt hung, killed at 420s), then opencode-go -> load-balanced to cline-pass (served_by cline-pass); MUST include (22 items) and MUST NOT include (16 items) both present and complete; jev-plan-gate shadow: ambiguity_risk 0.31, contract_state A",
+      "brief_contract": true,
+      "qa_model": "zai/glm-5.3",
+      "qa_provider": "zai",
+      "qa_route_note": "claude-cli primary failed authentication (OAuth session expired); cline-cli absent on the first run and over the 128 KiB argv limit on the second. qa-glm53.py exited 0 via the zai fallback. Run 1 on the raw draft returned FAIL with 3 real defects; run 2 on the fixed text returned PASS with zero defects.",
+      "qa_verdict": "PASS (run 2, zero defects) after 3 fixes: default preset renamed from review to default, every_n cadence corrected to first-iteration-of-turn plus every Nth tool iteration with a per-message counter reset, and the unsupported \"no top-level moa.enabled\" negative removed",
+      "qa_claim_vote": "skipped (no claim-vote run this match; the disprove pass covered claim verification)",
+      "linkcheck": "arena-linkcheck.py --min-ok 12: 14 unique external links, OK 14, BLOCKED 0, DEAD 0 (exit 0)",
+      "enforce_sources": "not run (no enforce-sources gate on the hermes-tutorials deploy path)",
+      "disprove_pass": {
+        "status": "needs_validation",
+        "verdicts": "/tmp/arena-outputs/arena-hermes-moa/verdicts2.json",
+        "note": "9 of 10 extracted claims confirmed by deepseek-v4-pro (commandcode, a different family than the glm winner). The single needs_validation flag is the guide own provenance sentence (draws only on the official docs fetched 2026-11-02), which no fetched source can confirm: an editorial/methodological disclosure required by the fabrication gate, not a factual claim. The first pass also flagged two advice sentences; both were rewritten and re-confirmed."
+      },
+      "hero": {
+        "url": "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-mixture-of-agents-presets-guide-2026-1793637268.webp",
+        "status": "HTTP 200 (GET), Lumenfall phase 1",
+        "note": "URL used verbatim in frontmatter heroImage"
+      },
+      "builder_dnf": [
+        "ling-3.1-flash"
+      ],
+      "total_models": 10,
+      "successful": 9,
+      "word_cap_policy": "Cron prompt caps the post at ~3,000 body words. The brief carried a stricter self-imposed 2,500-word ceiling; seven drafts landed between 2,500 and 3,080 body words, so the brief ceiling was NOT used as an eligibility gate (the job cap was). Only the winner was trimmed, by ~70 words of redundancy, and the trimmed text was re-judged in a fresh directory.",
+      "pipeline": "research lane -> plan+rubric (JEV plan gate, shadow) -> 10 builder lanes via parallel-builders.py -> JEV triage (9/9 solid) -> judge-draft-batch multipass x3 -> QA (zai/glm-5.3, sourced) -> orchestrator fixes -> linkcheck -> disprove pass -> hero -> shipped-text re-judge -> build -> record -> deploy",
+      "orchestrator": "deepseek/deepseek-v4.1-flash (this cron session)",
+      "results": [
+        {
+          "model": "glm-5.3-flash",
+          "model_id": "glm-5.3-flash",
+          "provider": "opencode-go",
+          "family": "glm",
+          "score": 8.03,
+          "rank": 1,
+          "eligible": true,
+          "note": "WINNER. 3-pass judge mean 8.03, spread 0.90. Tied on mean with stealth/glyph-cluster:free; won the tie on the orchestrator defect hunt (stealth carried zero internal links) plus the tighter spread. Shipped text after QA fixes and trims: 8.00, spread 0.45."
+        },
+        {
+          "model": "stealth/glyph-cluster:free",
+          "model_id": "stealth/glyph-cluster:free",
+          "provider": "commandcode",
+          "family": "stealth",
+          "score": 8.03,
+          "rank": 2,
+          "eligible": true,
+          "note": "Tied the winner on mean (spread 1.10) but rejected in the defect hunt: 0 internal links against the 2-5 per 1000 words requirement."
+        },
+        {
+          "model": "minimax-m3.1-flash",
+          "model_id": "minimax-m3.1-flash",
+          "provider": "opencode-go",
+          "family": "minimax",
+          "score": 7.9,
+          "rank": 3,
+          "eligible": true,
+          "note": "3-pass mean 7.90, spread 0.75; 2,392 body words, 5 internal links, 16 external links."
+        },
+        {
+          "model": "deepseek-v4.1-flash",
+          "model_id": "deepseek-v4.1-flash",
+          "provider": "commandcode",
+          "family": "deepseek",
+          "score": 7.85,
+          "rank": 4,
+          "eligible": true,
+          "note": "3-pass mean 7.85, spread 0.60; longest draft (2,876 body words), 31 external links."
+        },
+        {
+          "model": "beam-free",
+          "model_id": "beam-free",
+          "provider": "opencode-go",
+          "family": "beam",
+          "score": 7.8,
+          "rank": 5,
+          "eligible": true,
+          "note": "3-pass mean 7.80, spread 0.90."
+        },
+        {
+          "model": "gpt-6-luna",
+          "model_id": "gpt-6-luna",
+          "provider": "commandcode",
+          "family": "gpt",
+          "score": 7.57,
+          "rank": 6,
+          "eligible": true,
+          "note": "3-pass mean 7.57, spread 0.80; widest comparison table (11 pipe rows)."
+        },
+        {
+          "model": "mimo-v2.6-flash",
+          "model_id": "mimo-v2.6-flash",
+          "provider": "opencode-go",
+          "family": "mimo",
+          "score": null,
+          "rank": null,
+          "eligible": true,
+          "note": "UNSTABLE, excluded from ranking. Three independent 3-pass runs on identical text returned 7.50 (spread 2.40), 8.32 (spread 0.40) and 6.80 (spread 4.50). Its YAML block also used bare string pairs and a scalar aggregator instead of the documented provider/model mappings, so the high run would not have won the defect hunt either."
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "model_id": "claude-haiku-5-5",
+          "provider": "claude-cli",
+          "family": "claude",
+          "score": 7.45,
+          "rank": 7,
+          "eligible": true,
+          "note": "3-pass mean 7.45, spread 1.00; below the 7.5 gate."
+        },
+        {
+          "model": "muse-spark-1.3-contributor",
+          "model_id": "muse-spark-1.3-contributor",
+          "provider": "opencode-go",
+          "family": "muse",
+          "score": 7.25,
+          "rank": 8,
+          "eligible": true,
+          "note": "3-pass mean 7.25, spread 1.40; below the 7.5 gate."
+        },
+        {
+          "model": "ling-3.1-flash",
+          "model_id": "ling-3.1-flash",
+          "provider": "tokenharbor",
+          "family": "ling",
+          "score": 0.0,
+          "rank": null,
+          "eligible": false,
+          "status": "DNF",
+          "note": "DNF: load-balanced tokenharbor -> commandcode, which returned an empty CC stream after 280s (0 words). Recorded as a DNF, no substitution."
+        }
+      ]
     }
   ],
   "leaderboard": [
@@ -14330,10 +14493,10 @@
       "model": "deepseek-v4.1-flash",
       "provider": "commandcode",
       "family": "deepseek",
-      "matches": 40,
+      "matches": 41,
       "wins": 11,
-      "losses": 29,
-      "avgScore": 8.23,
+      "losses": 30,
+      "avgScore": 8.22,
       "bestScore": 9.78,
       "rank": 1
     },
@@ -14341,8 +14504,8 @@
       "model": "glm-5.3-flash",
       "provider": "opencode-go",
       "family": "glm",
-      "matches": 27,
-      "wins": 6,
+      "matches": 28,
+      "wins": 7,
       "losses": 21,
       "avgScore": 8.16,
       "bestScore": 9.75,
@@ -14374,10 +14537,10 @@
       "model": "gpt-6-luna",
       "provider": "commandcode",
       "family": "openai",
-      "matches": 20,
+      "matches": 21,
       "wins": 4,
-      "losses": 16,
-      "avgScore": 8.03,
+      "losses": 17,
+      "avgScore": 8.01,
       "bestScore": 9.73,
       "rank": 5
     },
@@ -14385,10 +14548,10 @@
       "model": "claude-haiku-5-5",
       "provider": "claude-cli",
       "family": "claude",
-      "matches": 13,
+      "matches": 14,
       "wins": 3,
-      "losses": 10,
-      "avgScore": 7.91,
+      "losses": 11,
+      "avgScore": 7.88,
       "bestScore": 9.15,
       "rank": 6
     },
@@ -14407,10 +14570,10 @@
       "model": "muse-spark-1.3-contributor",
       "provider": "opencode-go",
       "family": "muse",
-      "matches": 25,
+      "matches": 26,
       "wins": 2,
-      "losses": 23,
-      "avgScore": 7.83,
+      "losses": 24,
+      "avgScore": 7.81,
       "bestScore": 9.45,
       "rank": 8
     },
@@ -14495,12 +14658,23 @@
       "model": "stealth/glyph-cluster:free",
       "provider": "commandcode",
       "family": "stealth",
-      "matches": 2,
+      "matches": 3,
       "wins": 0,
-      "losses": 2,
-      "avgScore": 7.83,
+      "losses": 3,
+      "avgScore": 7.9,
       "bestScore": 8.37,
       "rank": 16
+    },
+    {
+      "model": "minimax-m3.1-flash",
+      "provider": "opencode-go",
+      "family": "minimax",
+      "matches": 3,
+      "wins": 0,
+      "losses": 3,
+      "avgScore": 7.77,
+      "bestScore": 7.9,
+      "rank": 17
     },
     {
       "model": "cline-pass/minimax-m3",
@@ -14511,27 +14685,16 @@
       "losses": 7,
       "avgScore": 7.75,
       "bestScore": 8.32,
-      "rank": 17
-    },
-    {
-      "model": "minimax-m3.1-flash",
-      "provider": "opencode-go",
-      "family": "minimax",
-      "matches": 2,
-      "wins": 0,
-      "losses": 2,
-      "avgScore": 7.71,
-      "bestScore": 7.85,
       "rank": 18
     },
     {
       "model": "beam-free",
       "provider": "opencode-go",
       "family": "beam",
-      "matches": 7,
+      "matches": 8,
       "wins": 0,
-      "losses": 7,
-      "avgScore": 7.69,
+      "losses": 8,
+      "avgScore": 7.7,
       "bestScore": 8.17,
       "rank": 19
     },
@@ -14613,8 +14776,8 @@
       "rank": 26
     }
   ],
-  "last_updated": "2026-11-01",
-  "total_matches": 58,
+  "last_updated": "2026-11-02T08:41:12",
+  "total_matches": 59,
   "retired_models": [
     {
       "model": "mimo-v2.5",

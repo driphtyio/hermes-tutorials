@@ -1,0 +1,161 @@
+---
+title: "Hermes Agent Mixture of Agents Presets Guide 2026: Configuration, Fanout, and Fallbacks"
+description: "Configure Hermes Agent Mixture of Agents presets in 2026: default preset YAML, fanout modes, reasoning effort, privacy filters, caching, and fallback wiring."
+pubDate: 2026-11-02
+tags: ["hermes-agent", "mixture-of-agents", "moa", "model-configuration", "multi-model"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-mixture-of-agents-presets-guide-2026-1793637268.webp"
+lastVerified: "2026-11-02"
+---
+
+If you already run Hermes Agent with more than one provider configured, you have everything Mixture of Agents needs: several models that can read the same user turn, and one strong model to act on their combined advice. MoA presets bundle that arrangement into a single selectable model, so a three-model review pass feels exactly like an ordinary model switch.
+
+This guide draws only on the official Hermes Agent docs fetched on 2026-11-02, and each section links the page it uses. Nothing here rests on hands-on device or cloud testing. The only benchmark numbers quoted are the three HermesBench figures the documentation itself publishes. If you have not yet wired up multiple providers, start with the [installation guide](https://hermes-agent.nousresearch.com/docs/getting-started/installation) and our [multi-provider setup walkthrough](/blog/provider-setup/), then come back.
+
+## What Mixture of Agents Actually Is (and Isn't)
+
+Mixture of Agents in Hermes Agent is a virtual model provider: each named preset appears as a selectable model under the `moa` provider, and the preset's aggregator is the acting model that writes replies and emits tool calls while reference models run first and provide analysis, according to the [official MoA documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents).
+
+Two clarifications follow from that design. First, a preset is an execution-mode configuration, not a primary model or provider: selecting one changes how a turn executes, not what `model.provider` points at. Second, MoA is not a toolset — it no longer appears under `hermes tools`, and there is no `moa` toolset to enable or disable. The division of labor is fixed: references advise, and the aggregator alone writes the reply and emits tool calls. The [configuring models guide](https://hermes-agent.nousresearch.com/docs/user-guide/configuring-models) is the general reference for how model selection works around it.
+
+## How a MoA Turn Executes, Step by Step
+
+A MoA turn executes in seven documented steps: resolve the preset, run references without tool schemas, append their outputs as private context, call the aggregator with the normal Hermes tool schema, treat its response as the real model response, execute tool calls normally, and repeat each iteration — per the [official MoA documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents).
+
+1. **Resolve the preset by name.** The selected preset — or the default, for `/moa` — determines the reference list and the aggregator.
+2. **Run the reference models without tool schemas.** They receive only user and assistant text: no Hermes system prompt, no tool-call transcript.
+3. **Append the reference outputs as private context** for the aggregator, below the stable conversation prefix.
+4. **Call the aggregator with the normal Hermes tool schema.** This is the only model that can act.
+5. **Treat the aggregator's response as the real model response** — its reply is what you see.
+6. **Execute any tool calls normally**, through the same [tool gateway](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway) path a single-model run would use.
+7. **Repeat the same process on the next iteration** over the updated conversation, including tool results.
+
+The references' blindness to tools is by design: they advise on the conversation text rather than on tool calls, so their output reads as analysis, not a tool plan. Everything downstream — tool execution, retries, iteration — flows through the aggregator alone.
+
+## Configuring Your First Preset in YAML
+
+MoA presets live under the `moa` key in your Hermes config: `moa.default_preset` names the preset that `/moa` runs, while `moa.presets.<name>.reference_models`, `moa.presets.<name>.aggregator`, optional `reference_temperature` / `aggregator_temperature`, and a per-preset `enabled: true` define each preset — the surrounding file structure is covered in the [configuration documentation](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
+
+Here is the documented default preset, written out in full:
+
+```yaml
+moa:
+  default_preset: default       # the preset /moa runs when you pass no name
+  presets:
+    default:
+      enabled: true
+      reference_models:
+        - provider: openai-codex
+          model: gpt-5.5
+        - provider: openrouter
+          model: deepseek/deepseek-v4-pro
+      aggregator:
+        provider: openrouter
+        model: anthropic/claude-opus-4.8
+      # reference_temperature / aggregator_temperature are optional.
+      # When omitted (the default), temperature is not sent and each
+      # model uses its provider's default.
+```
+
+`reference_models` is a list of provider/model pairs; `aggregator` is the single model that acts. `enabled` is strictly per preset, and setting it to `false` disables the reference fan-out so the aggregator acts alone — a kill switch that does not require deleting the preset.
+
+Reasoning effort is set per slot, independent of the optional temperature keys: every reference and the aggregator accepts a `reasoning_effort` from `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, `ultra`. The docs' `deep_review` example shows the pattern — a `gpt-5.6-sol` reference at `low`, a second `gpt-5.6-sol` reference at `xhigh`, an `xai-oauth:grok-4.5` reference, and an `openai-codex:gpt-5.6-sol` aggregator at `high`. For the surrounding file, our [configuration deep dive](/blog/configuration-deep-dive/) covers the rest of the config structure.
+
+## Fanout Modes: When References Run
+
+Fanout controls when reference models run: `fanout: user_turn` (the current default) runs references once per user turn, `fanout: per_iteration` runs them on every iteration of the tool loop, and `fanout: every_n:3` runs them on the first iteration of each user turn and then every Nth tool iteration for any N >= 2 — the default was `per_iteration` before July 2026, per the [MoA documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents).
+
+`user_turn` is the lightest in model-call count: references advise once when the user speaks, then the aggregator works the tool loop alone, which matches the default billing pattern. `per_iteration` re-runs every reference on every iteration, and on tool-heavy turns that multiplies the call count quickly. `every_n` sits between them: `fanout: every_n:3` runs the advisors at the start of the turn and then every third tool iteration, reusing the cached guidance in between, and its counter resets on each new user message so every turn starts with fresh advice.
+
+Both spellings of the N form work: the inline `fanout: every_n:3` and the mapping form `fanout: {mode: every_n, n: 3}`, which Hermes normalizes to the string form. Anything unknown or malformed — a misspelled mode, an out-of-range N — falls back to `user_turn` rather than failing the turn. For a first preset, keep `user_turn` and revisit only if the aggregator seems short on advice mid-loop.
+
+## Selecting and Using Presets: CLI and Slash Commands
+
+Four CLI commands manage presets: `hermes moa list` shows what is configured, `hermes moa configure` updates the default preset, `hermes moa configure review` creates or updates a named preset, and `hermes moa delete review` deletes one — the full surface is documented in the [CLI commands reference](https://hermes-agent.nousresearch.com/docs/reference/cli-commands).
+
+`hermes moa configure` reuses the same provider → model picker you use everywhere else in Hermes, once for each reference and once for the aggregator — a structural reminder that a preset is an execution-mode configuration, not a primary model or provider.
+
+At runtime, three routes select a preset: `/model default --provider moa`, `/model review --provider moa`, or a bare `/model <preset>` when the name matches a configured preset exactly. Presets also surface as a `Mixture of Agents` provider row in `hermes model`, in the Dashboard picker, and as `MoA: <preset>` in the Desktop model dropdown; the [slash commands reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands) lists every route.
+
+`/moa <prompt>` is the one-shot: it runs a single prompt through the default preset, then restores your previous model. Bare `/moa` prints usage. It is deliberately not a model switch — use it when you want one second opinion, and `/model ... --provider moa` when you want to stay inside a preset.
+
+## Preset Variants Compared
+
+The documented default preset pairs two references (`openai-codex:gpt-5.5` and `openrouter:deepseek/deepseek-v4-pro`) with an `openrouter:anthropic/claude-opus-4.8` aggregator, and the docs' `deep_review` example shows how per-slot reasoning effort shapes a heavier analysis pass — the table compares both with a minimal custom preset, using values from the [MoA documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents).
+
+| Preset | References | Aggregator | Reasoning effort | Fanout | Best use |
+|---|---|---|---|---|---|
+| `default` (documented) | `openai-codex:gpt-5.5` + `openrouter:deepseek/deepseek-v4-pro` | `openrouter:anthropic/claude-opus-4.8` | unset (provider defaults) | `user_turn` | Mixed-provider second opinions on everyday work |
+| `deep_review` (documented example) | `gpt-5.6-sol` at `low`, second `gpt-5.6-sol` at `xhigh`, `xai-oauth:grok-4.5` | `openai-codex:gpt-5.6-sol` at `high` | per-slot: `low` / `xhigh` / `high` | not specified in docs | Heavy analysis: one model at two effort levels plus an outside view |
+| Custom minimal (your config) | two models you already have credentials for | your strongest existing model | unset | `user_turn` | First preset to try; smallest change from single-model habits |
+
+The `deep_review` row lists only what the docs publish — the slot roster and efforts; its fanout is whatever you configure. Which shape should you start with? If your credentials already cover the documented models, start from the default preset: the docs print its exact contents, so you make zero configuration decisions. Note that the published HermesBench pair is a two-model variant — claude-opus-4.8 aggregating over a gpt-5.5 reference — so read those numbers as evidence for aggregation, not as a score for this exact three-model arrangement. If you lack those credentials, build the custom minimal row from providers you already have configured — the experiment stays inside existing credentials and gives you a direct comparison against your current single-model setup, which you can track with the habits in our [token cost optimization guide](/blog/token-cost-optimization/).
+
+## Privacy, Caching, and Failure Behavior
+
+MoA's `privacy_filter` is off by default and has two levels: `display` redacts only user-visible surfaces — the labelled reference blocks and `save_traces` records — while `full` also redacts the advisor text injected into the aggregator prompt, with credential shapes always masked by Hermes' central secret redactor, per the [MoA documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents).
+
+Under `display`, the aggregator still receives raw advisor text — the filter cleans what humans see, not what the aggregator reads. `full` additionally redacts the one-shot `/moa` synthesis input. In both modes the MoA filter only adds email and clearly formatted phone-number redaction on top of the central secret redactor. Bare digit runs, line numbers, timestamps, git SHAs, and IP addresses are never touched; only delimited phone formats such as `(555) 123-4567` match.
+
+Caching survives preset selection. Switching to or from a preset costs the same cache invalidation as any other `/model` switch, and reference outputs are appended as their own trailing user message below the stable prefix, so they do not invalidate a cached prefix — on the OpenAI-compatible wire the request ends `user(your message), user(guidance)`. A few strict-alternation templates reject that shape: llama.cpp and vLLM Jinja templates and some OpenRouter routes return a 400 such as `Conversation roles must alternate`. Hermes retries that single request with the messages merged and remembers that aggregator destination for the session, so the workaround runs once per session, not per turn.
+
+Failure behavior is contained: a credential failure on one reference model does not abort the turn, and `enabled: false` on a preset disables the reference fan-out so the aggregator acts alone.
+
+## Using a Preset as a Fallback Provider
+
+A preset can be a fallback entry: add `fallback_providers: [{provider: moa, model: <preset>}]` and Hermes activates the whole preset — references plus aggregator — with `moa://local` as the virtual endpoint, skipping the entry when the preset does not resolve or its aggregator lacks credentials, per the [fallback providers documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers).
+
+```yaml
+fallback_providers:
+  - provider: moa
+    model: default
+```
+
+When the chain reaches this entry, the entire preset runs — references and aggregator together — against the `moa://local` virtual endpoint. The two skip conditions keep a half-configured preset from stranding a fallback chain mid-incident: an unresolvable preset name or a missing aggregator credential makes Hermes move on. Because the whole preset runs, a MoA entry makes more model calls than any single-model entry, so place it behind your single-model fallbacks rather than in front of them.
+
+## When MoA Is the Wrong Tool
+
+MoA is the wrong tool when every extra model call matters: it multiplies model-call count, the aggregator's provider is billed for the whole run, per-preset and per-slot output-token caps are no longer supported, presets cannot nest, and the only published benchmark is one specific pair — not proof that MoA always beats a single model, per the [MoA documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents).
+
+- **Model calls multiply.** References advise once per user turn by default; `per_iteration` and `every_n` fanouts multiply that across the tool loop. There is no configuration where MoA calls fewer models than a single-model setup.
+- **Billing follows the aggregator.** The aggregator's provider is billed for the whole run. When it differs from `model.provider`, `hermes moa list` and `hermes moa configure` print a notice such as "Aggregator is on nous; the whole tool loop will be billed there, not to openai-codex." Our [subscription proxy guide](/blog/hermes-agent-subscription-proxy-guide-2026/) covers one provider where that distinction matters.
+- **No preset-level output caps.** Output limits are provider-owned, and "preset and per-slot output-token cap settings are no longer supported."
+- **No nesting.** An aggregator cannot be another MoA preset; recursive trees are blocked.
+- **One benchmark pair.** The only published numbers are HermesBench figures for a two-model preset — claude-opus-4.8 aggregating over a gpt-5.5 reference — scoring 0.8202 against 0.7607 for `anthropic/claude-opus-4.8` alone and 0.7412 for `openai/gpt-5.5` alone, about 6 points over its strongest component. The docs publish that one pair and no other comparison.
+
+If tight call budgets, strict per-provider billing, or hard output caps dominate your workload, the documented facts above argue against adding a preset: it raises model-call count and moves billing to one provider's account. Compare single-model candidates in the [model catalog](https://hermes-agent.nousresearch.com/docs/reference/model-catalog).
+
+## FAQ
+
+### Does Mixture of Agents always beat a single model?
+
+No — the only published numbers are three HermesBench figures for one specific pair: the two-model preset (claude-opus-4.8 aggregating over a gpt-5.5 reference) scores 0.8202 versus 0.7607 for `anthropic/claude-opus-4.8` alone and 0.7412 for `openai/gpt-5.5` alone, about 6 points over its strongest component, per the [MoA documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents). One pair, one benchmark — not a law.
+
+### Can I set token caps per preset or per slot?
+
+No — MoA uses provider-owned output limits and the documentation states that "preset and per-slot output-token cap settings are no longer supported," so any cap you need must come from each model's provider, per the [MoA documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents) and its [model catalog](https://hermes-agent.nousresearch.com/docs/reference/model-catalog). Plan output limits per provider, not per preset.
+
+### What do the reference models actually see?
+
+Only conversation text: references run without tool schemas and receive just user and assistant messages — never the Hermes system prompt, never the tool-call transcript — while their outputs become private context for the aggregator, which alone gets the normal tool schema, per the [MoA documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents). That is why reference output reads like analysis, not a tool plan.
+
+### Can an aggregator be another MoA preset?
+
+No — recursive trees are blocked: an aggregator must be a regular provider/model pair, not another MoA preset, so presets cannot be chained into hierarchies; if you want layered analysis, add the models as references in one preset instead, per the [MoA documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents).
+
+### Where is a MoA run billed?
+
+On the aggregator's provider, for the whole run: references advise once per user turn by default, but the aggregator is billed for everything, and when its provider differs from `model.provider`, `hermes moa list` prints a notice such as "Aggregator is on nous; the whole tool loop will be billed there, not to openai-codex," per the [MoA documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents).
+
+## The Bottom Line
+
+MoA presets are worth configuring once you already run multiple providers: they turn an aggregator-plus-advisors arrangement into one selectable model with per-slot reasoning effort and fallback support — at the cost of extra model calls and aggregator-side billing, so start with a minimal preset from your own providers and keep the [MoA documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents) open as you go.
+
+Concretely: build a minimal preset from providers you already have configured, leave temperatures and reasoning effort unset for the first pass, keep `user_turn` fanout, and run `hermes moa list` before your first tool-heavy session to catch the cross-provider billing notice. Keep single-model entries ahead of any MoA entry in `fallback_providers` so the multi-model path fires only when single-model ones fail. If you want a second pattern for spreading work across models, subagent delegation is the complementary approach — see our [parallel subagent delegation guide](/blog/hermes-parallel-subagent-delegation/).
+
+MoA earns its place on tasks that benefit from advice before action — review passes, tricky analysis — and where the extra call count is acceptable. For everything else, your existing single-model setup remains the right default.
+
+## How This Guide Was Built
+
+This guide was built entirely from the official Hermes Agent documentation, fetched and verified on 2026-11-02, with no hands-on testing and no benchmarks beyond the published HermesBench figures. Every key, command, behavior, and number above traces to the [Mixture of Agents documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/mixture-of-agents) or one of the sibling pages listed below.
+
+The pages consulted: the [configuring models](https://hermes-agent.nousresearch.com/docs/user-guide/configuring-models), [configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration), [CLI commands](https://hermes-agent.nousresearch.com/docs/reference/cli-commands), [slash commands](https://hermes-agent.nousresearch.com/docs/reference/slash-commands), [model catalog](https://hermes-agent.nousresearch.com/docs/reference/model-catalog), [fallback providers](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers), [credential pools](https://hermes-agent.nousresearch.com/docs/user-guide/features/credential-pools), [tool gateway](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway), [local models](https://hermes-agent.nousresearch.com/docs/user-guide/local-models), and [subscription proxy](https://hermes-agent.nousresearch.com/docs/user-guide/features/subscription-proxy) pages, plus the [Hermes Agent repository](https://github.com/NousResearch/hermes-agent) maintained by [Nous Research](https://nousresearch.com/). No configuration key, command, preset name, or figure appears above that these pages do not define; where the documentation is silent — the `deep_review` fanout, the exact YAML nesting for per-slot reasoning effort — the guide says so rather than guessing.
