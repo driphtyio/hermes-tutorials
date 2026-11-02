@@ -1,4 +1,4 @@
-// AUTO-GENERATED from NousResearch/hermes-agent GitHub releases (44 releases, 2026-03-12..2026-10-23).
+// AUTO-GENERATED from NousResearch/hermes-agent GitHub releases (45 releases, 2026-03-12..2026-11-02).
 // Regenerate via scripts/gen-changelog.py — do not hand-edit entries.
 export interface ChangelogLink {
   url: string;
@@ -20,6 +20,24 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  {
+    "tag": "v0.22.6",
+    "version": "v0.22.6",
+    "codename": "",
+    "date": "2026-11-02",
+    "summary": "Patch release. This tag rolls up the ~776 PRs merged since v0.22.5 into a stable release for the GitHub release (CLI and installers), the Microsoft Store app, Docker and Hermes Cloud. Full curated notes for this window ship with v0.23.0.",
+    "highlights": [],
+    "prs": "776",
+    "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.6",
+    "compare": "https://github.com/NousResearch/hermes-agent/compare/v0.22.5...v0.22.6",
+    "links": [
+      {
+        "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.6",
+        "label": "Release notes (v0.22.6)"
+      }
+    ],
+    "body": "> Patch release. This tag rolls up the ~776 PRs merged since v0.22.5 into a stable release for the GitHub release (CLI and installers), the Microsoft Store app, Docker and Hermes Cloud. Full curated notes for this window ship with v0.23.0.\n\n## About this release\n\nAlso in the window, undocumented here on purpose: the Webapp served from the gateway's own listener (`hermes webapp`, a Desktop Web Access pane to open it on your network or your own URL behind Nous sign-in, and Desktop plugins loading in a browser tab), `/model reset` to clear a session's model pin without losing history, per-skill locks against autonomous writes (lockable from the Desktop Capabilities pane), opt-in prepared compaction (`compression.prepare_ahead`), `hermes cron cancel` plus a per-job missed-run policy and a Stop button in the Desktop cron editor, `/delegation` choices saved for the next session, `hermes migrate` and setup moving Grok Bot and OpenBot users over, opt-in OS-keychain storage for the vault key, the catalog's `requires_hermes` enforced at plugin install and update, agent-picked ElevenLabs voices in `text_to_speech`, a `pre_llm_call` hook that can block a turn before inference, Desktop group chat rename, disband, mentions and attachment paste, every profile shown as a Desktop sidebar section, Telegram video notes, Slack emoji reactions in thread context, and resumable downloads in the package manager.\n\n**Full curated release notes for this window ship with v0.23.0**, which will document everything from v0.22.0 onward — highlights, feature areas, and complete contributor credits. Nothing in this window is skipped.\n## Updating\n\n- Microsoft Store app: updates through the Store.\n- Desktop app installed from the installer (.exe / .dmg): no change in this release; it updates with the next bundled release.\n- CLI: `hermes update`, or re-run the installer one-liner.\n- Docker / Hermes Cloud: `nousresearch/hermes-agent:stable` (or `:latest`).\n\n**Full Changelog**: [v0.22.5...v0.22.6](https://github.com/NousResearch/hermes-agent/compare/v0.22.5...v0.22.6)"
+  },
   {
     "tag": "v0.22.5",
     "version": "v0.22.5",
