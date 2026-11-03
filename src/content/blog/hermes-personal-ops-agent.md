@@ -261,3 +261,11 @@ Be clear-eyed about what you're getting. The loop is only as good as the prompt 
 This is a docs-based tutorial. Everything here is assembled from the official Hermes documentation, all pages fetched 2026-11-03: the [daily briefing bot guide](https://hermes-agent.nousresearch.com/docs/guides/daily-briefing-bot) for the self-contained-prompt rule and gateway setup, the [cron reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) for delivery targets, markers, and the model chain, the [google-workspace skill page](https://hermes-agent.nousresearch.com/docs/user-guide/skills/bundled/productivity/productivity-google-workspace) for OAuth, the CLI, and the Rules block, the [email gateway docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/email) and [agent email guide](https://hermes-agent.nousresearch.com/docs/guides/agent-email-address) for the three-paths distinction, the [Himalaya skill page](https://hermes-agent.nousresearch.com/docs/user-guide/skills/bundled/email/email-himalaya), the [heartbeat reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/heartbeat), the [memory reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory), the [automation guide](https://hermes-agent.nousresearch.com/docs/guides/automate-with-cron), and the [skills overview](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills).
 
 To state it plainly: this guide is based on the official documentation — we did not run this end-to-end on a live mailbox. On a live mailbox we would verify three things first: that your OAuth scopes cover the Gmail search calls you intend, how your own unread volume behaves against a `--max 10` cap, and whether your Telegram home channel resolves correctly before you trust an 08:00 delivery.
+
+<!-- crosslinks -->
+
+## 📖 Related Reads
+
+- **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools, agents, and APIs
+
+*Cross-links automatically generated from Hermes Tutorials.*
