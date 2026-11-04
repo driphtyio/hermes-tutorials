@@ -1,299 +1,287 @@
 ---
 title: "Getting Started with Hermes Agent — Install, Setup & First Conversation"
-description: "Install Hermes Agent, run hermes setup --portal, pick a provider, and have your first conversation in under 5 minutes. The complete starting point for everyone."
+description: "Install, pick a provider, and verify your first working Hermes Agent session."
 pubDate: "2026-07-17"
-updatedDate: "2026-10-02"
+updatedDate: "2026-11-04"
+lastVerified: "2026-11-04"
+heroImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200"
 tags: ["getting-started", "installation", "hermes-agent", "quickstart"]
-lastVerified: "2026-10-02"
 ---
 
-> **TLDR:** Hermes Agent is the self-improving AI agent from [Nous Research](https://nousresearch.com) — an autonomous agent with a built-in learning loop, persistent memory, 100+ LLM providers, and a multi-platform gateway. Install in one command and start chatting in under 5 minutes.
+## What Changed Since We Last Wrote This
 
----
+If you came here from an older version of this guide, two corrections matter up front. 
 
-## What is Hermes Agent?
+First, the toolchain is different from what older copies stated. [Current first-party installations run on **Python 3.14**](https://hermes-agent.nousresearch.com/docs/getting-started/installation). The broader `>=3.11,<3.15` range in `pyproject.toml` only exists to let older installations run the updater before [PM](https://hermes-agent.nousresearch.com/docs/reference/package-management) switches them over. It does **not** promise current runtime support on 3.11–3.13. More directly, the installer no longer advertises a hand-written Node.js version at all. [PM provides pinned Python, Node.js, npm, ripgrep, and FFmpeg](https://hermes-agent.nousresearch.com/docs/getting-started/installation) and [selects those managed tool versions from `pm/lock.json`](https://hermes-agent.nousresearch.com/docs/getting-started/installation). The docs do not publish a Node.js version number, so this guide will not assert one. 
 
-Hermes Agent isn't a chatbot wrapper around a single API or a coding copilot tethered to an IDE. It's an **autonomous agent** that gets more capable the longer it runs. It lives wherever you put it — a $5 VPS, a GPU cluster, or serverless infrastructure like Daytona or Modal that costs nearly nothing when idle.
+Second, "it installed" is no longer the finish line. The goal of this refresh is **verification**. A working setup is the one that meets the [quickstart's definition of "working"](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart): the banner shows your chosen model and provider, Hermes replies without errors, it can use a tool if needed, and the conversation continues for more than one turn. The quickstart then has you verify persistence with `hermes --continue`. With that in mind, we'll take you from install to a *resumed* session, not just to a splash screen.
 
-Key capabilities:
-- **Closed learning loop** — Creates skills from experience, improves them during use, and builds a deepening model of who you are across sessions
-- **Runs anywhere** — 7 terminal backends (local, Docker, SSH, Daytona, Singularity, Modal, Vercel Sandbox)
-- **21+ messaging platforms** — Telegram, Discord, Slack, WhatsApp, Signal, Matrix, Teams, and more
-- **60+ built-in tools** — Terminal, file ops, web search, browser, code execution, image generation
-- **MCP support** — Connect any Model Context Protocol server
 
-## Learning Path
+## What Hermes Agent Is (and Isn't)
 
-Not sure where to go after this guide? Follow this progression:
+[Hermes Agent](https://hermes-agent.nousresearch.com/docs) is a self-improving agent with its own CLI and TUI. The [quickstart](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart) is clear about its scope: it's not meant to be a coding copilot and not a thin chatbot wrapper. It's designed to run in agentic workflows, with configurable toolsets and its own sessions. Depending on how you run it, it's positioned to operate on infrastructure ranging from a small VPS up to serverless or cluster environments. For the purposes of *this* guide, treat those as vendor positioning, and focus on what you can actually verify on your own machine.
 
-| Step | Guide | What You'll Learn |
-|------|-------|-------------------|
-| 1 | **You are here** → Getting Started | Install, configure a provider, run your first chat |
-| 2 | [CLI Mastery](/blog/cli-mastery) | Sessions, slash commands, TUI, all CLI flags |
-| 3 | [Providers](/blog/provider-setup) | All 100+ providers, credential pools, model switching |
-| 4 | [Gateway Setup](/blog/gateway-setup) | Telegram, Discord, Slack — make Hermes a bot |
-| 5 | [Memory System](/blog/memory-profiles) | Persistent cross-session memory and Honcho |
-| 6 | [Multi-Agent](/blog/multi-agent-setup) | Profiles, subagents, parallel workflows |
-| 7 | [Automation](/blog/advanced-automation) | Cron jobs, webhooks, scheduled tasks |
-| 8 | [Troubleshooting](/blog/troubleshooting) | Common issues and recovery toolkit |
 
-{/* Each of these links points to a dedicated Quick Start guide on hermes-tutorials.dev */}
+## Step 1 — Pick Your Install Route
 
----
+Before running any command, pick the route that matches your platform. The table below is built strictly from the [installation page](https://hermes-agent.nousresearch.com/docs/getting-started/installation).
 
-## 1. Install Hermes Agent
+| Method | Where the code goes | CLI entry point | Default user data (`HERMES_HOME`) | Notes |
+| --- | --- | --- | --- | --- |
+| **POSIX source script** (Linux, macOS, WSL2) | `~/.hermes/hermes-agent/` | `~/.local/bin/hermes` wrapper | `~/.hermes/` | Uses `--dir` to change the checkout independently from data. Running as root does *not* force an FHS layout unless you explicitly provide a path. |
+| **Windows source script** (native PowerShell) | `%LOCALAPPDATA%\hermes\hermes-agent\` | `%LOCALAPPDATA%\hermes\bin\` | `%LOCALAPPDATA%\hermes\` | Use `-InstallDir` and `-HermesHome` to control paths. |
+| **Desktop bundle** (macOS/Windows) | Inside the installed app package | Packaged launchers; Windows execution aliases | Platform default Hermes data directory | Distributed as a packaged app. No separate "remote-only" Desktop download is listed. |
+| **Docker** | `/opt/hermes/` | Image entrypoint and `hermes` shim | Mounted `/opt/data/` | Treat image/pull details as unlisted by this guide; only the layout is documented. |
+| **Termux APT** (aarch64 Android) | `$PREFIX/lib/hermes-agent/` | Symlinks in `$PREFIX/bin/` | `~/.hermes/` | Its own repository path. The desktop/server scripts are **not** the Termux installation path. | 
 
-### Quick Install (Linux / macOS / WSL2 / Android)
+### Desktop packages (macOS & Windows)
+
+If you want an app package instead of a shell script: 
+
+- **Windows:** Download the package from the [Hermes website](https://hermes-agent.nousresearch.com/docs/getting-started/installation), open the `.appinstaller` download with **Windows App Installer**. It installs the signed MSIX bundle and records its update source.
+- **macOS:** Open the DMG, then copy `Hermes.app` to Applications. 
+
+**Important:** [The macOS installer is **Apple Silicon only**. macOS on x86 (Intel) processors is not a supported platform.](https://hermes-agent.nousresearch.com/docs/getting-started/installation) If you're on Intel macOS, do not assume compatibility from older guides. 
+
+### The one-liner CLI install (Linux / macOS / WSL2 / native Windows)
+
+This is the most common path and is what the [installation page](https://hermes-agent.nousresearch.com/docs/getting-started/installation) lists verbatim. 
+
+**POSIX (Linux, macOS, WSL2):**
 
 ```bash
 curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
 ```
 
-### Windows (native PowerShell)
+**Native Windows (PowerShell):**
 
 ```powershell
 iex (irm https://hermes-agent.nousresearch.com/install.ps1)
 ```
 
-### What the Installer Does
+After the script finishes, reload your shell and start Hermes: 
 
-The installer handles everything automatically — all dependencies (Python 3.11 via uv, Node.js v22, ripgrep, ffmpeg), the repo clone at `~/.hermes/hermes-agent/`, virtual environment creation, and a global `hermes` command symlinked to `~/.local/bin/hermes`. By the end, you can type `hermes` and get a working agent.
-
-After it finishes, reload your shell:
 ```bash
 source ~/.bashrc   # or source ~/.zshrc
+hermes
 ```
 
-For detailed install options — including non-sudo system service installs, root-mode FHS layout, and what happens on each platform — see the [official Installation Guide](https://hermes-agent.nousresearch.com/docs/getting-started/installation/).
+If you installed the CLI first and want the optional desktop app, [run `hermes desktop`](https://hermes-agent.nousresearch.com/docs/getting-started/installation). 
 
----
+### Android (Termux), Nix, and edge cases
 
-## 2. Choose a Provider (The Fastest Path)
+- **Termux (aarch64):** [Configure its signed repository before running `pkg install hermes-agent`.](https://hermes-agent.nousresearch.com/docs/getting-started/installation) Do not pipe the desktop/server scripts on Termux. 
+- **Nix:** The [installation page](https://hermes-agent.nousresearch.com/docs/getting-started/installation) states Nix is **no longer an explicitly supported install path (best-effort only)**. Note that the top-level [docs index](https://hermes-agent.nousresearch.com/docs) still lists "Nix & NixOS" in its marketing line. This guide does not resolve that tension — treat Nix as best-effort only and rely on `hermes doctor` if you go that route.
+- **Non-sudo/service users:** The docs note an admin can install prerequisites while a service user runs the curl installer, export `PATH="$HOME/.local/bin:$PATH"`, run `hermes doctor`, and consider `sudo loginctl enable-linger SERVICE_USER` on applicable systems. Details may vary by distro, so treat as a pattern rather than a universal block.
+- **Environment overrides:** `HERMES_HOME` selects user data. On POSIX `--dir` selects the source checkout independently. On Windows use `-HermesHome` and `-InstallDir`. 
 
-The single most important setup step. Hermes supports 100+ LLM providers, but for first-time users there's one clearly recommended path.
 
-### Fastest Path: Nous Portal
+## What the Installer Actually Does Now
 
-One subscription covers **300+ models** plus the [Tool Gateway](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway) (web search, image generation, TTS, cloud browser). Skip the per-tool key juggling:
+The [installation page](https://hermes-agent.nousresearch.com/docs/getting-started/installation) is explicit about the new flow, and it's the reason the old "Python 3.11 + Node.js v22" claim is incorrect.
+
+- **PM-driven setup:** The scripts clone the source, bootstrap `uv`, and delegate dependency preparation to PM.
+- **Verified toolchain:** [PM provides pinned Python, Node.js, npm, ripgrep, and FFmpeg](https://hermes-agent.nousresearch.com/docs/getting-started/installation) from `pm/lock.json`. [The script always downloads its verified `uv` pin; a `uv` already on your PATH is never used.](https://hermes-agent.nousresearch.com/docs/getting-started/installation)
+- **Python target:** [Current first-party installations run on **Python 3.14**.](https://hermes-agent.nousresearch.com/docs/getting-started/installation) The `>=3.11,<3.15` range is only for the updater path. 
+- **Extras:** [The source installation selects the `all` Python extra, not every optional extra.](https://hermes-agent.nousresearch.com/docs/getting-started/installation)
+- **Browser and computer use by default:** [PM also installs the browser and computer-use tools by default: a pinned Chromium (Chrome for Testing) that Hermes launches for local browsing, and `cua-driver` (the computer-use driver, on macOS, Windows and glibc Linux).](https://hermes-agent.nousresearch.com/docs/getting-started/installation)
+- **Resilient:** [If a download fails, the install still completes and prints the command to retry.](https://hermes-agent.nousresearch.com/docs/getting-started/installation)
+- **Logs:** [One status line per step, with detailed output in `logs/install.log` under the Hermes data directory.](https://hermes-agent.nousresearch.com/docs/getting-started/installation)
+
+### Installer flags worth knowing
+
+| Flag | Purpose | Notes |
+| --- | --- | --- |
+| `--channel main` / `-Channel main` / `HERMES_INSTALL_CHANNEL=main` | Install from the `main` channel | New installs land on latest stable by default. |
+| `--skip-browser` / `-SkipBrowser` | Skip installing the pinned Chromium | You can install later with `hermes pm install chromium`. |
+| `--skip-computer-use` / `-SkipComputerUse` | Skip `cua-driver` | You can install later with `hermes pm install cua-driver`. |
+| `--include-desktop` / `-IncludeDesktop` | Include the desktop app during CLI install where applicable | Optional. |
+| `--non-interactive` / `-NonInteractive` | Non-interactive runs | On glibc Linux the installer may run the distro package manager to handle `libatomic.so.1`; it will not prompt in this mode. |
+| `--verbose` / `-Verbose` / `HERMES_INSTALL_VERBOSE=1` | More verbose output | Logged alongside `logs/install.log`. |
+
+[Hermes remembers these choices: later installs and `hermes update` do not add them back.](https://hermes-agent.nousresearch.com/docs/getting-started/installation) Also note: [do not remove the data root to repair an application installation.](https://hermes-agent.nousresearch.com/docs/getting-started/installation) 
+
+
+## Step 2 — Choose a Provider and a Setup Mode
+
+After install and reloading your shell, the next job is to get a working provider. The [quickstart](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart) treats this as provider-first for a reason. Your secrets and settings live in two different places: [secrets go to `~/.hermes/.env`, non-secret settings go to `~/.hermes/config.yaml`.](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart) You can manage them with commands like `hermes config set model anthropic/claude-opus-4.6`, `hermes config set terminal.backend docker`, `hermes config set OPENROUTER_API_KEY sk-or-...`, and `hermes config get`.
+
+Before going further, know this hard constraint: [Hermes requires a model with at least **64,000 tokens** of context for agent use with tools.](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart) For local models you'll need to raise context explicitly, e.g. `--ctx-size 65536` (llama.cpp) or `-c 65536` (Ollama). Smaller windows can be rejected at startup.
+
+### The 60-second path — `hermes setup --portal`
+
+For first-timers, the fastest verified path is the [Nous Portal](https://hermes-agent.nousresearch.com/docs/integrations/nous-portal). 
 
 ```bash
 hermes setup --portal
 ```
 
-{/* hermes setup --portal flow */}
-That single command does three things:
-1. Opens a browser-based OAuth login to [Nous Portal](https://portal.nousresearch.com)
-2. Sets Nous as your LLM provider with a capable default model
-3. Enables the Tool Gateway — web search, image generation, TTS, and a cloud browser
+[That command runs the Portal OAuth, lets you pick a Nous model, sets Nous as your inference provider in `config.yaml`, and turns on the Tool Gateway.](https://hermes-agent.nousresearch.com/docs/integrations/nous-portal) In practice, [one OAuth covers a model plus all four Tool Gateway tools, billed to your Nous Portal subscription.](https://hermes-agent.nousresearch.com/docs/getting-started/installation) The [Portal](https://portal.nousresearch.com) advertises "300+ frontier models, one bill" and "+ everything else | 280+ additional models — the full agentic frontier". [The Portal routes each model to the backend best suited for it](https://hermes-agent.nousresearch.com/docs/integrations/nous-portal) — some through OpenRouter, others through proprietary or secondary providers, and routing for a given model can change over time. You can inspect this with `hermes portal`, `hermes portal info`/`hermes portal status`, `hermes portal tools`, and `hermes portal open`. The [Tool Gateway](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway) covers web search, image generation, TTS, and a cloud browser; for image generation it lists "Nine models under one endpoint: FLUX 2 Klein 9B, FLUX 2 Pro, Z-Image Turbo, Nano Banana Pro (Gemini 3 Pro Image), GPT Image 1.5, GPT Image 2, Ideogram V3, Recraft V4 Pro, Qwen Image." Treat those as the listed set at the time of writing.
 
-No API keys to copy, no `.env` files to edit, no model names to look up. You're authenticated and configured in under 30 seconds.
+### Bringing your own keys — `hermes model`
 
-### Alternative: hermes model
-
-If you already have an API key for another provider — or you want to use a local model via Ollama — run:
+If you'd rather bring your own keys, run
 
 ```bash
 hermes model
 ```
 
-This walks you through an interactive menu of all supported providers.
+[This walks through the provider choice interactively outside of a session.](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart) You can switch providers at any time with no lock-in: inside a session, [`/model` shows or changes the current model](https://hermes-agent.nousresearch.com/docs/user-guide/cli) (`/model <model> [--provider name]` also works on the gateway CLI), while `hermes model` outside a session is the wizard for choosing your provider and model. The [providers page](https://hermes-agent.nousresearch.com/docs/integrations/providers) lists representative options (by way of the quickstart): Nous Portal (OAuth via `hermes model`), OpenAI Codex (device code auth), Anthropic (OAuth requiring Max + extra credits, or an API key), OpenRouter (API key), Fireworks AI (`FIREWORKS_API_KEY`), Z.AI (`GLM_API_KEY` / `ZAI_API_KEY`, also `Z_AI_API_KEY`), Kimi / Moonshot (`KIMI_API_KEY` or `KIMI_CODING_API_KEY`), Kimi / Moonshot China (`KIMI_CN_API_KEY`), and Arcee AI (`ARCEEAI_API_KEY`). This is a representative set, not an exhaustive matrix, so rely on the [providers page](https://hermes-agent.nousresearch.com/docs/integrations/providers) if you need to confirm a specific provider.
 
-| Provider | What It Is | Setup |
-|----------|-----------|-------|
-| **Nous Portal** | Subscription-based, zero-config | OAuth via `hermes model` or `hermes setup --portal` |
-| **OpenAI Codex** | ChatGPT OAuth, Codex models | Device code auth via `hermes model` |
-| **Anthropic** | Claude models directly | OAuth or API key via `hermes model` |
-| **OpenRouter** | Multi-provider routing | Paste your API key |
-| **DeepSeek** | Direct API access | Set `DEEPSEEK_API_KEY` |
-| **Google AI Studio** | Gemini models | Set `GOOGLE_API_KEY` |
-| **Custom Endpoint** | Ollama, vLLM, SGLang | Set base URL + API key |
+### `hermes setup` modes
 
-**Important:** Hermes requires a model with at least **64K tokens** of context window. Most hosted models (Claude, GPT, Gemini, Qwen, DeepSeek) meet this easily. For local models, set `--ctx-size 65536` or equivalent.
+When you run `hermes setup` directly, you can choose between three modes as documented by the [quickstart](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart):
 
-For a complete catalog of all supported providers with env vars and setup details, see the [official AI Providers page](https://hermes-agent.nousresearch.com/docs/integrations/providers/).
+| Mode | What it does | When to use it |
+| --- | --- | --- |
+| **Quick Setup (Nous Portal)** | OAuth login, no API keys to manage. Sets up a model plus the Tool Gateway tools, billed to your Nous Portal subscription. | Fastest, recommended default for most first-timers. |
+| **Full Setup** | Walks through every provider, tool, and option yourself. | You want to bring your own keys and configure each piece intentionally. |
+| **Blank Slate** | Everything starts **off** except the bare minimum needed to run an agent: **provider & model, the File Operations toolset, and the Terminal toolset**. No web, browser, code execution, vision, memory, delegation, cron, skills, plugins, or MCP servers — and compression, checkpoints, smart routing, and memory capture are all disabled. | You want the strictest starting point and plan to enable features one by one. It writes an explicit `platform_toolsets.cli` list plus `agent.disabled_toolsets`, so nothing you didn't choose ever loads — not even after `hermes update`. Re-enable with `hermes tools`, seed skills with `hermes skills opt-in --sync`, or tune with `hermes setup agent`. | 
 
-### How Settings Are Stored
+### Coming from Claude Code, Codex CLI, Cursor, or OpenClaw
 
-Hermes separates secrets from normal config automatically:
-- **Secrets and tokens** → `~/.hermes/.env`
-- **Non-secret settings** → `~/.hermes/config.yaml`
+If a fresh `hermes setup` finds OpenClaw, Claude Code, Codex CLI, Cursor or Grok Bot on the machine, it first offers to import that setup and installs the `agent-importers` plugin. The [import guide](https://hermes-agent.nousresearch.com/docs/user-guide/import-from-other-agents) lists the mapping: Claude Code's `CLAUDE.md` becomes memory entries in `~/.hermes/memories/MEMORY.md`; `permissions.allow` becomes `command_allowlist`; `permissions.deny` becomes `approvals.deny`; `mcpServers` becomes `mcp_servers`; `skills/<name>/` imports to `~/.hermes/skills/claude-code-imports/<name>/`; `commands/*.md` slash commands are "Skipped with a note — convert them into skills". Codex CLI's `AGENTS.md` and `memories/*.md` become memory entries, `config.toml` `[mcp_servers.*]` becomes `mcp_servers`, skills import to `~/.hermes/skills/codex-imports/<name>/`. Cursor's `AGENTS.md` plus `rules/*.md`/`rules/*.mdc` become memory, `mcp.json` becomes `mcp_servers`, skills import to `~/.hermes/skills/cursor-imports/<name>/`. For machine moves you may also see `hermes import` / `hermes profile import` referenced by the flow — only act on what your setup actually offers.
 
-The CLI handles it:
-```bash
-hermes config set model anthropic/claude-opus-4.6
-hermes config set terminal.backend docker
+
+## Step 3 — Your First Conversation (Not Just `hermes --tui`)
+
+Now for the part older guides left out: prove it actually works. 
+
+### Classic CLI vs. TUI
+
+You can start in either form. Both share the same sessions, slash commands, and config.
+
+| Interface | Command | Recommendation |
+| --- | --- | --- |
+| **Classic CLI** | `hermes` | Great for scripting, single-query workflows, or minimal terminals. |
+| **Modern TUI** | `hermes --tui` | [Recommended by the quickstart](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart). Has modal overlays, mouse selection, and non-blocking input. |
+
+Single-query mode is also available: `hermes chat -q "Hello"`, `hermes chat --query-file prompt.txt` (or `--query-file -` for stdin with nothing shell-interpreted), `hermes chat --model "..."`, `hermes chat --provider ...`, or `hermes chat --toolsets "web,terminal,skills"`. [When you run `hermes chat`, it discovers or starts the profile's gateway (`hermes gateway ensure`), creates or resumes the session there, and attaches over the gateway's local WebSocket.](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart) Closing the terminal detaches: "`Detached; accepted work continues at the gateway.` — it does not cancel the turn.
+
+### Run a prompt that proves it works
+
+Use one of the [verbatim suggested first prompts](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart):
+
+```text
+What's my disk usage? Show the top 5 largest directories.
 ```
 
----
-
-## 3. Your First Conversation
-
-### Start Chatting
-
-```bash
-hermes            # classic CLI
-hermes --tui      # modern TUI (recommended)
+```text
+Summarize this repo in 5 bullets and tell me what the main entrypoint is.
 ```
 
-You'll see a welcome banner showing your model, provider, available tools, and loaded skills. Try a prompt that's specific and easy to verify:
+Check for these **success criteria** before moving to more features:
 
-```
-What's my current directory? Show me the top 5 largest files here.
-```
+1. The banner shows your chosen model and provider.
+2. Hermes replies without errors.
+3. It can use a tool if needed.
+4. The conversation continues normally for more than one turn.
 
-Or something more open-ended:
+### Verify sessions persist — `hermes --continue`
 
-```
-Summarize what Hermes Agent is and what tools I have available.
-```
-
-### What Success Looks Like
-
-- The welcome banner shows your chosen model and provider
-- Hermes replies without errors
-- It can use a tool if needed (terminal, file read, web search)
-- The conversation continues naturally for multiple turns
-
-### Slash Commands
-
-Type `/` to see an autocomplete dropdown of all in-session commands:
-
-| Command | What It Does |
-|---------|-------------|
-| `/help` | Show all available commands |
-| `/tools` | List enabled tools |
-| `/model` | Switch models interactively |
-| `/personality pirate` | Try a fun personality |
-| `/save` | Save the conversation |
-| `/compress` | Compress conversation context |
-| `/retry` | Regenerate the last response |
-
-### Session Persistence
-
-Before moving on, verify that sessions save and resume correctly:
+This is the true finish line. 
 
 ```bash
-hermes --continue    # Resume the most recent session
-hermes -c            # Short form
+hermes --continue  # short: hermes -c
 ```
 
-This should bring you right back to your last conversation. If it doesn't, check which profile you're in with `hermes sessions list`.
+You can also resume explicitly: `hermes --resume <session_id>`, `hermes --resume "my thread"` by title, or `hermes --resume latest`. If resume fails, [check whether you're in the same profile and whether the session actually saved](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart) (`hermes sessions list`). 
 
----
+### Five things worth knowing in minute two
 
-## 4. Next Steps & Key Features
+- **Slash commands:** `/help` (all commands), `/tools` (available tools), `/model` (switch models interactively), `/personality pirate` (try a personality), `/save` (save the conversation).
+- **Multi-line input:** Press `Alt+Enter`, `Ctrl+J`, or `Shift+Enter`. `Alt+Enter` and `Ctrl+J` work everywhere. `Shift+Enter` needs a terminal that sends it distinctly (Kitty / foot / WezTerm / Ghostty by default; iTerm2 / Alacritty / VS Code once the Kitty keyboard protocol is enabled).
+- **Interrupt:** Type a new message and press Enter to interrupt the current task, or use `Ctrl+C`.
+- **Gateway note:** Some flows attach through the local gateway. Don't panic if you see a detach message — work can continue at the gateway as documented.
+- **Keep it simple first:** The [quickstart](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart) rule of thumb holds: if Hermes cannot complete a normal chat, do not add more features yet.
 
-Once your base chat is working, layer on more capabilities in this order.
 
-### Connect a Messaging Platform
+## When It Breaks — The Recovery Toolkit
 
-```bash
-hermes gateway setup
-```
+When something doesn't look right, follow this [ordered sequence](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart):
 
-Interactively configure [Telegram](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/telegram/), [Discord](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/discord/), [Slack](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack/), [WhatsApp](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp/), or any of the 21+ supported platforms. See the [official Messaging Gateway docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/) for full details.
+1. `hermes doctor`
+2. `hermes model`
+3. `hermes setup`
+4. `hermes sessions list`
+5. `hermes --continue`
+6. `hermes gateway status`
 
-### Install Skills
+### Common failure modes
 
-Skills are on-demand instruction documents that teach Hermes how to do specific tasks — deploy to Kubernetes, open a GitHub PR, fine-tune a model. They ship as slash commands and auto-load when needed:
+| Symptom | Likely cause | Fix |
+| --- | --- | --- |
+| Empty or broken replies | Provider auth or model selection is wrong | Run `hermes model` again and confirm provider, model, and auth. |
+| Custom endpoint "works" but returns garbage | Wrong base URL, model name, or not actually OpenAI-compatible | Verify the endpoint in a separate client first. |
+| Gateway starts but nobody can message it | Bot token, allowlist, or platform setup is incomplete | Re-run `hermes gateway setup` and check `hermes gateway status`. |
+| `hermes --continue` can't find old session | Switched profiles or session never saved | Check `hermes sessions list` and confirm you're in the right profile. |
+| Model unavailable or odd fallback behavior | Provider routing or fallback settings are too aggressive | Keep routing off until the base provider is stable. |
+| `hermes doctor` flags config problems | Config values are missing or stale | Fix the config, retest a plain chat before adding features. |
 
-```bash
-hermes skills browse                      # list everything available
-hermes skills search kubernetes           # find skills by keyword
-hermes skills install openai/skills/k8s   # install one (security scan runs first)
-```
+### Extra gotchas from the docs
 
-### Configure Tools & Toolsets
+- **`hermes: command not found`:** Reload your shell/PATH (e.g. `source ~/.bashrc`/`~/.zshrc`). Check that `~/.local/bin` (POSIX) or `%LOCALAPPDATA%\hermes\bin\` (Windows) is on PATH.
+- **API key issues:** Use `hermes model` or `hermes config set <KEY> <value>`. Keys belong in `~/.hermes/.env`.
+- **Missing config after update:** Try `hermes config check` then `hermes config migrate` as suggested by the [installation page](https://hermes-agent.nousresearch.com/docs/getting-started/installation).
+- **Symlinked `HERMES_HOME`:** [If `HERMES_HOME` is a symlink, init stops with a storage error naming the path and target; `hermes setup` is *not* the repair for an unavailable directory.](https://hermes-agent.nousresearch.com/docs/getting-started/installation) [These are reported as storage problems by `hermes doctor`.](https://hermes-agent.nousresearch.com/docs/getting-started/installation)
+- **Update ownership:** `hermes update` behavior follows the installation method. [`hermes doctor`](https://hermes-agent.nousresearch.com/docs/getting-started/installation) can report provenance.
+- **Egress/proxy note (known tension):** The [quickstart](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart) states "Modal, SSH, Daytona, and Singularity are not wired yet" in the context of the egress credential-injection proxy, while the [docs index](https://hermes-agent.nousresearch.com/docs) describes running Hermes on a variety of backends. This guide does not reconcile those two statements — treat the proxy line as a narrow egress-proxy statement only. 
 
-```bash
-hermes tools    # enable/disable tools per platform
-```
+### Quick reference
 
-Hermes ships with 60+ built-in tools including terminal, file operations, web search, browser automation, code execution, and image generation. Control exactly which are available on each platform.
+| Command | What it's for |
+| --- | --- |
+| `hermes` | Start chatting (classic CLI) |
+| `hermes model` | Choose your LLM provider and model |
+| `hermes tools` | Configure which tools are enabled per platform |
+| `hermes setup` | Full setup wizard |
+| `hermes doctor` | Diagnose issues |
+| `hermes update` | Update to latest version |
+| `hermes gateway` | Start the messaging gateway |
+| `hermes --continue` | Resume last session |
 
-### Set Up Automations
 
-Once your CLI or bot is stable, schedule recurring tasks with the built-in cron system:
+## What to Add Next — and in What Order
 
-```bash
-hermes cron create --schedule "0 8 * * 1" --task "Send me a weekly summary of my GitHub issues"
-```
+Resist the urge to enable everything at once. Follow a strict order:
 
-### Run Hermes Remotely
+1. **Verify first.** Get a clean, multi-turn chat and confirm `hermes --continue` works.
+2. **Tighten access.** Only after step 1, configure tools deliberately with `hermes tools`. If you chose **Blank Slate**, enable only what you need.
+3. **Extend.** From there you can explore [skills](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills) (`hermes skills opt-in --sync`), [MCP](https://hermes-agent.nousresearch.com/docs/user-guide/configuration), the [messaging gateway](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/), or `hermes acp` if relevant to your workflow.
+4. **Stay aware of context.** Keep the 64K minimum in mind, especially for local models.
 
-For production setups, run the agent in a sandboxed environment:
+If you ever need machine-readable references, [the docs publish `/llms.txt` (~17 KB) and `/llms-full.txt` (~1.8 MB)](https://hermes-agent.nousresearch.com/docs).
 
-```bash
-hermes config set terminal.backend docker    # Docker isolation
-hermes config set terminal.backend ssh       # Remote server
-```
 
----
+## FAQ
 
-## Recovery Toolkit
+**Q: Do I need Python 3.11 or Node.js v22 to install Hermes Agent?**  
+A: No. [Current first-party installations run on **Python 3.14**](https://hermes-agent.nousresearch.com/docs/getting-started/installation). The `>=3.11,<3.15` range only helps with the updater path. [PM pins Python, Node.js, npm, ripgrep, and FFmpeg from `pm/lock.json`](https://hermes-agent.nousresearch.com/docs/getting-started/installation); the docs do not publish a Node.js version number, so don't rely on a fixed v22 claim.
 
-When something feels off, run through this sequence:
-1. `hermes doctor` — diagnostic check
-2. `hermes model` — verify provider and auth
-3. `hermes setup` — re-run the setup wizard
-4. `hermes sessions list` — check session health
-5. `hermes --continue` — resume last session
-6. `hermes gateway status` — verify messaging gateway
+**Q: Which install should I pick on macOS with Intel?**  
+A: [The macOS installer is **Apple Silicon only**. macOS on x86 (Intel) processors is not a supported platform.](https://hermes-agent.nousresearch.com/docs/getting-started/installation) Check the [installation page](https://hermes-agent.nousresearch.com/docs/getting-started/installation) for current options before proceeding — this guide does not assume an Intel build exists.
 
-That order gets you from broken vibes back to a known state fast. See the [Troubleshooting guide](/blog/troubleshooting) for deep dives into specific issues.
+**Q: Can I install on Android/Termux or with Nix?**  
+A: For Android (aarch64), use the [signed APT repository and `pkg install hermes-agent`](https://hermes-agent.nousresearch.com/docs/getting-started/installation); the shell scripts are not the Termux path. For Nix, the [installation page](https://hermes-agent.nousresearch.com/docs/getting-started/installation) marks it as **no longer an explicitly supported install path (best-effort only)**, despite the [docs index](https://hermes-agent.nousresearch.com/docs) still listing it. Treat Nix as best-effort.
 
----
+**Q: What's the fastest way to get going without managing many API keys?**  
+A: Run `hermes setup --portal`. [It runs Portal OAuth, picks a Nous model, sets Nous as your provider, and turns on the Tool Gateway in one command](https://hermes-agent.nousresearch.com/docs/getting-started/installation) — [one OAuth covers a model plus all four Tool Gateway tools](https://hermes-agent.nousresearch.com/docs/getting-started/installation). Learn more via [Nous Portal](https://hermes-agent.nousresearch.com/docs/integrations/nous-portal) and [portal.nousresearch.com](https://portal.nousresearch.com).
 
-## Quick Reference
+**Q: Where do I put API keys vs other settings?**  
+A: [Secrets go to `~/.hermes/.env`, non-secret settings go to `~/.hermes/config.yaml`.](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart) Use `hermes config set` and `hermes config get` to route values correctly. Also remember the [64,000-token context minimum](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart) for agent use with tools.
 
-| Command | What It Does |
-|---------|-------------|
-| `hermes` | Start interactive chat |
-| `hermes --tui` | Start TUI (recommended) |
-| `hermes model` | Choose LLM provider and model |
-| `hermes setup --portal` | Fastest setup — OAuth + Tool Gateway |
-| `hermes tools` | Configure enabled tools per platform |
-| `hermes doctor` | Diagnose configuration issues |
-| `hermes update` | Update to the latest version |
-| `hermes gateway setup` | Configure messaging platforms |
-| `hermes --continue` | Resume the last session |
+**Q: How do I update or recover if it's broken?**  
+A: Use `hermes update` where applicable to your install method. For issues, run the recovery order: `hermes doctor` → `hermes model` → `hermes setup` → `hermes sessions list` → `hermes --continue` → `hermes gateway status`. [See the failure table above](#when-it-breaks--the-recovery-toolkit). If `HERMES_HOME` is a symlink, `hermes setup` is not the repair — look to `hermes doctor` for storage problems.
 
----
 
-## Deepen Your Knowledge
+## The Bottom Line
 
-Continue your learning journey with these dedicated Quick Start guides:
+**Verdict:** For most people reading this in late 2026, the correct move is the **POSIX one-liner** or **Windows PowerShell one-liner** (or a supported desktop bundle if you prefer an app), followed by **`hermes setup --portal`** to get a working provider and the [Tool Gateway](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway) without juggling a long list of keys. If you want absolute minimalism, use **Blank Slate** and enable tools deliberately. 
 
-- **[CLI Mastery](/blog/cli-mastery)** — All CLI flags, session management, TUI features, and slash command reference
-- **[Providers](/blog/provider-setup)** — Every supported LLM provider, credential pools, local model configuration, model-switching strategies
-- **[Gateway Setup](/blog/gateway-setup)** — Connect Telegram, Discord, Slack, WhatsApp, Signal, Email, Teams, and more
-- **[Memory & Profiles](/blog/memory-profiles)** — Persistent memory, Honcho integrations, cross-session recall, profile management
-- **[Multi-Agent](/blog/multi-agent-setup)** — Run multiple independent Hermes agents, subagent delegation, parallel workflows
-- **[Automation](/blog/advanced-automation)** — Cron jobs, webhooks, scheduled tasks, event-driven pipelines
-- **[Troubleshooting](/blog/troubleshooting)** — Common failure modes, recovery sequences, diagnostic commands
+The habit that separates a "installed" box from a usable agent is this: run `hermes --tui` (or `hermes`), send one of the verbatim prompts, confirm the four success criteria, and verify persistence with `hermes --continue`. Ignore the old Python/Node version numbers — focus on the PM-pinned, Python 3.14-first flow and the recovery toolkit if anything drifts. Everything else is layering on top of a verified first conversation.
 
-All guides are verified against the latest Hermes Agent release. Bookmark the [official Hermes Agent Documentation](https://hermes-agent.nousresearch.com/docs/) for authoritative reference, CLI command listings, and feature deep dives.
 
----
+## How This Guide Was Built
 
-## Community & Resources
+This guide is **documentation synthesis only**. Its commands, flags, paths, modes, tables and constraints come from the official [Hermes Agent documentation](https://hermes-agent.nousresearch.com/docs) pages listed below, checked on **2026-11-04**; where the docs are silent, the gap is stated rather than filled. No commands were run hands-on on the reader's behalf, and no "we tested" claims are made anywhere in this post. Where the docs are silent on a detail (for example, a published Node.js version number), it was omitted rather than guessed. Where the docs themselves show a known tension (notably Nix support vs. the docs index, and the narrow "not wired yet" egress-proxy statement vs. broader backend positioning), it was quoted narrowly or called out explicitly without attempting to resolve it. Marketing enumerations (e.g. "300+" models) are treated as vendor claims. Inline sources used: [Installation](https://hermes-agent.nousresearch.com/docs/getting-started/installation), [Quickstart](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart), [Docs Index](https://hermes-agent.nousresearch.com/docs), [CLI](https://hermes-agent.nousresearch.com/docs/user-guide/cli), [Nous Portal](https://hermes-agent.nousresearch.com/docs/integrations/nous-portal), [Tool Gateway](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway), [Import from other agents](https://hermes-agent.nousresearch.com/docs/user-guide/import-from-other-agents), [Providers](https://hermes-agent.nousresearch.com/docs/integrations/providers), [Skills](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills), [Messaging](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/), [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration), [Package Management](https://hermes-agent.nousresearch.com/docs/reference/package-management), [FAQ](https://hermes-agent.nousresearch.com/docs/reference/faq), [Nous Research](https://nousresearch.com), [Nous Portal](https://portal.nousresearch.com).
 
-- **[GitHub](https://github.com/NousResearch/hermes-agent)** — Star the repo and submit PRs
-- **[Discord](https://discord.gg/NousResearch)** — Join the community
-- **[Skills Hub](https://agentskills.io)** — Browse community skills
-- **[Nous Portal](https://portal.nousresearch.com)** — Manage your subscription
-- **[YouTube Tutorials](https://www.youtube.com/playlist?list=PLmpUb_PWAkDxewld5ZYyKifuHxgIbiq2d)** — Video walkthroughs
-
-{/* crosslinks */}
-
-## References
-
-- [Nous Research](https://nousresearch.com)
-- [official Installation Guide](https://hermes-agent.nousresearch.com/docs/getting-started/installation/)
-- [Tool Gateway](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway)
-## 📖 Related Reads
-
-- **[NiteAgent](https://niteagent.com/)** — AI agent development, frameworks, and production patterns
-- **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools, agents, and APIs
-
-*Cross-links automatically generated from Hermes Tutorials.*
