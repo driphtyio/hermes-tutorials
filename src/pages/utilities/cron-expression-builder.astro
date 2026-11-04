@@ -67,8 +67,8 @@ const jsonLd = {
             <option value="daily" selected>Every day at a set time</option>
             <option value="weekly">Every week on a set day and time</option>
             <option value="monthly">Every month on a set date and time</option>
-            <option value="nth">Every month on the Nth weekday (e.g. 1st Monday)</option>
             <option value="hourly">Every N hours</option>
+            <option value="weekdays">Every weekday (Mon–Fri) at a set time</option>
           </select>
 
           <div class="row" style="margin-top: 1rem;">
@@ -101,25 +101,6 @@ const jsonLd = {
             <div id="gMonthday" class="hide">
               <label for="monthday">Day of month</label>
               <input id="monthday" type="number" min="1" max="31" value="1" />
-            </div>
-            <div id="gNth" class="hide">
-              <label for="nthSel">Which occurrence</label>
-              <select id="nthSel">
-                <option value="1">1st</option>
-                <option value="2">2nd</option>
-                <option value="3">3rd</option>
-                <option value="4">4th</option>
-              </select>
-              <label for="nthDow" style="margin-top: 0.6rem;">of which weekday</label>
-              <select id="nthDow">
-                <option value="1">Monday</option>
-                <option value="2">Tuesday</option>
-                <option value="3">Wednesday</option>
-                <option value="4">Thursday</option>
-                <option value="5">Friday</option>
-                <option value="6">Saturday</option>
-                <option value="0">Sunday</option>
-              </select>
             </div>
           </div>
 
@@ -158,7 +139,7 @@ const jsonLd = {
         <div class="panel">
           <ol class="runs" id="runs"></ol>
           <p class="how"><strong>How this is computed:</strong> the page expands the expression into explicit sets of minutes, hours, days, months and weekdays, then walks forward from your current clock — day by day while month/day/weekday match, then hour by hour, then minute by minute — collecting the first 5 timestamps strictly after now. Day-of-month and day-of-week follow the classic Vixie cron rule: when <em>both</em> are restricted (neither is <code>*</code>), a day matches if <strong>either</strong> matches. All times are in this browser's local timezone; the daemon that runs your job may be on a different one.</p>
-          <p class="how"><strong>The Nth-weekday trick:</strong> standard 5-field cron has no "first Monday" syntax. The usual workaround is to restrict the day-of-month to <code>1-7</code> and set the weekday — the overlap is exactly the first that weekday of the month (use <code>8-14</code> for the second, <code>15-21</code> for the third, <code>22-28</code> for the fourth). That is what the Nth-weekday mode generates, and the expression box shows the exact range it chose. Note that a month occasionally has a fifth occurrence, which this pattern deliberately skips.</p>
+          <p class="how"><strong>What 5-field cron cannot express:</strong> "the second Wednesday of the month" has no syntax here, and the popular <code>8-14</code>-plus-weekday workaround is <em>not</em> safe on cronie/Vixie cron — because it ORs day-of-month and day-of-week when both are restricted, that expression fires on <em>every</em> Wednesday. If you need an Nth weekday, either have the job check the date itself (run daily at the target time and exit early unless the weekday and week-of-month match) or use a scheduler with explicit nth-weekday support. This page deliberately will not generate a pattern that silently over-fires.</p>
         </div>
 
         <h2>Related</h2>
@@ -305,10 +286,10 @@ const jsonLd = {
       }
 
       const pad = (n: number) => String(n).padStart(2, '0');
-      const pad3 = (n: number) => String(n).padStart(3, '0');
+      const pad2 = (n: number) => String(n).padStart(2, '0');
 
       function fmtRun(d: Date): string {
-        return `${pad3(d.getDate())} ${MON_NAMES[d.getMonth()].slice(0, 3)} ${d.getFullYear()}  ${pad(d.getHours())}:${pad(d.getMinutes())}  ${DOW_NAMES[d.getDay()]}`;
+        return `${pad2(d.getDate())} ${MON_NAMES[d.getMonth()].slice(0, 3)} ${d.getFullYear()}  ${pad(d.getHours())}:${pad(d.getMinutes())}  ${DOW_NAMES[d.getDay()]}`;
       }
 
       function paint(expr: string, defaultDesc: boolean) {
@@ -350,15 +331,9 @@ const jsonLd = {
         }
         if (mode === 'daily') return `${tMin} ${tHour} * * *`;
         if (mode === 'weekly') return `${tMin} ${tHour} * * ${$('weekday').value}`;
-        if (mode === 'monthly') {
-          const d = Math.min(31, Math.max(1, parseInt($('monthday').value, 10) || 1));
-          return `${tMin} ${tHour} ${d} * *`;
-        }
-        // nth weekday: DOM range 1-7 / 8-14 / 15-21 / 22-28 overlapping the weekday
-        const nth = parseInt($('nthSel').value, 10);
-        const lo = (nth - 1) * 7 + 1;
-        const hi = nth * 7;
-        return `${tMin} ${tHour} ${lo}-${hi} * ${$('nthDow').value}`;
+        if (mode === 'weekdays') return `${tMin} ${tHour} * * 1-5`;
+        const d = Math.min(31, Math.max(1, parseInt($('monthday').value, 10) || 1));
+        return `${tMin} ${tHour} ${d} * *`;
       }
 
       function syncGroups() {
@@ -366,17 +341,16 @@ const jsonLd = {
         const show = (id: string, on: boolean) => el(id).classList.toggle('hide', !on);
         show('gMinutes', mode === 'minutes');
         show('gHours', mode === 'hourly');
-        show('gTime', mode === 'daily' || mode === 'weekly' || mode === 'monthly' || mode === 'nth');
+        show('gTime', mode !== 'minutes' && mode !== 'hourly');
         show('gWeekday', mode === 'weekly');
         show('gMonthday', mode === 'monthly');
-        show('gNth', mode === 'nth');
       }
 
       function fromForm() { syncGroups(); paint(buildFromForm(), false); }
 
       const DEFAULTS: Record<string, string> = {
         mode: 'daily', everyN: '15', everyH: '6', hMin: '0', atTime: '09:00',
-        weekday: '1', monthday: '1', nthSel: '1', nthDow: '1',
+        weekday: '1', monthday: '1',
       };
       function resetForm() {
         for (const k of Object.keys(DEFAULTS)) $(k).value = DEFAULTS[k];
@@ -384,7 +358,7 @@ const jsonLd = {
       }
 
       $('mode').addEventListener('change', fromForm);
-      ['everyN', 'everyH', 'hMin', 'atTime', 'weekday', 'monthday', 'nthSel', 'nthDow']
+      ['everyN', 'everyH', 'hMin', 'atTime', 'weekday', 'monthday']
         .forEach(id => $(id).addEventListener('input', fromForm));
       $('raw').addEventListener('input', () => paint($('raw').value.trim() || '* * * * *', true));
       document.querySelectorAll('[data-fill]').forEach(b => b.addEventListener('click', () => {
@@ -393,10 +367,8 @@ const jsonLd = {
       }));
       $('example').addEventListener('click', () => {
         for (const k of Object.keys(DEFAULTS)) $(k).value = DEFAULTS[k];
-        $('mode').value = 'nth';
-        $('nthSel').value = '2';
-        $('nthDow').value = '3';
-        $('atTime').value = '08:30';
+        $('mode').value = 'weekdays';
+        $('atTime').value = '07:30';
         fromForm();
       });
       $('reset').addEventListener('click', resetForm);
