@@ -1,0 +1,414 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'Cron Expression Builder',
+  description: 'Build a 5-field cron expression from a visual schedule picker, read it back as plain English, and preview the next 5 run times. Free, runs client-side.',
+  url: 'https://hermes-tutorials.dev/utilities/cron-expression-builder/',
+  operatingSystem: 'Any (web browser)',
+  applicationCategory: 'DeveloperApplication',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+};
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <BaseHead title="Cron Expression Builder — hermes-tutorials.dev" description="Build a cron expression visually, read it back as plain English, and preview the next 5 run times. Free, and everything runs client-side in your browser." />
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+    <style>
+      .tool { max-width: var(--grid-width); margin: 0 auto; color: var(--text-primary); }
+      .tool h1 { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.3em; }
+      .tool h2 { font-size: 1.3rem; margin-top: 2em; }
+      .lede, .note { color: var(--text-secondary); line-height: 1.7; max-width: var(--content-width); }
+      .note { font-size: 0.9rem; color: var(--text-muted); }
+      .panel { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-top: 1rem; }
+      .panel label { display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.3rem; }
+      select, input[type=number], input[type=text], input[type=time] { width: 100%; box-sizing: border-box; background: var(--bg); color: var(--text-primary); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.6rem 0.75rem; font-family: var(--font-mono); font-size: 0.85rem; }
+      select:focus, input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-top: 1rem; }
+      .btns { display: flex; gap: 0.6rem; margin-top: 1rem; flex-wrap: wrap; }
+      button { background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.5rem 1rem; cursor: pointer; font: inherit; }
+      button:hover { border-color: var(--accent); }
+      .out { font-family: var(--font-mono); font-size: 1.6rem; color: var(--accent-light); letter-spacing: 0.06em; word-break: break-all; margin-top: 0.75rem; }
+      .desc { color: var(--text-primary); line-height: 1.6; margin-top: 0.35rem; }
+      .fields { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; margin-top: 0.75rem; text-align: center; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); }
+      .runs { list-style: none; padding: 0; margin: 0.75rem 0 0; font-family: var(--font-mono); font-size: 0.9rem; }
+      .runs li { padding: 0.4rem 0; border-bottom: 1px solid var(--border); color: var(--text-primary); }
+      .runs li:last-child { border-bottom: none; }
+      .runs li span { color: var(--text-muted); margin-right: 0.75rem; }
+      .err { color: #e5484d; font-family: var(--font-mono); font-size: 0.85rem; margin-top: 0.5rem; }
+      .how { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.75rem; line-height: 1.6; }
+      .how code, .desc code { font-family: var(--font-mono); color: var(--text-secondary); }
+      .links a { color: var(--accent-light); }
+      .links li { margin-bottom: 0.4rem; }
+      .row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; }
+      .row > div { flex: 1 1 160px; }
+      .hide { display: none; }
+      .chips { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.9rem; }
+      .chips button { font-family: var(--font-mono); font-size: 0.8rem; padding: 0.35rem 0.7rem; }
+    </style>
+  </head>
+  <body>
+    <Header />
+    <main>
+      <div class="tool">
+        <p class="note"><a href="/utilities/">← All utilities</a></p>
+        <h1>Cron Expression Builder</h1>
+        <p class="lede">Pick a schedule with plain form controls and get the 5-field cron expression, a plain-English description, and the next five times it will actually fire. Free, and everything runs in your browser — nothing is sent anywhere.</p>
+
+        <div class="panel">
+          <label for="mode">Schedule type</label>
+          <select id="mode">
+            <option value="minutes">Every N minutes</option>
+            <option value="daily" selected>Every day at a set time</option>
+            <option value="weekly">Every week on a set day and time</option>
+            <option value="monthly">Every month on a set date and time</option>
+            <option value="nth">Every month on the Nth weekday (e.g. 1st Monday)</option>
+            <option value="hourly">Every N hours</option>
+          </select>
+
+          <div class="row" style="margin-top: 1rem;">
+            <div id="gMinutes" class="hide">
+              <label for="everyN">Every how many minutes</label>
+              <input id="everyN" type="number" min="1" max="59" value="15" />
+            </div>
+            <div id="gHours" class="hide">
+              <label for="everyH">Every how many hours</label>
+              <input id="everyH" type="number" min="1" max="23" value="6" />
+              <label for="hMin" style="margin-top: 0.6rem;">At minute</label>
+              <input id="hMin" type="number" min="0" max="59" value="0" />
+            </div>
+            <div id="gTime">
+              <label for="atTime">Time of day (local)</label>
+              <input id="atTime" type="time" value="09:00" />
+            </div>
+            <div id="gWeekday" class="hide">
+              <label for="weekday">Day of week</label>
+              <select id="weekday">
+                <option value="1">Monday</option>
+                <option value="2">Tuesday</option>
+                <option value="3">Wednesday</option>
+                <option value="4">Thursday</option>
+                <option value="5">Friday</option>
+                <option value="6">Saturday</option>
+                <option value="0">Sunday</option>
+              </select>
+            </div>
+            <div id="gMonthday" class="hide">
+              <label for="monthday">Day of month</label>
+              <input id="monthday" type="number" min="1" max="31" value="1" />
+            </div>
+            <div id="gNth" class="hide">
+              <label for="nthSel">Which occurrence</label>
+              <select id="nthSel">
+                <option value="1">1st</option>
+                <option value="2">2nd</option>
+                <option value="3">3rd</option>
+                <option value="4">4th</option>
+              </select>
+              <label for="nthDow" style="margin-top: 0.6rem;">of which weekday</label>
+              <select id="nthDow">
+                <option value="1">Monday</option>
+                <option value="2">Tuesday</option>
+                <option value="3">Wednesday</option>
+                <option value="4">Thursday</option>
+                <option value="5">Friday</option>
+                <option value="6">Saturday</option>
+                <option value="0">Sunday</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="btns">
+            <button id="copy" type="button">Copy expression</button>
+            <button id="example" type="button">Load worked example</button>
+            <button id="reset" type="button">Reset</button>
+          </div>
+
+          <p class="note" style="margin-top: 1.25rem;">Generated expression</p>
+          <div class="out" id="expr">0 9 * * *</div>
+          <div class="fields">
+            <div>minute</div><div>hour</div><div>day</div><div>month</div><div>weekday</div>
+          </div>
+          <p class="desc" id="desc"></p>
+        </div>
+
+        <h2>Check any expression</h2>
+        <div class="panel">
+          <label for="raw">Paste a 5-field cron expression (or write your own)</label>
+          <input id="raw" type="text" spellcheck="false" value="0 9 * * *" />
+          <p class="err" id="rawErr"></p>
+          <p class="desc" id="rawDesc"></p>
+          <div class="chips">
+            <button type="button" data-fill="*/15 * * * *">*/15 * * * *</button>
+            <button type="button" data-fill="0 * * * *">0 * * * *</button>
+            <button type="button" data-fill="0 3 * * 1-5">0 3 * * 1-5</button>
+            <button type="button" data-fill="30 6 1 * *">30 6 1 * *</button>
+            <button type="button" data-fill="0 0 * * 0">0 0 * * 0</button>
+            <button type="button" data-fill="0 9,18 * * *">0 9,18 * * *</button>
+          </div>
+          <p class="how"><strong>How this is read:</strong> fields are <code>minute hour day-of-month month day-of-week</code>, each accepting <code>*</code>, lists (<code>1,15</code>), ranges (<code>1-5</code>), steps (<code>*/10</code>, <code>0-30/5</code>), and weekday names (<code>mon-fri</code>, <code>sun</code>). Values are capped to their real ranges (0–59, 0–23, 1–31, 1–12, 0–6 with 0 and 7 = Sunday), so a bad number is rejected rather than silently clamped.</p>
+        </div>
+
+        <h2>Next 5 run times</h2>
+        <div class="panel">
+          <ol class="runs" id="runs"></ol>
+          <p class="how"><strong>How this is computed:</strong> the page expands the expression into explicit sets of minutes, hours, days, months and weekdays, then walks forward from your current clock — day by day while month/day/weekday match, then hour by hour, then minute by minute — collecting the first 5 timestamps strictly after now. Day-of-month and day-of-week follow the classic Vixie cron rule: when <em>both</em> are restricted (neither is <code>*</code>), a day matches if <strong>either</strong> matches. All times are in this browser's local timezone; the daemon that runs your job may be on a different one.</p>
+          <p class="how"><strong>The Nth-weekday trick:</strong> standard 5-field cron has no "first Monday" syntax. The usual workaround is to restrict the day-of-month to <code>1-7</code> and set the weekday — the overlap is exactly the first that weekday of the month (use <code>8-14</code> for the second, <code>15-21</code> for the third, <code>22-28</code> for the fourth). That is what the Nth-weekday mode generates, and the expression box shows the exact range it chose. Note that a month occasionally has a fifth occurrence, which this pattern deliberately skips.</p>
+        </div>
+
+        <h2>Related</h2>
+        <ul class="links">
+          <li><a href="/blog/cron-job-patterns-2026/">Cron Job Patterns &amp; Best Practices</a> — schedules, idempotency and the failure modes that bite.</li>
+          <li><a href="/blog/hermes-profiles-cron-guide/">Hermes Profiles &amp; Cron Guide</a> — how the scheduler itself is configured.</li>
+          <li><a href="/blog/hermes-cron-health-monitor-build-log/">Build Log: Cron Health Monitor</a> — watching jobs so a silent skip doesn't go unnoticed.</li>
+          <li><a href="/blog/advanced-automation/">Advanced Automation</a> — chaining scheduled work into a pipeline.</li>
+          <li><a href="/utilities/">All utilities</a></li>
+        </ul>
+      </div>
+    </main>
+    <Footer />
+    <script>
+      const DOW_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const MON_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const DOW_ALIAS: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+      const MON_ALIAS: Record<string, number> = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+
+      const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+      const el = (id: string) => document.getElementById(id)!;
+
+      type Field = { min: number; max: number; names?: Record<string, number> };
+
+      function parseField(raw: string, f: Field, label: string): number[] {
+        const out = new Set<number>();
+        const token = (t: string): number => {
+          const s = t.trim().toLowerCase();
+          if (s === '') throw new Error(`${label}: empty value`);
+          if (parseInt(s, 10).toString() === s) {
+            const n = parseInt(s, 10);
+            if (n < f.min || n > f.max) throw new Error(`${label}: ${n} is outside ${f.min}–${f.max}`);
+            return n;
+          }
+          if (f.names && s in f.names) return f.names[s];
+          throw new Error(`${label}: cannot read "${t}"`);
+        };
+        for (const part of raw.split(',')) {
+          if (part.trim() === '') throw new Error(`${label}: empty list item`);
+          const [rangePart, stepPart] = part.split('/');
+          let step = 1;
+          if (stepPart !== undefined) {
+            step = parseInt(stepPart, 10);
+            if (!Number.isFinite(step) || step < 1) throw new Error(`${label}: bad step "/${stepPart}"`);
+          }
+          let lo: number, hi: number;
+          if (rangePart.trim() === '*') { lo = f.min; hi = f.max; }
+          else if (rangePart.includes('-')) {
+            const [a, b] = rangePart.split('-');
+            lo = token(a); hi = token(b);
+            if (hi < lo) throw new Error(`${label}: range ${a}-${b} runs backwards`);
+          } else {
+            lo = hi = token(rangePart);
+            if (stepPart !== undefined) throw new Error(`${label}: a step needs a range or "*"`);
+          }
+          for (let v = lo; v <= hi; v += step) out.add(v);
+        }
+        return [...out].sort((a, b) => a - b);
+      }
+
+      type Parsed = { mins: number[]; hours: number[]; dom: number[]; mon: number[]; dow: number[]; domStar: boolean; dowStar: boolean };
+
+      function parseCron(expr: string): Parsed {
+        const parts = expr.trim().split(/\s+/);
+        if (parts.length !== 5) throw new Error(`expected 5 fields, got ${parts.length}`);
+        const mins = parseField(parts[0], { min: 0, max: 59 }, 'minute');
+        const hours = parseField(parts[1], { min: 0, max: 23 }, 'hour');
+        const dom = parseField(parts[2], { min: 1, max: 31 }, 'day of month');
+        const mon = parseField(parts[3], { min: 1, max: 12, names: MON_ALIAS }, 'month');
+        let dowRaw = parts[4];
+        // 7 is a valid Sunday alias; fold it to 0 before range checks would reject it
+        if (/\b7\b/.test(dowRaw)) { dowRaw = dowRaw.replace(/\b7\b/g, '0'); }
+        const dow = parseField(dowRaw, { min: 0, max: 6, names: DOW_ALIAS }, 'day of week');
+        return { mins, hours, dom, mon, dow, domStar: parts[2].trim() === '*', dowStar: parts[4].trim() === '*' };
+      }
+
+      function dayMatches(p: Parsed, d: Date): boolean {
+        if (!p.mon.includes(d.getMonth() + 1)) return false;
+        const domOk = p.dom.includes(d.getDate());
+        const dowOk = p.dow.includes(d.getDay());
+        if (p.domStar && p.dowStar) return true;
+        if (p.domStar) return dowOk;
+        if (p.dowStar) return domOk;
+        return domOk || dowOk;
+      }
+
+      function nextRuns(p: Parsed, count: number): Date[] {
+        const res: Date[] = [];
+        const now = new Date();
+        const start = new Date(now.getTime() + 60000);
+        start.setSeconds(0, 0);
+        const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        for (let day = 0; day < 366 * 5 && res.length < count; day++) {
+          const d = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + day);
+          if (!dayMatches(p, d)) continue;
+          for (const h of p.hours) {
+            for (const m of p.mins) {
+              const cand = new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m, 0, 0);
+              if (cand.getTime() < start.getTime()) continue;
+              res.push(cand);
+              if (res.length >= count) break;
+            }
+            if (res.length >= count) break;
+          }
+        }
+        return res;
+      }
+
+      function describe(p: Parsed): string {
+        const piece: string[] = [];
+        // minute / hour
+        let timeText: string;
+        const minsAll = p.mins.length === 60, hoursAll = p.hours.length === 24;
+        if (minsAll && hoursAll) timeText = 'Every minute';
+        else if (hoursAll && p.mins.length === 1) timeText = `Every hour at minute ${pad(p.mins[0])}`;
+        else if (hoursAll) timeText = `Every hour at minutes ${p.mins.map(pad).join(', ')}`;
+        else if (p.mins.length === 1 && p.hours.length === 1) timeText = `At ${pad(p.hours[0])}:${pad(p.mins[0])}`;
+        else {
+          const times: string[] = [];
+          for (const h of p.hours) for (const m of p.mins) times.push(`${pad(h)}:${pad(m)}`);
+          timeText = times.length <= 6 ? `At ${times.join(', ')}` : `At ${times.length} times per day (${times.slice(0, 3).join(', ')}…)`;
+        }
+        piece.push(timeText);
+
+        // day-of-week
+        let dowText = '';
+        if (!p.dowStar) {
+          dowText = p.dow.length === 5 && p.dow.join(',') === '1,2,3,4,5' ? 'on weekdays'
+            : p.dow.length === 2 && p.dow.includes(0) && p.dow.includes(6) ? 'on weekends'
+            : `on ${p.dow.map(d => DOW_NAMES[d]).join(', ')}`;
+        }
+        // day-of-month
+        let domText = '';
+        if (!p.domStar) {
+          domText = `on day ${p.dom.join(', ')} of the month`;
+        }
+        if (dowText && domText) piece.push('(' + domText + ' OR ' + dowText + ')');
+        else if (dowText) piece.push(dowText);
+        else if (domText) piece.push(domText);
+
+        // month
+        if (p.mon.length !== 12) piece.push(`in ${p.mon.map(m => MON_NAMES[m - 1]).join(', ')}`);
+        return piece.join(' ').replace(/\s+/g, ' ');
+      }
+
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const pad3 = (n: number) => String(n).padStart(3, '0');
+
+      function fmtRun(d: Date): string {
+        return `${pad3(d.getDate())} ${MON_NAMES[d.getMonth()].slice(0, 3)} ${d.getFullYear()}  ${pad(d.getHours())}:${pad(d.getMinutes())}  ${DOW_NAMES[d.getDay()]}`;
+      }
+
+      function paint(expr: string, defaultDesc: boolean) {
+        $('expr').textContent = expr;
+        $('raw').value = expr;
+        let p: Parsed | null = null;
+        let err = '';
+        try { p = parseCron(expr); } catch (e: any) { err = e.message; }
+        if (p) {
+          const d = describe(p);
+          $('desc').textContent = d ? d + '.' : '';
+          $('rawErr').textContent = '';
+          $('rawDesc').textContent = d ? d + '.' : 'Valid expression.';
+          const runs = nextRuns(p, 5);
+          $('runs').innerHTML = runs.length
+            ? runs.map((r, i) => `<li><span>${i + 1}.</span>${fmtRun(r)}</li>`).join('')
+            : '<li><span>—</span>No run time found in the next 5 years. Check the day-of-month / month combination (e.g. 31 February never occurs).</li>';
+        } else {
+          $('desc').textContent = defaultDesc ? 'Waiting for a valid expression.' : '';
+          $('rawErr').textContent = '✗ ' + err;
+          $('rawDesc').textContent = '';
+          $('runs').innerHTML = '';
+        }
+      }
+
+      function buildFromForm(): string {
+        const mode = $('mode').value;
+        const t = ($('atTime').value || '09:00').split(':');
+        const tMin = Math.min(59, Math.max(0, parseInt(t[1] || '0', 10)));
+        const tHour = Math.min(23, Math.max(0, parseInt(t[0] || '0', 10)));
+        if (mode === 'minutes') {
+          const n = Math.min(59, Math.max(1, parseInt($('everyN').value, 10) || 15));
+          return `*/${n} * * * *`;
+        }
+        if (mode === 'hourly') {
+          const n = Math.min(23, Math.max(1, parseInt($('everyH').value, 10) || 6));
+          const m = Math.min(59, Math.max(0, parseInt($('hMin').value, 10) || 0));
+          return `${m} */${n} * * *`;
+        }
+        if (mode === 'daily') return `${tMin} ${tHour} * * *`;
+        if (mode === 'weekly') return `${tMin} ${tHour} * * ${$('weekday').value}`;
+        if (mode === 'monthly') {
+          const d = Math.min(31, Math.max(1, parseInt($('monthday').value, 10) || 1));
+          return `${tMin} ${tHour} ${d} * *`;
+        }
+        // nth weekday: DOM range 1-7 / 8-14 / 15-21 / 22-28 overlapping the weekday
+        const nth = parseInt($('nthSel').value, 10);
+        const lo = (nth - 1) * 7 + 1;
+        const hi = nth * 7;
+        return `${tMin} ${tHour} ${lo}-${hi} * ${$('nthDow').value}`;
+      }
+
+      function syncGroups() {
+        const mode = $('mode').value;
+        const show = (id: string, on: boolean) => el(id).classList.toggle('hide', !on);
+        show('gMinutes', mode === 'minutes');
+        show('gHours', mode === 'hourly');
+        show('gTime', mode === 'daily' || mode === 'weekly' || mode === 'monthly' || mode === 'nth');
+        show('gWeekday', mode === 'weekly');
+        show('gMonthday', mode === 'monthly');
+        show('gNth', mode === 'nth');
+      }
+
+      function fromForm() { syncGroups(); paint(buildFromForm(), false); }
+
+      const DEFAULTS: Record<string, string> = {
+        mode: 'daily', everyN: '15', everyH: '6', hMin: '0', atTime: '09:00',
+        weekday: '1', monthday: '1', nthSel: '1', nthDow: '1',
+      };
+      function resetForm() {
+        for (const k of Object.keys(DEFAULTS)) $(k).value = DEFAULTS[k];
+        fromForm();
+      }
+
+      $('mode').addEventListener('change', fromForm);
+      ['everyN', 'everyH', 'hMin', 'atTime', 'weekday', 'monthday', 'nthSel', 'nthDow']
+        .forEach(id => $(id).addEventListener('input', fromForm));
+      $('raw').addEventListener('input', () => paint($('raw').value.trim() || '* * * * *', true));
+      document.querySelectorAll('[data-fill]').forEach(b => b.addEventListener('click', () => {
+        const v = (b as HTMLElement).dataset.fill!;
+        paint(v, false);
+      }));
+      $('example').addEventListener('click', () => {
+        for (const k of Object.keys(DEFAULTS)) $(k).value = DEFAULTS[k];
+        $('mode').value = 'nth';
+        $('nthSel').value = '2';
+        $('nthDow').value = '3';
+        $('atTime').value = '08:30';
+        fromForm();
+      });
+      $('reset').addEventListener('click', resetForm);
+      $('copy').addEventListener('click', () => {
+        const text = $('expr').textContent || '';
+        const btn = $('copy');
+        const done = () => { btn.textContent = 'Copied ✓'; setTimeout(() => { btn.textContent = 'Copy expression'; }, 1500); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done).catch(() => {});
+        else done();
+      });
+
+      resetForm();
+    </script>
+  </body>
+</html>
