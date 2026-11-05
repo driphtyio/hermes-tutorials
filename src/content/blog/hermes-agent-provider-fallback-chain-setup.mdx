@@ -1,0 +1,159 @@
+---
+title: "Hermes Agent Fallback Providers: Set Up a Backup Provider Chain in 2026"
+description: "Configure a Hermes Agent fallback chain in 2026 with a backup provider, covering fallback_providers YAML, trigger rules, and the prompt-cache costs to expect."
+pubDate: "2026-11-05"
+lastVerified: "2026-11-05"
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-provider-fallback-chain-setup-1793896790.webp"
+tags: ["hermes-agent", "providers", "fallback", "configuration"]
+keywords: [hermes fallback providers, hermes fallback chain, fallback_providers config, hermes agent provider fallback]
+---
+
+A Hermes Agent fallback chain is an ordered list of provider and model pairs stored under the top-level `fallback_providers` key in `~/.hermes/config.yaml`. Hermes switches to the next entry when your primary model fails, so an unattended workflow can keep running. Build the chain with a backup on a different provider than your primary, then verify it before a real workload depends on it.
+
+Fallback matters because a stalled agent on a rate limit or an authentication error stops doing its job. The [official fallback guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers) documents the mechanics, and a [third-party write-up](https://hermes-agent.ai/blog/hermes-agent-provider-fallbacks) adds operational advice that we flag wherever it is opinion.
+
+## How This Guide Was Built
+
+This guide is based on official Hermes Agent documentation and a third-party write-up. We did not run the tools hands-on. The [official fallback guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers) supplies the configuration keys and trigger rules, while the [third-party write-up](https://hermes-agent.ai/blog/hermes-agent-provider-fallbacks) supplies operating recommendations that we label as opinion.
+
+Where a claim has no source in those two documents, we have left it out. Provider pricing and free-tier terms are outside what the sources state, so this article does not give them.
+
+## What a Fallback Chain Is and How It Differs From Credential Pools
+
+A fallback chain is the top-level `fallback_providers` list in `~/.hermes/config.yaml`, holding ordered provider and model pairs that Hermes switches to when the primary model fails, per the [official fallback guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers). Credential pools rotate multiple API keys for the same provider and are tried first, so the two layers work independently.
+
+The official guide describes three layers: credential pools, primary model fallback, and auxiliary task fallback. Pools handle same-provider rotation, such as several OpenRouter keys. The chain handles cross-provider failover. The [credential-pool guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/credential-pools) covers the pool side in detail, and the [configuration reference](https://hermes-agent.nousresearch.com/docs/user-guide/configuration#credential-pool-strategies) lists the pool strategies.
+
+| Layer or surface | Purpose | Scope | Config location |
+| --- | --- | --- | --- |
+| Credential pool | Rotate keys or OAuth logins for one provider | Same provider | See the [credential-pool guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/credential-pools) |
+| Primary fallback chain | Switch to another provider:model | Main agent, gateways, CLI, Desktop | `fallback_providers` |
+| Auxiliary task fallback | Side tasks such as vision and compression | Per task | `auxiliary.<task>` |
+| Delegation and cron | Subagents and scheduled jobs | Unpinned work inherits the chain | `delegation.fallback_providers`, per-job settings |
+
+A [third-party write-up](https://hermes-agent.ai/blog/hermes-agent-provider-fallbacks) notes that a pool "does not eliminate an account-wide outage or merge subscriptions into one allowance."
+
+## Choosing a Backup Provider and the Same-Account Rule
+
+Choose a backup on a different provider than your primary. Verify each candidate's current terms on its own official page before you depend on it.
+
+### The same-OpenAI-account rule comes from the credential-pool docs
+
+The [third-party write-up](https://hermes-agent.ai/blog/hermes-agent-provider-fallbacks) states that "adding the same OpenAI account twice also does not add quota." It gives the reason: the pool docs warn that those logins share an upstream token family and can invalidate the older login. The sentence is scoped to pooled OpenAI logins. The sources do not establish how other providers bill a second route, so check how your provider bills each route before you count on extra capacity.
+
+### Candidate providers and their credential requirements
+
+The [supported providers table](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers) lists the value to use and the credential each provider needs. Examples include `openrouter` with `OPENROUTER_API_KEY`, `deepseek` with `DEEPSEEK_API_KEY`, and `gemini` with `GOOGLE_API_KEY`. The `custom` value requires `base_url`; `key_env` names the environment variable that holds the key. Some providers use OAuth through `hermes model` instead of a key. If a backup is not yet authenticated, the [API-key setup guide](https://hermes-agent.ai/blog/hermes-agent-api-keys) covers the steps, and the [OAuth vs API key comparison](https://hermes-agent.ai/blog/hermes-agent-oauth-vs-api-key) explains the two login styles.
+
+## Set the Chain With `hermes fallback`
+
+Run `hermes fallback` to open the interactive manager, which reuses the provider picker from `hermes model` and manages the chain with `add`, `list` (alias `ls`), `remove` (alias `rm`), and `clear`. The [official guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers) says changes persist under the top-level `fallback_providers` list in `config.yaml`.
+
+The picker uses the same provider list, credential prompts, and validation as `hermes model`. When you change the chain, `hermes fallback` writes the current `fallback_providers` key and migrates legacy configuration on write. The [third-party write-up](https://hermes-agent.ai/blog/hermes-agent-provider-fallbacks) recommends running `hermes fallback list` in the profile that owns the failing workload, and for a named profile, prefixing the command with `hermes -p <profile>`.
+
+## Edit config.yaml Directly: The `fallback_providers` YAML Shape
+
+Add a top-level `fallback_providers` list to `~/.hermes/config.yaml`, where each entry needs both `provider` and `model`, and entries missing either field are ignored, per the [official guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers). Multiple entries form a chain that is tried in order.
+
+```yaml
+fallback_providers:
+  - provider: openrouter
+    model: anthropic/claude-sonnet-4
+  - provider: nous
+    model: nous-hermes-3
+```
+
+The model IDs above are documentation examples. Re-verify each one in the `hermes fallback` picker before use, because the documentation example is not a claim that your account can access it today.
+
+There are no environment variables for the primary fallback chain. Configure it only through `config.yaml` or `hermes fallback`.
+
+### Custom endpoint entries
+
+For a custom OpenAI-compatible endpoint, add `base_url` and optionally `key_env`, which names the environment variable that holds the API key. The [official guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers) shows this form:
+
+```yaml
+fallback_providers:
+  - provider: custom
+    model: llama-3.1-70b
+    base_url: http://localhost:8000/v1
+    key_env: LOCAL_API_KEY
+```
+
+### The legacy `fallback_model` key
+
+`fallback_model` is the legacy single-fallback key. Hermes still honors it for back-compatibility. When both `fallback_model` and `fallback_providers` are set, `fallback_providers` takes priority, and `hermes fallback` writes the current key. Move older configuration to the list form when you next edit the chain.
+
+## When Fallback Triggers and the One-Activation Rule
+
+Fallback fires on rate limits (HTTP 429) and server errors (HTTP 500, 502, 503) after retries are exhausted, and immediately on auth failures (HTTP 401, 403) and not-found errors (HTTP 404), according to the [official guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers). It is turn-scoped: each new message starts with the primary restored, and fallback activates at most once within a turn. A rate-limit reset time can keep the primary benched longer, as described below.
+
+Repeated invalid responses, such as malformed or empty bodies, also trigger fallback. The guide states that "your conversation history, tool calls, and context are preserved," so the agent continues from where it stopped, using the fallback model.
+
+### One activation per turn, not per session
+
+Within a single turn, fallback activates at most once. If the fallback also fails, normal error handling takes over. The official guide describes this as turn-scoped behavior.
+
+The general provider reference still contains a legacy one-shot-per-session summary. The [third-party write-up](https://hermes-agent.ai/blog/hermes-agent-provider-fallbacks) flags that wording and follows the dedicated guide's per-turn explanation. Treat "per session" as legacy phrasing, not current behavior.
+
+## Tune Switching With `min_switch_reset_seconds`
+
+Leave `fallback.min_switch_reset_seconds` at its default of 0 and Hermes always switches away from a rate-limited primary. The [official guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers) uses 120 seconds as an example value, which skips the switch when the primary's declared reset is sooner than that.
+
+```yaml
+fallback:
+  min_switch_reset_seconds: 120
+```
+
+When a rate-limit response names its reset time, the primary is benched until then. A provider that gives no reset time gets an exponential backoff from 60 s up to 4 h. Expiry makes the primary eligible for a later retry; it does not schedule one or guarantee recovery. The [third-party write-up](https://hermes-agent.ai/blog/hermes-agent-provider-fallbacks) calls the 120-second setting a policy choice, not a universal recommendation.
+
+## The Hidden Cost: Prompt-Cache Invalidation
+
+When fallback fires, the new provider:model has no cached prefix, so the next request re-reads the entire history at full input-token price instead of the roughly 75–90% discounted cached rate, according to the [official guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers). The first request back on the primary is also a full re-read, unless the primary's cache TTL has not expired.
+
+Long sessions that bounce between providers can cost more than sessions that stay put. Prompt caches are keyed to the model and, on most providers, the account. The [third-party write-up](https://hermes-agent.ai/blog/hermes-agent-provider-fallbacks) recommends recording the billing owner for each fallback entry, setting a provider-side budget for each paid route, and comparing cached and uncached input usage. The [token-overhead guide](https://hermes-agent.ai/blog/hermes-agent-token-overhead) explains how to separate context growth from cache loss, and the [model provider costs and rate limits](https://hermes-agent.ai/blog/hermes-agent-model-provider-costs-rate-limits) post covers the wider cost picture.
+
+## Where the Chain Applies: CLI, Cron, Delegation, and Gateways
+
+The chain covers CLI sessions, messaging gateways, and Desktop or TUI chats, according to the [official guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers). Unpinned cron jobs and subagents inherit it, while pinned ones do not fall back. Auxiliary tasks follow their own resolution rules.
+
+### Cron jobs and delegation
+
+An unpinned cron job inherits the configured chain. A job with its own `provider`, `model`, or `base_url` does not fall back to it; if that route fails, the run fails. The [cron guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron#provider-recovery) covers scheduling details.
+
+Unpinned subagents spawned by `delegate_task` inherit the parent chain; pinned ones do not. If `delegation.fallback_providers` is set, it applies instead, and an empty list disables the delegation chain. The [delegation guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation) has the full configuration. Do not remove a deliberate pin just to clear an error, because that can move work onto a different billable route.
+
+### Auxiliary tasks
+
+Auxiliary tasks such as vision and compression have their own rules. With `provider: auto`, a task tries the main provider and model first, then its own `fallback_chain`, then `fallback_providers`. With an explicit auxiliary provider, the ladder covers capacity errors such as HTTP 402 and daily-quota exhaustion. A transient HTTP 429 with a retry constraint does not trigger that ladder, and auth errors (HTTP 401) walk only the task's own `fallback_chain`. The [context compression guide](https://hermes-agent.nousresearch.com/docs/developer-guide/context-compression-and-caching) covers the compression path, and the [third-party write-up](https://hermes-agent.ai/blog/hermes-agent-provider-fallbacks) warns against assuming one auxiliary rule fits every failure.
+
+## Verify the Chain Before You Depend on It
+
+Inspect the chain with `hermes fallback list` in the owning profile, confirm each backup is authenticated and funded, and run one small explicit provider and model call before relying on it. The [third-party write-up](https://hermes-agent.ai/blog/hermes-agent-provider-fallbacks) recommends a bounded test in a separate profile, and it warns never to deliberately exhaust a production quota to test failover.
+
+A practical sequence from the same write-up:
+
+- Confirm the test profile's backup model exists and has a spending limit.
+- Ask for a fixed response such as `provider ok`, not a self-description.
+- Check the provider ledger for the route actually used.
+- Use a reversible failure fixture if you need fault injection, and never revoke a working production key.
+- Inspect the next turn after the reset or repair to confirm the primary was retried.
+
+Do not blindly rerun a payment, post, or write after an uncertain network failure. The side effect may already have happened. Restore unattended traffic only after routing, cost, and the real output have been verified.
+
+## The Bottom Line
+
+Configure `fallback_providers` with at least one backup on a different provider, verify it with a bounded test, and budget for cache re-reads. The [official fallback guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers) documents the mechanics, and the [third-party write-up](https://hermes-agent.ai/blog/hermes-agent-provider-fallbacks) supplies the operating advice. Confirm each backup's terms on its provider's official page before you depend on it. Keep the chain empty rather than adding a paid route you have not authorized.
+
+## FAQ
+
+### Does adding the same OpenAI account twice to a pool add quota?
+
+No. The [third-party write-up](https://hermes-agent.ai/blog/hermes-agent-provider-fallbacks) states that adding the same OpenAI account twice does not add quota, and cites the credential-pool docs for the reason. The official fallback guide does not address quota sharing for other providers, so check how each provider bills a second route on its official page.
+
+### Is fallback_model still supported?
+
+Yes. The [official guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers) says Hermes still honors the legacy singular `fallback_model` key for back-compatibility. When both keys are set, `fallback_providers` takes priority. Running `hermes fallback` writes the current list and migrates legacy configuration on write.
+
+### Does a rate-limit reset time guarantee recovery?
+
+No. The official guide states that expiry makes the primary eligible for a later retry, without scheduling a retry or guaranteeing recovery. The third-party write-up adds that an elapsed cooldown does not prove the next request will succeed, so confirm the route and outcome on your next real turn.
