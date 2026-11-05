@@ -1,0 +1,147 @@
+---
+title: "Build Log: Wiring Hermes to a Local Model with Ollama (2026)"
+description: "Ollama's default context window can fall below what Hermes requires. This documented build log covers the config, the context fix, and how to verify the result."
+pubDate: "2026-11-05"
+tags: ["hermes", "ollama", "local-models", "llm", "configuration"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/build-log-wiring-hermes-to-a-local-model-with-ollama-1793897460.webp"
+lastVerified: "2026-11-05"
+---
+
+Most guides to running Hermes on a local model stop at "point it at localhost." On a machine where Ollama's default context window is below the one Hermes requires for agent work, that setup fails at startup rather than at the first prompt. This build log follows the documented path from an [Ollama](https://ollama.com/) install to a Hermes agent that starts on a local backend, with the context window as the central step.
+
+It assumes you have already chosen a local backend. For that decision, read the [Hermes local models guide](/blog/hermes-local-models-guide/); this post is the configuration walkthrough.
+
+> **About this guide.** This guide is assembled from official documentation and community reports — we did not run this build ourselves. Each command and default below is attributed inline to the document that states it, so you can check it against the source before changing your own setup.
+
+## Ollama's Default Context Can Fall Below What Hermes Requires
+
+Hermes requires at least 64,000 tokens of context for agent use with tools and rejects smaller windows at startup, per the [Hermes provider docs](https://hermes-agent.nousresearch.com/docs/integrations/providers). The Ollama FAQ states a default of 4,096 tokens, which is below that floor, so on a machine under 48 GB an unconfigured local model fails before your first prompt.
+
+The two documents disagree on the default. The Hermes docs list VRAM-based defaults: under 24 GB gives 4,096 tokens, 24–48 GB gives 32,768, and 48+ GB gives 256,000. The Ollama FAQ gives a flat 4,096. On a machine with 48 GB or more, the Hermes figure of 256,000 already clears the 64,000 floor; below 48 GB, the Hermes figures fall short of it. Do not assume either figure applies to your machine. Read the value Ollama actually loads, as Step 4 explains.
+
+## Step 1: Install Ollama and Pull a Model
+
+Install Ollama from its [download page](https://ollama.com/download/); the source is on [GitHub](https://github.com/ollama/ollama). Then pull a model with `ollama pull <model>` from the [Ollama model library](https://ollama.com/library) and confirm it appears with `ollama list`, the sequence the [Hermes provider docs](https://hermes-agent.nousresearch.com/docs/integrations/providers) give. Their example configuration uses `qwen2.5-coder:32b`. That name is the doc's example, not a verified recommendation.
+
+```bash
+ollama pull qwen2.5-coder:32b
+ollama list
+```
+
+Tool calling matters for this build. The [Ollama OpenAI-compatibility docs](https://docs.ollama.com/api/openai-compatibility) list `tools` as supported on `/v1/chat/completions` and `tool_choice` as not supported, so do not plan around forcing a specific tool. The sources used for this guide do not verify that any particular model calls Hermes tools well.
+
+## Step 2: Point Hermes at the Local Endpoint
+
+Hermes reaches local Ollama through the Custom Endpoint flow: `provider: custom` and `base_url: http://localhost:11434/v1`, with no API key, per the Hermes docs. Ollama binds 127.0.0.1:11434 by default, and the [Ollama FAQ](https://docs.ollama.com/faq#how-can-i-expose-ollama-on-my-network) describes changing the bind address with `OLLAMA_HOST`.
+
+You can run `hermes model`, choose "Custom endpoint (self-hosted / VLLM / etc.)", enter the URL, skip the key, and enter the model name. Or write the block directly:
+
+```yaml
+model:
+  default: qwen2.5-coder:32b
+  provider: custom
+  base_url: http://localhost:11434/v1
+  context_length: 64000
+```
+
+The Hermes docs place `context_length` beside a warning that Ollama's server-side default must be raised, so the server-side step in Step 3 is the one that matters. The `/v1` URL is the form both the Hermes and Ollama docs use. The Hermes docs also list [vLLM](https://docs.vllm.ai/) as a self-hosted option in this same Custom Endpoint flow. OpenAI SDK clients still require an `api_key` value; the Ollama compatibility docs show `'ollama'` with the comment that it is required but ignored. For other provider options, see [provider setup](/blog/provider-setup/).
+
+## Step 3: Raise the Context Window
+
+Context length cannot be set through the [OpenAI-compatible API](https://docs.ollama.com/api/openai-compatibility). The Hermes docs say it must be configured server-side or via a Modelfile, and the Ollama compatibility docs say the API has no way to set a model's context size. There are three documented options.
+
+**Option 1: shell environment variable.** Start the server with the variable set:
+
+```bash
+OLLAMA_CONTEXT_LENGTH=64000 ollama serve
+```
+
+**Option 2: systemd override.** The [Ollama FAQ's Linux section](https://docs.ollama.com/faq#setting-environment-variables-on-linux) says that when Ollama runs as a systemd service, environment variables should be set with `systemctl`:
+
+```bash
+sudo systemctl edit ollama.service
+```
+
+Under `[Service]`, add `Environment="OLLAMA_CONTEXT_LENGTH=64000"`, then reload and restart:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart ollama
+```
+
+The Hermes docs list the same sequence.
+
+**Option 3: Modelfile.** Bake the context into a derived model:
+
+```bash
+echo -e "FROM qwen2.5-coder:32b\nPARAMETER num_ctx 64000" > Modelfile
+ollama create qwen2.5-coder-64k -f Modelfile
+```
+
+Then set `default: qwen2.5-coder-64k` in `config.yaml`. The compatibility docs describe the same `PARAMETER num_ctx` approach. The window travels with the model name, so no environment variable is needed.
+
+`OLLAMA_NUM_PARALLEL` defaults to 1, and required RAM scales with `OLLAMA_NUM_PARALLEL` × `OLLAMA_CONTEXT_LENGTH`. `OLLAMA_KEEP_ALIVE` controls how long models stay loaded. Neither is needed for a working Hermes build, but both explain memory behavior you may otherwise misread.
+
+## Step 4: Verify the Build
+
+Run `ollama ps` and read the CONTEXT column. The Hermes docs name that column as the way to confirm the context a loaded model actually has. `ollama list` shows models on disk; `ollama ps` shows what is loaded and with what context.
+
+The pass signal is that Hermes starts without the documented context rejection and `ollama ps` shows a CONTEXT value of at least 64,000. If Hermes refuses to start, return to Step 3 and confirm the setting reached the server that answers requests, or that `config.yaml` names the Modelfile model.
+
+Once the local backend verifies, the next build is [profiles and cron jobs](/blog/hermes-profiles-cron-guide/).
+
+## Failure Modes and Fixes
+
+The sources used for this guide document two failure modes, both on the context window:
+
+| Symptom | Cause | Documented fix |
+| --- | --- | --- |
+| Hermes refuses to start with the local model | Context window below the 64,000-token minimum for agent use with tools | Raise context server-side with `OLLAMA_CONTEXT_LENGTH`, or bake `PARAMETER num_ctx 64000` into a Modelfile |
+| A context setting appears to have no effect | Context set through the OpenAI-compatible API, which has no way to set context size | Configure it server-side or via a Modelfile |
+
+Other failures, such as a wrong `base_url` or a model without tool support, are not documented in the sources used for this guide, so this table does not list them as documented causes.
+
+## Local Ollama vs Ollama Cloud vs Cloud API Providers
+
+Ollama Cloud uses the same OpenAI-compatible API as local Ollama. It is configured as `provider: ollama-cloud` with an `OLLAMA_API_KEY` from the [Ollama Cloud keys page](https://ollama.com/settings/keys), per the Hermes docs. Local Ollama is the Custom Endpoint path above, and [Ollama Cloud](https://ollama.com/cloud) is the option for models too large to run locally.
+
+| Row | Local Ollama | Ollama Cloud | Cloud API provider |
+| --- | --- | --- | --- |
+| API surface | OpenAI-compatible via Custom Endpoint, `base_url: http://localhost:11434/v1` | Same OpenAI-compatible API; first-class provider (`--provider ollama-cloud`) | Provider-specific setup in Hermes |
+| API key | None required; SDKs require a value that local Ollama ignores | `OLLAMA_API_KEY` | Provider-specific |
+| Context-length control | Server-side environment variable or Modelfile only | Not documented in the sources used | Not documented in the sources used |
+| Tool support | `tools` supported on `/v1/chat/completions`; `tool_choice` not supported | Not documented in the sources used | Provider-specific |
+| Best for | Privacy-sensitive work and offline use | Large models you cannot run locally | Not documented in the sources used |
+
+Local Ollama keeps requests on your machine and works offline, at the cost of your own hardware limits and of setting the context window yourself. Ollama Cloud uses the same API shape for larger models, at the cost of sending requests off your machine and managing a key. The sources used contain no benchmarks, so this guide makes no speed or quality claims.
+
+## FAQ
+
+### Why does Hermes reject my Ollama model at startup?
+
+Hermes requires at least 64,000 tokens of context for agent use with tools and rejects smaller windows at startup, per the [Hermes provider docs](https://hermes-agent.nousresearch.com/docs/integrations/providers). The system prompt, tool schemas, and conversation state need that room. Raise the window server-side and the rejection stops.
+
+### Can I set the context length in the API request?
+
+No. The [Ollama compatibility docs](https://docs.ollama.com/api/openai-compatibility) state the OpenAI-compatible API has no way to set a model's context size, and the Hermes docs say it must be configured server-side or through a Modelfile. The `num_ctx` option in the [Ollama FAQ](https://docs.ollama.com/faq) examples belongs to the native request path.
+
+### What is Ollama's actual default context window?
+
+The sources disagree. The [Ollama FAQ](https://docs.ollama.com/faq) gives a flat 4,096 tokens, while the [Hermes provider docs](https://hermes-agent.nousresearch.com/docs/integrations/providers) list VRAM-based defaults of 4,096, 32,768, and 256,000. Run `ollama ps` on your machine and read the CONTEXT column.
+
+### Do I need an API key for local Ollama?
+
+No. The Hermes docs say to skip the key step for local Ollama. OpenAI SDK clients still require a value, so a placeholder such as `'ollama'` satisfies them, per the [Ollama compatibility docs](https://docs.ollama.com/api/openai-compatibility).
+
+### When should I use Ollama Cloud instead?
+
+Use [Ollama Cloud](https://ollama.com/cloud) for models too large to run locally. The Hermes docs describe it as a first-class provider configured with `provider: ollama-cloud` and `OLLAMA_API_KEY`, and it uses the same API as local Ollama. Keep local Ollama for privacy-sensitive and offline work.
+
+## The Bottom Line
+
+A local Ollama backend is a documented, workable Hermes setup once the context window is raised server-side to at least 64,000 tokens, through `OLLAMA_CONTEXT_LENGTH` or a Modelfile, and verified with `ollama ps`. If your hardware cannot carry that, Ollama Cloud or another provider is the practical alternative.
+
+Pull a model, point Hermes at `http://localhost:11434/v1` with no key, raise the context server-side, then verify the CONTEXT column.
+
+If you have not chosen a backend yet, start with the [Hermes local models guide](/blog/hermes-local-models-guide/), then return here for the configuration.
+
