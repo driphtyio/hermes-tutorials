@@ -1,0 +1,144 @@
+---
+title: "Hermes Agent v0.23.0 (The Hearth Release): what changed and what to do about it"
+description: "Hermes Agent v0.23.0 centralizes the gateway, ships the Webapp off by default, renames hermes mcp serve, and adds MCP spend limits. What to check before upgrading."
+pubDate: 2026-11-06
+tags: ["hermes-agent", "release-notes", "upgrades", "v0-23-0", "operators"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-v023-hearth-release-1793983958.webp"
+lastVerified: 2026-11-06
+draft: false
+---
+
+Hermes Agent v0.23.0 — "The Hearth Release" — was released on November 5, 2026, according to the [Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/) and the [GitHub release v0.23.0](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0). The [CorpusIQ changelog](https://www.corpusiq.io/docs/hermes/changelog) confirms it as the latest version, published November 5, 2026. It follows v0.22.0, "The Threshold Release," which shipped October 13–14, 2026, and rolls up the v0.22.1–v0.22.7 patches.
+
+If you run Hermes Agent on a pre-v0.23.0 build — CLI, TUI, Desktop, cron jobs, ACP editors, or messaging-bot surfaces — check the breaking changes first: the `hermes mcp serve` rename, the removal of the built-in browser tools, the new Desktop OS requirements, and the Webapp shipping off by default. Everything below is sourced from the release notes and changelogs; nothing here comes from hands-on testing.
+
+**How this article was assembled (E-E-A-T):** This article was put together on 2026-11-06 from four sources: the official [Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/), the [GitHub release v0.23.0](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0), the [CorpusIQ changelog](https://www.corpusiq.io/docs/hermes/changelog), and the [GitHub releases index](https://github.com/NousResearch/hermes-agent/releases). The author has not run v0.23.0 hands-on; performance figures are as reported by the release notes, not independently verified.
+
+## TL;DR: what v0.23.0 means for operators
+
+**Answer:** Hermes Agent v0.23.0, The Hearth Release, landed on November 5, 2026. One gateway per machine now owns every conversation, and the Webapp ships off by default. Before upgrading, update any `hermes mcp serve` command, rework browser automation onto `browser_exec`, and check Desktop OS requirements.
+
+The short version: v0.23.0 was released November 5, 2026 ([Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/); [GitHub release v0.23.0](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0); [CorpusIQ changelog](https://www.corpusiq.io/docs/hermes/changelog) lists it as the latest version). Per machine, one gateway now owns every conversation, with your surfaces attaching as clients ([Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/)). The Webapp ships disabled by default ([Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/)). Four things to check before upgrading: the `hermes mcp serve` rename, the removed browser tools, the Desktop OS requirements, and the Webapp default ([Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/); [GitHub release v0.23.0](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0)).
+
+## How big this release actually is
+
+**Answer:** v0.23.0 is a large minor release: the release notes and GitHub tag report roughly 10,080 commits and about 1,950 merged PRs since v0.22.0. It also rolls up the v0.22.1 through v0.22.7 patches, so reading its notes covers everything since the Threshold Release.
+
+The scale numbers, quoted from the [Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/) and [GitHub release v0.23.0](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0): approximately 10,080 commits, approximately 1,950 merged pull requests, approximately 8,720 files changed (+725,200 / −201,400 lines), approximately 850 issues closed, and 666 contributors. These are the figures the release notes themselves report; we have not independently counted them.
+
+This release also rolls up and documents the v0.22.1 through v0.22.7 patch releases ([Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/); [GitHub release v0.23.0](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0)). For context on how recent those patches were: the [GitHub releases index](https://github.com/NousResearch/hermes-agent/releases) shows v0.22.7 as a November 3, 2026 patch with 174 merged PRs since v0.22.6, and v0.22.6 as a November 2, 2026 patch. The GitHub tag for v0.23.0 was released 05 Nov 2026 at 21:32, on commit 2bd378e ([GitHub release v0.23.0](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0)).
+
+If you are sitting on an older minor and deciding whether to jump, the practical takeaway is that v0.23.0's notes are the single document covering everything since v0.22.0 — you do not need to reconstruct seven patch releases yourself.
+
+## Check these before upgrading: the breaking changes
+
+**Answer:** v0.23.0 removes the ten built-in `browser_*` tools (browser automation now runs on `browser_exec` only), renames `hermes mcp serve` to `hermes mcp-serve`, requires macOS 13+ or 64-bit Windows for Desktop, and ships the Webapp off by default. Upgrade with `hermes update`, then run `hermes doctor`.
+
+Four items from the upgrade notes in the [Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/) and [GitHub release v0.23.0](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0) deserve your attention before you pull the trigger:
+
+1. **Browser tools removed.** The old built-in browser tools are gone. Browser automation now runs on `browser_exec` only — agent-browser and the ten `browser_*` tools have been removed. If you have cron jobs, skills, or prompts that invoke the old tool names, they will break. Camofox users get the `camofox` plugin automatically, per the release notes.
+
+2. **`hermes mcp serve` is now `hermes mcp-serve`.** Any MCP client that launches Hermes as a server must update its command. Check your editor configs, bot harnesses, and scripts for the old two-word form.
+
+3. **Desktop OS requirements.** Desktop now needs macOS 13+ and 64-bit Windows, on Electron 44 ([Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/); [GitHub release v0.23.0](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0)). The release notes give that requirement only.
+
+4. **Webapp off by default.** The new Webapp feature ships disabled. Nothing changes for you unless you turn it on (covered below).
+
+For the upgrade path itself, the release notes' Upgrade section lists `hermes update` followed by `hermes doctor` ([Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/)). To be explicit about sourcing: those are the only install commands the sources behind this article verify — we cannot confirm any other installation method from the material reviewed here.
+
+## One gateway owns every conversation
+
+**Answer:** In v0.23.0, a single gateway per machine owns every session, while the CLI, TUI, Desktop, ACP editors, messaging bots, and cron jobs attach as clients. Operators no longer get one agent copy per surface, so check how your surfaces connect before upgrading.
+
+Architecturally, this is the biggest shift in the release. Per the [Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/), one gateway per machine now owns every session, and the CLI, TUI, Desktop, ACP editors, messaging bots, and cron jobs all attach to it as clients. Previously, each surface could run its own copy of the agent.
+
+The operator implication is that session ownership is now centralized on the machine's gateway. The release notes are the only source for this behavior — this article does not add any details beyond what they state — so if your setup relied on multiple independent agent copies per machine, review how your surfaces attach after upgrading.
+
+## The Webapp: a desktop workspace in a browser tab
+
+**Answer:** The v0.23.0 Webapp puts a desktop-style workspace in a browser tab, but it is disabled by default. Set `webapp.enabled: true`, then open it with `hermes webapp`. Its default address is 127.0.0.1:9120.
+
+The Webapp is the first-listed highlight of the release, and it is opt-in. According to the [Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/), you enable it with `webapp.enabled: true` in config (the default is `false`), it listens on host `127.0.0.1`, port `9120`, with a `public_url` setting for exposed deployments. The `hermes webapp` command opens it.
+
+Two model details matter for operators. First, it is single-user: a signed-in tab acts as you, so this is a personal workspace surface, not a multi-tenant portal. Second, distribution: the Docker image and the Nix package both ship the Webapp ([Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/)). If you run Hermes in either of those environments, the capability is already present — just off until you flip the config flag.
+
+## Operator quality of life: images in the terminal, rewind, group chats
+
+**Answer:** v0.23.0 adds inline images in supported terminals, a `/rewind` command for editing or forking earlier prompts, and opt-in Group Chats with a lead bot or `auto` router. Desktop also keeps every registered gateway connected. Group Chats are opt-in.
+
+Three quality-of-life clusters landed in v0.23.0, per the [Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/):
+
+**Images in the terminal.** The CLI and TUI now draw pasted images and screenshots inline. Support varies by terminal: kitty and Ghostty get inline images in both CLI and TUI; iTerm2, WezTerm, and Konsole get them in the CLI; everywhere else falls back to coloured blocks.
+
+**Rewind.** Press Esc twice on an idle, empty composer, or run `/rewind` in the CLI or TUI, and you get a list of earlier prompts, newest first. From there you can edit and resend, or fork into a new session — `/branch` reuses this mechanism, and the original session is kept. Separately, the TUI can now run `/new` while a turn is still running.
+
+**Group Chats.** These are opt-in. Either a lead bot or an `auto` router picks who answers an unaddressed message. Scheduled jobs can post into a room using `deliver: room:<room_id>@<profile>`. Rooms have a purpose and shared notes, and the back-and-forth is capped at `max_hops` (default 4) after the last human message — a sensible guard against agents talking to each other indefinitely.
+
+One more Desktop note: Desktop keeps all registered gateways connected, and terminal tabs run on the host they were opened on ([Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/)).
+
+## Price tags and spend limits for paid MCP tools
+
+**Answer:** v0.23.0 lets you tag paid MCP tools with `tool_costs`, `spend_limit`, and `cost_unit` in `mcp_servers` config. When a chat would exceed the budget, Hermes asks first — even in YOLO mode — and refuses the call in unattended contexts like cron or headless `chat -q`.
+
+If you attach paid MCP tools to your agent, v0.23.0 gives you a budget mechanism. According to the [Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/), the `mcp_servers` config now accepts `tool_costs`, `spend_limit`, and `cost_unit` entries. With a `spend_limit` set, Hermes asks before a chat goes over budget — and notably, it does so even in YOLO mode, where it would otherwise act without confirmation.
+
+The unattended case is handled differently, and this is the part cron users should internalize: where nobody can answer the confirmation prompt — a cron job, or a headless `chat -q` run — the call is refused rather than silently overspending. If your scheduled jobs call paid MCP tools, expect those calls to be refused once the limit is reached.
+
+## Plugins, skills, and delegation
+
+**Answer:** v0.23.0 adds `hermes plugins update` and an opt-in auto-update switch, grows the catalog past 1,050 entries with a Verified tier, moves several core features into plugins, and makes delegation pluggable. Skills drop to 44 built-ins; use `hermes curator lock <skill>` to protect custom edits.
+
+The plugin system got the largest structural rework in this release, per the [Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/):
+
+- **Self-updating plugins.** A new `hermes plugins update` command, plus an opt-in Auto-update switch if you want plugins to refresh without manual intervention.
+- **Catalog growth.** The catalog grew from roughly 600 entries to over 1,050, and a new Verified tier marks vendor-built plugins.
+- **One-command installs.** Meshy, ElevenLabs Music and Sound Effects, X Chat, REA, and the bubblewrap sandbox are now one-command installs.
+- **Core slimming.** Camofox, `mcp-serve`, the agent importers, and Singularity moved out of core and into plugins.
+
+Delegation is now pluggable too: a `delegation.backend` setting chooses how each `delegate_task` child runs, and an official `advanced-delegation` plugin adds a model-map and per-profile routing. The `/delegation <mode>` command switches modes ([Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/)).
+
+On skills: a fresh install now ships 44 built-in skills, down from 58. The Word, PowerPoint, and Excel skills merged into a single `microsoft-office` skill. If you maintain custom skill edits, `hermes curator lock <skill>` blocks the agent from rewriting a skill ([Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/)).
+
+## Performance: what the release notes report
+
+**Answer:** According to the release notes, v0.23.0 shares one prompt-cache key across recurring cron jobs, cuts roughly 1,570 prompt tokens per one-shot call, and speeds LSP-backed edits from 10.1 seconds to about 0.06 seconds. These figures are reported, not independently benchmarked.
+
+The release notes report four performance and reliability improvements:
+
+- Recurring cron jobs now share one prompt-cache key.
+- One-shot runs send approximately 1,570 fewer prompt tokens per call, according to the release notes.
+- For a clean TypeScript edit via `patch`/`write_file` with LSP enabled, the release notes report the time dropping from 10.1 seconds to approximately 0.06 seconds.
+- The roughly once-a-minute gateway freeze during memory trims was removed.
+
+Treat these as the project's own reported figures. They are useful for deciding whether to upgrade, but they are not independent measurements, and this article makes no claim that they reproduce on any particular workload.
+
+## Models, compaction, security, and cron additions
+
+**Answer:** v0.23.0 makes GLM-5.3 the silent default model, adds several new models, and extends compaction, secret masking, approval gates, and cron controls. Operators should review the new default model, consider the opt-in `compression.prepare_ahead` setting, and note `hermes cron cancel` for cancellable jobs.
+
+The remaining release-notes material, all per the [Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/):
+
+**Models.** GLM-5.3 is now the silent default when no model is picked (previously GLM-5.2), with the same 1M context on Nous Portal and OpenRouter. Newly added: GPT-6.1 Terra, DeepSeek V4.1 Flash 1017, Gemini 4 Argon on Solstice, and Nemotron 3.5 Super VL. A `/model reset` command returns a pinned session to the configured default. If your workflows depended on GLM-5.2 being the implicit default, review this change.
+
+**Compaction.** An opt-in `compression.prepare_ahead` setting writes the next summary in the background. Summaries now list uncertain claims on `UNVERIFIED:` lines. And `hermes sessions refresh-prompts` picks up edited SOUL.md and skills on the next turn.
+
+**Security.** More secret shapes are masked; an approval gate now prompts for `curl ... | sudo bash` pipes; and a stale approval card can no longer approve the next request.
+
+**Cron.** A running job is now cancellable via CLI, Desktop, API, or the agent itself, using `hermes cron cancel`. Jobs also take a per-job missed-run policy via `--catch-up on|off`.
+
+## FAQ
+
+**Answer:** The FAQ below covers the three most common upgrade questions for Hermes Agent v0.23.0: whether the Webapp is on by default (it is not), whether `hermes mcp serve` still works (it is now `hermes mcp-serve`), and what replaced the removed built-in browser tools (`browser_exec` only).
+
+### Is the Webapp enabled by default in v0.23.0?
+
+No. According to the [Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/), the Webapp ships with `webapp.enabled` set to `false` by default. To use it, set `webapp.enabled: true` in your config and open it with `hermes webapp`. Its default address is `127.0.0.1:9120`; `public_url` is for exposed deployments. Remember it is a single-user surface where a signed-in tab acts as you, and it ships in both the Docker image and the Nix package.
+
+### My MCP client launches Hermes with `hermes mcp serve` — do I need to change anything?
+
+Yes. Per the [Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/) and the [GitHub release v0.23.0](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0), `hermes mcp serve` is now `hermes mcp-serve`. Any MCP client that launches Hermes as a server must update its command to the new hyphenated form.
+
+### What happened to the built-in browser tools?
+
+They were removed. According to the [Hermes release notes](https://hermes-agent-lab.com/releases/v0-23-0/) and the [GitHub release v0.23.0](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0), browser automation in v0.23.0 runs on `browser_exec` only — agent-browser and the ten `browser_*` tools are gone. If you relied on the old tool names in prompts, skills, or cron jobs, update them. Camofox users receive the `camofox` plugin automatically as part of the move of Camofox out of core.
+
