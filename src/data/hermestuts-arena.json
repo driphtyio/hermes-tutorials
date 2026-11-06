@@ -3,7 +3,7 @@
     "name": "Hermes Tutorials Arena",
     "version": "1.0.0",
     "description": "Model-vs-model battles for Hermes Tutorials content and design.",
-    "total_matches": 63
+    "total_matches": 64
   },
   "model_pool": [
     {
@@ -15109,6 +15109,131 @@
         "beam-free spread 1.8 not re-judged (rank 9 of 9, cannot flip the winner); noted.",
         "ling-3.1-flash DNF (empty response), recorded as DNF, not substituted."
       ]
+    },
+    {
+      "id": "arena-hermes-v023-whats-new",
+      "match_id": "arena-hermes-v023-whats-new",
+      "slug": "2026-11-06-hermes-agent-v023-hearth-release",
+      "topic": "Hermes Agent v0.23.0 (The Hearth Release): what changed and what to do about it",
+      "category": "release-update",
+      "type": "content",
+      "date": "2026-11-06",
+      "winner": "glm-5.3-flash",
+      "winner_provider": "opencode-go",
+      "winner_family": "glm",
+      "winner_score": 8.53,
+      "threshold": 7.5,
+      "threshold_met": true,
+      "threshold_note": "Shipped text judged 3 passes mean 8.53 spread 0.5 (judge-v4). Pre-QA pooled mean 8.18 over 6 passes. Winner chosen on pooled pre-QA mean; shipped text re-judged.",
+      "verification_status": "unverified-by-machine-gate: disprove_pass and validate_judge not run in this session",
+      "plan_model": "glm-5.3 via cline-pass (served by zai fallback)",
+      "qa_model": "claude-cli/claude-sonnet-5-5 (r1 FAIL 8 defects, r2 FAIL 8, r3 PASS with style-only residue; factual defects fixed; style repetition NOT fully trimmed)",
+      "research_lane": "in-session: web_extract on hermes-agent-lab v0-23-0 + GitHub v0.23.0 tag; dossier saved",
+      "linkcheck": "4 unique external links, OK 4, DEAD 0 (orchestrator check)",
+      "builder_lanes_dispatched": 10,
+      "builder_lanes_drafts": 9,
+      "builder_lanes_eligible": 9,
+      "results": [
+        {
+          "model": "glm-5.3-flash",
+          "provider": "opencode-go",
+          "family": "glm",
+          "rank": 1,
+          "status": "scored",
+          "score": 8.53,
+          "pre_qa_pooled_mean": 8.18,
+          "note": "WINNER: score = shipped text (post-QA, 3 passes, spread 0.5). pre-QA pooled mean 8.18 over 6 passes (spreads 2.85 / 0.6 across two judge runs)"
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "provider": "claude-cli",
+          "family": "claude",
+          "rank": 2,
+          "status": "scored",
+          "score": 7.25,
+          "pre_qa_pooled_mean": 7.25,
+          "note": "pooled mean of 2 judge runs (3 passes each): 7.88 / 6.62, spread 5.05 on run 2 -> noisy"
+        },
+        {
+          "model": "stealth/glyph-cluster:free",
+          "provider": "commandcode",
+          "family": "stealth",
+          "rank": 3,
+          "status": "scored",
+          "score": 6.62,
+          "pre_qa_pooled_mean": 6.62,
+          "note": "pooled 5.15 / 8.08, spreads 4.7 / 0.35 -> noisy"
+        },
+        {
+          "model": "deepseek-v4.1-flash",
+          "provider": "commandcode",
+          "family": "deepseek",
+          "rank": 4,
+          "status": "scored",
+          "score": 6.38,
+          "pre_qa_pooled_mean": 6.38,
+          "note": "pooled 7.47 / 5.28, spreads 1.25 / 5.35 -> noisy"
+        },
+        {
+          "model": "gpt-6-luna",
+          "provider": "commandcode",
+          "family": "gpt",
+          "rank": 5,
+          "status": "scored",
+          "score": 6.06,
+          "pre_qa_pooled_mean": 6.06,
+          "note": "pooled 6.47 / 5.65, spreads 5.15 / 3.8 -> noisy"
+        },
+        {
+          "model": "mimo-v2.6-flash",
+          "provider": "opencode-go",
+          "family": "mimo",
+          "rank": 6,
+          "status": "scored",
+          "score": 5.43,
+          "pre_qa_pooled_mean": 5.43,
+          "note": "pooled 6.75 / 4.1, spreads 3.25 / 2.55 -> noisy"
+        },
+        {
+          "model": "muse-spark-1.3-contributor",
+          "provider": "opencode-go",
+          "family": "muse",
+          "rank": 7,
+          "status": "scored",
+          "score": 4.38,
+          "pre_qa_pooled_mean": 4.38,
+          "note": "pooled 4.63 / 4.12, spreads 4.3 / 2.35 -> noisy"
+        },
+        {
+          "model": "minimax-m3.1-flash",
+          "provider": "opencode-go",
+          "family": "minimax",
+          "rank": 8,
+          "status": "scored",
+          "score": 4.17,
+          "pre_qa_pooled_mean": 4.17,
+          "note": "single judge run (3 passes), spread 0.85"
+        },
+        {
+          "model": "beam-free",
+          "provider": "opencode-go",
+          "family": "beam",
+          "rank": 9,
+          "status": "scored",
+          "score": 3.98,
+          "pre_qa_pooled_mean": 3.98,
+          "note": "single judge run (3 passes), spread 1.1"
+        },
+        {
+          "model": "ling-3.1-flash",
+          "provider": "tokenharbor",
+          "family": "ling",
+          "rank": null,
+          "status": "dnf",
+          "score": null,
+          "error": "Empty response (no text-delta events in CC stream)"
+        }
+      ]
     }
   ],
   "leaderboard": [
@@ -15116,10 +15241,10 @@
       "model": "deepseek-v4.1-flash",
       "provider": "commandcode",
       "family": "deepseek",
-      "matches": 45,
+      "matches": 46,
       "wins": 13,
-      "losses": 32,
-      "avgScore": 8.21,
+      "losses": 33,
+      "avgScore": 8.17,
       "bestScore": 9.78,
       "rank": 1
     },
@@ -15127,10 +15252,10 @@
       "model": "glm-5.3-flash",
       "provider": "opencode-go",
       "family": "glm",
-      "matches": 32,
-      "wins": 7,
+      "matches": 33,
+      "wins": 8,
       "losses": 25,
-      "avgScore": 8.13,
+      "avgScore": 8.14,
       "bestScore": 9.75,
       "rank": 2
     },
@@ -15160,10 +15285,10 @@
       "model": "gpt-6-luna",
       "provider": "commandcode",
       "family": "openai",
-      "matches": 25,
+      "matches": 26,
       "wins": 4,
-      "losses": 21,
-      "avgScore": 7.99,
+      "losses": 22,
+      "avgScore": 7.92,
       "bestScore": 9.73,
       "rank": 5
     },
@@ -15171,10 +15296,10 @@
       "model": "claude-haiku-5-5",
       "provider": "claude-cli",
       "family": "claude",
-      "matches": 18,
+      "matches": 19,
       "wins": 4,
-      "losses": 14,
-      "avgScore": 7.85,
+      "losses": 15,
+      "avgScore": 7.82,
       "bestScore": 9.15,
       "rank": 6
     },
@@ -15193,10 +15318,10 @@
       "model": "muse-spark-1.3-contributor",
       "provider": "opencode-go",
       "family": "muse",
-      "matches": 30,
+      "matches": 31,
       "wins": 2,
-      "losses": 28,
-      "avgScore": 7.8,
+      "losses": 29,
+      "avgScore": 7.69,
       "bestScore": 9.45,
       "rank": 8
     },
@@ -15223,17 +15348,6 @@
       "rank": 10
     },
     {
-      "model": "stealth/glyph-cluster:free",
-      "provider": "commandcode",
-      "family": "stealth",
-      "matches": 6,
-      "wins": 1,
-      "losses": 5,
-      "avgScore": 8.08,
-      "bestScore": 8.57,
-      "rank": 11
-    },
-    {
       "model": "ling-3.1-flash",
       "provider": "tokenharbor",
       "family": "ling",
@@ -15242,16 +15356,27 @@
       "losses": 3,
       "avgScore": 7.9,
       "bestScore": 8.32,
+      "rank": 11
+    },
+    {
+      "model": "stealth/glyph-cluster:free",
+      "provider": "commandcode",
+      "family": "stealth",
+      "matches": 7,
+      "wins": 1,
+      "losses": 6,
+      "avgScore": 7.87,
+      "bestScore": 8.57,
       "rank": 12
     },
     {
       "model": "mimo-v2.6-flash",
       "provider": "opencode-go",
       "family": "mimo",
-      "matches": 11,
+      "matches": 12,
       "wins": 1,
-      "losses": 10,
-      "avgScore": 7.89,
+      "losses": 11,
+      "avgScore": 7.68,
       "bestScore": 8.45,
       "rank": 13
     },
@@ -15278,17 +15403,6 @@
       "rank": 15
     },
     {
-      "model": "minimax-m3.1-flash",
-      "provider": "opencode-go",
-      "family": "minimax",
-      "matches": 7,
-      "wins": 0,
-      "losses": 7,
-      "avgScore": 8.07,
-      "bestScore": 8.7,
-      "rank": 16
-    },
-    {
       "model": "space-bunny-free",
       "provider": "opencode-go",
       "family": "space",
@@ -15297,7 +15411,7 @@
       "losses": 6,
       "avgScore": 8.01,
       "bestScore": 9.13,
-      "rank": 17
+      "rank": 16
     },
     {
       "model": "cline-pass/minimax-m3",
@@ -15308,18 +15422,18 @@
       "losses": 7,
       "avgScore": 7.75,
       "bestScore": 8.32,
-      "rank": 18
+      "rank": 17
     },
     {
-      "model": "beam-free",
+      "model": "minimax-m3.1-flash",
       "provider": "opencode-go",
-      "family": "beam",
-      "matches": 12,
+      "family": "minimax",
+      "matches": 8,
       "wins": 0,
-      "losses": 12,
-      "avgScore": 7.56,
-      "bestScore": 8.42,
-      "rank": 19
+      "losses": 8,
+      "avgScore": 7.58,
+      "bestScore": 8.7,
+      "rank": 18
     },
     {
       "model": "omen-alpha",
@@ -15330,6 +15444,17 @@
       "losses": 4,
       "avgScore": 7.54,
       "bestScore": 8.32,
+      "rank": 19
+    },
+    {
+      "model": "beam-free",
+      "provider": "opencode-go",
+      "family": "beam",
+      "matches": 13,
+      "wins": 0,
+      "losses": 13,
+      "avgScore": 7.28,
+      "bestScore": 8.42,
       "rank": 20
     },
     {
@@ -15399,8 +15524,8 @@
       "rank": 26
     }
   ],
-  "last_updated": "2026-11-05",
-  "total_matches": 63,
+  "last_updated": "2026-11-06",
+  "total_matches": 64,
   "retired_models": [
     {
       "model": "mimo-v2.5",
