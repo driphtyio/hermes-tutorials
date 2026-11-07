@@ -1,0 +1,289 @@
+---
+title: "Make Your Agent Say OUTCOME: Why Prose-Only Success Reports Fail"
+description: "A subagent that reports success in prose has proved nothing. Give it a completion contract, a three-verdict parser, and a retry rule you can audit."
+pubDate: 2026-11-07
+tags: [hermes, tutorial, subagents, delegation, verification, cron, engineering]
+keywords: [hermes agent outcome contract, agent success reporting, subagent verification, output_schema json schema contract, three verdict parser, machine readable agent reports]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/make-your-agent-say-outcome-why-prose-only-success-reports-fail-1794069767.webp"
+lastVerified: 2026-11-07
+---
+
+Agent runtimes routinely hand back the same message: *"Done — fixed the bug and all tests pass."* Then you check, and the tests do not pass, or never ran, or ran against the wrong directory. The child agent was not lying. It was summarizing.
+
+The failure is structural. A prose summary is a claim, and claims need verification. The [Hermes delegation patterns guide](https://hermes-agent.nousresearch.com/docs/guides/delegation-patterns) says it plainly: "Subagent summaries are just that — summaries. If a subagent says 'fixed the bug and tests pass,' verify by running the tests yourself or reading the diff." That works when you are sitting there reading. It does not work at 3 a.m., when the summary is the only thing your scheduled run left behind.
+
+This post is about replacing prose with a contract: an `output_schema` the child must satisfy, a parser that returns one of three verdicts, and the discipline to treat silence as silence rather than as failure.
+
+## "All tests pass!" — and other stories
+
+A subagent's "all tests pass" is a claim, not a verification. Hermes's delegation-patterns guide states that subagent summaries are just summaries and instructs the parent to re-run the tests or read the diff. Scheduled runs sharpen the problem: the [cron documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) shows results landing in the origin chat, local files, or a configured platform target, so the record you can check later is only as good as what you chose to write down.
+
+The prose failure mode has a shape. A child agent runs a long task, hits an obstacle it cannot route around, and — because its final turn is free text — writes something optimistic and vague. "Refactored the module, should be good now." Nothing in that sentence is checkable. There is no field to read, no exit code attached, no list of artifacts. The parent either trusts it or re-runs an hour of work.
+
+Hermes is explicit that subagents start with a completely fresh conversation; their only context is the `goal` and `context` the parent passes. So the child has no memory of your earlier warnings about verification — the contract is the only place that discipline can live. If you are still deciding how much context to hand a child in the first place, [context compaction in Hermes Agent](https://hermes-tutorials.dev/blog/hermes-agent-context-compaction-guide/) covers that side of the trade.
+
+## The fix in one sentence: make the child say `outcome`
+
+The fix is a completion contract: pass an `output_schema` to `delegate_task` so the child's final answer must validate as a JSON value whose `outcome` field names the result — because [JSON Schema](https://json-schema.org/understanding-json-schema/about) exists precisely to remove the ambiguity of representing the same concept in myriad ways.
+
+Per the [Hermes delegation docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation), each task accepts an optional `output_schema`: "a JSON Schema object the child's final answer must validate against." The child "sees the schema up front as an output contract ('return ONLY the JSON value — no prose, no code fence')." That single sentence removes most of the failure mode, because the child now knows that a paragraph of reassurance is a contract violation rather than a deliverable.
+
+JSON's six core types — object, array, number, string, boolean, null — are enough to express everything you actually need from a worker: a status enum, a list of evidence strings, a list of failing test names. The [delegation docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation) use exactly that shape in their example, an object with two required string arrays.
+
+Other dispatch systems expose a similar worker-side signal. [Orca](https://github.com/stablyai/orca) runs a fleet of coding agents and its [orchestration skill](https://www.skills.sh/stablyai/orca/orchestration) applies "when you are a dispatched worker (a prompt with Task and Dispatch IDs: ask, worker_done)" — a worker gets a task and dispatch identity, and `worker_done` is its completion signal. Notably, the public [skill file](https://github.com/stablyai/orca/tree/main/skills/orchestration) is a short discovery stub; the real guide is version-matched and printed by the binary itself, so the payload inside `worker_done` is not something a reader can check from here.
+
+## Three verdicts: LIVE, UNVERIFIABLE, EXITED
+
+The three verdicts are LIVE (positive evidence the work happened), UNVERIFIABLE (no evidence yet — not failure), and EXITED (positive evidence it stopped); only positive exit evidence authorizes a retry, and "failed" is a payload value inside a report, never a fourth verdict.
+
+- **LIVE** — positive evidence the work happened. In Hermes terms, a result with `schema_valid: true` whose payload reports a successful outcome. The contract held and the work is claimed done with evidence attached.
+- **UNVERIFIABLE** — no evidence yet. The child has not returned, or returned nothing you can read. This is the default state, and it is not a failure state.
+- **EXITED** — positive evidence it stopped. That includes a validated report whose `outcome` is `failed`, a returned-but-invalid report (`schema_valid: false` with raw prose in `summary`), a `⚠️ Subagent failed — "your goal": <reason>` notice, or an observed non-zero [exit status](https://www.gnu.org/software/bash/manual/html_node/Exit-Status.html).
+
+The governing rule is not negotiable: **positive exit evidence is required for a retry, and it is not sufficient on its own.** A silent child is UNVERIFIABLE. A slow child is UNVERIFIABLE. A child you have not heard from in twenty minutes is UNVERIFIABLE. Retrying those does not recover the work — it duplicates it, and `delegation.max_concurrent_children` sets the batch size the duplicate lands in. In the parser below, only an observed non-zero exit passes `may_retry`.
+
+The exit-code branch matters because exit statuses are legible: "a command which exits with a zero exit status has succeeded … a non-zero exit status indicates failure." Bash also distinguishes 126 (found but not executable), 127 (command not found), and 128+N (terminated by fatal signal N) — all of which are positive evidence that something stopped, as opposed to evidence that something is still going.
+
+## The completion parser
+
+The completion parser is a small function that branches on the JSON parse and on whether an exit status was actually observed, returning one of the three verdicts plus a `may_retry` gate that opens only for an EXITED verdict with a retryable reason.
+
+```python
+import json
+
+LIVE = "LIVE"
+UNVERIFIABLE = "UNVERIFIABLE"
+EXITED = "EXITED"
+
+# The validator tolerates prose or a fence around otherwise-valid JSON,
+# so the parser has to tolerate the same shapes.
+FENCE = "`" * 3
+
+# EXITED reasons. Only a process that actually died is retried: a structured
+# failure report tells you what happened, so re-running it duplicates work.
+RETRYABLE_EXITS = {"exit_nonzero"}
+
+
+def loads_tolerant(raw):
+    """Extract one JSON object; tolerate a fence or surrounding prose."""
+    text = (raw or "").strip()
+    if text.startswith(FENCE):
+        text = text[len(FENCE):].split(FENCE, 1)[0]
+        if text.lstrip().lower().startswith("json"):
+            text = text.lstrip()[4:]
+    start, end = text.find("{"), text.rfind("}")
+    if start == -1 or end <= start:
+        raise ValueError("no JSON object in the text")
+    return json.loads(text[start:end + 1])
+
+
+def classify(raw_text, exit_status=None):
+    """Return (verdict, reason, payload).
+
+    exit_status is an observed process exit code, or None when no
+    process has been observed at all.
+    """
+    # An observed non-zero exit is positive evidence the process stopped.
+    if exit_status not in (None, 0):
+        return EXITED, "exit_nonzero", {"exit_status": exit_status}
+
+    if raw_text is None or not raw_text.strip():
+        # Nothing came back that we can read.
+        if exit_status is None:
+            return UNVERIFIABLE, "no_output", None
+        return UNVERIFIABLE, "clean_exit_no_report", None
+
+    try:
+        payload = loads_tolerant(raw_text)
+    except (json.JSONDecodeError, ValueError):
+        # Prose leaked into the payload: the contract did not hold.
+        return EXITED, "contract_miss", {"raw": raw_text}
+
+    outcome = payload.get("outcome")
+    evidence = payload.get("evidence") or []
+    if outcome == "succeeded" and evidence:
+        # LIVE needs the evidence attached, not just the claim.
+        return LIVE, "structured_success", payload
+    if outcome == "succeeded":
+        return UNVERIFIABLE, "success_without_evidence", payload
+    if outcome in ("failed", "blocked"):
+        return EXITED, "outcome_failed", payload
+    return UNVERIFIABLE, "no_verdict_in_payload", payload
+
+
+def may_retry(verdict, reason):
+    # Positive exit evidence is required before any retry.
+    return verdict == EXITED and reason in RETRYABLE_EXITS
+```
+
+### Walking the branches
+
+The parse failure is itself the signal. Python's [`json.loads`](https://docs.python.org/3/library/json.html) raises `json.JSONDecodeError`, a subclass of `ValueError`, on malformed input — so the moment prose leaks into a field that was supposed to be a JSON value, the exception fires and you learn something real about the child's output.
+
+The absent-exit-status branch can never promote silence to EXITED: with no exit status and no readable text, the answer is UNVERIFIABLE by construction, no matter how long you have been waiting. That is the whole point: the function cannot accidentally convert impatience into a retry.
+
+Note also the zero-exit branch. A zero exit status means the command succeeded, but it says nothing about whether the *work* succeeded — Bash's rule is "for the shell's purposes, a command which exits with a zero exit status has succeeded", and that qualified success is the whole of the claim. Treating it as LIVE would be a category error, so it stays UNVERIFIABLE until a report arrives.
+
+The branch that matters most is the contract miss. A child whose report missed the contract twice is EXITED — it stopped — but its reason is `contract_miss`, which is deliberately not in `RETRYABLE_EXITS`. The guidance from the [delegation docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation) is to extract what you need from its raw text rather than re-run a task that may have taken an hour, so the parser refuses to authorize exactly that mistake. The same holds for a structured `failed` report: the work ran and it failed, which is something to act on, not something to run again. A `blocked` outcome belongs in the same bucket — the worker reported that it stopped because it needs something it does not have, which is evidence it stopped rather than evidence it is still working.
+
+## Wiring the contract into Hermes: `delegate_task` + `output_schema`
+
+Wiring the contract means passing `output_schema` to `delegate_task` with at minimum an `outcome` enum and an `evidence` array, then reading the documented result fields — `status`, `summary`, `schema_valid`, `schema_errors`, `schema_note` — to decide what happened.
+
+```python
+import json
+
+result = delegate_task(tasks=[{
+    "goal": "Run the billing test suite and report the outcome.",
+    "context": (
+        "Repo root is /srv/billing. Use `pytest -q`. Do not modify source. "
+        "Wait for pytest to exit before returning your final answer."
+    ),
+    "output_schema": {
+        "type": "object",
+        "required": ["outcome", "evidence"],
+        "properties": {
+            "outcome": {
+                "type": "string",
+                "enum": ["succeeded", "failed", "blocked"],
+            },
+            "evidence": {
+                "type": "array",
+                "items": {"type": "string"},
+            },
+            "failing": {
+                "type": "array",
+                "items": {"type": "string"},
+            },
+        },
+    },
+}])[0]  # assumes the single-task form returns that task's result
+```
+
+The schema-design rule from the [delegation docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation) is to keep schemas forgiving: require only the fields you will actually read. A schema that demands a dozen fields will miss on turn one and burn the correction budget on cosmetics. The validator also tolerates prose or a code fence around otherwise-valid JSON (object or array), so a child that wraps its answer in a fence still passes.
+
+### When `schema_valid` is false
+
+On return, the parent validates. On failure, Hermes "sends the child exactly one bounded correction turn carrying the validation errors verbatim (the schema is not re-pasted)." The result then gains `schema_valid` (true/false) and, on failure, `schema_errors`.
+
+If the retry also misses, the task keeps `status: completed`, with the child's raw final text in `summary`, `schema_valid: false`, the `schema_errors`, and a `schema_note` saying the text is unvalidated. The documented guidance is to extract what you need from the raw text rather than re-running a task that may have taken an hour. That is the right call, and it is exactly why the parser above treats an unvalidated return as EXITED rather than UNVERIFIABLE — the child stopped, it just stopped without satisfying the contract.
+
+```python
+if result.get("schema_valid"):
+    # `summary` carries the final text; validate with the same parser.
+    verdict, reason, report = classify(result["summary"])
+elif result.get("status") == "completed":
+    # The contract missed twice: the child stopped, without satisfying it.
+    verdict, reason, report = EXITED, "contract_miss", None
+    raw_text = result.get("summary", "")
+    errors = result.get("schema_errors", [])
+    note = result.get("schema_note", "")
+else:
+    # No completion has arrived yet, so there is no exit evidence either.
+    verdict, reason, report = UNVERIFIABLE, "no_output", None
+```
+
+For the parallel-work angle on this pattern, see the guide to [parallel subagent delegation](https://hermes-tutorials.dev/blog/hermes-parallel-subagent-delegation/).
+
+## The bad report and the good report
+
+The difference between a bad and a good report is not optimism versus pessimism; it is that a good report returns an explicit outcome with evidence and artifacts, so the parent can decide without re-running anything.
+
+```python
+# BAD: prose that asserts success and proves nothing.
+bad_report = """
+Done! Fixed the bug and all tests pass now. The refactor is complete
+and everything should be good. Let me know if you need anything else.
+"""
+
+# GOOD: the same worker, on the same kind of day, under a contract.
+good_report = json.dumps({
+    "outcome": "failed",
+    "evidence": [
+        "pytest -q: 3 failed, 118 passed in 42.6s",
+        "failure 1: tests/test_invoice.py::test_proration - AssertionError",
+        "failure 2: tests/test_invoice.py::test_rounding - AssertionError",
+        "failure 3: tests/test_ledger.py::test_balance - KeyError 'currency'",
+    ],
+    "failing": [
+        "tests/test_invoice.py::test_proration",
+        "tests/test_invoice.py::test_rounding",
+        "tests/test_ledger.py::test_balance",
+    ],
+    "artifacts": ["/srv/billing/.pytest_cache/v/cache/lastfailed"],
+})
+```
+
+The good report is worth more than the bad one even though it carries worse news. It tells you what ran, what failed, and where to look. The bad report tells you the child felt finished, which is not information about the code.
+
+This matters most for scheduled work. If you are generating a recurring report from delegated tasks, the report's own honesty depends on each child's report being machine-readable — the [build log on a skill for automated weekly reports](https://hermes-tutorials.dev/blog/build-log-a-hermes-skill-for-automated-weekly-reports/) is a worked example of composing scheduled output.
+
+## What "no output yet" actually means
+
+"No output yet" means UNVERIFIABLE, and the traps that make it look like failure are ownership confusion, admission-versus-delivery confusion, and the child's ignorance of anything you left out of `goal`, `context`, and its workspace context files.
+
+**Process IDs do not transfer ownership.** Background processes belong to the agent that starts them. The delegation docs are explicit: "a child should wait for its builds, tests, and other bounded background commands before returning its final summary," and "returning a process ID does not transfer ownership to the parent." So a child that hands back a PID has not handed you a running job. You have a number and no worker.
+
+**ADMISSION is not DELIVERY.** Completion delivery distinguishes the two: a successful admission "suppresses repeat delivery within the running gateway, but is not proof that a model turn or outbound reply completed." Admission means the system accepted the completion. It does not mean the turn finished or the reply went out.
+
+**Subagents start from almost nothing.** A fresh conversation fed by `goal`, `context`, and — when the parent has a resolved workspace — that workspace's project context files, means the child cannot infer your verification standards or your definition of done. Whatever discipline you want has to be in the contract, not in the prose you hope it imitates.
+
+The general shape of the mistake is treating a missing signal as a negative signal. For how results flow through the runtime, see the [tool execution pipeline](https://hermes-tutorials.dev/blog/hermes-tool-execution-pipeline/).
+
+## Verdict carriers compared
+
+Verdict carriers differ in how much they can express and where they break; silence carries nothing, prose carries claims, exit codes carry process fate, an `output_schema` contract carries structured outcomes, and `application/problem+json` carries standardized problem semantics.
+
+| Carrier | What it can express | Where it breaks | Source |
+| --- | --- | --- | --- |
+| Silence | Nothing at all | Cannot distinguish slow from dead; must default to UNVERIFIABLE | This post's reasoning |
+| Prose summary | Any claim the model can phrase | Unfalsifiable; "tests pass" with no test output is unreadable evidence | [Delegation patterns](https://hermes-agent.nousresearch.com/docs/guides/delegation-patterns) |
+| Exit code | Process fate: 0, non-zero, 126, 127, 128+N | Reports that the process stopped, not whether the work happened | [GNU exit status](https://www.gnu.org/software/bash/manual/html_node/Exit-Status.html) |
+| JSON Schema contract (`output_schema`) | Enumerated outcome plus evidence arrays, validated on return | Needs a parser; two misses leave you with raw text in `summary` | [Delegation docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation) |
+| `application/problem+json` | Canonical `type`, `title`, `status`, `detail`, `instance` | HTTP-scoped; not a general worker-completion format | [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html) |
+
+The [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html) row is prior art worth knowing. Problem Details defines those five canonical members under the media type `application/problem+json`, and the spec exists "so that they aren't required to define their own or, worse, tempted to redefine the semantics of existing HTTP status codes." That is the same discipline: one agreed shape for bad news, so nobody invents a private vocabulary for it. If you want a worked example of scoring many delegated outputs against one rubric, the [subagent arena guide](https://hermes-tutorials.dev/blog/hermes-subagent-arena-guide/) applies the same idea to judging drafts.
+
+## The same discipline in an unattended cron run
+
+A scheduled run needs the completion contract more than an interactive session does, because nobody is watching the prose go by and the run's output may land in a chat, a file, or a platform target rather than in front of you.
+
+Hermes manages cron through a single `cronjob_manage` tool with action-style operations: schedule, list, pause, resume, edit, trigger, remove. The [cron docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) describe results going back to the origin chat, to local files, or to configured platform targets. Wherever your output lands, have each scheduled run write a structured record — the same `outcome`/`evidence` shape the child was contracted to produce — so the verdict survives the session.
+
+The second consequence is durability. Top-level delegation is not durable: it is tied to the owning session and the Hermes process, and session closure, `/stop`, `/new`, or a restart can cancel or strand in-progress work. Treat a scheduled run that dispatches children and then exits as a run whose children you may have to re-check. For more scheduling patterns, see [cron job patterns](https://hermes-tutorials.dev/blog/cron-job-patterns-2026/).
+
+## FAQ
+
+### What are the default delegation limits in Hermes?
+
+Hermes defaults to 10 concurrent children (`delegation.max_concurrent_children`) and 250 iterations per child (`delegation.max_iterations`), per the [delegation patterns guide](https://hermes-agent.nousresearch.com/docs/guides/delegation-patterns). The concurrency default is why a retry gate matters: an impatient retry loop can multiply one unverified task into ten simultaneous copies of itself.
+
+### Does a schema miss mark the task as failed?
+
+No. After the single bounded correction turn misses, the result keeps `status: completed`, with the child's raw final text in `summary`, `schema_valid: false`, the `schema_errors`, and a `schema_note` marking the text unvalidated. The [delegation docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation) recommend extracting from the raw text rather than re-running a long task.
+
+### Is "no output yet" a failure?
+
+No. It is UNVERIFIABLE, which is a distinct verdict from EXITED. A child that has not returned, or has returned only a process ID it does not own, has produced no positive exit evidence — and without positive exit evidence, no retry is authorized. Waiting is the correct action; re-dispatching duplicates work.
+
+### Can a child return JSON inside a code fence?
+
+Yes. The validator tolerates prose or a code fence around otherwise-valid JSON, whether object or array. The contract's "return ONLY the JSON value" instruction reduces wrapping, but a wrapped answer still validates. Keep schemas forgiving and require only the fields you will actually read.
+
+### Is delegation durable across restarts?
+
+No. Top-level delegation is tied to the owning session and the Hermes process, per the [delegation patterns guide](https://hermes-agent.nousresearch.com/docs/guides/delegation-patterns): session closure, `/stop`, `/new`, or a restart can cancel or strand in-progress work. The [repo README](https://github.com/NousResearch/hermes-agent) describes Hermes spawning isolated subagents for parallel workstreams, which is what a restart would strand.
+
+## The Bottom Line
+
+Make the child say `outcome`. Pass an `output_schema` with an enum and an evidence array, keep it forgiving, and read the documented result fields instead of the prose. Then classify every return into exactly one of three verdicts: LIVE for positive evidence the work happened, UNVERIFIABLE for no evidence yet, EXITED for positive evidence it stopped.
+
+Positive exit evidence is required before any retry. A contract miss and a structured failure report are both EXITED without authorizing one. "Failed" is a value inside a report, not a verdict of its own. Silence is not failure — it is the absence of information, and the correct response to absent information is to wait, or to read the raw text you already have.
+
+## How This Guide Was Built
+
+This guide was built from primary documentation, not from experiments. The Hermes-specific behavior comes from the official [delegation docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation), the [delegation patterns guide](https://hermes-agent.nousresearch.com/docs/guides/delegation-patterns), the [cron docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron), and the [Hermes repository](https://github.com/NousResearch/hermes-agent).
+
+Supporting material came from the [GNU Bash exit status reference](https://www.gnu.org/software/bash/manual/html_node/Exit-Status.html), [JSON Schema documentation](https://json-schema.org/understanding-json-schema/about), the Python [`json` module docs](https://docs.python.org/3/library/json.html), and [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html). The Orca material is limited to its public [repository](https://github.com/stablyai/orca), [skill catalogue](https://www.skills.sh/stablyai/orca/orchestration), and [orchestration skill directory](https://github.com/stablyai/orca/tree/main/skills/orchestration).
+
+No hands-on testing, benchmarks, or timings were performed for this post. The code blocks are illustrative templates, not transcripts of runs.
