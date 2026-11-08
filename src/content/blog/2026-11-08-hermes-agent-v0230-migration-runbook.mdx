@@ -1,0 +1,197 @@
+---
+title: "Hermes Agent v0.23.0 Migration Runbook: The Pre-Upgrade Checklist for v0.22.x Installs"
+description: "Upgrade checklist for Hermes Agent v0.22.x to v0.23.0: breaking changes, per-surface steps, rollback, and verification signals."
+pubDate: 2026-11-08
+tags: ["release-notes", "migration", "hermes-agent", "upgrade", "operators"]
+lastVerified: 2026-11-08
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-v0230-migration-runbook-1794155461.webp"
+---
+
+## What This Runbook Covers (and What It Doesn't)
+
+This is a migration runbook for operators running any Hermes Agent v0.22.x install — CLI, TUI, Desktop, cron, delegation, MCP, plugins, skills, or messaging bots — who need to move to v0.23.0 without breaking their setup. It is not a release announcement and not a feature tour. If you want the tour, read the previously published release overview, [Hermes Agent v0.23.0 "The Hearth Release" — overview](https://hermes-tutorials.dev/blog/2026-11-06-hermes-agent-v023-hearth-release/), which covers the new capabilities in depth. This article focuses only on what changes between your current install and v0.23.0, and what you must do about it.
+
+Framing first: v0.23.0 is a rollup release. Per the [official release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0), v0.23.0 "rolls up and fully documents the v0.22.1–v0.22.7 patch releases." That means any v0.22.x install upgrades directly to v0.23.0 — you do **not** need to step through v0.22.1 through v0.22.7 individually. The scale since v0.22.0 is roughly 10,080 commits, ~1,950 merged PRs, ~850 issues closed, and 666 contributors, so the diff you are crossing is large even if the upgrade path is single-hop.
+
+Provenance: everything here is drawn from the official 2026-11-05 release notes and documentation, cited inline. Where the release notes report performance figures, they are labeled vendor-reported. This runbook does not claim hands-on testing of v0.23.0; it is a planning and execution checklist built from the published evidence, including the [release index](https://github.com/NousResearch/hermes-agent/releases) and the [changelog mirror](https://www.corpusiq.io/docs/hermes/changelog).
+
+## Pre-Upgrade Audit: The Checklist
+
+Before touching anything, record the current state of your install and search for the things v0.23.0 changes. Work through this list and write down what you find — several items in the next section depend on it.
+
+**1. Search prompts, skills, and toolsets for old `browser_*` tool names.** Grep your agent prompts, skill files, and toolset configuration for `browser_navigate`, `browser_click`, and the other `browser_*` names. These tools are removed in v0.23.0, and any prompt or skill that instructs the agent to use them will fail after upgrade. Also note whether your setup uses Camofox, because the migration handles that case automatically (see below).
+
+**2. Find MCP clients with the old serve command.** Search every MCP client config for `"args": ["mcp", "serve"]`. The command is renamed in v0.23.0 and the client args must change.
+
+**3. Check Desktop hosts against the OS floors.** List every machine running Hermes Desktop and record its OS version and architecture. v0.23.0 raises the floor, and some hosts will be stranded.
+
+**4. Locate Word, PowerPoint, and Excel skill usage.** Find where those built-in skills are referenced in prompts, cron jobs, or delegation instructions. They are merged into a single `microsoft-office` skill.
+
+**5. Decide on the Webapp.** If you rely on the webapp being reachable, note that it is off by default in v0.23.0 and requires an explicit enable sequence.
+
+**6. Pin the model explicitly where the silent default matters.** If your install never chose a model and rides the default, record that. The default changes in v0.23.0.
+
+**7. Inventory delegation and cron settings.** Record your delegation backend/strategy, any `/delegation` mode selections, your cron jobs (including one-shots and how you currently stop runs), and any cron prompts that would benefit from knowing their fire time.
+
+## The Breaking-Change Checklist
+
+Each item below follows the same shape: who is affected, how to detect it, what to change.
+
+### Browser tools removed; `browser_exec` is the only path
+
+**Who's affected:** any setup whose prompts, skills, or toolsets reference `agent-browser` or any of the ten `browser_*` tools — `browser_navigate` and `browser_click` are the named examples.
+
+**How to detect it:** the pre-upgrade grep from the Pre-Upgrade Audit checklist. If it returns hits, you are affected.
+
+**What to change:** per the [official release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0), "Browser automation runs on `browser_exec` only; agent-browser and the ten `browser_*` tools (`browser_navigate`, `browser_click`, ...) were removed." Rewrite the affected prompts and skills to target `browser_exec`. One automatic mitigation: homes that used Camofox get the `camofox` plugin installed automatically, so Camofox-based browser workflows have a landing spot without manual plugin work. The [tools reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools) documents the surviving tool surface.
+
+### `hermes mcp serve` renamed to `hermes mcp-serve`
+
+**Who's affected:** anyone running an MCP client against Hermes, or anyone who launches the MCP server by hand.
+
+**How to detect it:** any client config containing `"args": ["mcp", "serve"]`.
+
+**What to change:** the command is renamed `hermes mcp serve` → `hermes mcp-serve` and moved into the mcp-serve plugin. In your MCP client config, change `"args": ["mcp", "serve"]` to `["mcp-serve"]`. MCP **tool names and parameters are unchanged**, so no downstream client tool mappings need editing. If you forget, the old `hermes mcp serve` invocation prints the new spelling and the install line rather than failing silently. Install the plugin with:
+
+```
+hermes plugins install mcp-serve
+```
+
+The [MCP feature docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp) and the [MCP usage guide](https://hermes-agent.nousresearch.com/docs/guides/use-mcp-with-hermes) cover the new arrangement; the [CLI reference](https://hermes-agent.nousresearch.com/docs/reference/cli-commands) lists the renamed command.
+
+### Desktop OS floors raised
+
+**Who's affected:** Desktop installs on macOS 11, macOS 12, or 32-bit Windows.
+
+**How to detect it:** check the OS version and architecture of every Desktop host during the audit.
+
+**What to change:** v0.23.0 Desktop requires macOS 13+ and 64-bit Windows (it ships on Electron 44). It no longer runs on macOS 11, macOS 12, or 32-bit Windows. Hosts below the floor cannot run v0.23.0 Desktop — either upgrade the OS or keep that host on v0.22.x (see The Bottom Line).
+
+### Word, PowerPoint, Excel skills merged into `microsoft-office`
+
+**Who's affected:** installs that reference the three separate office skills.
+
+**How to detect it:** your audit notes from Pre-Upgrade Audit step 4.
+
+**What to change:** built-in skills went from 58 to 44, and Word, PowerPoint, and Excel are merged into one `microsoft-office` skill. Update prompts and job instructions that name the old skills individually. Note that old copies stay on disk until you remove them — which also makes rollback easier (see Rollback).
+
+### Webapp off by default
+
+**Who's affected:** anyone who expects the webapp to serve a browser after upgrade.
+
+**How to detect it:** if you never explicitly enabled it, it will not be serving.
+
+**What to change:** nothing is served to a browser until `webapp.enabled` or Web Access is on. The enable sequence, verbatim, is: `hermes config set webapp.enabled true` → `hermes gateway restart` → `hermes webapp`. The [configuration docs](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) cover the setting.
+
+## Defaults and Architecture: Changes That Don't Break but Do Surprise
+
+**The silent default model moves from GLM-5.2 to GLM-5.3.** Per the release notes, the change comes "at about the same price and with the same 1M context window on Nous Portal and OpenRouter." If your install never explicitly chose a model, your agent's behavior and outputs may shift after upgrade simply because the default changed. The advice for operators: pin a model explicitly on installs that never chose one, so the default change cannot surprise you. This is a behavior change, not a break — nothing fails, but results differ.
+
+**One gateway owns every conversation.** v0.23.0 moves to an architecture where CLI, TUI, Desktop, ACP editors, messaging bots, and cron all attach to one gateway per profile, instead of each running its own agent against the same database. There is one queue and one writer. This does not break configs, but it changes operational assumptions: concurrent agents no longer write to the same store independently, and the gateway becomes the single coordination point for your profile. If you have scripts that assumed per-surface agents, revisit those assumptions after upgrade. Related vendor-reported performance claims — recurring cron jobs sharing a prompt cache, and long-lived gateways releasing closed sessions' memory — are attributed to the release notes, not independently verified here.
+
+## Per-Surface Migration Steps
+
+**CLI.** Update the install (see Running the Upgrade). If you preferred the pre-v0.23.0 CLI layout, set `display.cli_layout: classic` to restore the old look — a useful fallback if the new layout disrupts muscle memory. No other mandatory CLI action from this runbook.
+
+**TUI.** No mandatory action. (New conveniences like `/new` working mid-turn are covered in the release overview; they require no migration step.)
+
+**Desktop.** Verify each host meets macOS 13+ / 64-bit Windows before upgrading. Hosts below the floor stay on v0.22.x or get an OS upgrade first. The Desktop Stop button for cron runs appears as part of the new cron controls.
+
+**Cron.** Learn the new controls: `hermes cron cancel` stops a live run, alongside a Desktop Stop button, the API, and `cronjob_manage`. Deleting a job now cancels its live run. Each job picks its own missed-run policy with `--catch-up on|off` — set this per job if you care about catch-up behavior. A manual run no longer consumes a one-shot, so one-shot inventories are safe from manual triggers. Prompts now carry the fire time, so time-sensitive prompts can be simplified. Review your jobs against these behaviors after upgrade.
+
+**Delegation.** `delegation.backend` chooses how each `delegate_task` task becomes a child run; the default strategy is now a bundled plugin. If you want model-map and per-profile routing, install the official `advanced-delegation` plugin. `/delegation <mode>` saves for the next session, and `--now` applies immediately. If you run batch subagents, consider the opt-in `delegation.prefix_stagger_seconds`, which lets batch subagents reuse the prompt cache (vendor-reported benefit; not independently verified).
+
+**MCP.** Apply the rename from The Breaking-Change Checklist: install `mcp-serve` via `hermes plugins install mcp-serve` and change client args to `["mcp-serve"]`. Then review the new paid-tools governance: servers can declare `tool_costs` (e.g. `create_image: 20`, `animate: {credits: [5, 20], note: "per animation"}`, `get_status: 0`), a per-chat `spend_limit` (0 or absent means no limit), and `cost_unit` (default `credits`). The approval prompt names the cost and the chat's running total; a costed call that would cross the limit asks first, even on `trust: full`. Critical for unattended setups: where nobody can answer — cron jobs, `hermes chat -q`, a gateway with no approver — the call is refused without running and the model is told not to retry. `/yolo`, `--yolo`, and `approvals.mode: off` skip the untrusted prompt but **not** the spend limit. Malformed `tool_costs`, `spend_limit`, or `cost_unit` skips the server with an error naming the key; a `tool_costs` key the server does not offer is named in a warning at connect time, so use the server's own tool names.
+
+**Plugins.** `hermes plugins update` updates everything at once; an opt-in Auto-update switch exists. "Updates that would break your setup are held back instead of applied," per the release notes. The catalog grew from about 600 to over 1,050 entries with a new Verified tier for vendor-built plugins. Note that `hermes import-agent` and the OpenClaw migration moved to the agent-importers plugin — if you scripted those, install that plugin.
+
+**Skills.** Account for the 58 → 44 built-in count and the `microsoft-office` merge. If you hand-curated skills, `hermes curator lock` stops the agent rewriting a curated skill through any tool, even in YOLO mode — apply it to skills you want frozen.
+
+**Bots and unattended gateways.** Beyond the MCP paid-tool refusals above, note the security behavior changes: an unattended gateway skips an unapproved shell hook instead of freezing, and a recorded consent takes effect within about 30 seconds. Audit any shell hooks your bots rely on so a skip does not surprise you.
+
+## Running the Upgrade
+
+`hermes update` behaves differently in v0.23.0, per the [release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0): it asks before stashing anything, no longer stashes untracked folders it never touches, reclaims git locks left by a killed update, no longer hangs on an in-flight kanban card, and names a CDN firewall block instead of a bare 403. New installs check out the latest stable release instead of the tip of `main`.
+
+A sensible command order after upgrading:
+
+1. Run `hermes plugins update` to bring the plugin set current in one pass.
+2. Run `hermes plugins install mcp-serve` if you use MCP.
+3. Apply the client-config arg change (`["mcp-serve"]`) on every MCP client.
+4. Set `webapp.enabled` and restart the gateway only if you want the webapp served.
+5. Pin your model explicitly if the install rode the default.
+6. Restart the gateway so the one-gateway-per-profile architecture takes over cleanly.
+
+Docker and Nix notes: the Docker image and Nix package ship the Webapp bundle; the image adds tmux and Office/PDF libraries; and files a root Docker sandbox writes are handed back to your user, with setuid bits and file capabilities stripped. If you build on Docker or Nix, pull the updated image/package as part of the upgrade.
+
+## Rollback: Getting Back to v0.22.x
+
+If you need to return to v0.22.x, the evidence supports these rollback aids — this runbook deliberately does not invent a downgrade command; use whatever version-pinning mechanism your install method provides.
+
+- **Revert the MCP client args:** change `["mcp-serve"]` back to `"args": ["mcp", "serve"]` in client configs.
+- **Revert any `webapp.enabled` change:** if you enabled the webapp only for v0.23.0, undo the config change on rollback.
+- **Old office skill copies still on disk:** because the old Word/PowerPoint/Excel skill copies remain on disk until removed, a rolled-back v0.22.x install can still find them.
+- **Final patches:** v0.22.6 (published 2026-11-02, per the [v0.22.6 release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.6)) and v0.22.7 (published 2026-11-03, per the [v0.22.7 release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.7)) are the final patch releases of the v0.22 line — they are your rollback targets.
+
+No guarantee of full reversibility is offered for every setup; validate any rollback on a non-production profile first.
+
+## Verification: How to Confirm the Upgrade Took
+
+Check only for signals stated in the release evidence:
+
+- `hermes mcp serve` (the old spelling) prints the new spelling instead of failing silently — confirming you are on the renamed build.
+- A malformed `tool_costs`, `spend_limit`, or `cost_unit` in an MCP server config produces an error that names the key — confirming the paid-tools governance is active.
+- `display.cli_layout: classic` restores the old CLI layout — confirming config parsing matches v0.23.0.
+- The browser tools are absent from the tool surface, and `browser_exec` is present.
+- A costed MCP call crossing `spend_limit` asks first, even on `trust: full`.
+- `hermes update` asks before stashing, rather than stashing silently.
+
+## v0.22.x vs v0.23.0 at a Glance
+
+| Area | v0.22.x | v0.23.0 | Action required |
+|---|---|---|---|
+| Browser tools | `agent-browser` + ten `browser_*` tools | `browser_exec` only; `camofox` plugin auto-installed for Camofox users | Rewrite prompts/skills referencing old `browser_*` names |
+| MCP server command | `hermes mcp serve` | `hermes mcp-serve` (mcp-serve plugin) | Change client args to `["mcp-serve"]`; `hermes plugins install mcp-serve` |
+| Desktop OS support | Older macOS/Windows versions | macOS 13+ and 64-bit Windows only | Upgrade OS or stay on v0.22.x |
+| Office skills | Word, PowerPoint, Excel separate (58 built-ins) | Merged `microsoft-office` skill (44 built-ins) | Update references; old copies remain on disk |
+| Webapp | Available | Off by default | Run the enable sequence if needed |
+| Default model | GLM-5.2 | GLM-5.3 (same price, same 1M context) | Pin a model explicitly if you rode the default |
+| Architecture | Per-surface agents against one database | One gateway per profile; one queue, one writer | Review scripts assuming per-surface agents |
+| Cron control | — | `hermes cron cancel`, Desktop Stop, per-job `--catch-up on|off` | Review job policies and stopping habits |
+| Plugins | Individual updates | `hermes plugins update`, held-back breaking updates, Verified tier | Batch-update; install agent-importers if needed |
+
+## FAQ
+
+### Do I need to install v0.22.1 through v0.22.7 before v0.23.0?
+
+No. v0.23.0 rolls up and fully documents the v0.22.1–v0.22.7 patch releases, so any v0.22.x install upgrades directly. Stepping through the patches individually is unnecessary.
+
+### My MCP client broke after upgrading. What changed?
+
+The server command was renamed from `hermes mcp serve` to `hermes mcp-serve`. Change your client config from `"args": ["mcp", "serve"]` to `["mcp-serve"]` and run `hermes plugins install mcp-serve`. Tool names and parameters are unchanged, so nothing else in the client mapping should need edits.
+
+### Will YOLO mode bypass the new MCP spend limits?
+
+No. `/yolo`, `--yolo`, and `approvals.mode: off` skip the untrusted prompt but not the spend limit. A costed call that would cross the limit asks first even on `trust: full` — and in unattended contexts (cron jobs, `hermes chat -q`, a gateway with no approver) it is refused without running.
+
+### What happens to my hand-tuned skills after upgrade?
+
+The agent's curator can rewrite skills through tools, but `hermes curator lock` stops that for a locked skill — effective even in YOLO mode. Lock any hand-curated skill before relying on it post-upgrade. Also note the old Word/PowerPoint/Excel skill copies stay on disk until you remove them.
+
+### Can I keep the old CLI look?
+
+Yes. Set `display.cli_layout: classic` to restore the pre-v0.23.0 CLI layout.
+
+### My Desktop machine runs macOS 12. What are my options?
+
+v0.23.0 Desktop requires macOS 13+ and 64-bit Windows; macOS 11, macOS 12, and 32-bit Windows are no longer supported. Either upgrade the host OS or keep that machine on v0.22.x (v0.22.7 is the final patch).
+
+## The Bottom Line
+
+Upgrade now if you run headless or CLI/TUI-heavy installs on supported hosts: the breaking changes are few, well-documented, and mostly mechanical (the MCP rename, `browser_*` rewrites, the office-skill merge). The rollup framing means one hop gets you current, and `hermes plugins update` plus held-back breaking updates reduce plugin risk.
+
+Wait if you run Desktop on macOS 11, macOS 12, or 32-bit Windows — v0.23.0 Desktop will not run there, so either upgrade the OS first or stay on v0.22.7 until you can. Also pause if your unattended workflows depend on costed MCP calls with no approver present: v0.23.0 refuses those calls rather than running them, which is the safer behavior but a functional change you must plan for. Everyone else: run the pre-upgrade audit, apply the checklist, and verify with the signals in Verification.
+
+## How This Guide Was Built
+
+This runbook is based on the official Hermes Agent v0.23.0 release notes published 2026-11-05 and the accompanying official documentation, cross-checked against the v0.22.6 and v0.22.7 release pages and the changelog mirror. The author did not run v0.23.0; no hands-on testing, measurements, or screenshots are claimed. All performance figures cited (prompt-cache sharing, token reductions, refresh timing, tool latency) are vendor-reported from the release notes and have not been independently verified.

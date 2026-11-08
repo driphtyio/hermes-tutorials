@@ -15375,6 +15375,152 @@
           "note": "DNF: empty response (no text-delta events in CC stream after TH->CC rescue), 0 words"
         }
       ]
+    },
+    {
+      "id": "arena-hermes-agent-v0230-migration-runbook",
+      "match_id": "arena-hermes-agent-v0230-migration-runbook",
+      "slug": "hermes-agent-v0230-migration-runbook",
+      "topic": "Hermes Agent v0.23.0 Migration Runbook: The Pre-Upgrade Checklist for v0.22.x Installs",
+      "category": "runbook",
+      "type": "content",
+      "date": "2026-11-08",
+      "winner": "glm-5.3-flash",
+      "winner_provider": "opencode-go",
+      "winner_family": "glm",
+      "winner_score": 8.02,
+      "threshold": 7.5,
+      "threshold_met": true,
+      "threshold_note": "Shipped text (post-QA, meta-description shortened to fit the 160-char schema, six 'Section N' cross-references replaced with heading names) judged 3 passes: mean 8.02 spread 0.45. Same lane earlier: 7.98 spread 2.85 (10-lane field) and 8.22 spread 1.4 (first re-judge) — the recorded 8.02 is the shipped-text score. Judge noise on this brief was high (spreads 1.2-3.1 across the field).",
+      "verification_status": "partially-verified",
+      "verification_note": "qa-claim-vote.py (zai/glm-5.3 after claude-cli quota marker + cline-cli absent): 40 claims extracted, 39 SUPPORTED, 0 CONTRADICTED, 1 UNVERIFIED. The single UNVERIFIED claim ('MCP tool names and parameters are unchanged') is a source-pack artifact: it is verbatim in the full MCP docs (sources/08-docs-mcp.md line 705) but the judge/QA excerpt pack omitted that line, so the claim stands. validate_judge.py and disprove_pass.py were NOT run (not installed at ~/.hermes/scripts/validators/ on this host) — recorded as unevaluated, not passed.",
+      "plan_model": "glm-5.3 via cline-pass (served by zai fallback)",
+      "qa_model": "zai/glm-5.3 (claude-cli route skipped: quota marker set by the earlier claim-vote until 2026-11-08T16:40Z; cline-cli not on PATH). Verdict PASS (with fixes), 3 defects, 0 applied by QA — change-receipt.py check returned UNCHANGED, so the orchestrator applied fixes 1 and 2 and deliberately left fix 3 (an em-dash table cell, explicitly 'not a factual error') because every alternative wording would have stated an unsupported v0.22.x behaviour.",
+      "research_lane": "dispatched: mimo-v2.6-pro via commandcode, 2,652-word dossier, served_by opendesign (load-balanced commandcode->opendesign). Dossier-check.py: all 11 sources represented.",
+      "linkcheck": "11 unique external links, OK 11, DEAD 0, BLOCKED 0 (arena-linkcheck.py, orchestrator-run on the shipped text)",
+      "builder_lanes_dispatched": 10,
+      "builder_lanes_drafts": 10,
+      "builder_lanes_eligible": 7,
+      "plan_gate": {
+        "mode": "shadow",
+        "gate": "ok",
+        "contract_state": "A"
+      },
+      "brief_contract": true,
+      "jev_triage": "10 drafts scored; 3 length-ineligible (deepseek 3,357 / muse 3,205 / haiku 3,014 vs the 3,000 cap); beam-free met the word bound but shipped only 8 external links against the >=10 requirement",
+      "deviations": [
+        "Judge spreads were extreme on this brief (1.2-3.1 across the 10-lane field even with a source pack), so the top three lanes were re-judged in a fresh directory; the re-judge reordered the field (glm 7.98->8.22, luna 7.8->6.98, beam 7.5->7.35).",
+        "Dedup: the v0.23.0 release OVERVIEW was published 2026-11-06 (/blog/2026-11-06-hermes-agent-v023-hearth-release/). This match deliberately runs the migration/runbook angle instead and links to the overview rather than repeating the feature tour.",
+        "The 160-char description cap in src/content.config.ts rejected the winning draft's 185-char description; shortened by the orchestrator before build.",
+        "validate_judge.py and disprove_pass.py are not installed on this host; both gates are recorded as unevaluated.",
+        "Leaderboard updated additively (7 length-eligible lanes) with assertions that untouched rows are unchanged; recalc_leaderboard was NOT used because it regresses hermestuts career totals."
+      ],
+      "results": [
+        {
+          "model": "glm-5.3-flash",
+          "provider": "opencode-go",
+          "family": "glm",
+          "score": 8.02,
+          "judge_mean": 8.02,
+          "judge_spread": 0.45,
+          "passes": [
+            8.1,
+            8.2,
+            7.75
+          ],
+          "status": "scored",
+          "note": "winner; shipped-text 3-pass mean 8.02 spread 0.45. Earlier 3-pass runs on the same lane: 7.98 (spread 2.85) and 8.22 (spread 1.4) — re-judged in fresh dirs per the spread rule"
+        },
+        {
+          "model": "gpt-6-luna",
+          "provider": "commandcode",
+          "family": "gpt",
+          "score": 6.98,
+          "judge_mean": 6.98,
+          "judge_spread": 1.6,
+          "status": "scored",
+          "note": "re-judge of a straddled first pass (7.8 mean, spread 1.2) in a fresh dir"
+        },
+        {
+          "model": "muse-spark-1.3-contributor",
+          "provider": "opencode-go",
+          "family": "muse",
+          "score": 7.75,
+          "judge_mean": 7.75,
+          "judge_spread": 0.8,
+          "status": "ineligible_length",
+          "note": "ineligible_length: 3,205 body words over the 3,000 cap"
+        },
+        {
+          "model": "beam-free",
+          "provider": "opencode-go",
+          "family": "beam",
+          "score": 7.35,
+          "judge_mean": 7.35,
+          "judge_spread": 1.7,
+          "status": "scored",
+          "note": "re-judge of a straddled first pass (7.5 mean, spread 1.2); under the >=10 external-link requirement (8 links)"
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "provider": "claude-cli",
+          "family": "claude",
+          "score": 7.5,
+          "judge_mean": 7.5,
+          "judge_spread": 1.5,
+          "status": "ineligible_length",
+          "note": "ineligible_length: 3,014 body words over the 3,000 cap"
+        },
+        {
+          "model": "minimax-m3.1-flash",
+          "provider": "opencode-go",
+          "family": "minimax",
+          "score": 7.17,
+          "judge_mean": 7.17,
+          "judge_spread": 3.1,
+          "status": "scored",
+          "note": "3-pass mean, extreme spread"
+        },
+        {
+          "model": "stealth/glyph-cluster:free",
+          "provider": "commandcode",
+          "family": "stealth",
+          "score": 7.0,
+          "judge_mean": 7.0,
+          "judge_spread": 2.1,
+          "status": "scored",
+          "note": "3-pass mean"
+        },
+        {
+          "model": "deepseek-v4.1-flash",
+          "provider": "commandcode",
+          "family": "deepseek",
+          "score": 6.95,
+          "judge_mean": 6.95,
+          "judge_spread": 3.1,
+          "status": "ineligible_length",
+          "note": "ineligible_length: 3,357 body words over the 3,000 cap"
+        },
+        {
+          "model": "ling-3.1-flash",
+          "provider": "tokenharbor",
+          "family": "ling",
+          "score": 6.58,
+          "judge_mean": 6.58,
+          "judge_spread": 1.4,
+          "status": "scored",
+          "note": "3-pass mean"
+        },
+        {
+          "model": "mimo-v2.6-flash",
+          "provider": "opencode-go",
+          "family": "mimo",
+          "score": 6.45,
+          "judge_mean": 6.45,
+          "judge_spread": 2.1,
+          "status": "scored",
+          "note": "3-pass mean"
+        }
+      ]
     }
   ],
   "leaderboard": [
@@ -15393,8 +15539,8 @@
       "model": "glm-5.3-flash",
       "provider": "opencode-go",
       "family": "glm",
-      "matches": 34,
-      "wins": 8,
+      "matches": 35,
+      "wins": 9,
       "losses": 26,
       "avgScore": 8.13,
       "bestScore": 9.75,
@@ -15426,10 +15572,10 @@
       "model": "gpt-6-luna",
       "provider": "commandcode",
       "family": "openai",
-      "matches": 27,
+      "matches": 28,
       "wins": 4,
-      "losses": 23,
-      "avgScore": 7.88,
+      "losses": 24,
+      "avgScore": 7.85,
       "bestScore": 9.73,
       "rank": 5
     },
@@ -15489,35 +15635,35 @@
       "rank": 10
     },
     {
-      "model": "ling-3.1-flash",
-      "provider": "tokenharbor",
-      "family": "ling",
-      "matches": 4,
-      "wins": 1,
-      "losses": 3,
-      "avgScore": 7.9,
-      "bestScore": 8.32,
-      "rank": 11
-    },
-    {
       "model": "stealth/glyph-cluster:free",
       "provider": "commandcode",
       "family": "stealth",
-      "matches": 8,
+      "matches": 9,
       "wins": 1,
-      "losses": 7,
-      "avgScore": 7.79,
+      "losses": 8,
+      "avgScore": 7.7,
       "bestScore": 8.57,
+      "rank": 11
+    },
+    {
+      "model": "ling-3.1-flash",
+      "provider": "tokenharbor",
+      "family": "ling",
+      "matches": 5,
+      "wins": 1,
+      "losses": 4,
+      "avgScore": 7.64,
+      "bestScore": 8.32,
       "rank": 12
     },
     {
       "model": "mimo-v2.6-flash",
       "provider": "opencode-go",
       "family": "mimo",
-      "matches": 13,
+      "matches": 14,
       "wins": 1,
-      "losses": 12,
-      "avgScore": 7.65,
+      "losses": 13,
+      "avgScore": 7.56,
       "bestScore": 8.45,
       "rank": 13
     },
@@ -15569,10 +15715,10 @@
       "model": "minimax-m3.1-flash",
       "provider": "opencode-go",
       "family": "minimax",
-      "matches": 9,
+      "matches": 10,
       "wins": 0,
-      "losses": 9,
-      "avgScore": 7.66,
+      "losses": 10,
+      "avgScore": 7.61,
       "bestScore": 8.7,
       "rank": 18
     },
@@ -15591,10 +15737,10 @@
       "model": "beam-free",
       "provider": "opencode-go",
       "family": "beam",
-      "matches": 14,
+      "matches": 15,
       "wins": 0,
-      "losses": 14,
-      "avgScore": 7.23,
+      "losses": 15,
+      "avgScore": 7.24,
       "bestScore": 8.42,
       "rank": 20
     },
@@ -15665,8 +15811,8 @@
       "rank": 26
     }
   ],
-  "last_updated": "2026-11-07",
-  "total_matches": 65,
+  "last_updated": "2026-11-08",
+  "total_matches": 66,
   "retired_models": [
     {
       "model": "mimo-v2.5",
