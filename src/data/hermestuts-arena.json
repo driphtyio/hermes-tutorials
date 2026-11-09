@@ -15539,7 +15539,7 @@
       "threshold_note": "Pre-QA winner 3-pass mean 8.15 (spread 0.95) decided the pick. Shipped text after QA fixes, three fresh 3-pass judge runs on the shipped text: 8.25 (spread 0.0), 8.18 (spread 0.8), 7.97 (spread 0.5); pooled 9-pass mean 8.13. Gate 7.5 met on every run. Judge noise is high on this brief (lane spreads 0.5-2.7).",
       "verification_status": "partially-verified",
       "verification_note": "Orchestrator link check: 12 unique external links, 12 OK, 0 DEAD (arena-linkcheck.py). validate_post.py PASS (hero url verified). QA (claude-sonnet-5-5 via claude-cli) returned FAIL with defects on the pre-QA text; each defect was checked against the saved sources and fixed, and the final text was NOT converged to a QA PASS (QA round 3 still listed meta/FAQ wording and minor repetition; the rollback-nuance defect (condition on checkpoint-turn ordering) was NOT applied). disprove_pass.py was not run. validate_judge.py was not run.",
-      "plan_model": "glm-5.3 via cline-pass (served by zai fallback)",
+      "plan_model": "glm-5.3 via cline-pass (served_by cline-pass per runner output)",
       "qa_model": "claude-sonnet-5-5 (claude-cli), 3 rounds: FAIL, FAIL, FAIL-with-fixes",
       "research_lane": "in-session: firecrawl-research --save for 3 docs pages + GitHub v0.23.0 release via web_extract (cached in full); source-manifest rc=0",
       "brief_contract": true,
