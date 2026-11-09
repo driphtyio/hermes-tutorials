@@ -15521,6 +15521,183 @@
           "note": "3-pass mean"
         }
       ]
+    },
+    {
+      "id": "arena-hermes-rewind-fork-v023",
+      "match_id": "arena-hermes-rewind-fork-v023",
+      "slug": "hermes-agent-rewind-edit-resend-fork-v023",
+      "topic": "Hermes Agent /rewind: Edit, Resend, or Fork a Conversation (v0.23.0 Guide)",
+      "category": "tutorial",
+      "type": "content",
+      "date": "2026-11-09",
+      "winner": "glm-5.3-flash",
+      "winner_provider": "opencode-go",
+      "winner_family": "glm",
+      "winner_score": 8.13,
+      "threshold": 7.5,
+      "threshold_met": true,
+      "threshold_note": "Pre-QA winner 3-pass mean 8.15 (spread 0.95) decided the pick. Shipped text after QA fixes, three fresh 3-pass judge runs on the shipped text: 8.25 (spread 0.0), 8.18 (spread 0.8), 7.97 (spread 0.5); pooled 9-pass mean 8.13. Gate 7.5 met on every run. Judge noise is high on this brief (lane spreads 0.5-2.7).",
+      "verification_status": "partially-verified",
+      "verification_note": "Orchestrator link check: 12 unique external links, 12 OK, 0 DEAD (arena-linkcheck.py). validate_post.py PASS (hero url verified). QA (claude-sonnet-5-5 via claude-cli) returned FAIL with defects on the pre-QA text; each defect was checked against the saved sources and fixed, and the final text was NOT converged to a QA PASS (QA round 3 still listed meta/FAQ wording and minor repetition; the rollback-nuance defect (condition on checkpoint-turn ordering) was NOT applied). disprove_pass.py was not run. validate_judge.py was not run.",
+      "plan_model": "glm-5.3 via cline-pass (served by zai fallback)",
+      "qa_model": "claude-sonnet-5-5 (claude-cli), 3 rounds: FAIL, FAIL, FAIL-with-fixes",
+      "research_lane": "in-session: firecrawl-research --save for 3 docs pages + GitHub v0.23.0 release via web_extract (cached in full); source-manifest rc=0",
+      "brief_contract": true,
+      "builder_lanes_dispatched": 10,
+      "builder_lanes_drafts": 9,
+      "builder_lanes_eligible": 9,
+      "linkcheck": "12 unique external links; OK 12; DEAD 0",
+      "deviations": [
+        "Builder lanes received the plan + dossier inline (no tools). ling-3.1-flash DNF (tokenharbor curl timeout), recorded as DNF, not substituted.",
+        "Judge drafts were all 9 builder drafts; the 1,500-3,000 body-word band was applied at the record, not as a judge exclusion.",
+        "The planner output was moved out of the draft dir before judging (judge grades every *.md in a dir).",
+        "Winner post was patched by the orchestrator after QA, and the shipped text was re-judged on fresh dirs (3 runs)."
+      ],
+      "results": [
+        {
+          "model": "glm-5.3-flash",
+          "provider": "opencode-go",
+          "family": "glm",
+          "score": 8.15,
+          "passes": [
+            8.7,
+            7.75,
+            8.0
+          ],
+          "spread": 0.95,
+          "noisy": false,
+          "note": "",
+          "rank": 1
+        },
+        {
+          "model": "muse-spark-1.3-contributor",
+          "provider": "opencode-go",
+          "family": "muse",
+          "score": 8.03,
+          "passes": [
+            8.3,
+            7.55,
+            8.25
+          ],
+          "spread": 0.75,
+          "noisy": false,
+          "note": "",
+          "rank": 2
+        },
+        {
+          "model": "deepseek-v4.1-flash",
+          "provider": "commandcode",
+          "family": "deepseek",
+          "score": 8.0,
+          "passes": [
+            7.75,
+            7.9,
+            8.35
+          ],
+          "spread": 0.6,
+          "noisy": false,
+          "note": "",
+          "rank": 3
+        },
+        {
+          "model": "beam-free",
+          "provider": "opencode-go",
+          "family": "beam",
+          "score": 7.88,
+          "passes": [
+            7.65,
+            7.85,
+            8.15
+          ],
+          "spread": 0.5,
+          "noisy": false,
+          "note": "",
+          "rank": 4
+        },
+        {
+          "model": "minimax-m3.1-flash",
+          "provider": "opencode-go",
+          "family": "minimax",
+          "score": 7.88,
+          "passes": [
+            8.15,
+            7.55,
+            7.95
+          ],
+          "spread": 0.6,
+          "noisy": false,
+          "note": "",
+          "rank": 5
+        },
+        {
+          "model": "stealth-glyph-cluster:free",
+          "provider": "commandcode",
+          "family": "stealth",
+          "score": 7.83,
+          "passes": [
+            8.05,
+            8.05,
+            7.4
+          ],
+          "spread": 0.65,
+          "noisy": false,
+          "note": "",
+          "rank": 6
+        },
+        {
+          "model": "gpt-6-luna",
+          "provider": "commandcode",
+          "family": "gpt",
+          "score": 7.75,
+          "passes": [
+            7.4,
+            8.5,
+            7.35
+          ],
+          "spread": 1.15,
+          "noisy": false,
+          "note": "",
+          "rank": 7
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "provider": "claude-cli",
+          "family": "claude",
+          "score": 7.73,
+          "passes": [
+            7.45,
+            7.55,
+            8.2
+          ],
+          "spread": 0.75,
+          "noisy": false,
+          "note": "",
+          "rank": 8
+        },
+        {
+          "model": "mimo-v2.6-flash",
+          "provider": "opencode-go",
+          "family": "mimo",
+          "score": 7.67,
+          "passes": [
+            8.6,
+            5.9,
+            8.55
+          ],
+          "spread": 2.7,
+          "noisy": true,
+          "note": "noisy first pass (spread 2.7); re-judged once (mean 7.65, spread 0.55); pooled 6-pass mean",
+          "rank": 9
+        },
+        {
+          "model": "ling-3.1-flash",
+          "provider": "tokenharbor",
+          "family": "ling",
+          "score": 0.0,
+          "status": "DNF",
+          "error": "curl exit 28 (timeout) on the builder call; no draft produced"
+        }
+      ]
     }
   ],
   "leaderboard": [
@@ -15528,9 +15705,9 @@
       "model": "deepseek-v4.1-flash",
       "provider": "commandcode",
       "family": "deepseek",
-      "matches": 47,
+      "matches": 48,
       "wins": 14,
-      "losses": 33,
+      "losses": 34,
       "avgScore": 8.18,
       "bestScore": 9.78,
       "rank": 1
@@ -15539,8 +15716,8 @@
       "model": "glm-5.3-flash",
       "provider": "opencode-go",
       "family": "glm",
-      "matches": 35,
-      "wins": 9,
+      "matches": 36,
+      "wins": 10,
       "losses": 26,
       "avgScore": 8.13,
       "bestScore": 9.75,
@@ -15572,9 +15749,9 @@
       "model": "gpt-6-luna",
       "provider": "commandcode",
       "family": "openai",
-      "matches": 28,
+      "matches": 29,
       "wins": 4,
-      "losses": 24,
+      "losses": 25,
       "avgScore": 7.85,
       "bestScore": 9.73,
       "rank": 5
@@ -15583,10 +15760,10 @@
       "model": "claude-haiku-5-5",
       "provider": "claude-cli",
       "family": "claude",
-      "matches": 20,
+      "matches": 21,
       "wins": 4,
-      "losses": 16,
-      "avgScore": 7.84,
+      "losses": 17,
+      "avgScore": 7.83,
       "bestScore": 9.15,
       "rank": 6
     },
@@ -15605,10 +15782,10 @@
       "model": "muse-spark-1.3-contributor",
       "provider": "opencode-go",
       "family": "muse",
-      "matches": 32,
+      "matches": 33,
       "wins": 2,
-      "losses": 30,
-      "avgScore": 7.71,
+      "losses": 31,
+      "avgScore": 7.72,
       "bestScore": 9.45,
       "rank": 8
     },
@@ -15660,10 +15837,10 @@
       "model": "mimo-v2.6-flash",
       "provider": "opencode-go",
       "family": "mimo",
-      "matches": 14,
+      "matches": 15,
       "wins": 1,
-      "losses": 13,
-      "avgScore": 7.56,
+      "losses": 14,
+      "avgScore": 7.57,
       "bestScore": 8.45,
       "rank": 13
     },
@@ -15701,6 +15878,17 @@
       "rank": 16
     },
     {
+      "model": "stealth-glyph-cluster:free",
+      "provider": "commandcode",
+      "family": "stealth",
+      "matches": 1,
+      "wins": 0,
+      "losses": 1,
+      "avgScore": 7.83,
+      "bestScore": 7.83,
+      "rank": 17
+    },
+    {
       "model": "cline-pass/minimax-m3",
       "provider": "cline-pass",
       "family": "minimax",
@@ -15709,18 +15897,18 @@
       "losses": 7,
       "avgScore": 7.75,
       "bestScore": 8.32,
-      "rank": 17
+      "rank": 18
     },
     {
       "model": "minimax-m3.1-flash",
       "provider": "opencode-go",
       "family": "minimax",
-      "matches": 10,
+      "matches": 11,
       "wins": 0,
-      "losses": 10,
-      "avgScore": 7.61,
+      "losses": 11,
+      "avgScore": 7.63,
       "bestScore": 8.7,
-      "rank": 18
+      "rank": 19
     },
     {
       "model": "omen-alpha",
@@ -15731,18 +15919,18 @@
       "losses": 4,
       "avgScore": 7.54,
       "bestScore": 8.32,
-      "rank": 19
+      "rank": 20
     },
     {
       "model": "beam-free",
       "provider": "opencode-go",
       "family": "beam",
-      "matches": 15,
+      "matches": 16,
       "wins": 0,
-      "losses": 15,
-      "avgScore": 7.24,
+      "losses": 16,
+      "avgScore": 7.28,
       "bestScore": 8.42,
-      "rank": 20
+      "rank": 21
     },
     {
       "model": "cline-pass/qwen3.8-max",
@@ -15753,7 +15941,7 @@
       "losses": 1,
       "avgScore": 7.01,
       "bestScore": 7.01,
-      "rank": 21
+      "rank": 22
     },
     {
       "model": "gemini-3.8-flash-medium",
@@ -15764,7 +15952,7 @@
       "losses": 7,
       "avgScore": 6.82,
       "bestScore": 8.42,
-      "rank": 22
+      "rank": 23
     },
     {
       "model": "minimax-m3.1-flash-free",
@@ -15775,7 +15963,7 @@
       "losses": 2,
       "avgScore": 6.54,
       "bestScore": 7.72,
-      "rank": 23
+      "rank": 24
     },
     {
       "model": "qwen3.8-flash",
@@ -15786,7 +15974,7 @@
       "losses": 2,
       "avgScore": 6.06,
       "bestScore": 6.63,
-      "rank": 24
+      "rank": 25
     },
     {
       "model": "ling-3.0-flash-sante",
@@ -15797,7 +15985,7 @@
       "losses": 1,
       "avgScore": 5.55,
       "bestScore": 5.55,
-      "rank": 25
+      "rank": 26
     },
     {
       "model": "pixel-canary",
@@ -15808,11 +15996,11 @@
       "matches": 0,
       "avgScore": 0,
       "bestScore": 0,
-      "rank": 26
+      "rank": 27
     }
   ],
   "last_updated": "2026-11-08",
-  "total_matches": 66,
+  "total_matches": 67,
   "retired_models": [
     {
       "model": "mimo-v2.5",

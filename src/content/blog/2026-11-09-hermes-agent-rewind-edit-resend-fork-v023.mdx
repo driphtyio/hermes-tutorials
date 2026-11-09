@@ -1,0 +1,106 @@
+---
+title: "Hermes Agent /rewind: Edit, Resend, or Fork a Conversation (v0.23.0 Guide)"
+description: "Hermes Agent v0.23.0 adds /rewind: browse your prompts, edit and resend an earlier one, or fork a branch. Edit-and-resend cuts the session like /undo."
+pubDate: 2026-11-09
+tags: [ "hermes-agent", "rewind", "conversations", "v0.23.0" ]
+lastVerified: 2026-11-09
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-rewind-edit-resend-fork-v023-1794241955.webp"
+---
+
+Every long agent session has a moment where the right move is to go back, not forward: the prompt you sent three turns ago set the wrong course, and everything after it is baggage. Hermes Agent v0.23.0 gives you two clean ways to do that with a single keypress or command. You can edit an earlier prompt and resend it, or fork a branched session from that point. The cut behaves like `/undo`, and `/undo` never touches files, so editing and resending leaves your files alone.
+
+This guide is based on official documentation and release notes; we did not run the tool hands-on. Every claim below cites the [GitHub v0.23.0 release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0) or one of the three official Hermes docs pages inline. Where the sources leave something unsettled, such as messaging-platform support, the post says so instead of guessing.
+
+## What /rewind does
+
+Shipped in v0.23.0 on 5 November 2026 ("The Hearth Release"), `/rewind` lets you press Esc twice or type `/rewind` in the TUI or classic CLI, pick an earlier message, then edit and resend it or fork a new session from that point, while the original stays exactly as it was ([GitHub v0.23.0 release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0)).
+
+The feature is tied to PR [#144937](https://github.com/NousResearch/hermes-agent/pull/144937) in the release notes, credited to @SaguaroDev in the [release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0). The [slash commands reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands) lists `/rewind` among the interactive CLI commands, and it operates on the conversation transcript: your prompts and Hermes's replies. For announcement-day context, see our [v0.23.0 "Hearth" release walkthrough](/blog/2026-11-06-hermes-agent-v023-hearth-release/).
+
+## Two ways to open the transcript browser
+
+Type `/rewind` or press Esc, Esc on an idle, empty prompt. The command is listed in the [slash commands reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands) as a classic CLI command, and the first Esc shows "esc again to edit previous message" as a hint before the browser opens.
+
+In the TUI the same double-tap works: Esc, Esc on an empty composer opens the browser ([TUI guide](https://hermes-agent.nousresearch.com/docs/user-guide/tui)). If there is no earlier prompt to return to, the second Esc reports "No previous message to edit" ([TUI guide](https://hermes-agent.nousresearch.com/docs/user-guide/tui)). Looking for the wider command surface instead? Our [Hermes slash commands reference](/blog/commands-reference/) collects the rest of the CLI vocabulary in one place.
+
+## Finding the prompt you want
+
+The browser opens showing the session's prompts and replies with the latest prompt already selected, so stepping back is a couple of key presses. Per the [slash commands reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands), Left/Right (h/l) pick a prompt, while Up/Down (k/j) and PgUp/PgDn scroll through the transcript.
+
+In the TUI, `/rewind` has no prime step: Left/Right move you straight to an earlier prompt, and Esc goes back ([TUI guide](https://hermes-agent.nousresearch.com/docs/user-guide/tui)). Whenever you want out entirely, Esc or q closes the browser ([slash commands reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands)).
+
+## Edit and resend: what happens to the later messages
+
+Press Enter and the selected prompt drops back into your composer, ready to change. Sending the edited text cuts the session back to just before that prompt, sends the new version, and archives the later messages, the same behaviour as `/undo`, per the [slash commands reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands).
+
+The [TUI guide](https://hermes-agent.nousresearch.com/docs/user-guide/tui) words the same flow more bluntly: everything from that prompt on is removed when you send. Backing out costs nothing, since cancelling with Esc Esc, Ctrl+C, or an empty submit removes nothing ([slash commands reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands)). And because the cut behaves as `/undo` does, and `/undo` never touches files ([checkpoints and rollback docs](https://hermes-agent.nousresearch.com/docs/user-guide/checkpoints-and-rollback)), editing and resending leaves your files alone. `/rollback` is the command that restores them.
+
+## Fork instead: keep the original, branch the history
+
+Press f and Hermes forks rather than edits: the new branched session contains only the history before the selected prompt, with that prompt prefilled but not sent, while the original session is kept ([slash commands reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands), [TUI guide](https://hermes-agent.nousresearch.com/docs/user-guide/tui)). The [v0.23.0 release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0) describe the original as staying exactly as it was.
+
+Don't confuse a fork with `/new [name]` (alias `/reset`), which starts a fresh session ([slash commands reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands)). A fork carries the earlier transcript into a new branch with the chosen prompt prefilled but not sent, while `/new` simply hands you a blank slate.
+
+## Skipping the browser: /rewind N and /rewind fork N
+
+Two direct forms skip browsing entirely: `/rewind N` edits prompt N directly, and `/rewind fork N` forks a branched session before prompt N, both documented in the [slash commands reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands). Reach for them when you already know exactly which turn you want to revisit and don't need to scroll the transcript to find it.
+
+The reference only says that N targets a prompt; it does not document how prompts are numbered, so this post assumes nothing about counting direction or indexing. Otherwise the forms parallel their browser counterparts: an edit rewinds the conversation, a fork keeps the original ([slash commands reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands)).
+
+## /rewind vs /undo vs /rollback
+
+The three commands answer different questions: `/undo` rewinds the conversation, `/rewind` browses and branches it, and `/rollback` restores files. The [checkpoints documentation](https://hermes-agent.nousresearch.com/docs/user-guide/checkpoints-and-rollback) and the [slash commands reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands) draw those lines, and the table below puts them side by side so you can pick the right one mid-session.
+
+| Command | Touches conversation | Touches files | Source |
+|---|---|---|---|
+| `/undo` | Yes — rewinds the conversation only | Never touches files; when checkpoints are on and the undone turns changed files, it adds one line naming them and pointing at `/rollback` | [Checkpoints and rollback docs](https://hermes-agent.nousresearch.com/docs/user-guide/checkpoints-and-rollback) |
+| `/rewind` | Yes — the transcript browser lets you edit and resend an earlier prompt (later messages archived, as with `/undo`) or fork with f, keeping the original session | Edit: no — the cut behaves as `/undo` does, and `/undo` never touches files. Fork: the sources do not address files | [GitHub v0.23.0 release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0), [slash commands reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands), [TUI guide](https://hermes-agent.nousresearch.com/docs/user-guide/tui) |
+| `/rollback <N>` | Yes — also undoes the last chat turn | Yes — restores files to checkpoint N, keeping hand-edits; takes a pre-rollback snapshot first, then restores files, then undoes the last turn; requires checkpoints (`--checkpoints` or `checkpoints: enabled: true`) | [Checkpoints docs](https://hermes-agent.nousresearch.com/docs/user-guide/checkpoints-and-rollback), [slash commands reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands) |
+
+The pattern is simple: anything in the `/rewind` and `/undo` family is conversation-only, and file restoration lives entirely in the checkpoint system.
+
+## Checkpoints: the part that touches files
+
+File restoration belongs entirely to checkpoints: they are opt-in as of v2 and off by default. You enable them per session with the `--checkpoints` flag, or globally with `checkpoints: enabled: true` in `~/.hermes/config.yaml`, according to the [checkpoints and rollback documentation](https://hermes-agent.nousresearch.com/docs/user-guide/checkpoints-and-rollback). That is the switch that makes `/rollback` possible, because without a checkpoint history there is nothing on the file side to restore to.
+
+When a rollback runs, it first takes a pre-rollback snapshot, so you can undo the undo. Then it restores the files, then undoes the last conversation turn so the agent's context matches the restored filesystem ([checkpoints docs](https://hermes-agent.nousresearch.com/docs/user-guide/checkpoints-and-rollback)). `/rollback <N>` restores to checkpoint N while keeping your hand-edits, and it also undoes the last chat turn ([checkpoints docs](https://hermes-agent.nousresearch.com/docs/user-guide/checkpoints-and-rollback)). One more interaction worth knowing: when checkpoints are on and the turns `/undo` removes changed files, `/undo` adds one line naming those files and pointing at `/rollback` ([checkpoints docs](https://hermes-agent.nousresearch.com/docs/user-guide/checkpoints-and-rollback)). For setup details, see our [Hermes Agent backup and checkpoints guide](/blog/hermes-backup-checkpoints-guide/).
+
+## Where /rewind works (and what the sources don't say)
+
+The v0.23.0 release documents `/rewind` for the TUI and the classic CLI ([GitHub v0.23.0 release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0)). The slash commands reference's messaging command table does not list `/rewind`, so this post makes no claim about Telegram, Discord, or other messaging platforms.
+
+Two further gaps deserve plain honesty. The release notes state no rewind-specific setting or default, so this post describes none. And no timing or benchmark figures exist for `/rewind` in these sources, so none appear here.
+
+## Version context and further reading
+
+v0.23.0 landed on 5 November 2026 and rolls up the v0.22.1–v0.22.7 patch releases; its headline feature is the Desktop workspace served in a browser tab (the Webapp), which ships off by default ([GitHub v0.23.0 release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0)). `/rewind` is the conversation-management highlight of that same release. A separate TUI change lets `/new` start while a turn is still running, with the running session continuing in the background, in [PR #148880](https://github.com/NousResearch/hermes-agent/pull/148880). The Webapp arrived through [PR #141864](https://github.com/NousResearch/hermes-agent/pull/141864), and the terminal image work through [#147293](https://github.com/NousResearch/hermes-agent/pull/147293) and [#148874](https://github.com/NousResearch/hermes-agent/pull/148874). The full set of changes is in the [release commit 2bd378e](https://github.com/NousResearch/hermes-agent/commit/2bd378ed1b8d6bf2192cb26e0a55ff3091e6bd19), and the project lives at the [Hermes Agent repository](https://github.com/NousResearch/hermes-agent).
+
+Still on an earlier build? The [Hearth release walkthrough](/blog/2026-11-06-hermes-agent-v023-hearth-release/) covers everything else that shipped, and the [v0.23.0 migration runbook](/blog/2026-11-08-hermes-agent-v0230-migration-runbook/) takes you through the upgrade step by step. Once you're current, Esc, Esc and `/rewind` behave as described above in the TUI and the classic CLI.
+
+## FAQ
+
+### Does editing and resending touch my files?
+
+No. The cut made when you send an edited prompt behaves as `/undo` does, and the [checkpoints documentation](https://hermes-agent.nousresearch.com/docs/user-guide/checkpoints-and-rollback) states that `/undo` only rewinds the conversation and never touches files. Restoring files is `/rollback`'s job, and it needs checkpoints enabled, as our [backup and checkpoints guide](/blog/hermes-backup-checkpoints-guide/) explains.
+
+### Should I edit and resend, or fork?
+
+Edit and resend when the later turns are simply wrong: sending cuts the session back to just before that prompt and archives the later messages ([slash commands reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands)). Fork, by pressing f, when you want to explore an alternative: the branched session holds only the earlier history, the prompt is prefilled but not sent, and the original stays intact ([TUI guide](https://hermes-agent.nousresearch.com/docs/user-guide/tui)).
+
+### I opened the browser and closed it. Did I lose anything?
+
+No. Esc or q closes the browser, and nothing is removed until you send an edited prompt. Cancelling a pending edit with Esc Esc, Ctrl+C, or an empty submit also removes nothing, according to the [slash commands reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands). Fork leaves the original intact, and the sources do not address files for a fork.
+
+### Does /rewind work in Telegram or Discord?
+
+The sources don't establish it. The [slash commands reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands) lists `/rewind` under interactive CLI commands and not in its messaging command table, and the [v0.23.0 release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0) document it for the TUI and the classic CLI. Verify rewind behaviour on your own messaging platform before relying on it.
+
+## The Bottom Line
+
+`/rewind` makes going back cheap. Esc, Esc or the command opens the transcript, Enter edits and resends with later messages archived, and f forks a branch while the original stays exactly as it was ([GitHub v0.23.0 release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0)). Because the cut behaves as `/undo` does, and `/undo` never touches files, restoring files is `/rollback`'s job.
+
+## How This Guide Was Built
+
+This guide was built entirely from four official sources: the [GitHub v0.23.0 release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.0) plus three Hermes documentation pages: the [slash commands reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands), the [TUI guide](https://hermes-agent.nousresearch.com/docs/user-guide/tui), and the [checkpoints and rollback documentation](https://hermes-agent.nousresearch.com/docs/user-guide/checkpoints-and-rollback). We did not run Hermes hands-on for this post; no testing, benchmarks, or screenshots inform the claims above.
+
+The release notes established what shipped in v0.23.0 and its scope; the docs pages supplied command-level behaviour, keybindings, and the `/undo`–`/rollback` mechanics. The full documentation index is at the [Hermes Agent documentation home](https://hermes-agent.nousresearch.com/docs). Where a fact was not established (messaging-platform support, rewind defaults, prompt numbering in `/rewind N`, the destination of archived messages), the post flags the gap instead of filling it. Facts were last checked against these sources on 9 November 2026.
