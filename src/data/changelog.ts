@@ -1,4 +1,4 @@
-// AUTO-GENERATED from NousResearch/hermes-agent GitHub releases (47 releases, 2026-03-12..2026-11-05).
+// AUTO-GENERATED from NousResearch/hermes-agent GitHub releases (48 releases, 2026-03-12..2026-11-10).
 // Regenerate via scripts/gen-changelog.py — do not hand-edit entries.
 export interface ChangelogLink {
   url: string;
@@ -20,6 +20,24 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  {
+    "tag": "v0.23.1",
+    "version": "v0.23.1",
+    "codename": "",
+    "date": "2026-11-10",
+    "summary": "Patch release. This tag rolls up the ~618 PRs merged since v0.23.0 into a stable release for the GitHub release (CLI and installers), the Microsoft Store app, Docker and Hermes Cloud. Full curated notes for this window ship with v0.24.0.",
+    "highlights": [],
+    "prs": "618",
+    "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1",
+    "compare": "https://github.com/NousResearch/hermes-agent/compare/v0.23.0...v0.23.1",
+    "links": [
+      {
+        "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1",
+        "label": "Release notes (v0.23.1)"
+      }
+    ],
+    "body": "> Patch release. This tag rolls up the ~618 PRs merged since v0.23.0 into a stable release for the GitHub release (CLI and installers), the Microsoft Store app, Docker and Hermes Cloud. Full curated notes for this window ship with v0.24.0.\n\n**What this patch ships for plugin users:** since the plugin catalog's site deploy on November 9, the published `plugin-catalog.json` was larger than the 2 MiB cap clients accept, so every install silently fell back to the catalog it shipped with. `hermes plugins install <name>` could not find plugins added since your last update, installed the pin your release shipped instead of the current one, and missed newer `removed` entries. This release raises the cap to 16 MiB, so the live catalog is used again ([#151860](https://github.com/NousResearch/hermes-agent/pull/151860), fixes [#151856](https://github.com/NousResearch/hermes-agent/issues/151856), thanks @100yenadmin). Installs that stay on v0.23.0 or older keep falling back until they update.\n\n## About this release\n\nAlso in the window, undocumented here on purpose: Esc backtrack in the TUI and classic CLI (replacing the rewind list picker), group chats that run on a gateway without Desktop and can seat bots from other computers, saved gateway connections shared by Desktop and the Webapp, signing the in-app browser in with your real browser profile and filling saved logins from its address bar, `hermes gateway attach` for local clients, `hermes clipboard image --json`, new plugin API (session-scoped environment values, plugin JSON-RPC methods and events, `llm.oneshot` auxiliary tasks, a compression-stable `conversation_id`, an `on_session_open` hook in the gateway, a `post_curator_run` hook), faster transcript and handoff reads, and a large batch of new plugin-catalog entries.\n\n**Full curated release notes for this window ship with v0.24.0**, which will document everything from v0.23.0 onward — highlights, feature areas, and complete contributor credits. Nothing in this window is skipped.\n## Updating\n\n- Microsoft Store app: updates through the Store.\n- Desktop app installed from the installer (.exe / .dmg): no change in this release; it updates with the next bundled release.\n- CLI: `hermes update`, or re-run the installer one-liner.\n- Docker / Hermes Cloud: `nousresearch/hermes-agent:stable` (or `:latest`).\n\n**Full Changelog**: [v0.23.0...v0.23.1](https://github.com/NousResearch/hermes-agent/compare/v0.23.0...v0.23.1)"
+  },
   {
     "tag": "v0.23.0",
     "version": "v0.23.0",
