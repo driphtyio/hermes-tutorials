@@ -205,3 +205,12 @@ For a Hermes beginner, this is a practical way to understand how code execution,
 ## How This Guide Was Built
 
 This article is documentation-derived from the linked Hermes, pandas, Matplotlib, DuckDB, and Python pages. No hands-on test or benchmark was run. Where those sources do not establish library availability, delivery syntax, file persistence between sessions, or PNG attachment behavior, the guide says so rather than filling in the gaps.
+
+<!-- crosslinks -->
+
+## 📖 Related Reads
+
+- **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools, agents, and APIs
+- **[CodeIntel Log](https://codeintel.xyz/)** — code quality, debugging, and software engineering benchmarks
+
+*Cross-links automatically generated from Hermes Tutorials.*
