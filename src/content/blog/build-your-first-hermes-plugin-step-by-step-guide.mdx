@@ -1,0 +1,205 @@
+---
+title: "Build Your First Hermes Plugin: Step-by-Step Guide"
+description: "A step-by-step walkthrough for writing your first Hermes plugin, from manifest and tool registration to hooks, capabilities, and Plugin Doctor validation."
+pubDate: "2026-11-12"
+tags: ["plugins", "tutorial", "hermes"]
+keywords: [hermes plugin, build hermes plugin, hermes register_tool, hermes plugin manifest]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/build-your-first-hermes-plugin-step-by-step-guide-1794501384.webp"
+lastVerified: 2026-11-12
+---
+
+## What changed since our last plugin tutorial
+
+This guide revisits [our earlier plugin build](/blog/building-hermes-plugin) against the current docs, Nov 2026: capabilities consent, the tool override gate, `hermes plugins doctor`, and the project-local loading rule are the four surfaces that post did not cover, per the [developer guide](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins).
+
+> This guide is based on the official Hermes plugin developer documentation; we did not run the example on a live gateway.
+
+If you are new to the plugin system itself, our [plugin system overview](/blog/hermes-plugins) is the companion piece; this post is the build walkthrough.
+
+## What you'll build
+
+The scope here is the docs' own hello-world plugin: a single tool named `hello_world` plus a single `post_tool_call` hook, described throughout as the docs example as published in the [user guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/plugins) rather than something we executed ourselves.
+
+That means two files, one manifest and one `register(ctx)` function, plus the enable step. It is deliberately small so you can see the whole registration surface — schema, handler, hook — in one screen before you add your own logic.
+
+## Where Hermes loads plugins from (and why project-local doesn't count)
+
+Hermes discovers plugins from `~/.hermes/plugins/<name>/`, bundled `<repo>/plugins/`, and pip `hermes_agent.plugins` entry points, and it does not load `./.hermes/plugins/` at all, so a plugin placed there will not appear in sessions, per the [user guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/plugins).
+
+### Where plugins are discovered
+
+User plugins live in `~/.hermes/plugins/<name>/`, bundled plugins live in `<repo>/plugins/`, and pip-installed plugins register through `hermes_agent.plugins` entry points. General plugins are disabled by default: discovery finds them, but nothing with hooks or tools loads until its name is in `plugins.enabled` in `~/.hermes/config.yaml`, per the [user guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/plugins).
+
+The management commands are `hermes plugins install NAME`, `hermes plugins enable <name>`, `hermes plugins list`, and `hermes plugins remove NAME`. Installing does not switch a plugin on; it stays disabled until you enable it.
+
+### Why `./.hermes/plugins/` doesn't work for sessions
+
+`./.hermes/plugins/` is not loaded by the gateway: every session — `hermes`, `hermes --tui`, Desktop, messaging, cron — runs inside one gateway that discovers plugins once per process, as documented in the [user guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/plugins).
+
+Setting `HERMES_ENABLE_PROJECT_PLUGINS=true` has no effect on sessions; Hermes shows a warning instead. For local development, put the plugin in `~/.hermes/plugins/<name>/` and restart, or use the doctor command described below to test a path without installing it.
+
+## Step-by-step: build the hello-world plugin
+
+The build is scaffold the directory, write the manifest, write `register(ctx)`, then restart Hermes and enable the plugin, following the directory layout in the [developer guide](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins) and the example in the [user guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/plugins).
+
+### Step 1 — Scaffold the directory
+
+Create `~/.hermes/plugins/hello-world/` and put four possible files in it: `plugin.yaml` (the manifest), `__init__.py` (`register(ctx)`, which wires schemas to handlers), `schemas.py` (tool schemas, what the LLM sees), and `tools.py` (tool handlers, what runs when called).
+
+The example below keeps everything in `__init__.py` for brevity; the full layout separates `schemas.py` (what the LLM sees) from `tools.py` (the handlers).
+
+### Step 2 — Write the manifest
+
+This is `plugin.yaml`, copied verbatim from the docs example:
+
+```yaml
+name: hello-world
+version: "1.0"
+description: A minimal example plugin
+provides_tools:
+  - hello_world
+provides_hooks:
+  - post_tool_call
+```
+
+### Step 3 — Write `register(ctx)`
+
+This is `__init__.py`, also the docs example verbatim:
+
+```python
+"""Minimal Hermes plugin — registers a tool and a hook."""
+import json
+
+def register(ctx):
+    # --- Tool: hello_world ---
+    schema = {
+        "name": "hello_world",
+        "description": "Returns a friendly greeting for the given name.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Name to greet",
+                }
+            },
+            "required": ["name"],
+        },
+    }
+
+    def handle_hello(params, **kwargs):
+        del kwargs
+        name = params.get("name", "World")
+        return json.dumps({"success": True, "greeting": f"Hello, {name}!"})
+
+    ctx.register_tool(
+        name="hello_world",
+        toolset="hello_world",
+        schema=schema,
+        handler=handle_hello,
+    )
+
+    # --- Hook: log every tool call ---
+    def on_tool_call(tool_name, args, result, **kwargs):
+        print(f"[hello-world] tool called: {tool_name}")
+
+    ctx.register_hook("post_tool_call", on_tool_call)
+```
+
+The model-facing description belongs in `schema["description"]`. `ctx.register_tool(description=...)` is separate registry metadata that defaults to the schema description; keep both synchronized if you supply both, and remember the model only sees the schema value, per the [developer guide](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins).
+
+`register(ctx)` runs exactly once at startup. If it raises, the plugin is disabled and Hermes keeps running, so a broken registration does not take your session down.
+
+### Step 4 — Restart and enable
+
+Copy both files into `~/.hermes/plugins/hello-world/`, enable the plugin with `hermes plugins enable hello-world` (general plugins stay off until enabled, per the [user guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/plugins)), then restart Hermes; the model can then call `hello_world`.
+
+The exact console text of install and enable output was not part of what we fetched, so it is not quoted here. What the docs state is the sequence: copy, enable, restart, and the tool becomes callable.
+
+## The manifest, field by field
+
+Manifest v1 uses `name`, `version`, `description`, `provides_tools`, and `provides_hooks`; manifest v2 is additive with every extra field optional, and unknown fields are ignored with a warning, per the [developer guide](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins).
+
+| Field | v1 / v2 | What it does |
+|---|---|---|
+| `name` | v1 | Plugin id, used in `hermes plugins enable <name>` |
+| `version` | v1 | Plugin version string |
+| `description` | v1 | Human-readable summary |
+| `provides_tools` | v1 | Declared tools; drives validate, catalog listing, dashboard auth hint |
+| `provides_hooks` | v1 | Declared hooks |
+| `manifest_version: 2` | v2, optional | Opt into the v2 field set |
+| `api_version`, `requires_plugins` | v2, optional | Compatibility declarations |
+| `python_dependencies`, `python_runtime` | v2, optional | Dependency declarations |
+| `config_schema`, `config_keys` | v2, optional | Settings keys under `plugins.entries.<id>.settings` |
+| `license`, `homepage`, `tags` | v2, optional | Catalog metadata |
+| `requires_auth`, `oauth` | v2, optional | Auth declarations |
+| `provides_locales` | v2, optional | Localization |
+
+The important correction for first-timers: `provides_tools` does NOT decide whether tools load. Once enabled, everything `register()` registers is available. It does drive the `hermes plugins validate` "declared tools" check — a mismatch between declared and registered tools blocks catalog admission — plus catalog listing and a dashboard auth hint.
+
+`config_schema` describes keys under `plugins.entries.<id>.settings`, is validated at load, and mismatches log warnings rather than failures. `requires_env: [API_KEY]` is prompted during `hermes plugins install`.
+
+## Hooks: what `post_tool_call` gives you
+
+`post_tool_call` receives `tool_name, args, result, task_id, duration_ms` and its return value is ignored, while `pre_tool_call` may return `{"action": "block", ...}` to veto or `{"action": "approve", ...}` to escalate to human approval, per the [developer guide](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins).
+
+- `pre_tool_call(tool_name, args, task_id)` — veto or escalate.
+- `post_tool_call(tool_name, args, result, task_id, duration_ms)` — observe; return ignored.
+- `pre_llm_call` / `post_llm_call` — once per turn; `pre_llm_call` can inject context.
+- `on_session_start` / `on_session_end` — session boundaries. The full callback signatures are in the [Event Hooks reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/hooks).
+
+All callbacks should accept `**kwargs`, because documented payloads evolve additively and are keyword payloads. A crashing hook is logged and skipped, not fatal. For the broader runtime picture, including `check_fn` availability checks and `requires_env`, see the [tools runtime docs](https://hermes-agent.nousresearch.com/docs/developer-guide/tools-runtime); for what the model can reach, see [plugin LLM access](https://hermes-agent.nousresearch.com/docs/developer-guide/plugin-llm-access).
+
+## The tool override gate
+
+Without `override=True`, the registry rejects any registration that would shadow a tool from another toolset with a logged warning and a `None` return; non-bundled plugins additionally need `allow_tool_override: true`, or the loader raises `PluginToolOverrideError` and disables the plugin, per the [developer guide](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins).
+
+```yaml
+plugins:
+  entries:
+    hello-world:
+      allow_tool_override: true
+```
+
+The docs describe two routes here. The current route is the `tools.override` capability, declared under `capabilities:`, which gives the user one consent screen. The per-plugin `allow_tool_override` key is the older route: the docs say it still works but is deprecated in favor of capabilities. Check the docs for your version before relying on either.
+
+`override=True` is what lets a plugin replace a built-in such as `web_search`. The gate exists because an enabled plugin that silently replaces `write_file` or `shell_exec` could intercept everything the model routes through it. Every override is logged in `~/.hermes/logs/agent.log`.
+
+## Capabilities: consent before power
+
+Capabilities are a privileged host surface — for example `tools.override` and `llm.model_override` — declared at install or enable time so the user sees a single consent list, and undeclared or unconsented capabilities are off, fail closed, per the [developer guide](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins).
+
+Probe with `ctx.has_capability("tools.override")` and degrade gracefully when it returns false, so your plugin remains useful in a reduced mode instead of failing. One framing point the docs are explicit about: capabilities are consent plus audit, NOT a sandbox.
+
+## Validate before you ship: `hermes plugins doctor`
+
+`hermes plugins doctor [path-or-id]` runs the same discovery, manifest parser, `register(ctx)`, hook registry, and tool registry that Hermes uses, using a temporary `HERMES_HOME`, and it restores registration state afterwards, per the [developer guide](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins).
+
+While registration runs, doctor blocks direct Python socket connections. It reports invalid hook names, callbacks without `**kwargs`, registration failures, and drift between declared and registered tools and hooks. `hermes plugins doctor . --ci` exits non-zero on error, and `hermes plugins validate /path/to/your-plugin --install-deps` runs the catalog-CI check (the catalog rules are described in the [plugin catalog docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/plugin-catalog)).
+
+The safety line: doctor is NOT a sandbox. Plugin code runs in-process with your permissions and can spawn subprocesses, so only run it on code you trust.
+
+## FAQ
+
+### Why isn't my plugin in `./.hermes/plugins/` loading?
+
+Because the gateway does not load that path. Discovery happens once per process, every session runs in a single gateway, and `HERMES_ENABLE_PROJECT_PLUGINS=true` has no effect on sessions — Hermes shows a warning instead, per the [user guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/plugins).
+
+### Do I need `override=True`?
+
+Only if you intend to shadow a tool from another toolset. Without it, a shadowing registration is rejected with a logged warning. Non-bundled plugins also need an operator grant. The docs name the older `allow_tool_override: true` key under `plugins.entries.<id>` in `config.yaml`; the current route is the `tools.override` capability, and without either the plugin is disabled on `PluginToolOverrideError`.
+
+### Why didn't my `/command`'s printed text appear in chat?
+
+Because handlers should RETURN their text, not `print()` it — printed output goes to gateway stdout, not the chat. A `/command` registered with `ctx.register_command` runs in the gateway process owning the session, including the classic `hermes` chat CLI; read the session directory with `agent.runtime_cwd.resolve_agent_cwd()`, not `os.getcwd()`, per the [user guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/plugins).
+
+## How This Guide Was Built
+
+Everything here is drawn from the official Hermes documentation — the [developer guide](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins), the [user guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/plugins), the [tools runtime page](https://hermes-agent.nousresearch.com/docs/developer-guide/tools-runtime), and the [plugin LLM access page](https://hermes-agent.nousresearch.com/docs/developer-guide/plugin-llm-access) — checked against the current docs, Nov 2026.
+
+Two gaps we are stating rather than papering over: the exact text of install and enable output was not fetched, and the full Event Hooks payload tables were not fetched, so neither is quoted. The hello-world files are reproduced verbatim as the docs example, not as a run we performed.
+
+## The Bottom Line
+
+Building a first Hermes plugin comes down to four checks before you share it: use a discovery path the gateway actually reads, write `plugin.yaml` and `register(ctx)`, respect the override gate and capability consent, then run `hermes plugins doctor`. Start from the [developer guide](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins) for the full reference.
+
