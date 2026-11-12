@@ -1,0 +1,124 @@
+---
+title: "Build Log: Routing Hermes Cron Jobs with Fallback Chains (2026)"
+description: "A build-log guide to Hermes cron routing with fallback chains: model resolution, pinning trade-offs, and verification before runs depend on the chain."
+pubDate: "2026-11-12"
+tags: [hermes-agent, cron-jobs, fallback-providers, build-log, automation]
+lastVerified: "2026-11-12"
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/build-log-routing-hermes-cron-jobs-to-free-providers-with-fallbacks-1794504612.webp"
+---
+
+## Why route cron to cheaper providers
+
+Hermes cron jobs resolve their model through a documented three-step chain, and unpinned jobs can inherit a configured fallback chain for resilience, as described in the [cron feature documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) and the [fallback providers guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers). This build log focuses on steering scheduled work toward lower-cost routes without sacrificing reliability.
+
+The goal is to keep recurring automation running when a primary route is unavailable or constrained. Provider availability, rate limits and pricing vary and are outside what the Hermes documentation covers, so this guide describes the routing rules only.
+
+For broader pattern framing, Hermes publishes the official [Automate Anything with Cron guide](https://hermes-agent.nousresearch.com/docs/guides/automate-with-cron). For the chain itself, the [Hermes Agent provider fallback chain setup](/blog/hermes-agent-provider-fallback-chain-setup/) walkthrough adds context.
+
+## Which model actually runs: three-level resolution
+
+At fire time, a Hermes cron job uses its per-job pin, else the `cron.model` configuration, else the main agent model, following the resolution rules in the [cron job model resolution docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron). This three-level order determines exactly which route a scheduled run will attempt.
+
+You can pin a job to a specific route with `hermes cron create/edit --model ... --provider ...`, through the dashboard, or by editing `~/.hermes/cron/jobs.json`. The `--pin` flag locks the current main model onto the job, while `--unpin` makes it follow the main model again. When no per-job override is set, `jobs.json` stores `model` and `provider` as null, and they are resolved at execution time.
+
+Visibility matters when auditing a fleet. Both `hermes cron list` and the `cronjob_manage` tool report whether a job is `pinned`. You can also pin per-job reasoning effort separately with values such as none, minimal, low, medium, high, xhigh, max, or ultra (for example, `hermes cron create/edit --reasoning-effort high`). These controls are detailed in the [Hermes cron documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron).
+
+## The trade-off: pinning removes fallback
+
+A cron job with its own provider, model, or `base_url` never falls back to the global chain, while unpinned jobs inherit `fallback_providers` or the legacy `fallback_model`, as specified in the [cron provider recovery rules](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) and the [fallback providers behavior table](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers). Pinning gives predictability but removes chain-based resilience.
+
+For unpinned jobs, fallback can apply both pre-run (when the primary credentials fail to resolve) and mid-run (when the provider errors during execution). Same-provider credential-pool rotation still applies to pinned jobs. The pre-run key check is skipped for an unpinned job with a fallback chain configured, but it is always run for a pinned job.
+
+## Config walkthrough
+
+The `cron.model` setting defines a fleet default for unpinned jobs, and `fallback_providers` is a top-level YAML list where every entry requires both `provider` and `model`, according to the [cron configuration guidance](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) and the [fallback providers configuration](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers).
+
+### Fleet default with cron.model
+
+Set the fleet default with:
+
+```bash
+hermes config set cron.model <name>
+```
+
+You can also set `cron.model_provider`. Switching the chat model with `hermes model` or `/model` does not change the fleet while `cron.model` is configured. This separation lets interactive sessions and scheduled work follow different routes, as documented in the [cron model settings](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron).
+
+### Building the fallback chain
+
+The fallback chain lives in `~/.hermes/config.yaml` as a top-level `fallback_providers` list. You can manage it with `hermes fallback add`, `hermes fallback list`, `hermes fallback remove`, and `hermes fallback clear`. Every entry must include both `provider` and `model`; entries missing either field are ignored. The [fallback providers reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers) gives this example:
+
+```yaml
+fallback_providers:
+  - provider: openrouter
+    model: anthropic/claude-sonnet-4
+```
+
+Custom OpenAI-compatible endpoint entries take `base_url` and optionally `key_env` (the name of the environment variable holding the key). Triggers include HTTP 429 and 500/502/503 after retries are exhausted, 401/403 and 404 immediately, and repeated invalid or empty responses.
+
+When a 429 names its reset time, the primary is benched until then; if no reset is named, exponential backoff applies from 60 s to 4 h. The optional `fallback: min_switch_reset_seconds: 120` setting skips the switch when the primary reopens soon, and the default 0 means always switch. See the [fallback trigger and rate-limit behavior](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers) for the full rules.
+
+## Verify: `hermes fallback check`
+
+The `hermes fallback check` command performs a static check that resolves each entry and its credentials. The `--live` flag sends one short completion per statically ready entry in parallel, and the command exits with status 1 when any entry is not ready, as described in the [fallback verification docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers). Verification is the gate before relying on a chain for cron runs.
+
+Use the static check to confirm configuration and credential resolution without making inference calls. Add `--live` to validate that statically ready entries can complete a short request. Because the command exits with status 1 when any entry is not ready, it is suitable for gating cron jobs and CI. The `--json` flag is available for machine-readable output.
+
+## Pitfall: the behaviour change that removed pinned-job fallback
+
+Hermes documentation states that pinned jobs once ran on the first working fallback entry with a one-line notice, but now a failed pinned route fails the run, a behaviour change recorded in the [cron provider recovery section](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron). Fleets that assumed pinned jobs were covered by the chain should audit them.
+
+When a pinned route fails, the run fails and the failure alert says the pinned route failed. To restore fallback behavior, unpin the job with `hermes cron edit <job_id> --unpin` and set the desired model through `cron.model`. Readers should audit existing fleets for pinned jobs that were assumed to be protected by the global chain.
+
+## When runs fail anyway: streaks and alerts
+
+Cron jobs track consecutive failed runs (delivery failures excluded), alert once per error signature, and use `failure_repeat_alert_hours: 6` to send one reminder then silence, according to the [cron failure handling documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron). These rules help distinguish transient issues from recurring incidents.
+
+Setting `failure_repeat_alert_hours` to 0 makes the job alert on every failing run. A different error mints a new incident and alerts immediately. The `cron.catch_up_missed` setting controls whether late jobs fire on recovery; late means past a grace window of half the period, clamped 120 s to 2 h, and `false` re-anchors to the next occurrence.
+
+There is also a provider outage hold: for subscription providers reporting a retry-after window with the whole chain unavailable, the scheduler parks the job rather than re-firing into a closed window. These behaviors are covered in the [cron run behavior docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron).
+
+## Skip the model: `no_agent` script jobs
+
+Cron jobs created with `no_agent=True` run a script and deliver stdout without using tokens, a model, or provider fallback, as defined in the [cron script job documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron). This mode bypasses routing concerns entirely for deterministic tasks.
+
+Scripts must be files, not command lines. When a task is deterministic and does not require model reasoning, a script job is often preferable to routing through cheaper providers. The [Automate Anything with Cron guide](https://hermes-agent.nousresearch.com/docs/guides/automate-with-cron) provides pattern framing for choosing automation approaches, and you can explore more ideas in [cron job patterns for 2026](/blog/cron-job-patterns-2026/).
+
+## Comparison table
+
+The table below compares pinned, unpinned, and `no_agent` jobs on the fallback, credential and failure behaviour that the [cron docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) and [fallback providers guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers) describe.
+
+| Mode | Model resolution | Falls back to chain? | Pre-run key check | On failure | Best for |
+| --- | --- | --- | --- | --- | --- |
+| Pinned | Per-job model and provider | Never (same-provider credential-pool rotation only) | Always checked | Run fails, alert says so | One exact route |
+| Unpinned | `cron.model`, else main model | Yes (`fallback_providers` or legacy `fallback_model`) | Skipped when a chain is configured | Alert once per signature | Fleet default with fallback |
+| no_agent | None | n/a | n/a | Not documented here | Deterministic scripts |
+
+## The Bottom Line
+
+Running cron on cheaper providers without losing resilience is best achieved with unpinned jobs, a `cron.model` fleet default, and a verified fallback chain, following the documented approach in the [cron guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) and the [fallback providers documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers). This combination keeps the fallback that pinning removes.
+
+A practical recipe is to set `cron.model`, build the `fallback_providers` chain, and run `hermes fallback check --live`. Pin only when a job truly needs one exact route, and check `pinned` status with `hermes cron list` before assuming coverage. For more operational context, see [cron job patterns for 2026](/blog/cron-job-patterns-2026/).
+
+## How This Guide Was Built
+
+The claims trace to Hermes' official cron and fallback documentation and one community feature request, namely the [cron docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron), the [fallback providers docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers), the [automation guide](https://hermes-agent.nousresearch.com/docs/guides/automate-with-cron), and [GitHub issue 132411](https://github.com/NousResearch/hermes-agent/issues/132411). This guide is assembled from official documentation and community reports — we did not run this build ourselves.
+
+The three official pages provide the verified behavior for model resolution, fallback configuration, verification, and cron run handling. The GitHub issue is a feature request and is not verified as shipped. No latency, cost, or uptime measurements were made.
+
+## FAQ
+
+### Does a pinned job ever fall back?
+
+A pinned cron job does not fall back to the global `fallback_providers` chain; if its pinned route fails, the run fails, as documented in the [cron recovery rules](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron). To restore fallback, unpin the job and rely on `cron.model` with a configured chain described in the [fallback guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers).
+
+### What if a fallback entry lacks provider or model?
+
+Each `fallback_providers` entry must include both `provider` and `model`, and entries missing either field are ignored by Hermes, according to the [fallback providers configuration](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers). Verifying the chain with `hermes fallback check` helps catch incomplete or unresolvable entries before scheduled runs depend on them.
+
+### Does switching my chat model change cron jobs?
+
+Switching the chat model with `hermes model` or `/model` does not change unpinned cron jobs while `cron.model` is set, because the fleet default takes precedence, as explained in the [cron model resolution docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron). This separation keeps interactive and scheduled routing independent.
+
+### Can I set fallback_providers per job?
+
+Per-job `fallback_providers` is a feature request and is not verified as shipped, as indicated by [GitHub issue 132411](https://github.com/NousResearch/hermes-agent/issues/132411). Current fallback behavior is configured globally, with unpinned jobs inheriting the chain described in the [fallback providers documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers).
