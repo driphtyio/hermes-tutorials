@@ -1,0 +1,162 @@
+---
+title: "Hermes Agent Memory Management: Build Persistent Context Across Sessions"
+description: "This practical guide shows how to curate Hermes Agent's MEMORY.md and USER.md stores, consolidate when full, time session resets, and fix forgotten facts."
+pubDate: 2026-11-13
+lastVerified: 2026-11-13
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-memory-management-build-persistent-context-across-sessions-1794589703.webp"
+tags:
+  - hermes-agent
+  - memory-management
+  - tutorial
+  - agent-configuration
+---
+
+# Hermes Agent Memory Management: Build Persistent Context Across Sessions
+
+**TLDR:** Hermes Agent gives you two curated stores — MEMORY.md for the agent's notes and USER.md for your profile — each with a fixed character budget and no auto-compaction. This guide covers what to save, how to patch and remove entries, how to consolidate before overflow, when to start a fresh session, how to search old sessions, and the five-step fix for "it forgot".
+
+This guide is based on the official Hermes Agent documentation and its source; it was not run as a timed benchmark.
+
+## Two Stores, Two Budgets
+
+Hermes Agent keeps two curated Markdown stores: MEMORY.md holds the agent's personal notes at 2,200 characters (about 800 tokens), set by `memory.memory_char_limit` with a default of 2200, and USER.md holds your profile at 1,375 characters (about 500 tokens), set by `memory.user_char_limit` with a default of 1375. Both live in `~/.hermes/memories/`; a named profile reads `~/.hermes/profiles/<name>/memories/` instead.
+
+That split matters when you decide where a fact belongs. MEMORY.md is the agent's working knowledge — environment facts, conventions, lessons learned — while USER.md is about you: preferences, communication style, workflow habits. Memory is scoped per profile, per the [Hermes memory docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory): `hermes -p work` reads the work profile's memory directory, not the default one, so a forgotten fact may be living in a different file.
+
+Inside the rendered system-prompt block, entries are separated by the section sign §, and entries may span multiple lines. The header reports usage in plain terms, for example:
+
+```text
+MEMORY (your personal notes) [67% — 1,474/2,200 chars]
+```
+
+Treat that percentage as your working dashboard. The docs give typical capacity as roughly 8–15 entries in memory and 5–10 in the user profile, which means short, well-scoped entries beat long essays.
+
+## The Frozen-Snapshot Rule
+
+A note written mid-session does not change the agent's behaviour until the next session. Memory loads once at session start and is injected into the system prompt as a frozen snapshot to preserve the prefix cache; writes reach disk immediately, tool responses show live state, and the prompt only refreshes when a session ends.
+
+This is the single most common source of "I told it to remember and nothing changed." The write is not lost — the file on disk is already updated — but the model working in the current session still sees the snapshot it was started with. The practical consequence: save the fact, finish or reset the session, and the next one picks it up.
+
+Tool responses show the live state, while the prompt keeps the snapshot it started with. For the underlying architecture behind this design, see the [internals deep dive](/blog/hermes-memory-internals-deep-dive/).
+
+## What to Save and What to Skip
+
+The docs sort saves from skips along one line: persist what changes future behaviour, discard what is trivial or re-discoverable. Save preferences to USER.md, environment facts to MEMORY.md, corrections, conventions, dated completed work, and explicit "remember that" requests; skip trivia, re-searchable facts, raw dumps, session ephemera, and anything already in SOUL.md or AGENTS.md.
+
+The skip list is worth internalising because the budget is small. Language-feature details a web search can answer, raw code or log dumps, temporary paths, and one-off debug context all burn characters without improving the next session. The docs also list content already in SOUL.md or AGENTS.md as a skip.
+
+There is also a skill-vs-memory decision, covered in the [Skills docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills). A location a recurring task needs every run is usually better as a skill, because skills load only when relevant and do not compete for the 2,200-character budget. Memory is for context that must always be present; skills are for instructions that only matter on demand.
+
+## Editing in Place: add, patch, remove
+
+The memory tool exposes exactly three write actions: add a new entry, patch one span inside an entry, and remove an entry. Every call must carry a top-level target of `memory` or `user`, with a single target per batch, and there is no read action at all because content is injected into the prompt automatically.
+
+Precision rules keep the store tidy:
+
+- **add** creates a new entry under the chosen target.
+- **patch** replaces one span inside an existing entry. `old_text` must occur exactly once in that entry; if it occurs more than once, the call is rejected. If `old_text` matches across several entries, the call errors and asks for a more specific match.
+- **remove** deletes an entry, matched by a unique substring via `old_text`.
+
+Two guard rails sit behind these actions, per the [Hermes memory docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory). Exact duplicates are rejected — the tool returns success with a "no duplicate added" message rather than padding the store. A security scan blocks prompt-injection, credential-exfiltration, and SSH-backdoor patterns, plus invisible Unicode, before an entry ever reaches the system prompt.
+
+## When the Store Is Full
+
+Memory never auto-compacts. A write that would push a store past its limit returns an error naming the current usage, the entry size, and the overrun. The error shape in the docs starts like this:
+
+```text
+Memory at 2,100/2,200 chars; adding this entry (250 chars) would exceed the limit...
+```
+
+Nothing is silently dropped, which is the point: you always know a write failed. The agent then removes or shortens entries and retries as one batch. Note that patch is bound by the same limit, so a patch that lengthens an entry can overflow just as an add can.
+
+The docs' best practice is to consolidate above 80% capacity before adding anything new. That might mean merging three separate "project uses X" entries into one compact line, or removing dated work that is no longer relevant. Consolidation keeps the header percentage healthy and buys room for the next genuinely useful fact.
+
+## When to Start a New Session
+
+Start a fresh session with `/new` at natural boundaries — a finished task, a topic change, or the start of the day — because the updated MEMORY.md and USER.md snapshot only loads then. On the CLI every invocation is already a new session, while Telegram and Discord chats are one continuous session that survives restarts and reboots.
+
+Because memory is designed around the moment a session ends, timing `/new` well is what makes curation pay off. A chat that never resets can run for weeks with compaction running repeatedly, and the forget → recall → search loop almost never fires. The [Sessions docs](https://hermes-agent.nousresearch.com/docs/user-guide/sessions) describe the boundary rules: gateways get their boundary from `/new`, while the CLI gets one per invocation.
+
+## session_search: The Unlimited Other Half
+
+Session search is the complement to curated memory: every CLI and messaging session is stored in SQLite at `~/.hermes/state.db` with FTS5 full-text search, returning raw messages in about 20ms with no LLM summarisation. Browse it with `hermes sessions list`; memory stays small and always in the prompt, while search is unlimited, on-demand, and free.
+
+```bash
+hermes sessions list
+```
+
+Results are raw messages rather than summaries, and the agent can scroll forward or backward within a session it has found. That makes history the right tool for "what did we decide last week," while memory is the right tool for "what must be true every session." The docs put the two side by side: memory is roughly 1,300 tokens total, always in the prompt, and manually curated; session_search is unlimited, on-demand, and costs no LLM calls.
+
+Within a single session the agent rarely consults session_search — the curated snapshot is right there. Search becomes valuable across sessions, once the prompt snapshot has moved on.
+
+## Diagnosing "It Forgot": Five Checks in Order
+
+When an agent forgets a fact, the docs prescribe five checks in order: confirm the write actually happened with `cat`, confirm a staged write was not left unapproved, confirm you are in the right profile, confirm `memory.memory_enabled` is on, and start a new session so the frozen snapshot reloads.
+
+Work through them in exactly this order:
+
+1. **Check the write happened.** Open both files:
+
+```bash
+cat ~/.hermes/memories/MEMORY.md
+cat ~/.hermes/memories/USER.md
+```
+
+A model that says "I've saved that" without a memory tool call has saved nothing. Small local models (roughly under 30B) and weak tool-callers do this often.
+
+2. **Check the write was not staged.** With `write_approval` on, run `/memory pending`, then `/memory approve all` if the entry is right.
+3. **Check the profile.** `hermes -p work` reads `~/.hermes/profiles/work/memories/`; `hermes profile list` shows what exists.
+4. **Check memory is enabled.** `memory.memory_enabled` set to false removes the tool entirely.
+5. **Start a new session** after the write, so the frozen snapshot reloads.
+
+Two things are not memory at all: variables in `.env` (credentials and settings) and facts mentioned in passing without a save request. Both look like forgotten facts but were never stored, per the [Hermes memory docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory).
+
+## Tuning the Loop: write_approval and Background Review
+
+`write_approval` defaults to false, so writes save immediately; turn it on and the CLI prompts inline while messaging, scripts, and background review stage writes for `/memory pending` and `/memory approve`. The background-review loop can also route to a cheaper model through `auxiliary.background_review`, and `display.memory_notifications` controls the feedback.
+
+The four documented approval commands are:
+
+```text
+/memory pending
+/memory approve <id> | all
+/memory reject <id> | all
+/memory approval on|off
+```
+
+Approval binds to the exact entry that was staged: if the entry changed after staging, the write is refused and stays pending. `/memory pending` also tags automatic saves with `[auto]`, and `/memory approval on|off` toggles the gate and persists it.
+
+For the self-improvement loop, background review may save a memory or update a skill after a turn. Its keys must live under `auxiliary:` — a top-level `background_review` block is not read. `auxiliary.background_review.provider` and `auxiliary.background_review.model` route reviews to a cheaper model; the docs claim roughly a 3–5x cost reduction in their benchmarks, with memory capture identical and skill capture near-identical in their testing. Notification volume is set by `display.memory_notifications`: `off`, `on` (the default, which prints "💾 Memory updated"), or `verbose`, which shows a preview.
+
+## Auditing Learned Nodes with journey
+
+`hermes journey list` shows everything the agent has learned as inspectable nodes, including `memory:<source>:<index>:<fingerprint>` ids. From there you can delete a node with `hermes journey delete` to remove a memory chunk or archive a skill, or open it in your editor with `hermes journey edit`; in chat the same surface is `/journey`.
+
+```bash
+hermes journey list
+hermes journey delete <node> -y
+hermes journey edit <node>
+```
+
+This is the audit trail for everything the save rules and background review have produced. Skills are archived rather than destroyed, so they stay restorable; memory chunks are removed outright. Use the list to spot entries that no longer earn their characters, then delete or edit them before the store approaches its limit.
+
+## FAQ
+
+### Why didn't the note I saved mid-session change the agent's behavior?
+
+Because memory is loaded once at session start and injected as a frozen snapshot, which preserves the LLM prefix cache. Your write persisted to disk immediately, but the prompt the model is working from does not refresh mid-session — tool responses show live state, while the snapshot waits. The note takes effect the next time a session starts.
+
+### What actually happens when MEMORY.md hits its limit?
+
+An over-limit write returns an error rather than silently dropping anything, reporting current usage, the entry size, and how far over the limit the write would go. The agent must free space in the same turn — remove an entry or shorten one with patch — then retry as one batch. Consolidating above 80% capacity avoids the situation.
+
+### Should this fact be a memory entry or a skill?
+
+If a recurring task needs the same location or instruction every run, make it a skill: skills load only when relevant and do not compete for the character budget. Reserve memory for facts that must be present in every session, such as preferences, environment facts, corrections, and conventions.
+
+## Where to Go Next
+
+- [Hermes memory internals deep dive](/blog/hermes-memory-internals-deep-dive/) — the architecture behind snapshots, writes, and the store layout.
+- [Memory providers](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory-providers) — RetainDB and ByteRover are bundled, while Honcho, Hindsight, Supermemory, Mem0, OpenViking, and Holographic install via `hermes plugins install`. Run `hermes memory setup` to pick one and `hermes memory status` to see what is active; providers run alongside the built-in stores, never replacing them.
+- [Sessions](https://hermes-agent.nousresearch.com/docs/user-guide/sessions), [Profiles](https://hermes-agent.nousresearch.com/docs/user-guide/profiles), and [Skills](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills) for the surrounding configuration surface.
+
