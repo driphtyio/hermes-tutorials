@@ -1,4 +1,4 @@
-// AUTO-GENERATED from NousResearch/hermes-agent GitHub releases (49 releases, 2026-03-12..2026-11-13).
+// AUTO-GENERATED from NousResearch/hermes-agent GitHub releases (50 releases, 2026-03-12..2026-11-14).
 // Regenerate via scripts/gen-changelog.py — do not hand-edit entries.
 export interface ChangelogLink {
   url: string;
@@ -20,6 +20,24 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  {
+    "tag": "v0.23.1+canary.20261114T064334Z",
+    "version": "v0.23.1",
+    "codename": "",
+    "date": "2026-11-14",
+    "summary": "",
+    "highlights": [],
+    "prs": "",
+    "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1%2Bcanary.20261114T064334Z",
+    "compare": "https://github.com/NousResearch/hermes-agent/compare/v0.23.1+canary.20261113T064447Z...v0.23.1+canary.20261114T064334Z",
+    "links": [
+      {
+        "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1%2Bcanary.20261114T064334Z",
+        "label": "Release notes (v0.23.1+canary.20261114T064334Z)"
+      }
+    ],
+    "body": "## Downloads\n\n### Hermes Desktop\n\n| OS | Architecture | Download |\n|---|---|---|\n| macOS | Apple Silicon (M-series) | [DMG](https://hermes-assets.nousresearch.com/releases/tag/v0.23.1%2Bcanary.20261114T064334Z/HermesBundled-0.23.1%2Bcanary.20261114T064334Z-mac-arm64.dmg) |\n| Windows | x86 (64-bit) | [MSIX](https://hermes-assets.nousresearch.com/releases/tag/v0.23.1%2Bcanary.20261114T064334Z/HermesBundled-0.23.1%2Bcanary.20261114T064334Z-win-x64.msix) |\n| Windows | ARM (arm64 / aarch64) | [MSIX](https://hermes-assets.nousresearch.com/releases/tag/v0.23.1%2Bcanary.20261114T064334Z/HermesBundled-0.23.1%2Bcanary.20261114T064334Z-win-arm64.msix) |\n\n### Native install/chat smoke\n\nDownload availability is independent of smoke status. Each result covers all native legs in that format group. Linux bundles are disabled; unsigned Store envelopes are not install-smoked. No-upload dry tags have no download handoff and are not smoke-qualified.\n\n| Packages | Smoke status |\n|---|---|\n| macOS DMG + ZIP (arm64) | Passed |\n| Windows MSIX (arm64) | Passed |\n| Windows MSIX (x64) | Passed |\n\n**Full Changelog**: [v0.23.1+canary.20261113T064447Z...v0.23.1+canary.20261114T064334Z](https://github.com/NousResearch/hermes-agent/compare/v0.23.1+canary.20261113T064447Z...v0.23.1+canary.20261114T064334Z)"
+  },
   {
     "tag": "v0.23.1+canary.20261113T064447Z",
     "version": "v0.23.1",
