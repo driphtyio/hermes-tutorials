@@ -1,0 +1,115 @@
+---
+title: "How to Connect Hermes Agent to an Obsidian Vault in 2026: Setup, Read/Write Verification, and Profile Boundaries"
+description: "Learn how to connect Hermes Agent to an Obsidian vault, verify read and write access, and understand profile and memory boundaries for portable Markdown notes."
+pubDate: "2026-11-14"
+tags: ["tutorial", "hermes-agent", "obsidian", "markdown", "profiles"]
+lastVerified: "2026-11-14"
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-obsidian-vault-setup-2026-1794673485.webp"
+keywords: ["Hermes Agent Obsidian vault", "OBSIDIAN_VAULT_PATH setup", "Hermes Obsidian read write", "Hermes profiles boundaries", "Hermes Agent memory", "Obsidian Markdown workflow"]
+---
+
+If you use Hermes Agent alongside an Obsidian vault, you can connect the two through a filesystem-first workflow, verify read and write access, and keep profile and memory boundaries clear. This guide is documentation-based and walks through setup, validation, and common pitfalls without assuming a specific hosting environment.
+
+## How This Guide Was Built
+
+This guide is based on official Hermes Agent documentation and third-party setup notes — we did not run the Obsidian workflow hands-on. The bundled-skill behavior described here comes from the official [Hermes Agent Obsidian skill documentation](https://hermes-agent.nousresearch.com/docs/user-guide/skills/bundled/note-taking/note-taking-obsidian), not a local run: the skill was not present under `~/.hermes/skills/` on our build host, and `OBSIDIAN_VAULT_PATH` was not set in the host `.env`.
+
+Sources were checked on 2026-11-14. The official Hermes Agent docs are primary: the [Obsidian skill page](https://hermes-agent.nousresearch.com/docs/user-guide/skills/bundled/note-taking/note-taking-obsidian), [profiles documentation](https://hermes-agent.nousresearch.com/docs/user-guide/profiles), and [memory documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory/). Two hermes-agent.ai pages are used as third-party references and labeled as such throughout: a [third-party Obsidian setup guide](https://hermes-agent.ai/blog/hermes-agent-obsidian-integration) and a [third-party integration boundaries note](https://hermes-agent.ai/integrations/obsidian).
+
+## What the Bundled Obsidian Skill Actually Does
+
+Hermes ships a bundled `note-taking/obsidian` skill (version 1.0.0, installed by default per the docs) for filesystem-first vault work: reading notes, listing notes, searching note files, creating notes, appending content, and adding wikilinks. It operates on plain Markdown files on Linux, macOS, and Windows, which keeps your notes portable and vendor-neutral ([official Obsidian skill documentation](https://hermes-agent.nousresearch.com/docs/user-guide/skills/bundled/note-taking/note-taking-obsidian)).
+
+Because the workflow is filesystem-first, Hermes works with ordinary `.md` files rather than a proprietary store. That means the same notes remain usable in Obsidian and other Markdown tools without migration, preserving flexibility in how you edit, sync, and back up your vault.
+
+## Setup Step 1 — Set OBSIDIAN_VAULT_PATH in the Right .env
+
+Set `OBSIDIAN_VAULT_PATH` in your profile's `.env` file; if it is unset, the skill falls back to `~/Documents/Obsidian Vault`. The documented convention is `${HERMES_HOME:-~/.hermes}/.env` ([official Obsidian skill documentation](https://hermes-agent.nousresearch.com/docs/user-guide/skills/bundled/note-taking/note-taking-obsidian)). To print the active profile's `.env` path, run `hermes -p <profile> config env-path`, a command the [third-party setup guide](https://hermes-agent.ai/blog/hermes-agent-obsidian-integration) uses ([profiles documentation](https://hermes-agent.nousresearch.com/docs/user-guide/profiles)).
+
+Each profile has its own `.env` (for example, `~/.hermes/profiles/coder/.env`), so the vault path is configured per profile. As an example only, the third-party guide shows a line like `OBSIDIAN_VAULT_PATH="/Users/alex/Documents/Obsidian Vault"`. After changing the environment, start a new Hermes process; for a gateway service, confirm that the service has reloaded the intended value. The same third-party guide suggests an optional layout with one `Hermes-Agent` folder containing `Projects`, `Research`, and `Memory-Review` subfolders.
+
+## Setup Step 2 — Resolve the Vault Path Before Calling File Tools
+
+File tools do not expand shell variables, so never pass a path containing `$OBSIDIAN_VAULT_PATH` to `read_file`, `write_file`, `patch`, or `search_files`. Ask Hermes to resolve the setting and report only the resulting absolute vault path—not the whole `.env`. Vault paths may contain spaces, which is one reason the official docs prefer file tools over shell commands ([official Obsidian skill documentation](https://hermes-agent.nousresearch.com/docs/user-guide/skills/bundled/note-taking/note-taking-obsidian), [third-party setup guide](https://hermes-agent.ai/blog/hermes-agent-obsidian-integration)).
+
+Using a concrete absolute path avoids subtle failures and keeps credentials or unrelated settings private.
+
+## Reading, Listing, and Searching Notes
+
+Read notes with `read_file` and the resolved absolute path—the official docs prefer it over `cat` for its line numbers and pagination. List notes with `search_files` using `target: "files"` and `pattern: "*.md"`. Search inside notes with `search_files` using `target: "content"`, your regex as `pattern`, and `file_glob: "*.md"` to stay within Markdown ([official Obsidian skill documentation](https://hermes-agent.nousresearch.com/docs/user-guide/skills/bundled/note-taking/note-taking-obsidian), [third-party setup guide](https://hermes-agent.ai/blog/hermes-agent-obsidian-integration)).
+
+Per the third-party guide, Obsidian refreshes its view when files change externally, but that does not mean Hermes automatically indexes the vault; every read, list, or search is an explicit file-tool call against the resolved path.
+
+## Creating, Appending, and Wikilinking Notes
+
+Create notes with `write_file`, passing the resolved absolute path and full Markdown content. For appends, use `patch` for an anchored append when there is stable context such as a heading, or rewrite the whole note with `write_file` when that is clearer. Link notes with Obsidian's `[[Note Name]]` wikilink syntax to keep connections portable across the vault ([official Obsidian skill documentation](https://hermes-agent.nousresearch.com/docs/user-guide/skills/bundled/note-taking/note-taking-obsidian)).
+
+## Read/Write Verification — The Disposable-Note Test
+
+Write a disposable note containing a unique marker, open it in Obsidian to confirm the marker, then start a fresh Hermes session and ask it to read the same file back. An assistant's "done" sentence is not enough. The fresh session matters because it shows the note is read back from disk rather than repeated from the conversation ([third-party setup guide](https://hermes-agent.ai/blog/hermes-agent-obsidian-integration), [official Obsidian skill documentation](https://hermes-agent.nousresearch.com/docs/user-guide/skills/bundled/note-taking/note-taking-obsidian)).
+
+This is a documented, recommended check described by the third-party guide, not a procedure performed for this post. Completing it gives you confidence that both write and read operations target the intended vault path.
+
+## Profile Boundaries — Which Hermes Sees Which Vault
+
+A profile is a separate Hermes home directory with its own `config.yaml`, `.env`, `SOUL.md`, memories, sessions, skills, cron jobs, and state database; `HERMES_HOME` is the profile boundary. Profiles do not sandbox the agent—a sandbox is what limits filesystem access—and tool execution starts from `terminal.cwd`, not automatically from `HERMES_HOME` ([profiles documentation](https://hermes-agent.nousresearch.com/docs/user-guide/profiles)).
+
+Because each profile has its own `.env` and memories, `OBSIDIAN_VAULT_PATH` is per-profile. A default-profile CLI session and a bot on another profile do not share memory or configuration unless you point both at the same vault path. Host profiles still share user-level CLI state, because tool subprocesses keep the real OS-user `HOME` by default ([profiles documentation](https://hermes-agent.nousresearch.com/docs/user-guide/profiles)).
+
+## Memory Boundaries — MEMORY.md and USER.md Are Not Vault Notes
+
+Built-in memory means `MEMORY.md` (about 2,200 characters) and `USER.md` (about 1,375 characters), stored in `~/.hermes/memories/` and injected as a frozen snapshot at session start; a named profile like `hermes -p work` reads `~/.hermes/profiles/work/memories/` instead. A vault note is separate from these files, and `.env` variables are credentials and settings—not memory ([memory documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory/), [third-party setup guide](https://hermes-agent.ai/blog/hermes-agent-obsidian-integration)).
+
+Facts mentioned in passing are not saved unless requested. The memory tool gate is not a filesystem lock—generic file tools and the terminal can still edit `MEMORY.md` or `USER.md` in a foreground turn ([memory documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory/)).
+
+## Remote, Container, and VPS Caveats
+
+Hermes only sees Markdown files visible to its execution environment: your laptop vault is not automatically visible to a VPS, Docker container, or managed runtime. A successful sync does not prove a separate container or gateway can see the files—check the path inside the execution container, not just the host path, and give Docker an appropriate mount ([third-party setup guide](https://hermes-agent.ai/blog/hermes-agent-obsidian-integration), [third-party integration boundaries note](https://hermes-agent.ai/integrations/obsidian)).
+
+The third-party boundaries note states that a Mac path is not present on a VPS, while an SSH backend sees the remote filesystem. Treat server-sync specifics as unverified unless you can confirm the resolved path and file visibility from within the actual execution environment.
+
+## Scoping Rules — What Not to Expose to a Synced Vault
+
+Avoid symlinking all of `~/.hermes` into a synced vault, because that directory can include credentials and private operational state. Point Hermes at one reviewable folder rather than the whole vault, and do not broaden mounts to your whole home folder ([third-party setup guide](https://hermes-agent.ai/blog/hermes-agent-obsidian-integration), [third-party integration boundaries note](https://hermes-agent.ai/integrations/obsidian)).
+
+## Cheat Sheet — Vault Task vs. File-Tool Operation
+
+The bundled skill maps every vault task to a generic file tool: `read_file` for reading, `search_files` for listing and content search, `write_file` for creating or rewriting, and `patch` for anchored appends. The table below pairs each operation with the parameters the official docs specify, so you can see which operation each task maps to ([official Obsidian skill documentation](https://hermes-agent.nousresearch.com/docs/user-guide/skills/bundled/note-taking/note-taking-obsidian)).
+
+| Vault task (what you ask the skill) | File-tool operation used | Key parameters (per official docs) |
+|---|---|---|
+| Read a note | `read_file` | Resolved absolute path; preferred over `cat` (line numbers, pagination) |
+| List all notes | `search_files` | `target: "files"`, `pattern: "*.md"`, resolved vault path |
+| Search note contents | `search_files` | `target: "content"`, `pattern:` your regex, `file_glob: "*.md"` |
+| Create a note | `write_file` | Resolved absolute path, full Markdown content |
+| Append to a note | `patch` (or `write_file`) | Anchored append after stable context (e.g., a heading); `write_file` full rewrite when clearer |
+| Link notes | inside `write_file`/`patch` content | `[[Note Name]]` wikilink syntax |
+
+## Troubleshooting Common Connection Failures
+
+The failures below are the ones the sources describe. Each one resolves by checking the concrete absolute path first ([official Obsidian skill documentation](https://hermes-agent.nousresearch.com/docs/user-guide/skills/bundled/note-taking/note-taking-obsidian), [profiles documentation](https://hermes-agent.nousresearch.com/docs/user-guide/profiles), [memory documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory/)).
+
+- **Path errors containing `$`**: Cause: file tools do not expand shell variables. Fix: resolve `OBSIDIAN_VAULT_PATH` and pass a concrete absolute path.
+- **Falls back to `~/Documents/Obsidian Vault`**: Cause: environment variable unset or stale process. Fix: set it in the correct `.env`, start a new Hermes process, and confirm a gateway service reloaded the value ([third-party setup guide](https://hermes-agent.ai/blog/hermes-agent-obsidian-integration)).
+- **Invisible on VPS or Docker**: Cause: execution-environment visibility. Fix: check the path inside the execution container and provide an appropriate mount ([third-party setup guide](https://hermes-agent.ai/blog/hermes-agent-obsidian-integration), [third-party integration boundaries note](https://hermes-agent.ai/integrations/obsidian)).
+- **"Forgot" between sessions**: Cause: `.env` is not memory. Fix: ask Hermes to save needed facts, or keep them in a vault note.
+- **Shell breaks on spaces**: Cause: vault paths may contain spaces. Fix: prefer file tools with resolved absolute paths.
+- **Skill not found on your host**: The docs list it as bundled by default (v1.0.0), but it was not present on our build host. Confirm the skill exists on your install before relying on it.
+
+## FAQ
+
+### Does Hermes need the Obsidian app running?
+
+The official skill page describes file-level operations on Markdown files and does not describe any connection to the Obsidian app. Every operation is an explicit file-tool call on a resolved absolute path ([official Obsidian skill documentation](https://hermes-agent.nousresearch.com/docs/user-guide/skills/bundled/note-taking/note-taking-obsidian)).
+
+### Does saving OBSIDIAN_VAULT_PATH in .env give Hermes a memory of my vault?
+
+No. Saving the vault path in `.env` configures a workflow; it does not create a memory entry. Built-in memory is `MEMORY.md` and `USER.md`, injected as a frozen snapshot at session start, and `.env` variables are credentials and settings. Facts mentioned in passing are not remembered unless you ask for them to be saved ([memory documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory/), [third-party setup guide](https://hermes-agent.ai/blog/hermes-agent-obsidian-integration)).
+
+### Do profiles keep a second Hermes instance out of my vault?
+
+No. Profiles do not sandbox the agent—a profile is a separate home directory for config, `.env`, memories, sessions, skills, and state, and a sandbox is what limits filesystem access. Tool execution starts from `terminal.cwd`, not automatically from `HERMES_HOME`, and host installs keep the real OS-user `HOME` by default ([profiles documentation](https://hermes-agent.nousresearch.com/docs/user-guide/profiles)).
+
+## The Bottom Line
+
+Connecting Hermes to an Obsidian vault is a path problem and a boundary problem: set `OBSIDIAN_VAULT_PATH` per profile, resolve it to a concrete absolute path before any file tool, verify with a disposable note in a fresh session, and treat profiles and memory as separate concerns. Because the skill is filesystem-first, your notes stay portable Markdown with no lock-in.

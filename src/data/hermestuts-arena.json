@@ -16381,6 +16381,184 @@
           "winner": false
         }
       ]
+    },
+    {
+      "id": null,
+      "match_id": "arena-hermestuts-obsidian-vault",
+      "slug": "hermes-agent-obsidian-vault-setup-2026",
+      "topic": "How to Connect Hermes Agent to an Obsidian Vault in 2026: Setup, Read/Write Verification, and Profile Boundaries",
+      "category": "tutorial",
+      "type": "content",
+      "date": "2026-11-14",
+      "pipeline": "cron-subagent-arena",
+      "topic_source": "in-session research (queue her-0022 skipped: covered by build-custom-mcp-server; all other non-build-log queued items already covered)",
+      "winner": "commandcode/stealth/glyph-cluster:free",
+      "winner_provider": "commandcode",
+      "winner_family": "stealth",
+      "winner_score": 7.18,
+      "shipped_score": 7.18,
+      "pre_edit_score": 7.75,
+      "threshold": 7.5,
+      "threshold_met": false,
+      "threshold_note": "Shipped text window-2 mean 7.18 (5 passes, spread 1.35); same-window pre-QA control 7.75. Redo budget 1 of 3 used. Shipped as a logged waiver (ship-waivers.jsonl) under the user's ship-best policy.",
+      "verification_status": "confirmed",
+      "verification_note": "disprove_pass on final text (fresh dir, claude-haiku-5-5 via claude-cli, family differs from winner): 5 claims confirmed.",
+      "plan_model": "glm-5.3 (cline-pass; 2787 words; MUST include/MUST NOT include present, no truncation)",
+      "plan_gate": {
+        "mode": "shadow",
+        "gate": "ok",
+        "ambiguity_risk": 0.3,
+        "contract_state": "A",
+        "flagged": false
+      },
+      "jev_triage": "9/9 solid, 0 hard-skipped",
+      "qa_model": "claude-cli/claude-sonnet-5-5",
+      "qa_verdict_note": "Verdict FAIL with 6 defects (host path leak + misattributed third-party claim, non-sequitur HOME claim, wrong fresh-session rationale, unsourced advice, filler/repetition, FAQ 'No.' without source). All 6 verified against source and applied.",
+      "research_lane": "NOT DISPATCHED: orchestrator in-session research (web_search + firecrawl-research.py --save, 7 pages saved; source-manifest pass)",
+      "research_source": "in-session",
+      "brief_contract": true,
+      "builder_lanes_dispatched": 10,
+      "builders_produced_draft": 9,
+      "dossier_check": "2 sources NOT_REPRESENTED: 02 skins (saved, unused), 05 help.obsidian.md/sync/headless (dead: returns 'Not found')",
+      "link_check": "5 unique external links, 5 OK, 0 dead (arena-linkcheck). Policy wants >=10-12: SHORTFALL, no unverified URLs padded in.",
+      "hero": "R2 GET 200 (gen-image-verified.sh, Lumenfall FLUX.1-schnell)",
+      "hero_url": "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-obsidian-vault-setup-2026-1794673485.webp",
+      "deviations": [
+        "Builder brief leaked the orchestrator's local check (hermes config env-path printed a host path); QA caught it and it was removed from the shipped post.",
+        "Length cap applied at ~2,500 body words (skill rule); 3 drafts over cap and beam 16 over; all scored and recorded.",
+        "Leaderboard NOT rebuilt (hermestuts has no canonical rebuilder; append-only per store note).",
+        "Cron prompt names 3000-word and 1400-2100-word bounds; operative cap 2,500 used.",
+        "Judge stage used the 7.5 gate (cron prompt) while the triage spec still says 8.0 (stale)."
+      ],
+      "results": [
+        {
+          "model": "stealth/glyph-cluster:free",
+          "provider": "commandcode",
+          "family": "stealth",
+          "score": 7.18,
+          "status": "judged_shipped_text_below_threshold",
+          "winner": true,
+          "spread": 1.35,
+          "body_words": 1968,
+          "window_scores": {
+            "w1_pre_qa": 7.9,
+            "w2_shipped_post_qa": 7.18,
+            "w2_pre_qa_control": 7.75
+          },
+          "note": "Winner by window-1 (7.90, top eligible). QA FAIL (6 defects, all applied). Score recorded is the SHIPPED text in window 2; threshold_met false (waived)."
+        },
+        {
+          "model": "gpt-6-luna",
+          "provider": "commandcode",
+          "family": "gpt",
+          "score": 7.77,
+          "status": "judged",
+          "winner": false,
+          "spread": 1.4,
+          "body_words": 2276,
+          "window_scores": {
+            "w1": 7.77,
+            "w2": 7.18
+          }
+        },
+        {
+          "model": "mimo-v2.6-flash",
+          "provider": "opencode-go",
+          "family": "mimo",
+          "score": 7.72,
+          "status": "ineligible_hero_prompt_missing",
+          "winner": false,
+          "spread": 0.5,
+          "body_words": 2499,
+          "note": "HERO_IMAGE_PROMPT line missing; not re-run (ineligible per gate)."
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "provider": "claude-cli",
+          "family": "claude",
+          "score": 7.17,
+          "status": "judged",
+          "winner": false,
+          "spread": 0.75,
+          "body_words": 2149
+        },
+        {
+          "model": "deepseek-v4.1-flash",
+          "provider": "commandcode",
+          "family": "deepseek",
+          "score": 7.35,
+          "status": "ineligible_length",
+          "winner": false,
+          "spread": 2.45,
+          "body_words": 2925,
+          "window_scores": {
+            "w1": 7.35,
+            "rejudge": 7.13
+          },
+          "note": "Over ~2,500 body-word cap; re-judged (spread > 1.5)."
+        },
+        {
+          "model": "beam-free",
+          "provider": "opencode-go",
+          "family": "beam",
+          "score": 7.27,
+          "status": "ineligible_length",
+          "winner": false,
+          "spread": 1.15,
+          "body_words": 2516,
+          "note": "16 words over the ~2,500 body cap."
+        },
+        {
+          "model": "glm-5.3-flash",
+          "provider": "opencode-go",
+          "family": "glm",
+          "score": 7.07,
+          "status": "ineligible_length",
+          "winner": false,
+          "spread": 1.5,
+          "body_words": 2807
+        },
+        {
+          "model": "muse-spark-1.3-contributor",
+          "provider": "opencode-go",
+          "family": "muse",
+          "score": 6.27,
+          "status": "judged_noisy",
+          "winner": false,
+          "spread": 2.7,
+          "body_words": 2327,
+          "window_scores": {
+            "w1": 6.27,
+            "rejudge": 7.95,
+            "w2_control": 6.58
+          },
+          "note": "Bimodal across windows (6.27 / 7.95 / 6.58); mean not trusted. Eligible but not winner."
+        },
+        {
+          "model": "minimax-m3.1-flash",
+          "provider": "opencode-go",
+          "family": "minimax",
+          "score": 4.87,
+          "status": "ineligible_length",
+          "winner": false,
+          "spread": 2.3,
+          "body_words": 2758,
+          "window_scores": {
+            "w1": 4.87,
+            "rejudge": 5.45
+          },
+          "note": "Over cap; re-judged (spread > 1.5)."
+        },
+        {
+          "model": "ling-3.1-flash",
+          "provider": "tokenharbor",
+          "family": "ling",
+          "score": 0.0,
+          "status": "dnf",
+          "winner": false,
+          "note": "Empty response (no text-delta events in CC stream) after 328s; 0 words. Recorded as DNF, not substituted."
+        }
+      ]
     }
   ],
   "leaderboard": [
