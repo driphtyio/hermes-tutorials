@@ -1,0 +1,167 @@
+---
+title: "Hermes Agent v0.23.1: The Plugin Catalog Bug That Made Installs Quietly Pin Old Versions (and How to Check Yours)"
+description: "Hermes Agent v0.23.1 raises the plugin catalog size cap from 2 MiB to 16 MiB. Here is why installs quietly fell back to old pins, and how to tell if yours was affected."
+pubDate: 2026-11-15
+tags: [ "release-notes", "hermes-agent", "plugins", "v0.23.1" ]
+lastVerified: 2026-11-15
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-v0231-plugin-catalog-cap-fix-1794759743.webp"
+---
+
+Hermes Agent v0.23.1 is a patch release, and it exists for one plain reason: to undo a silent failure in `hermes plugins install`. Since the plugin catalog's site deploy on November 9, the published `plugin-catalog.json` has been larger than the 2 MiB cap clients accept, so affected installs fell back to the catalog their own release shipped with — no error, no prompt, no visible warning. The [v0.23.1 GitHub release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1) raises that ceiling to 16 MiB so the live catalog is used again.
+
+The fix is small. [PR #151860](https://github.com/NousResearch/hermes-agent/pull/151860), titled "fix(plugin-catalog): accept the published catalog past 2 MiB," changes one constant and adds two tests. What makes it worth a post is the failure mode: a debug-only log line, an install that resolves to a stale pin instead of the current one, and a `removed` list that never refreshes. If you are on v0.23.0 or older and an install looked out of date, this is likely why.
+
+The bug was filed as [issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856) and closed as completed on Nov 10, 2026. Below is what changed, which installs were exposed, how each channel gets the patch, and where the numbers in the two reports disagree.
+
+> **How this guide was built.** This post is based on three primary sources: the [v0.23.1 GitHub release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1), [PR #151860](https://github.com/NousResearch/hermes-agent/pull/151860) ("fix(plugin-catalog): accept the published catalog past 2 MiB"), and [issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856). We did not run the fix hands-on — every figure, quote, and behavior described here is reported from those sources, including the maintainer's and PR author's own test notes.
+
+## What Happened: The Live Catalog Outgrew the Client's Cap
+
+At the 2026-11-09 10:18Z site deploy, the published `plugin-catalog.json` crossed the client's 2 MiB cap. From that point, per [PR #151860](https://github.com/NousResearch/hermes-agent/pull/151860), "every client rejects the live doc and falls back to its in-tree catalog" — the copy baked into the release you installed.
+
+The cap is a constant in `hermes_cli/plugin_catalog.py`: `_MAX_LIVE_BYTES = 2 * 1024 * 1024`, "which is 2,097,152 bytes. `main` has the same value today," according to [issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856). The issue also records the size immediately before the deploy: 2,090,135 bytes, just under the line. One deploy pushed it over, and every client built against that constant stopped trusting the live document.
+
+Nothing about the fetch logic was broken. The document was simply bigger than the client was willing to accept, and the client's behavior on an oversized document was to give up quietly rather than fail loudly — which is the part that turned a size overage into a support problem.
+
+## Why the Fallback Was Silent (and What It Did to Installs)
+
+The issue is blunt about the UX: "It fails quietly: there is only a debug log line." With debug logging on, `fetch_live_catalog(force=True)` logs `Plugin catalog: live fetch failed: live catalog payload too large` and returns `None`, so `get_live_catalog_entry()` answers from the in-tree catalog instead, per [issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856).
+
+That fallback has three concrete effects on `hermes plugins install <name>`, as summarized in the [v0.23.1 release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1): it "could not find plugins added since your last update, installed the pin your release shipped instead of the current one, and missed newer `removed` entries." The PR words the last two the same way: `hermes plugins install <name>` "installs the pin from the client's own release, and newer `removed` entries never arrive" ([PR #151860](https://github.com/NousResearch/hermes-agent/pull/151860)).
+
+The reporter's reproduction used a fresh `HERMES_HOME` and ran `hermes plugins install caduceus --enable`, which returned:
+
+```
+Error: 'caduceus' is not in the Hermes plugin catalog and is not a Git URL or owner/repo shorthand.
+```
+
+That plugin had been merged in [#151211](https://github.com/NousResearch/hermes-agent/pull/151211) and was present in the live document — it just never reached the client, because the client never read the live document ([issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856)). That error line is the only verbatim CLI error output the sources give for the failing state; the debug log line quoted above is log output, not CLI output, and nothing beyond these two strings is documented.
+
+## v0.23.0 vs v0.23.1: Catalog Cap Behaviour
+
+| Behaviour | v0.23.0 and older | v0.23.1 |
+|---|---|---|
+| Accepted live-catalog size cap | 2 MiB (`_MAX_LIVE_BYTES`, 2,097,152 bytes) | 16 MiB |
+| Live catalog after the Nov 9 deploy (2.1–2.3 MB) | Rejected; silent fallback to the in-tree catalog | Accepted; live catalog used again |
+| `hermes plugins install <name>` for entries added since your last update | Not found (quoted error above) | Found and installable after updating |
+| Pin installed | The pin your release shipped (e.g. `hermes-teammates` 1.1.0) | The current live pin (e.g. 1.2.2) |
+| Newer `removed` entries | Never arrive | Arrive |
+| User-visible warning on fallback | None; debug log line only | None added by this fix — "Nothing else changes: same fetch, same cache, same fallback." |
+
+The pin row comes from the PR's own demonstration: with the fix applied, `get_live_catalog_entry("hermes-teammates")` reports the live pin (1.2.2) instead of the in-tree one (1.1.0) ([PR #151860](https://github.com/NousResearch/hermes-agent/pull/151860)). The last row is the PR's explicit scope statement: the cap was raised, and the mechanism around it was left alone.
+
+## How to Tell Whether Your Install Was Affected
+
+The established scope is narrow and worth stating exactly: installs on v0.23.0 or older keep the 2 MiB cap until they update. The [v0.23.1 release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1) puts it as "Installs that stay on v0.23.0 or older keep falling back until they update," and the maintainer's Nov 9 comment in [issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856) says "Clients already installed (0.23.0 and older) keep the 2 MiB cap until they update."
+
+Within that group, the symptoms to look for are the three effects above:
+
+- A plugin you know exists reports `Error: '<name>' is not in the Hermes plugin catalog and is not a Git URL or owner/repo shorthand.`
+- Installs resolve to the pin bundled with your release rather than the pin currently published.
+- `removed` entries added to the live catalog never reach you.
+
+If you have debug logging on, the string to look for is `live catalog payload too large`, from the log line quoted in [issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856).
+
+Limitation: the sources do not document a local command, `HERMES_HOME` file path, or tooling for inspecting the cached catalog or reading `_MAX_LIVE_BYTES` on your machine. There is nothing in the issue or PR that establishes one, so this post does not invent it. The reliable proxy is your version number plus the symptoms above.
+
+## How to Get the Fix
+
+Each distribution channel has its own path, all listed in the [v0.23.1 release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1).
+
+### CLI
+
+Run `hermes update`, or re-run the installer one-liner. The maintainer's closing comment in [issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856) gives the same instruction: "Run `hermes update` (or pull `nousresearch/hermes-agent:v0.23.1`) to get it."
+
+### Microsoft Store app
+
+The Store app updates through the Store, per the [release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1).
+
+### Docker / Hermes Cloud
+
+Pull `nousresearch/hermes-agent:stable` (or `:latest`), per the [v0.23.1 release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1). The maintainer's closing comment also names the pinned tag `nousresearch/hermes-agent:v0.23.1` ([issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856)). A third-party image repo also merged the v0.23.0 to v0.23.1 bump, [Docker-Hub-sirmark/docker-hermes-agent#41](https://github.com/Docker-Hub-sirmark/docker-hermes-agent/pull/41), cross-referenced from [PR #151860](https://github.com/NousResearch/hermes-agent/pull/151860).
+
+### Desktop app from installer (.exe / .dmg)
+
+The [release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1) is explicit: "no change in this release; it updates with the next bundled release." If you use the Desktop app installed from an installer, this patch does not reach you through it — you wait for the next bundled release.
+
+## Inside the Fix: One Constant, Two Tests
+
+The shipped change is a single constant raise in `hermes_cli/plugin_catalog.py`: `_MAX_LIVE_BYTES` goes from 2 MiB to 16 MiB, with a comment recording why ([PR #151860](https://github.com/NousResearch/hermes-agent/pull/151860)). The PR is authored by [100yenadmin](https://github.com/100yenadmin) as a single commit, [b0e0e35](https://github.com/NousResearch/hermes-agent/pull/151860/commits/b0e0e357bfeaddd9d193d513d44008134087fb57) ("fix(plugin-catalog): accept the published catalog past 2 MiB"), and merged by teknium1 as [6cff782](https://github.com/NousResearch/hermes-agent/commit/6cff782b8d081a0ed382eaf75c432d452cd452cc) into main on Nov 9, 2026, with 36 checks passed. The PR's Type of Change box is ticked as "Bug fix (non-breaking change that fixes an issue)," and it is labeled type/bug, comp/cli and comp/plugins.
+
+Two tests accompany it, both in `tests/hermes_cli/test_plugin_catalog.py`: `test_a_catalog_doc_past_two_mib_is_still_accepted`, which fetches and caches a doc of today's size and shape (1,400 entries, over 2 MiB), and `test_a_catalog_doc_over_the_cap_is_refused`, which lowers the cap and confirms an oversized doc reads as a failed fetch with nothing cached ([PR #151860](https://github.com/NousResearch/hermes-agent/pull/151860)).
+
+The run counts come from the PR author's notes, not from anything we executed: a red run of 15 passed and 1 failed (the `past_two_mib` test), a green run of 16 passed, and `tests/hermes_cli/test_plugins_hub_live_catalog.py` at 4 passed ([PR #151860](https://github.com/NousResearch/hermes-agent/pull/151860)).
+
+Why not raise the cap without limit? The PR's rationale: "A cap still bounds a broken or hostile response." At today's ~1.7 KB per entry, 16 MiB leaves room for roughly 9,000 entries, per [PR #151860](https://github.com/NousResearch/hermes-agent/pull/151860).
+
+## The Numbers Behind the Bug
+
+Sizes here depend on when you look, and the sources do not agree because they are not measuring the same moment. Each figure belongs to its own snapshot.
+
+| When | Size | Entries | Source |
+|---|---|---|---|
+| Before the Nov 9 deploy | 2,090,135 bytes (just under the cap) | not stated | [Issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856) |
+| 2026-11-09 10:18Z deploy (`generated_at` 2026-11-09T10:18:17Z) | **2,109,306 bytes** | 1,268 | [PR #151860](https://github.com/NousResearch/hermes-agent/pull/151860) and [issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856) |
+| 10:22:52Z (PR live check) | 2,136,595 bytes | 1,280 | [PR #151860](https://github.com/NousResearch/hermes-agent/pull/151860) |
+| Later on Nov 9 (maintainer live check) | **2,302,549 bytes** | 1,376 | [Issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856) |
+| Nov 10 closing comment | "about 2.3 MB" (rounded; no exact figure) | not stated | [Issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856) |
+
+So: at the 10:18Z deploy the published catalog was 2,109,306 bytes with 1,268 entries, per both the issue and the PR. A later same-day check by the maintainer put it at 2,302,549 bytes and 1,376 entries, and the Nov 10 closing comment rounds it to "about 2.3 MB." The [release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1) give no byte count at all — only "larger than the 2 MiB cap."
+
+Composition matters for anyone wondering why it grew. In the 2.11 MB document, `description` fields take 1.20 MB, `capabilities` 0.19 MB, and `known_issues` 0.10 MB, per [issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856). The document is already minified, and each new entry adds about 1.7 KB on average. The maintainer also cited growth of roughly 108 entries in 3.5 hours at the time of the comment.
+
+The maintainer chose a patch release over trimming the published doc. Cutting descriptions to 280 characters only gets the document to ~1.35 MB, and the maintainer noted that at the then-current growth rate the headroom would be gone in about a day ([issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856)). The PR leaves the site build alone, and says already-installed clients would need a site-side fix that keeps the doc under 2 MiB; the maintainer chose a patch release instead, and the release notes mention no trimming. As of the maintainer's Nov 9 check, the live document at [hermes-agent.nousresearch.com/docs/api/plugin-catalog.json](https://hermes-agent.nousresearch.com/docs/api/plugin-catalog.json) is accepted by v0.23.1 clients and main, at its published size; clients on v0.23.0 or older keep rejecting it until they update.
+
+It is also worth being precise about what did not happen server-side: the PR "leaves the site build alone," per [PR #151860](https://github.com/NousResearch/hermes-agent/pull/151860), and no source confirms any site-side change was ever made. The issue's proposed options — trimming, a visible warning, a build check — were options, not shipped work. The shipped change is the cap raise.
+
+## What Else v0.23.1 Rolls Up
+
+v0.23.1 is not a single-fix release. Per the [release notes](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1), it is a "Patch release. This tag rolls up the ~618 PRs merged since v0.23.0 into a stable release for the GitHub release (CLI and installers), the Microsoft Store app, Docker and Hermes Cloud. Full curated notes for this window ship with v0.24.0."
+
+The window metrics, measured at commit [3b421578588243f920886e6fe79a6faa87ea026e](https://github.com/NousResearch/hermes-agent/commit/3b421578588243f920886e6fe79a6faa87ea026e): 2,578 non-merge commits across 2,781 changed files (+151,690 / −62,595), 618 merged PRs, and 409 closed issues, per the [release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1). The full diff between tags is available in the [v0.23.0...v0.23.1 comparison](https://github.com/NousResearch/hermes-agent/compare/v0.23.0...v0.23.1).
+
+Because the curated per-change notes ship with v0.24.0, the release body does not enumerate what changed across that window beyond the summary above — and this post does not fill the gap with guesses.
+
+On timing, the sources disagree and both readings are worth reporting. The release body says "**Release Date:** November 9, 2026," but GitHub shows it as "released this 10 Nov 01:42," and the issue was closed as completed on Nov 10 ([issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856)). If you are reconciling a changelog date against the releases page, that is why they do not match.
+
+## FAQ
+
+### Which versions are affected?
+
+Installs on v0.23.0 or older keep the 2 MiB cap until they update. The [release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1) says "Installs that stay on v0.23.0 or older keep falling back until they update," and the maintainer's comment in [issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856) matches: "Clients already installed (0.23.0 and older) keep the 2 MiB cap until they update." The sources establish nothing further about older versions.
+
+### What did the bug look like from the CLI?
+
+One quoted line, from the reporter's repro: `Error: 'caduceus' is not in the Hermes plugin catalog and is not a Git URL or owner/repo shorthand.` That is the only verbatim CLI error output given in [issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856); the debug log line is separate log output.
+
+### Did I install the wrong version of a plugin?
+
+Possibly the wrong *pin*. Instead of the current published pin, the client installed the pin its own release shipped with — the PR demonstrates 1.1.0 versus the live 1.2.2 for `hermes-teammates` ([PR #151860](https://github.com/NousResearch/hermes-agent/pull/151860)). Update to v0.23.1; re-running the install is our suggestion, not something the sources state.
+
+### Why was there no error message?
+
+Because the failure was treated as a quiet fallback, not an error. "It fails quietly: there is only a debug log line," per [issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856). With debug logging, the line is `Plugin catalog: live fetch failed: live catalog payload too large`.
+
+### Why 16 MiB?
+
+Headroom. At today's ~1.7 KB per entry, 16 MiB is room for roughly 9,000 entries, and the PR keeps a cap at all because "A cap still bounds a broken or hostile response" ([PR #151860](https://github.com/NousResearch/hermes-agent/pull/151860)).
+
+### Did they also shrink the published catalog?
+
+No. The PR "leaves the site build alone," and no source confirms any site-side change was made ([PR #151860](https://github.com/NousResearch/hermes-agent/pull/151860)). The maintainer's Nov 9 position was that the fix for already-installed clients is a patch release, not trimming the published doc ([issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856)) — and the patch release is what closed the issue.
+
+### How do Docker, Store, and Desktop users get it?
+
+Docker / Hermes Cloud: pull `nousresearch/hermes-agent:stable` or `:latest`, or the pinned `nousresearch/hermes-agent:v0.23.1` per the closing comment ([issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856)). Microsoft Store: updates through the Store. Desktop app from installer (.exe / .dmg): "no change in this release; it updates with the next bundled release" ([v0.23.1 release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1)).
+
+### When exactly was it released?
+
+The release body says November 9, 2026. GitHub shows it published 10 Nov 01:42, and the issue was closed as completed on Nov 10 ([v0.23.1 release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1); [issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856)). We report both rather than picking one.
+
+### Was a warning added so this doesn't happen silently again?
+
+No. The shipped change is described only as raising `_MAX_LIVE_BYTES`, and the PR states "Nothing else changes: same fetch, same cache, same fallback" ([PR #151860](https://github.com/NousResearch/hermes-agent/pull/151860)). A visible warning was among the options discussed in [issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856); it is not part of this release.
+
+## The Bottom Line
+
+If you use `hermes plugins install`, update to v0.23.1 — that is the entire fix, and it is one constant wide. Installs on v0.23.0 or older keep the 2 MiB cap and keep falling back until they update, so a version check is the fastest way to know whether you were exposed. Nothing about the catalog mechanism itself changed ([PR #151860](https://github.com/NousResearch/hermes-agent/pull/151860)). Curated notes for the ~618-PR window arrive with v0.24.0, so treat v0.23.1 as a targeted patch rather than a feature drop ([v0.23.1 release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1)). The bug itself is closed as completed, and the full timeline lives in [issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856); if you are reading this much later, check the [latest release](https://github.com/NousResearch/hermes-agent/releases/latest) before pinning anything.

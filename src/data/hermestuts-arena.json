@@ -16559,6 +16559,141 @@
           "note": "Empty response (no text-delta events in CC stream) after 328s; 0 words. Recorded as DNF, not substituted."
         }
       ]
+    },
+    {
+      "id": null,
+      "match_id": "arena-hermestuts-v0231",
+      "slug": "hermes-agent-v0231-plugin-catalog-cap-fix",
+      "topic": "Hermes Agent v0.23.1: The Plugin Catalog Bug That Made Installs Quietly Pin Old Versions",
+      "category": "release-notes",
+      "type": "content",
+      "date": "2026-11-15",
+      "pipeline": "cron-subagent-arena",
+      "topic_source": "release-watch: GitHub v0.23.1 (published 2026-11-10) — no existing post covered 0.23.1",
+      "winner": "commandcode/deepseek-v4.1-flash",
+      "winner_provider": "commandcode",
+      "winner_family": "deepseek",
+      "winner_score": 8.02,
+      "shipped_score": 8.02,
+      "pre_edit_score": 8.47,
+      "threshold": 7.5,
+      "threshold_met": true,
+      "threshold_note": "Shipped-text 3-pass mean 8.02 (8.10/8.40/7.55, spread 0.85). Pre-QA winner re-judged in fresh dir: 8.47 (spread 0.5). Window-1 judge 8.53 (spread 1.7, re-judged). Post-QA edits lowered mean ~0.45 on the same claims.",
+      "verification_status": "confirmed",
+      "verification_note": "disprove_pass extract+verify on shipped text, fresh dir, claude-haiku-5-5 via claude-cli (family claude, differs from winner deepseek): 10/10 claims confirmed.",
+      "plan_model": "glm-5.3 (cline-pass declared; served by zai via rescue hop; plan has MUST include / MUST NOT include)",
+      "qa_model": "claude-cli/claude-sonnet-5-5",
+      "qa_verdict_note": "QA round 1: verdict PASS with 6 defects (label misattribution, \"only verbatim CLI output\" wording, unsupported \"No trimming shipped\", undated \"today\" table cell, pin-advice attribution, repetition). Applied all 6. QA round 2: verdict PASS with 7 defects (framing of who reads the live doc, trimming attribution, PR author site-side position omitted, intro overclaim, third-party image inference, repetition, filler). Applied 1-5 and 7; defect 6 (FAQ repetition) only partly addressed. Max 2 remediation iterations reached; not a third QA round.",
+      "research_lane": "DISPATCHED: mimo-v2.6-pro declared xiaomi; served_by opendesign (load-balanced xiaomi->opendesign). Dossier 40.7 KB.",
+      "research_source": "lane",
+      "brief_contract": true,
+      "builder_lanes_dispatched": 10,
+      "builders_produced_draft": 9,
+      "dossier_check": "3 sources checked, 3 represented (dossier-check exit 0)",
+      "link_check": "arena-linkcheck on shipped post: 12 unique external links, 12 OK, 0 dead",
+      "hero": "Lumenfall FLUX.1-schnell via gen-image-verified.sh; R2 GET 200",
+      "hero_url": "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-v0231-plugin-catalog-cap-fix-1794759743.webp",
+      "deviations": [
+        "Research lane served by opendesign via load-balance; declared provider xiaomi.",
+        "ling-3.1-flash (tokenharbor) produced no draft; recorded DNF with score 0.0, not substituted.",
+        "Judge noise: window-2 re-judge of the top-3 gave glm-5.3-flash 6.55 (spread 4.7, was 8.23) and claude-haiku 7.47 (spread 3.0, was 8.20); deepseek stable 8.47 (spread 0.5). Not used for ranking; winner selected on window-1 means and confirmed on shipped text.",
+        "Frontmatter added at finalize; builder drafts had no frontmatter. Body judged as drafted, shipped text re-judged.",
+        "Sources are 3 primary pages (GitHub release, PR, issue); the link policy asks for >=10 external links and the dossier held 12 unique URLs, all OK on linkcheck.",
+        "Winner body is 2,584 words by draft-wordcount (eligible, bounds 1500-3500).",
+        "Not run through arena-finalize (hermestuts not in its BLOGS); recorded by manual append with additive leaderboard update."
+      ],
+      "results": [
+        {
+          "rank": 1,
+          "model": "deepseek-v4.1-flash",
+          "provider": "commandcode",
+          "family": "deepseek",
+          "score": 8.53,
+          "status": "scored",
+          "is_winner": true
+        },
+        {
+          "rank": 2,
+          "model": "glm-5.3-flash",
+          "provider": "opencode-go",
+          "family": "glm",
+          "score": 8.23,
+          "status": "scored",
+          "is_winner": false
+        },
+        {
+          "rank": 3,
+          "model": "claude-haiku-5-5",
+          "provider": "claude-cli",
+          "family": "claude",
+          "score": 8.2,
+          "status": "scored",
+          "is_winner": false
+        },
+        {
+          "rank": 4,
+          "model": "stealth/glyph-cluster:free",
+          "provider": "commandcode",
+          "family": "stealth",
+          "score": 7.95,
+          "status": "scored",
+          "is_winner": false
+        },
+        {
+          "rank": 5,
+          "model": "gpt-6-luna",
+          "provider": "commandcode",
+          "family": "gpt",
+          "score": 7.77,
+          "status": "scored",
+          "is_winner": false
+        },
+        {
+          "rank": 6,
+          "model": "mimo-v2.6-flash",
+          "provider": "opencode-go",
+          "family": "mimo",
+          "score": 7.62,
+          "status": "scored",
+          "is_winner": false
+        },
+        {
+          "rank": 7,
+          "model": "beam-free",
+          "provider": "opencode-go",
+          "family": "beam",
+          "score": 7.43,
+          "status": "scored",
+          "is_winner": false
+        },
+        {
+          "rank": 8,
+          "model": "minimax-m3.1-flash",
+          "provider": "opencode-go",
+          "family": "minimax",
+          "score": 7.2,
+          "status": "scored",
+          "is_winner": false
+        },
+        {
+          "rank": 9,
+          "model": "muse-spark-1.3-contributor",
+          "provider": "opencode-go",
+          "family": "muse",
+          "score": 7.08,
+          "status": "scored",
+          "is_winner": false
+        },
+        {
+          "rank": 10,
+          "model": "ling-3.1-flash",
+          "provider": "tokenharbor",
+          "family": "ling",
+          "score": 0.0,
+          "status": "dnf",
+          "is_winner": false
+        }
+      ]
     }
   ],
   "leaderboard": [
@@ -16610,10 +16745,10 @@
       "model": "deepseek-v4.1-flash",
       "provider": "commandcode",
       "family": "deepseek",
-      "matches": 52,
-      "wins": 14,
+      "matches": 53,
+      "wins": 15,
       "losses": 38,
-      "avgScore": 8.13,
+      "avgScore": 8.14,
       "bestScore": 9.78,
       "rank": 5
     },
@@ -16621,9 +16756,9 @@
       "model": "glm-5.3-flash",
       "provider": "opencode-go",
       "family": "glm",
-      "matches": 40,
+      "matches": 41,
       "wins": 10,
-      "losses": 30,
+      "losses": 31,
       "avgScore": 8.07,
       "bestScore": 9.75,
       "rank": 6
@@ -16676,9 +16811,9 @@
       "model": "gpt-6-luna",
       "provider": "commandcode",
       "family": "openai",
-      "matches": 33,
+      "matches": 34,
       "wins": 5,
-      "losses": 28,
+      "losses": 29,
       "avgScore": 7.86,
       "bestScore": 9.73,
       "rank": 11
@@ -16698,10 +16833,10 @@
       "model": "claude-haiku-5-5",
       "provider": "claude-cli",
       "family": "claude",
-      "matches": 25,
+      "matches": 26,
       "wins": 4,
-      "losses": 21,
-      "avgScore": 7.77,
+      "losses": 22,
+      "avgScore": 7.79,
       "bestScore": 9.15,
       "rank": 13
     },
@@ -16717,17 +16852,6 @@
       "rank": 14
     },
     {
-      "model": "minimax-m3.1-flash",
-      "provider": "opencode-go",
-      "family": "minimax",
-      "matches": 14,
-      "wins": 0,
-      "losses": 14,
-      "avgScore": 7.72,
-      "bestScore": 8.7,
-      "rank": 15
-    },
-    {
       "model": "ling-3.1-flash",
       "provider": "tokenharbor",
       "family": "ling",
@@ -16736,28 +16860,39 @@
       "losses": 6,
       "avgScore": 7.69,
       "bestScore": 8.32,
-      "rank": 16
+      "rank": 15
     },
     {
-      "model": "muse-spark-1.3-contributor",
+      "model": "minimax-m3.1-flash",
       "provider": "opencode-go",
-      "family": "muse",
-      "matches": 37,
-      "wins": 2,
-      "losses": 35,
-      "avgScore": 7.65,
-      "bestScore": 9.45,
-      "rank": 17
+      "family": "minimax",
+      "matches": 15,
+      "wins": 0,
+      "losses": 15,
+      "avgScore": 7.69,
+      "bestScore": 8.7,
+      "rank": 16
     },
     {
       "model": "stealth/glyph-cluster:free",
       "provider": "commandcode",
       "family": "stealth",
-      "matches": 13,
+      "matches": 14,
       "wins": 2,
-      "losses": 11,
-      "avgScore": 7.64,
+      "losses": 12,
+      "avgScore": 7.66,
       "bestScore": 8.57,
+      "rank": 17
+    },
+    {
+      "model": "muse-spark-1.3-contributor",
+      "provider": "opencode-go",
+      "family": "muse",
+      "matches": 38,
+      "wins": 2,
+      "losses": 36,
+      "avgScore": 7.63,
+      "bestScore": 9.45,
       "rank": 18
     },
     {
@@ -16775,10 +16910,10 @@
       "model": "mimo-v2.6-flash",
       "provider": "opencode-go",
       "family": "mimo",
-      "matches": 19,
+      "matches": 20,
       "wins": 3,
-      "losses": 16,
-      "avgScore": 7.51,
+      "losses": 17,
+      "avgScore": 7.52,
       "bestScore": 8.47,
       "rank": 20
     },
@@ -16786,10 +16921,10 @@
       "model": "beam-free",
       "provider": "opencode-go",
       "family": "beam",
-      "matches": 20,
+      "matches": 21,
       "wins": 0,
-      "losses": 20,
-      "avgScore": 7.28,
+      "losses": 21,
+      "avgScore": 7.29,
       "bestScore": 8.42,
       "rank": 21
     },
@@ -16860,8 +16995,8 @@
       "rank": 27
     }
   ],
-  "last_updated": "2026-11-10",
-  "total_matches": 70,
+  "last_updated": "2026-11-15",
+  "total_matches": 71,
   "retired_models": [
     {
       "model": "mimo-v2.5",
