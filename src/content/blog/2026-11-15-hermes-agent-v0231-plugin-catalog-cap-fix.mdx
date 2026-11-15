@@ -1,6 +1,6 @@
 ---
 title: "Hermes Agent v0.23.1: The Plugin Catalog Bug That Made Installs Quietly Pin Old Versions (and How to Check Yours)"
-description: "Hermes Agent v0.23.1 raises the plugin catalog size cap from 2 MiB to 16 MiB. Here is why installs quietly fell back to old pins, and how to tell if yours was affected."
+description: "Hermes Agent v0.23.1 lifts the plugin catalog size cap to 16 MiB. Why installs quietly fell back to old pins, and how to tell if yours was hit."
 pubDate: 2026-11-15
 tags: [ "release-notes", "hermes-agent", "plugins", "v0.23.1" ]
 lastVerified: 2026-11-15
@@ -165,3 +165,12 @@ No. The shipped change is described only as raising `_MAX_LIVE_BYTES`, and the P
 ## The Bottom Line
 
 If you use `hermes plugins install`, update to v0.23.1 — that is the entire fix, and it is one constant wide. Installs on v0.23.0 or older keep the 2 MiB cap and keep falling back until they update, so a version check is the fastest way to know whether you were exposed. Nothing about the catalog mechanism itself changed ([PR #151860](https://github.com/NousResearch/hermes-agent/pull/151860)). Curated notes for the ~618-PR window arrive with v0.24.0, so treat v0.23.1 as a targeted patch rather than a feature drop ([v0.23.1 release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1)). The bug itself is closed as completed, and the full timeline lives in [issue #151856](https://github.com/NousResearch/hermes-agent/issues/151856); if you are reading this much later, check the [latest release](https://github.com/NousResearch/hermes-agent/releases/latest) before pinning anything.
+
+{/* crosslinks */}
+
+## 📖 Related Reads
+
+- **[ToolBrain](https://toolbrain.net/)** — tool reviews, LLM comparisons, and AI workflow guides
+- **[CodeIntel Log](https://codeintel.xyz/)** — code quality, debugging, and software engineering benchmarks
+
+*Cross-links automatically generated from Hermes Tutorials.*
