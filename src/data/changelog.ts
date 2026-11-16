@@ -1,4 +1,4 @@
-// AUTO-GENERATED from NousResearch/hermes-agent GitHub releases (51 releases, 2026-03-12..2026-11-15).
+// AUTO-GENERATED from NousResearch/hermes-agent GitHub releases (52 releases, 2026-03-12..2026-11-16).
 // Regenerate via scripts/gen-changelog.py — do not hand-edit entries.
 export interface ChangelogLink {
   url: string;
@@ -20,6 +20,24 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  {
+    "tag": "v0.23.1+canary.20261116T070005Z",
+    "version": "v0.23.1",
+    "codename": "",
+    "date": "2026-11-16",
+    "summary": "",
+    "highlights": [],
+    "prs": "",
+    "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1%2Bcanary.20261116T070005Z",
+    "compare": "https://github.com/NousResearch/hermes-agent/compare/v0.23.1+canary.20261115T064406Z...v0.23.1+canary.20261116T070005Z",
+    "links": [
+      {
+        "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1%2Bcanary.20261116T070005Z",
+        "label": "Release notes (v0.23.1+canary.20261116T070005Z)"
+      }
+    ],
+    "body": "## Downloads\n\n### Hermes Desktop\n\n| OS | Architecture | Download |\n|---|---|---|\n| macOS | Apple Silicon (M-series) | [DMG](https://hermes-assets.nousresearch.com/releases/tag/v0.23.1%2Bcanary.20261116T070005Z/HermesBundled-0.23.1%2Bcanary.20261116T070005Z-mac-arm64.dmg) |\n| Windows | x86 (64-bit) | [MSIX](https://hermes-assets.nousresearch.com/releases/tag/v0.23.1%2Bcanary.20261116T070005Z/HermesBundled-0.23.1%2Bcanary.20261116T070005Z-win-x64.msix) |\n| Windows | ARM (arm64 / aarch64) | [MSIX](https://hermes-assets.nousresearch.com/releases/tag/v0.23.1%2Bcanary.20261116T070005Z/HermesBundled-0.23.1%2Bcanary.20261116T070005Z-win-arm64.msix) |\n\n### Native install/chat smoke\n\nDownload availability is independent of smoke status. Each result covers all native legs in that format group. Linux bundles are disabled; unsigned Store envelopes are not install-smoked. No-upload dry tags have no download handoff and are not smoke-qualified.\n\n| Packages | Smoke status |\n|---|---|\n| macOS DMG + ZIP (arm64) | Passed |\n| Windows MSIX (arm64) | Passed |\n| Windows MSIX (x64) | Passed |\n\n## 🐛 Bug Fixes\n\n- Code-health): packaged-imports models namespace packages; AGENTS.md names its exceptions ([`aa6d201d`](https://github.com/NousResearch/hermes-agent/commit/aa6d201dfdd530b4bcc4df377181b6e7170e17eb)) — @alt-glitch\n- Agent): generic tool deadline no longer clips a tool's own timeout ([`e1ac37eb`](https://github.com/NousResearch/hermes-agent/commit/e1ac37eba1fe4f36bf31d422c2884c895799a02c)) — @huanshan5195\n- Redact): mask an .npmrc auth value that only starts with a ${VAR} reference ([`81fd6d89`](https://github.com/NousResearch/hermes-agent/commit/81fd6d89e57998dd8e76042e5e8357a60eed94bb)) — @c2h5oh\n- Plugin-catalog): commonly-hermes-plugin re-pinned; its server asks before writes ([`467b8f7d`](https://github.com/NousResearch/hermes-agent/commit/467b8f7d1246536c55872d2318afe0f2b74d6959)) — @lilyshen0722\n- Security): mask passwords in DB URL query strings ([`5b3168ea`](https://github.com/NousResearch/hermes-agent/commit/5b3168ea01c0155b474a8778d83e3205339d2a34)) — @thejesh23\n- Approval): read git option substitutions nested up to four levels as one word ([`234bd742`](https://github.com/NousResearch/hermes-agent/commit/234bd742d26f5030b51ef87eff41a018e7f969d1)) — @c2h5oh\n\n## 📦 Other Changes\n\n- Review: trim deadline-floor tests to the two runner invariants; slim the registry guard ([`ec931428`](https://github.com/NousResearch/hermes-agent/commit/ec93142876e9c8a9413e7a3dbdcd5cc6caa70079))\n- Port from lobehub/lobehub#20735: run in a usable directory when the terminal cwd is gone, and say so ([#20735](https://github.com/NousResearch/hermes-agent/pull/20735))\n\n## 👥 Contributors\n\nThank you to everyone who contributed to this release!\n\n- @BearHuddleston (81 commits)\n- @unsupportedpastels (3 commits)\n- @foma-agent (2 commits)\n- @c2h5oh (2 commits)\n- @alt-glitch (1 commit)\n- @liuhao1024 (1 commit)\n- @huanshan5195 (1 commit)\n- @Sora-bluesky (1 commit)\n- @nolanchic (1 commit)\n- @Sahilvishnaliya (1 commit)\n- @lilyshen0722 (1 commit)\n- @thejesh23 (1 commit)\n- @kouyichi (1 commit)\n- @djagya (1 commit)\n\n**Full Changelog**: [v0.23.1+canary.20261115T064406Z...v0.23.1+canary.20261116T070005Z](https://github.com/NousResearch/hermes-agent/compare/v0.23.1+canary.20261115T064406Z...v0.23.1+canary.20261116T070005Z)"
+  },
   {
     "tag": "v0.23.1+canary.20261115T064406Z",
     "version": "v0.23.1",
