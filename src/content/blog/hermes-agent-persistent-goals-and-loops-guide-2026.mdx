@@ -1,0 +1,212 @@
+---
+title: "Hermes Agent /goal and /loop: Keep an Agent Working Across Turns (2026)"
+description: "Learn how Hermes Agent's /goal and /loop commands keep work running across turns in one session, and how both differ from /heartbeat and a scheduled cron job."
+pubDate: 2026-11-16
+tags: [ "hermes-agent", "goal", "loop", "cron", "heartbeat", "automation" ]
+lastVerified: 2026-11-16
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-persistent-goals-and-loops-guide-2026-1794846280.webp"
+---
+If you run Hermes Agent and wonder which command keeps work moving, which one just checks in, and which one runs on a schedule, you are not alone. The four-way confusion—`/goal` vs `/loop` vs `/heartbeat` vs `hermes cron`—is common. This guide gives you one mental model and a comparison table to choose the right tool.
+
+## What `/goal` Does: A Standing Objective That Survives the Turn
+
+`/goal` gives Hermes a standing objective that survives across turns, with a lightweight judge model checking after every turn whether the goal is satisfied, per the [Persistent Goals docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/goals). If not, Hermes feeds a continuation prompt into the same session and keeps working until the goal is achieved, you pause or clear it, or the turn budget runs out.
+
+Use `/goal` when you would otherwise have to say "keep going" three times. It is Hermes’ take on the Ralph loop, directly inspired by Codex CLI 0.128.0's `/goal` by Eric Traut (OpenAI), with an independent implementation adapted to Hermes’ architecture. The continuation prompt is a plain user-role turn, so "Running a 20-turn goal costs the same cache-wise as 20 turns of normal conversation."
+
+Quick start:
+
+```text
+/goal Fix every failing test in tests/hermes_cli/ and make sure scripts/run_tests.sh passes for that directory
+```
+
+Documented output lines include:
+
+```text
+⊙ Goal set (20-turn budget): …
+↻ Continuing toward goal (1/20): <judge's reason>
+✓ Goal achieved: <reason>
+⏸ Goal paused — N/20 turns used
+```
+
+## The `/goal` Command Family, Verbatim
+
+The `/goal` command family lets you set, inspect, pause, resume, and clear a standing goal, and add deterministic quality gates, all documented in the [Persistent Goals docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/goals). Setting a new goal mid-run is rejected with a message telling you to `/stop` first, while `status`, `pause`, `clear`, `wait`, and `unwait` are safe to run mid-run.
+
+### Setting and controlling a goal
+
+| Command | Purpose |
+|---|---|
+| `/goal <text>` | Set (or replace) the standing goal. Kicks off the first turn immediately. |
+| `/goal -- <text>` | Set goal text starting with a control word. |
+| `/goal draft <text>` | Draft a structured completion contract from a plain-language objective, then set it. |
+| `/goal show` | Print the active goal's completion contract. |
+| `/goal` or `/goal status` | Show the current goal, status, turns used. |
+| `/goal pause` | Stop auto-continuation without clearing the goal. |
+| `/goal resume` | Resume the loop (resets the turn counter back to zero). |
+| `/goal clear` | Drop the goal entirely. |
+| `/goal wait <pid> [reason]` | Park the loop on a background process; auto-resumes when it exits. |
+| `/goal unwait` | Drop the wait barrier and resume immediately. |
+| `/goal gate add <command>` | Add a quality gate: a shell command that must pass before the goal can be judged done. |
+| `/goal gate` / `/goal gate list` | List the goal's gates and their pass/fail state. |
+| `/goal gate remove <N>` | Remove the Nth gate (1-based). |
+| `/goal gate clear` | Remove all gates. |
+
+Without `--`, `resume`/`continue`/`unpause`/`pause`/`status`/`show`/`unwait` followed by words run the control command and ignore the rest. `/goal` is single-session: it never creates a kanban card, never assigns work to another profile, and never fans out. A kanban card created with `--goal` runs the same continuation engine inside that card's worker session, which fits into [Kanban multi-agent workflows in Hermes](https://hermes-tutorials.dev/blog/kanban-multi-agent-workflows/).
+
+### `/subgoal`: extra acceptance criteria mid-loop
+
+The `/subgoal` family lets you append criteria mid-loop without resetting progress: `/subgoal <text>`, `/subgoal` (list), `/subgoal remove <N>`, and `/subgoal clear`. The judge must consider every subgoal, and the goal is not done until the original objective AND every subgoal are met. A new `/goal <text>` or `/goal clear` replaces the goal and clears the subgoal list. `/subgoal` requires an active `/goal`.
+
+## The Completion Contract: How the Judge Decides "Done"
+
+A completion contract is a structured goal with five optional fields — `outcome`, `verification`, `constraints`, `boundaries`, and `stop_when` — that the judge only marks done when the verification criterion is met with concrete evidence, per the [Persistent Goals docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/goals). Set one with `/goal draft <text>` or inline `field: value` lines; contracts persist in `SessionDB.state_meta` and survive `/resume`.
+
+- `outcome`: the single end state that must be true when done.
+- `verification`: the specific test, command, or artifact that proves the outcome.
+- `constraints`: what must not change or regress.
+- `boundaries`: which files, dirs, tools, or systems are in scope.
+- `stop_when`: the condition under which Hermes should stop and ask for input.
+
+`/goal draft <text>` expands via the `goal_judge` auxiliary model and falls back to a free-form goal if that model is unavailable — "drafting never blocks setting a goal." Inline prefixes include `verify:`, `verified by:`, `constraints:`, `preserve:`, `boundaries:`, `scope:`, `stop when:`, and `blocked:`. A plain goal with an incidental colon, such as `Fix bug: the parser drops commas`, is not mangled because only known field prefixes are pulled out. Use `/goal show` to print the contract.
+
+## Quality Gates and Background-Process Waits
+
+Quality gates are deterministic shell commands that must exit 0 before the goal can complete, and they run before the judge each turn, per the [Persistent Goals docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/goals). Each gate defaults to 3 retries and a 5-minute timeout; when retries are exhausted the goal auto-pauses. A red gate means the judge is not called.
+
+When a gate fails, its exit code and output tail (last ~3 KB) become the continuation prompt. If all gates pass, normal judging proceeds. Every boundary re-runs a failed gate (no stale replay), and gates persist in `SessionDB.state_meta`. Gate subcommands let you add, list, remove (1-based), and clear gates.
+
+### Parking a goal on a background process
+
+The judge sees the session's live `terminal(background=true)` registry entries (pid, session id, command, uptime, recent output, `watch_patterns` / `notify_on_complete`). Verdicts include `wait_on_session <id>` (releases on exit OR a watch-pattern match), `wait_on_pid <pid>` (exit only), and `wait_for_seconds <n>`. Pid/session waits are capped at 30 minutes. Manual controls are `/goal wait <pid> [reason]` and `/goal unwait`. Processes started by delegated subagents are not shown. For more on running work alongside the agent, see [our guide to Hermes background processes](https://hermes-tutorials.dev/blog/hermes-background-processes-guide/).
+
+## The Judge, Its Verdicts, and the 20-Turn Budget
+
+The judge is a small auxiliary model called after every turn that returns strict one-line JSON — `done`, `blocked`, `continue`, or `wait` — and the 20-turn continuation budget (`goals.max_turns`) is the real backstop, per the [Persistent Goals docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/goals). If the judge errors, the verdict fails open to `continue`; a `blocked` verdict pauses the goal and never marks it done.
+
+The judge receives the goal text and the last ~4 KB of the final response, and must return:
+
+```json
+{"verdict": "done" | "blocked" | "continue" | "wait", "reason": "<one-sentence rationale>"}
+```
+
+A `done` verdict is returned only when the response explicitly confirms completion. A `blocked` verdict pauses with `🚫 Goal judged unachievable — paused`. The default budget is 20 continuation turns (`goals.max_turns`). On exhaustion:
+
+```text
+⏸ Goal paused — 20/20 turns used. Use /goal resume to keep going, or /goal clear to stop.
+```
+
+`/goal resume` resets the turn counter to zero. Any real user message preempts the continuation loop. Goal state lives in `SessionDB.state_meta` keyed by `goal:<session_id>` and survives `/resume`. A false negative can be caught by the budget, while a false positive means sending a follow-up or re-setting a more specific goal. The judge's system prompt is deliberately conservative, and the judge call is small (~200 output tokens, once per turn).
+
+## What `/loop` Does: Recurring Prompts Inside Your Session
+
+`/loop` re-runs a prompt or a slash command on a recurring cadence inside your current session, with each wakeup a real agent turn that reads current state fresh, per the [Recurring Loops docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/loops). Where `/goal` is judge-driven, `/loop` is timer-driven: do this again every N minutes until something says stop.
+
+Quick start:
+
+```text
+/loop 5m check the deploy status and tell me if it's live yet
+```
+
+Output:
+
+```text
+↻ Loop set (every 5m): …
+```
+
+The first wakeup fires right away (gateway: next 15s watcher scan). Canonical uses include polling external state, iterate-until-green, monitoring during a work session, and periodic housekeeping. You can also loop a slash command, for example `/loop 10m /recap`. `/proactive` is an alias for `/loop` for Claude Code parity; `/loop` is Hermes' take on Claude Code's `/loop`.
+
+Countdown surfaces include the CLI row `↻ loop · every 5m · 2 runs · next in 4m · <prompt>` (Ctrl+R collapses to `↻ loop next in 4m`), a TUI row under the goal bar, and a Desktop card `Loop active · 2 runs · next 00:04:12`. On gateway platforms, wakeups fire even between your messages and results arrive as ordinary replies.
+
+## `/loop` Cadences and Stop Conditions
+
+`/loop` supports fixed intervals like `30s` or `5m` and a self-paced mode that starts at a 1-minute floor, backs off exponentially toward a 15-minute ceiling, and snaps back when a reply differs, per the [Recurring Loops docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/loops). Loops stop via `LOOP_COMPLETE`, `--times N`, `--until`, or the `loops.max_ticks` backstop (default 100).
+
+Fixed intervals such as `30s`, `5m`, `2h`, and `1h30m` fit when an external clock drives the work. In self-paced mode, omit the interval: it starts at the floor, backs off to 2m, 4m, 8m up to the ceiling while replies stop changing, and snaps back to the floor the moment a reply differs. Change detection is a local digest comparison with timestamps ignored.
+
+Stop conditions: the agent emits `LOOP_COMPLETE` on its own line; `--times N`; `--until <condition>` checked by the same auxiliary judge that powers `/goal` (unachievable conditions pause the loop; fail-open); `/loop stop` or `/loop pause`; and `loops.max_ticks` (default 100, `0` = unlimited). Ctrl+C during a wakeup pauses the loop, recoverable with `/loop resume`. Because `--until` routes through the `goal_judge` auxiliary task, `auxiliary.goal_judge.*` overrides apply to loop conditions too.
+
+## Mixing `/goal` and `/loop` in One Session
+
+An active goal owns the session: while a goal is actively driving, loop wakeups defer and resume using idle time once the goal finishes, pauses, or parks on a wait barrier, per the [Recurring Loops docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/loops). A parked goal plus a `/loop` is a natural combo, and a real user message always wins over both.
+
+There is one loop per session—a new `/loop` replaces the old. To run several loops, use several sessions or use cron for a fleet of schedules. Loop state survives `/resume` and context compression; for a deeper look at how session context is handled, see [how context compaction works in Hermes Agent](https://hermes-tutorials.dev/blog/hermes-agent-context-compaction-guide/). "Token cost scales with cadence. Every tick is a full agent turn."
+
+## `/goal` vs `/loop` vs `hermes cron` vs `/heartbeat`
+
+`/goal`, `/loop`, `hermes cron`, and `/heartbeat` differ in trigger, scope, and durability: `/goal` is judge-driven in your current session, `/loop` is timer-driven in the same session, cron runs unattended on its own session per run, and `/heartbeat` fires only when the session is idle, per the official comparison tables in the [Recurring Loops](https://hermes-agent.nousresearch.com/docs/user-guide/features/loops), [Cron Jobs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron), and [Session Heartbeats](https://hermes-agent.nousresearch.com/docs/user-guide/features/heartbeat) docs.
+
+| Mechanism | Trigger | Lives in | Ends when | Best for |
+|---|---|---|---|---|
+| `/loop` | Timer (or self-paced) | Your current session | Stop condition / caps / you | Polling, monitoring, periodic re-runs |
+| `/goal` | Judge verdict after each turn | Your current session | Goal achieved / budget / you | One objective, iterate until done |
+| cron | Schedule, outside any session | Its own session per run | You remove the job | Unattended, long-horizon schedules |
+| `/heartbeat` | Fires when the session is idle and the interval has elapsed (minimum 60s) | This conversation — one per session (state keyed `heartbeat:<session_id>`) | You run `/heartbeat clear` | Recurring prompts that need full session context; idle-only, never interrupts a running turn |
+
+"`/loop` lives inside a session; cron lives outside all of them." Cron lets you "Schedule automated tasks with natural language, manage them with one cron tool, and attach one or more skills." For durable schedules, see [cron job patterns for unattended Hermes schedules](https://hermes-tutorials.dev/blog/cron-job-patterns-2026/). Heartbeat runs in this conversation with full context, one per session; cron runs a fresh isolated session per tick, is fully durable, and allows unlimited jobs.
+
+## Where These Commands Work — and Where They Don't
+
+`/goal` and `/loop` work across the classic CLI, TUI, desktop app, dashboard chat, and every gateway platform; `/heartbeat` works on the CLI, the TUI/Desktop app, and gateway platforms (on Slack, use `/hermes heartbeat …`). That is the documented surface list in the official [Persistent Goals](https://hermes-agent.nousresearch.com/docs/user-guide/features/goals), [Recurring Loops](https://hermes-agent.nousresearch.com/docs/user-guide/features/loops), and [Session Heartbeats](https://hermes-agent.nousresearch.com/docs/user-guide/features/heartbeat) docs. The one documented gap: ACP does not currently advertise or implement `/goal`. On messaging platforms, `/goal gate add` requires an explicitly configured gateway admin.
+
+`/loop` works on CLI, TUI (`hermes --tui`), web dashboard chat, desktop app, and every gateway platform (Telegram, Discord, Slack, WhatsApp, …). In the desktop app and dashboard chat, "a session with an active `/loop` (or `/heartbeat`) is exempt from the disconnected-session reaper," but the backend process itself must keep running.
+
+## Configuration: Budgets, Cadence Floors, and the Judge Model
+
+The relevant configuration keys are `goals.max_turns` (default 20), the `loops` block (`min_interval_seconds`, `max_ticks`, `self_paced_floor_seconds`, `self_paced_ceiling_seconds`), and the `auxiliary.goal_judge` override, per the official [Persistent Goals](https://hermes-agent.nousresearch.com/docs/user-guide/features/goals) and [Recurring Loops](https://hermes-agent.nousresearch.com/docs/user-guide/features/loops) docs. The judge call is small — about 200 output tokens, once per turn — so a cheap fast model is usually the right call.
+
+```yaml
+goals:
+  max_turns: 20
+```
+
+```yaml
+auxiliary:
+  goal_judge:
+    provider: openrouter
+    model: google/gemini-3-flash-preview
+```
+
+```yaml
+loops:
+  min_interval_seconds: 30        # floor for fixed intervals
+  max_ticks: 100                  # backstop budget (0 = unlimited)
+  self_paced_floor_seconds: 60    # self-paced starting cadence
+  self_paced_ceiling_seconds: 900 # self-paced max backoff
+```
+
+The `auxiliary.goal_judge.*` override also governs `/loop --until` conditions. You can cross-check command syntax in the [Slash Commands reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands).
+
+## FAQ
+
+### Does a `/goal` or `/loop` survive `/resume`, restarts, or a closed window?
+
+Goal state persists in `SessionDB.state_meta` keyed `goal:<session_id>` and survives `/resume`, per the [Persistent Goals docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/goals); loop state survives `/resume` and context compression per the [Recurring Loops docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/loops). Active `/loop` or `/heartbeat` sessions are exempt from the disconnected-session reaper, but the backend must keep running. For restart-surviving work, use cron; see [building persistent context across sessions](https://hermes-tutorials.dev/blog/hermes-agent-memory-management-build-persistent-context-across-sessions/).
+
+### What happens if the judge model is wrong — or errors?
+
+A false negative—judge says continue when done—is caught by the turn budget; a false positive means a follow-up or a more specific goal, per the [Persistent Goals docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/goals). The judge's system prompt is deliberately conservative to make false positives rarer, and a judge error fails open to `continue`.
+
+### Can I run multiple goals or loops at once?
+
+One loop per session—setting a new `/loop` replaces the old; run several loops by running several sessions, or use cron for a fleet of schedules, per the [Recurring Loops docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/loops). `/goal` is single-session too: it never creates a kanban card, never assigns work to another profile, never fans out, and a new goal mid-run is rejected.
+
+### How do I stop a runaway goal or loop?
+
+Any real user message preempts the continuation loop, per the [Persistent Goals docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/goals). `/goal pause` stops auto-continuation, `/goal clear` drops it, the 20-turn budget auto-pauses on exhaustion, and exhausted gate retries auto-pause. For loops, `/loop stop` or `/loop pause` halts it, Ctrl+C pauses it, and `loops.max_ticks` (default 100) is the backstop.
+
+### Do `/goal` and `/loop` cost more tokens than normal turns?
+
+No cache penalty—continuation prompts and loop wakeups are plain user-role turns with no system-prompt mutation or toolset swap, so a 20-turn goal costs the same cache-wise as 20 turns of normal conversation, per the [Persistent Goals](https://hermes-agent.nousresearch.com/docs/user-guide/features/goals) and [Recurring Loops](https://hermes-agent.nousresearch.com/docs/user-guide/features/loops) docs. The judge call is small (~200 output tokens, once per turn), and loop token cost scales with cadence.
+
+## The Bottom Line
+
+The bottom line is that `/goal` is judge-driven persistence for one objective, `/loop` is timer-driven recurrence inside your session, cron is the unattended scheduler, and `/heartbeat` is an idle-only nudge, per the official [Persistent Goals](https://hermes-agent.nousresearch.com/docs/user-guide/features/goals), [Recurring Loops](https://hermes-agent.nousresearch.com/docs/user-guide/features/loops), [Cron Jobs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron), and [Session Heartbeats](https://hermes-agent.nousresearch.com/docs/user-guide/features/heartbeat) docs.
+
+Reach for `/goal` when you need one objective iterated until done, with contracts and gates to make "done" provable. Reach for `/loop` for polling, monitoring, and periodic re-runs inside the session you are already in. Reach for `hermes cron` when the work is unattended, overnight, or must survive restarts. Reach for `/heartbeat` for idle-only nudges in one conversation. For durable schedules, explore [cron job patterns for unattended Hermes schedules](https://hermes-tutorials.dev/blog/cron-job-patterns-2026/).
+
+## How This Guide Was Built
+
+This guide was built from the official Hermes Agent documentation only — the [Persistent Goals](https://hermes-agent.nousresearch.com/docs/user-guide/features/goals), [Recurring Loops](https://hermes-agent.nousresearch.com/docs/user-guide/features/loops), [Cron Jobs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron), [Session Heartbeats](https://hermes-agent.nousresearch.com/docs/user-guide/features/heartbeat), and [Slash Commands](https://hermes-agent.nousresearch.com/docs/reference/slash-commands) pages — fetched on 2026-11-16 with HTTP 200 and saved in full. No hands-on testing was performed and no third-party sources were used; any fact not in those pages was excluded.
+
+As the docs state it: `/goal` is Hermes' take on the Ralph loop, directly inspired by Codex CLI 0.128.0's `/goal` by Eric Traut (OpenAI), with an independent implementation; `/loop` is Hermes' take on Claude Code's `/loop`; `/heartbeat` is inspired by Prime-Agent's `/heartbeat`. Commands and output strings shown are reproduced from the documentation.
