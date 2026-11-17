@@ -331,3 +331,12 @@ The agent run succeeded but output did not reach the target. Cron records `last_
 ## The Bottom Line
 
 Build a multi-blog content pipeline in Hermes by composing documented primitives—cron, `workdir`, skills, script-only jobs, `execute_code`, delegation, and delivery—around a file-based queue convention you control. Treat queue schemas, dequeue rewrites, validation gates, and publish hand-offs as explicit conventions, start with one blog’s drafter, and scale to **13** blogs only after watchdogs, delivery, and failure checks are in place.
+
+<!-- crosslinks -->
+
+## 📖 Related Reads
+
+- **[NiteAgent](https://niteagent.com/)** — AI agent development, frameworks, and production patterns
+- **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools, agents, and APIs
+
+*Cross-links automatically generated from Hermes Tutorials.*
