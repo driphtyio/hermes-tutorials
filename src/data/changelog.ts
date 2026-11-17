@@ -1,4 +1,4 @@
-// AUTO-GENERATED from NousResearch/hermes-agent GitHub releases (53 releases, 2026-03-12..2026-11-16).
+// AUTO-GENERATED from NousResearch/hermes-agent GitHub releases (54 releases, 2026-03-12..2026-11-17).
 // Regenerate via scripts/gen-changelog.py — do not hand-edit entries.
 export interface ChangelogLink {
   url: string;
@@ -20,6 +20,24 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  {
+    "tag": "v0.23.2+canary.20261117T064624Z",
+    "version": "v0.23.2",
+    "codename": "",
+    "date": "2026-11-17",
+    "summary": "",
+    "highlights": [],
+    "prs": "",
+    "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.2%2Bcanary.20261117T064624Z",
+    "compare": "https://github.com/NousResearch/hermes-agent/compare/v0.23.2...v0.23.2+canary.20261117T064624Z",
+    "links": [
+      {
+        "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.2%2Bcanary.20261117T064624Z",
+        "label": "Release notes (v0.23.2+canary.20261117T064624Z)"
+      }
+    ],
+    "body": "## Downloads\n\n### Hermes Desktop\n\n| OS | Architecture | Download |\n|---|---|---|\n| macOS | Apple Silicon (M-series) | [DMG](https://hermes-assets.nousresearch.com/releases/tag/v0.23.2%2Bcanary.20261117T064624Z/HermesBundled-0.23.2%2Bcanary.20261117T064624Z-mac-arm64.dmg) |\n| Windows | x86 (64-bit) | [MSIX](https://hermes-assets.nousresearch.com/releases/tag/v0.23.2%2Bcanary.20261117T064624Z/HermesBundled-0.23.2%2Bcanary.20261117T064624Z-win-x64.msix) |\n| Windows | ARM (arm64 / aarch64) | [MSIX](https://hermes-assets.nousresearch.com/releases/tag/v0.23.2%2Bcanary.20261117T064624Z/HermesBundled-0.23.2%2Bcanary.20261117T064624Z-win-arm64.msix) |\n\n### Native install/chat smoke\n\nDownload availability is independent of smoke status. Each result covers all native legs in that format group. Linux bundles are disabled; unsigned Store envelopes are not install-smoked. No-upload dry tags have no download handoff and are not smoke-qualified.\n\n| Packages | Smoke status |\n|---|---|\n| macOS DMG + ZIP (arm64) | Passed |\n| Windows MSIX (arm64) | Passed |\n| Windows MSIX (x64) | Passed |\n\n## ✨ Features\n\n- Plugin-catalog): add opendockit plugin ([`3cf52227`](https://github.com/NousResearch/hermes-agent/commit/3cf522275736592abb9540154b6de50814165144)) — @hyeonsang010716\n\n## 🔧 Improvements\n\n- Teams): move the Microsoft Graph auth and client into the teams_pipeline plugin ([`40d1e95f`](https://github.com/NousResearch/hermes-agent/commit/40d1e95f37e409f9f618f32c170661c66b86a4f4)) — @alt-glitch\n- Agent): six checkpoint files move from tools/ to agent/checkpoints/ ([`458a0046`](https://github.com/NousResearch/hermes-agent/commit/458a0046ad6ce75f6f7b2705f592b9c7a749fe14)) — @alt-glitch\n\n## 🐛 Bug Fixes\n\n- Update-check): the passive check's git ls-remote dies with the CLI ([`60503775`](https://github.com/NousResearch/hermes-agent/commit/605037755ad3ffa2ec9d8304447d9cc150db1e73))\n- Desktop): an adopted reply drops its late tail by stream offset, in raw form ([`e87a591d`](https://github.com/NousResearch/hermes-agent/commit/e87a591d9b973fa912ef227a7764edb341b978ac))\n\n## 🧪 Tests\n\n- Update-check): fill the child script's SHA with replace, not % (ruff UP031) ([`631e406f`](https://github.com/NousResearch/hermes-agent/commit/631e406f57b2d6fc6a65eb189d8ae0c8afb3f44c))\n\n## 👥 Contributors\n\nThank you to everyone who contributed to this release!\n\n- @BearHuddleston (8 commits)\n- @alt-glitch (2 commits)\n- @SHL0MS (2 commits)\n- @kvnloo (1 commit)\n- @hyeonsang010716 (1 commit)\n\n**Full Changelog**: [v0.23.1+canary.20261116T070005Z...v0.23.2+canary.20261117T064624Z](https://github.com/NousResearch/hermes-agent/compare/v0.23.1+canary.20261116T070005Z...v0.23.2+canary.20261117T064624Z)"
+  },
   {
     "tag": "v0.23.2",
     "version": "v0.23.2",
