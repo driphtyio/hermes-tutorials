@@ -2,305 +2,368 @@
 title: "Configuration Deep Dive"
 description: "Every config.yaml section explained — model, agent, terminal, compression, display, stt, tts, memory, security, delegation, and checkpoints."
 pubDate: "2026-05-14"
-updatedDate: "2026-10-14"
-lastVerified: "2026-10-14"
+updatedDate: "2026-11-18"
+lastVerified: "2026-11-18"
 tags: ["configuration", "reference", "advanced"]
 keywords: [hermes config, config.yaml, configuration reference, hermes settings, terminal timeout, context compression, agent max_turns, hermes checkpoints]
 ---
 
-> **TLDR:** Hermes configuration lives in `~/.hermes/config.yaml`. Inspect it with `hermes config path`, open it with `hermes config edit`, and change single values with `hermes config set KEY VALUE`. This guide walks every config section — model, agent, terminal, compression, display, stt, tts, memory, security, delegation, and checkpoints — with the documented values against the [official configuration guide](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) on 2026-10-14.
+> **TLDR:** Hermes configuration lives in `~/.hermes/config.yaml`. Edit it with `hermes config edit`, and change one value with `hermes config set KEY VALUE`. This refresh covers the configuration sections that changed most recently against the [official configuration reference](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) fetched on 2026-11-18.
 
 ## Key Takeaways
 
-- `hermes config edit` opens the full config in your editor; `hermes config path` prints its location
-- `hermes config set section.key value` changes one thing at a time; `unset KEY` restores the default
-- `agent.max_turns` defaults to **none (unlimited)** — not 90
-- `checkpoints.enabled` defaults to **false** — it is opt-in
-- `compression.enabled: true` and `compression.threshold: 0.50` match the documentation
-- `approvals.mode` defaults to `smart`; setting it to `off` disables all terminal safety checks
-- Most changes need a session restart (`/reset` or relaunch) to take effect
-
-A note on notation before we start: slash commands such as `/reset`, `/compress`, `/rollback`, and `/voice` are typed inside a running session. They are not `hermes` CLI subcommands and are not part of the CLI reference.
+- `compression.prepare_ahead` defaults to `false`; when enabled, Hermes prepares one background summary for the next compaction.
+- Gateway hygiene and in-agent compression use separate inactivity budgets. Streamed tokens extend the inactivity deadline.
+- `auxiliary.compression.no_progress_timeout` defaults to 60 seconds when unset. Increasing `timeout` alone does not widen that progress window.
+- `delegation.backend` defaults to `"default"`. A missing or disabled plugin backend fails closed instead of silently selecting another route.
+- The canonical concurrency key is top-level `max_concurrent_sessions`; `gateway.max_concurrent_sessions` is only a fallback.
+- `runtime.nofile_soft_limit` defaults to `4096`, while `runtime.malloc_arena_max` defaults to `4`.
+- `database.journal_mode` defaults to `wal`; converting an existing WAL database to `delete` requires stopping its users.
+- Store environment-variable references with `hermes config set`, not inline credentials.
 
 ## Config File Location
 
 ```bash
-hermes config path    # → /home/you/.hermes/config.yaml
-hermes config edit    # Open in $EDITOR
-hermes config check   # Validate the config
+hermes config edit
+hermes config get KEY
+hermes config set KEY VALUE
+hermes config unset KEY
+hermes config check
 ```
 
-Hermes keeps everything in a single home directory, `~/.hermes/`, which holds `config.yaml`, `.env`, `auth.json`, `SOUL.md`, `memories/`, and `skills/`. See the [configuration guide](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) for the full layout.
-
-Secrets live in a separate file, printed by:
-
-```bash
-hermes config env-path  # → /home/you/.hermes/.env
-```
+The main file is `~/.hermes/config.yaml`. Secrets belong in `~/.hermes/.env`. The [configuration reference](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) also covers migration, validation, and configuration loading behavior.
 
 ## Model Section
 
-Controls which LLM Hermes uses. The block below is a representative shape of the section, not a statement of shipped defaults:
+The model block selects the model identifier, provider, endpoint, credential, and declared context length:
 
 ```yaml
 model:
-  default: anthropic/claude-sonnet-4      # Model identifier
-  provider: openrouter                    # Provider name
-  base_url: ""                            # Custom endpoint URL
-  api_key: ""                             # Use .env instead!
-  context_length: 128000                  # Model's max context
+  default: "<model-id>"
+  provider: "<provider>"
+  base_url: ""
+  api_key: "${API_KEY}"
+  context_length: <context-length>
 ```
 
-**Tips:**
-- Never put API keys in `config.yaml` — use `.env`
-- `context_length` should match whatever the model actually supports
-- `provider` determines routing; set to `openrouter` to reach many models through one key
-
-Model selection and provider setup are covered in the [models documentation](https://hermes-agent.nousresearch.com/docs/user-guide/configuring-models).
+These are representative fields, not shipped defaults. Keep provider-specific values aligned with the selected model, and use an environment reference instead of storing an inline credential. The [full configuration reference](https://hermes-agent.nousresearch.com/docs/user-guide/configuration#full-reference) is the canonical source for model and provider settings.
 
 ## Agent Section
 
-Controls conversation loop behavior.
-
 ```yaml
 agent:
-  max_turns: none             # default: none (unlimited)
-  tool_use_enforcement: "auto"  # "auto" | true | false | ["model-substring", ...]
+  max_turns: none
+  tool_use_enforcement: "auto"
 ```
 
-**`max_turns` defaults to none — unlimited.** A positive integer caps the value; the strings `"none"` and `null` both mean unlimited. The [configuration guide](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) explains the history: a hard cap "caused more problems than it solved (silent mid-task truncation)", which is why the shipped default is no cap at all. 
+`agent.max_turns` defaults to unlimited. A positive integer imposes a cap, while `"none"` and `null` retain the unlimited behavior. Because a cap can interrupt work mid-task, leave it unset unless a deliberate ceiling is required.
 
-If you do want a guard rail, set a positive integer and accept that a task can be cut off mid-flight. If you never want that, leave it at `none`.
+Slash commands such as `/reset`, `/compress`, `/rollback`, and `/voice` are entered inside a running session. They are not `hermes` CLI subcommands.
 
 ## Terminal Section
 
-Controls shell access.
-
 ```yaml
 terminal:
-  backend: local                 # local, docker, ssh, modal
-  cwd: /home/you/projects       # Default working directory
-  timeout: 180                   # Seconds before a command is cut off
+  backend: local
+  cwd: /home/you/projects
+  timeout: 180
 ```
 
-**Backends:**
-- `local` — runs on your machine
-- `docker` — runs inside a Docker container
-- `ssh` — runs on a remote server
-- `modal` — runs on Modal serverless infra
-- `daytona`, `vercel_sandbox`, `singularity` — additional sandbox backends listed in the configuration reference
+This is a representative configuration rather than a list of defaults. Available backends include `local`, `docker`, `ssh`, and `modal`, with additional backends such as `daytona`, `vercel_sandbox`, and plugin backends documented in the [terminal configuration reference](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
 
-`timeout` is the maximum seconds for any single command. Raise it for long builds. Terminal behavior is documented on the [terminal page](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
+`terminal.docker_forward_env` forwards named credentials from your shell or `~/.hermes/.env` into the container, and anything listed becomes visible to commands inside it; `docker_env` injects literal `KEY=value` pairs instead. `terminal.vercel_image` picks the Vercel sandbox image (default `vercel/sandbox/universal:latest`), and the older `vercel_runtime` presets are deprecated by Vercel. `terminal.home_mode` (default `auto`) controls whether host profiles share the normal user-level `~` config; `home_mode: profile` gives a profile its own home. `persistent_shell` defaults to on for SSH and local terminals, so exported environment variables carry over between commands.
 
 ## Compression Section
 
-Controls context window compression to save tokens.
+Compression has separate controls for triggering, summary generation, gateway hygiene, and in-agent context recovery:
 
 ```yaml
 compression:
-  enabled: true        # Auto-compress when nearing limit
-  threshold: 0.50      # Trigger at 50% context usage
-  target_ratio: 0.20   # Example value shown in the docs' sample config
+  enabled: true
+  threshold: 0.50
+  target_ratio: 0.20
+  prepare_ahead: false
+  hygiene_hard_message_limit: 5000
+  hygiene_timeout_seconds: 30
+  hygiene_total_ceiling_seconds: 600
+  hygiene_max_turn_hold_seconds: 10
+  hygiene_failure_cooldown_seconds: 300
+  context_timeout_seconds: 120
+  context_total_ceiling_seconds: 600
+
+auxiliary:
+  compression:
+    model: ""
+    provider: "auto"
+    base_url: null
+    no_progress_timeout: 60
 ```
 
-`enabled: true` and `threshold: 0.50` are both confirmed on the [configuration page](https://hermes-agent.nousresearch.com/docs/user-guide/configuration). `target_ratio` appears as `0.20` in the documentation's sample block; we are presenting it as the sample value rather than asserting it as a documented default, because the guide does not label it as one.
+`enabled: true` and `threshold: 0.50` are documented defaults. The shown `target_ratio: 0.20` is the documentation’s sample value, not a labeled default. See the [compression reference](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) for the complete block.
 
-When compression triggers, Hermes summarizes older conversation turns as you approach the context limit. `/compress` triggers it manually (in-session slash command).
+### Summary Model and Legacy Migration
+
+The three summary-model knobs interact as follows:
+
+| `auxiliary.compression.provider` | `auxiliary.compression.base_url` | Result |
+| --- | --- | --- |
+| `auto` (default) | Not set | Auto-detect the best available provider |
+| A named provider | Not set | Force that provider and use its authentication |
+| Any value | Set | Use the custom endpoint directly; the provider is ignored |
+
+`auxiliary.compression.model` names the summary model. An empty value uses the main chat model. The summary model’s context window must be at least as large as the main agent model’s, because the compressor sends the conversation’s middle section to it. A smaller summary window causes the call to fail and can drop those turns without a summary.
+
+Legacy `compression.summary_model`, `compression.summary_provider`, and `compression.summary_base_url` values automatically migrate to `auxiliary.compression.*` on first load. This is config version 17 and requires no manual action.
+
+### Prepare Ahead
+
+`compression.prepare_ahead` defaults to `false`. When enabled, Hermes prepares the next compaction summary in the background once the session approaches the trigger, including while tools run and between turns.
+
+Exactly one summary is prepared per compaction. When automatic compaction fires, Hermes uses it only if the messages being summarized are still the same messages. Plugin text edits are acceptable, but a dropped message or rewind invalidates the prepared summary. Messages newer than the prepared summary remain outside it in the uncompressed tail.
+
+If preparation is still running when compaction starts, Hermes waits for that preparation within the usual compression limit instead of starting another summary. If no usable preparation exists, normal compaction proceeds. Preparation can spend an auxiliary call that goes unused, and it does not apply to manual `/compress`, plugin context engines, or native/app-server compaction. When a memory provider adds context to compaction summaries, `prepare_ahead` switches itself off after the first compaction because the prepared summary would be discarded.
+
+### Gateway Hygiene Budgets
+
+Gateway hygiene must not be treated as one undifferentiated timeout:
+
+- `compression.hygiene_timeout_seconds` defaults to `30`. It is an inactivity budget: every arriving summary token counts as progress and extends the deadline. Only a period with no model output expires it.
+- `compression.hygiene_total_ceiling_seconds` defaults to `600`. This is an absolute ceiling, even while tokens continue streaming, and is clamped to at least `hygiene_timeout_seconds`.
+- `compression.hygiene_max_turn_hold_seconds` defaults to `10`. This bounds the wall-clock time an incoming turn waits for hygiene before proceeding uncompressed. The detached worker may still finish; a safely fenced late summary is adopted at a later safe boundary.
+- `compression.hygiene_failure_cooldown_seconds` defaults to `300`. It is the first rung of a per-session backoff: consecutive failures wait `1x`, `3x`, then `9x` this value, capped at one hour. A successful shrinking compaction resets the ladder.
+- `compression.hygiene_hard_message_limit` defaults to `5000`. It is a gateway-only count-based safety valve when token usage cannot be trusted. If hygiene does not land, the model payload is clipped to the leading system/setup rows and newest messages, never starts the retained tail on an orphaned tool result, and leaves the stored transcript untouched.
+
+These paths and their failure behavior are described under [gateway hot reload and compression](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
+
+### In-Agent Context Budgets
+
+`compression.context_timeout_seconds` defaults to `120` and governs the conversation loop, preflight compaction, and manual `/compress`. It is an inactivity budget: streamed summary tokens extend it, while silence expires it. The effective budget is floored at `auxiliary.compression.timeout`; that effective auxiliary timeout is itself at least 300 seconds for this path.
+
+`compression.context_total_ceiling_seconds` defaults to `600` and caps the in-agent pre-commit wait even while tokens are moving. It is clamped to at least `context_timeout_seconds`. Time spent reading a prompt on a llama.cpp server does not consume the ceiling; genuine newly-read-token reports extend it, while reports that read nothing do not. Once a session-store commit starts, it is never abandoned mid-flight; an overrun is logged and surfaced instead.
+
+The deterministic fallback ladder is deliberate. After a timeout, Hermes retries once against the first `auxiliary.compression.fallback_chain` entry. If that also fails and the request still fits the model window, Hermes sends it uncompressed for that turn. If it does not fit, Hermes commits a deterministic fallback summary that prunes old tool results and inserts a static handoff in place of the summarized middle. Ending the turn with the compression-timeout recovery result—and resetting the session on the messaging gateway—is the last resort. A preflight pass that reclaims nothing above the window ends with guidance to start a new session with `/new`.
+
+### Stream Progress Timeout
+
+`auxiliary.compression.no_progress_timeout` defaults to 60 seconds when unset. A substantive text or reasoning delta, or a completed output item, re-arms the window; keepalive and lifecycle frames do not count as progress.
+
+Raising `auxiliary.compression.timeout` alone does **not** widen this progress window. Use the per-task form `auxiliary.<task>.no_progress_timeout` to change an individual task. The effective window is capped by the request timeout, and a non-positive value is ignored with a warning, leaving the 60-second default in effect.
 
 ## Display Section
 
-Controls CLI appearance.
-
 ```yaml
 display:
-  skin: default                  # Color theme
-  tool_progress: all            # off | new | all | verbose
-  show_reasoning: true           # Show model reasoning above each response
-  show_cost: false               # Show per-turn token costs
+  skin: default
+  tool_progress: all
+  show_reasoning: true
+  show_cost: false
 ```
 
-`show_reasoning` surfaces what the model is thinking, which is useful when debugging a stubborn task. `show_cost` tracks per-turn token spend.
+`show_reasoning` exposes model reasoning above a response, while `show_cost` shows per-turn token cost. These controls are independent of model and compression settings; see the [configuration reference](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
 
 ## STT (Speech-to-Text)
-
-Converts voice messages to text.
 
 ```yaml
 stt:
   enabled: true
-  provider: local                # local, groq, openai, mistral
+  provider: local
   local:
-    model: base                  # tiny, base, small, medium, large-v3
+    model: base
 ```
 
-Local transcription runs through `faster-whisper` on your CPU and requires the `faster-whisper` backend; the voice docs describe its install path. The cloud providers (`groq`, `openai`, `mistral`) need their respective API key in `.env`. Provider options are listed on the [voice page](https://hermes-agent.nousresearch.com/docs/user-guide/features/voice-mode).
+Supported providers include `local`, `groq`, `openai`, and `mistral`. Local transcription uses the `faster-whisper` backend, while cloud providers require their respective credentials in `.env`. See the [speech-to-text configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
 
 ## TTS (Text-to-Speech)
 
-Converts text responses to voice.
-
 ```yaml
 tts:
-  provider: edge                 # edge, elevenlabs, openai, minimax, mistral, neutts
+  provider: edge
 ```
 
-`edge` is the shipped default. Other providers include `elevenlabs`, `openai`, `minimax`, `mistral`, `neutts`, `gemini`, `xai`, `kittentts`, `piper` and `deepinfra`; the voice docs hold the full list. Availability and quality vary by provider and region, so check the [voice documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/voice-mode) rather than relying on a pricing table.
-
-Voice mode: `/voice on` speaks replies to voice messages only; `/voice tts` speaks every reply (in-session slash commands).
+The sample configuration uses `edge`. Other providers include `elevenlabs`, `openai`, `minimax`, `mistral`, `neutts`, `gemini`, `xai`, `kittentts`, `piper`, and `deepinfra`. Use `/voice on` in the CLI to enable microphone mode and `/voice tts` to toggle spoken replies. For gateway chats, `voice.auto_tts_mode` (`all` by default, or `voice_only`) controls which replies receive audio when `voice.auto_tts` is enabled. See the [text-to-speech configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
 
 ## Memory Section
 
-Controls cross-session persistence.
-
 ```yaml
 memory:
-  memory_enabled: true           # Enable agent memory
-  user_profile_enabled: true     # Enable user preference memory
-  provider:                      # empty = built-in; honcho and mem0 are plugin providers
+  memory_enabled: true
+  user_profile_enabled: true
+  provider: ""
 ```
 
-- `memory_enabled` — the agent's working memory (lessons learned, preferences)
-- `user_profile_enabled` — stores facts about who you are
-- `provider` — the built-in provider is used when none is set; `honcho` and `mem0` are plugin providers
-
-Persistence and isolation are covered in the [memory documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory), and stored memories live under `~/.hermes/memories/`.
+An empty provider uses the built-in implementation. Agent memory records working knowledge, while user-profile memory stores facts about the user. See the [memory configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
 
 ## Security Section
 
-Controls safety features.
-
-```yaml
-security:
-  website_blocklist:             # mapping: enabled, domains, shared_files
-```
-
-The approval layer sits above this and is configured with `approvals.mode`, which has exactly three values:
+The approval layer is controlled with:
 
 ```bash
-hermes config set approvals.mode smart     # Default: smart — an LLM assesses flagged commands; risky ones are denied, uncertain ones escalate
-hermes config set approvals.mode manual    # Prompt for every dangerous command
-hermes config set approvals.mode off       # Disable all prompts
+hermes config set approvals.mode smart
+hermes config set approvals.mode manual
+hermes config set approvals.mode off
 ```
 
-**Warning:** `off` disables **all** terminal safety checks — every command runs without confirmation. Use it only where you accept that consequence. `smart` is the default; `manual` is the strict option. Background on the guardrails is in the [security guide](https://hermes-agent.nousresearch.com/docs/user-guide/security).
+`smart` is the default: an LLM assesses flagged commands, denies risky ones, and escalates uncertain ones. `manual` prompts for dangerous commands. `off` disables all terminal safety checks, so use it only where every command running without confirmation is acceptable. The [security configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) covers the surrounding controls.
 
 ## Delegation Section
 
-Controls subagent spawning.
+```yaml
+delegation:
+  backend: "default"
+  api_mode: ""
+```
+
+### Backend Selection
+
+`delegation.backend` defaults to `"default"`. The default strategy uses the ordinary delegation keys or inherits the parent route. Plugin strategies such as `model_map` and `profile_routes` read their settings from `delegation.backends.<backend name>`.
+
+A backend whose plugin is missing or disabled fails closed. `delegate_task` returns an error naming that backend and the fix—`/delegation default` or `hermes config set delegation.backend default`—instead of running children on another route. A backend without its own `fallback_providers` inherits `delegation.fallback_providers`. See [delegation strategies](https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation#delegation-strategies-delegationbackend).
+
+### Request Overrides and API Mode
+
+`delegation.request_overrides` is applied on all three route-resolution branches: direct `base_url`, named `provider`, and pure inheritance. Top-level request keys are API kwargs. An `extra_body` dictionary is deep-merged one level, preserving runtime or parent-derived nested values unless the delegation setting explicitly replaces them.
 
 ```yaml
 delegation:
-  model: ""                      # Override model for subagents
-  provider: ""                   # Override provider
-  base_url: ""                   # Override endpoint
-  api_key: ""                    # Use .env
-  reasoning_effort: medium       # accepted levels: see the delegation docs
+  model: "deepseek/deepseek-v4-flash-0731"
+  base_url: "https://openrouter.ai/api/v1"
+  api_key: "${OPENROUTER_API_KEY}"
+  request_overrides:
+    extra_body:
+      provider:
+        sort: throughput
 ```
 
-Subagents are independent agent instances and can run a different model from the parent. Each override field mirrors the top-level `model` section.
+`delegation.api_mode` defaults to `""`, which auto-detects the wire protocol from `base_url`. Set it explicitly to `chat_completions`, `codex_responses`, or `anthropic_messages` when the URL heuristic cannot classify an endpoint.
+
+### Child Process Notifications
+
+Child-process completion and watch notifications are suppressed by default because the child’s consolidated result is the deliverable. Set `delegation.surface_child_process_notifications: true` to deliver them with subagent attribution. Delegation results themselves are never suppressed. See [child process notifications](https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation#child-background-process-notifications).
 
 ## Checkpoints Section
 
-Filesystem snapshots for rollback.
-
 ```yaml
 checkpoints:
-  enabled: false       # default: false — opt-in
-  max_snapshots: 20    # Max checkpoints kept per directory (default: 20)
+  enabled: false
+  max_snapshots: 20
 ```
 
-**`checkpoints.enabled` defaults to `false`.** Checkpoints are opt-in: turn them on in `config.yaml`, or start a session with `hermes chat --checkpoints`. When enabled, Hermes snapshots your working directory before destructive operations and `/rollback` restores it (in-session slash command).
+Checkpoints are opt-in (`checkpoints.enabled: false` by default). Enable them in `config.yaml`, or start a session with `hermes chat --checkpoints`. `checkpoints.max_snapshots` keeps 20 checkpoints per directory by default. The default of `compression.checkpoint_required` is **not documented in the source verified for this refresh**, so no default is assigned to it here. See the [checkpoint configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
 
 ## Gateway Section
 
-For messaging platform configuration (covered in the [gateway guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)):
+Messaging platform settings live under `gateway.platforms`, while platform credentials belong in `.env`. The gateway also shares Hermes’s concurrent-session limit with the CLI, TUI, and dashboard.
+
+### Concurrent Sessions
+
+The canonical key is top-level:
 
 ```yaml
-gateway:
-  platforms:
-    telegram:
-      enabled: true
-      # token comes from the platform's *_BOT_TOKEN variable in .env
-
-    discord:
-      enabled: true
-      # token comes from the platform's *_BOT_TOKEN variable in .env
+max_concurrent_sessions: null
 ```
 
-Bot tokens belong in `.env`, referenced from `config.yaml`.
+`null` or `0` means unlimited; a positive integer caps active sessions. Hermes also accepts `gateway.max_concurrent_sessions` as a fallback, but the top-level key wins when both are set.
+
+A slot is taken when a session runs its **first turn**, not when a chat is opened, resumed, or reconnected. When the cap is reached, Hermes returns a direct limit message naming the surfaces holding slots. Run `hermes status --full` to inspect current usage and every holder. Existing sessions continue normally, and accepted gateway turns run on separate threads rather than queueing behind one another. The [concurrency reference](https://hermes-agent.nousresearch.com/docs/user-guide/configuration#full-reference) also describes the local lease and fail-open behavior.
+
+## Runtime Limits
+
+```yaml
+runtime:
+  nofile_soft_limit: 4096
+  malloc_arena_max: 4
+```
+
+`runtime.nofile_soft_limit` defaults to `4096`. Long-running server surfaces, including the gateway and `hermes serve --isolated`, apply the configured `RLIMIT_NOFILE` soft limit at startup when the operating system supports it. Hermes clamps the target to the hard limit and never lowers a process that already has a higher soft limit. Set it to `0`, `false`, or `null` to disable the adjustment.
+
+On Linux with glibc, `runtime.malloc_arena_max` defaults to `4` and applies to the gateway, `hermes serve`, and `hermes dashboard`. The cap is set before the server starts threads and applies only to the Hermes process; terminal tools, MCP servers, and builds retain glibc’s default. An explicit `MALLOC_ARENA_MAX` or `GLIBC_TUNABLES=glibc.malloc.arena_max=…` takes precedence, including when supplied through the profile’s `.env`. Set the Hermes value to `0`, `false`, or `null` to retain glibc’s default. Other platforms ignore it. See [runtime limits](https://hermes-agent.nousresearch.com/docs/user-guide/configuration#runtime-limits).
+
+## Database Settings
+
+```yaml
+database:
+  journal_mode: wal
+  # synchronous: FULL
+  # wal_autocheckpoint: 1000
+  # journal_size_limit: 67108864
+```
+
+`database.journal_mode` defaults to `wal`; `delete` is the alternative for filesystems where WAL is unsafe. The three commented values are examples, not labeled defaults. When unset, `synchronous` follows SQLite’s compile-time default, while `wal_autocheckpoint` and `journal_size_limit` use SQLite defaults. `synchronous` accepts `OFF`, `NORMAL`, `FULL`, `EXTRA`, or `0`–`3`. On macOS, values below `FULL` are refused as a floor against filesystem reordering; `EXTRA` is honored.
+
+Hermes never live-downgrades an existing WAL database. Stop every process using it and run:
+
+```bash
+hermes sessions set-journal-mode delete
+```
+
+The command refuses while a process still holds the database and verifies the converted header. `hermes doctor` warns `<db> is in WAL mode despite database.journal_mode=delete`, names the holding processes when it can prove them, and says `cannot prove the database is quiet` when the scan is incomplete. See [database settings](https://hermes-agent.nousresearch.com/docs/user-guide/configuration#database-settings).
 
 ## Environment Variables
 
-Hermes loads environment variables from `~/.hermes/.env`. This file keeps secrets separate from `config.yaml`.
+Hermes loads `~/.hermes/.env` for secrets and provider configuration. Its location is `~/.hermes/.env`.
+
+### Environment Variable Substitution
+
+Store a reference rather than a literal credential:
 
 ```bash
-hermes config env-path  # → /home/you/.hermes/.env
+hermes config set model.api_key '${MY_KEY}'
 ```
 
-You can also reference environment variables *inside* `config.yaml` with `${VAR}` interpolation. If a variable is unset, Hermes keeps the literal `${VAR}` text and emits a warning rather than failing silently.
+A value typed as a reference is stored exactly as typed. Generated variable names follow the documented endpoint and task rules: a path segment is added only when it is something other than `/v1`; a plugin task key that is not all lowercase, such as `My_Task`, receives `_<HASH>` and cannot share `my_task`’s variable. `<HASH>` is eight hexadecimal characters derived from the exact endpoint URL or provider name, so visually similar names remain separate. Hermes refuses to overwrite a variable that another configured endpoint already reads with a different key.
 
-```yaml
-model:
-  api_key: ${OPENROUTER_API_KEY}
-```
+These variables are always removed from terminal and subprocess environments, even when `env_passthrough` lists them or `inherit_credentials` is enabled. With a remote configuration backend that does not share `.env` between hosts, values are stored as given.
 
-The easiest way to start is OAuth: `hermes setup --portal`.
+A running gateway re-reads `.env` at the start of every turn, so the next message can use a newly saved key. A process that reads `.env` only at startup needs `/reload` or a restart. Until then, an auxiliary task whose key was just saved may send the literal `${VAR}` text as its key.
+
+Inline credentials in `config.yaml` still work and are not migrated, but they are discouraged. Move one by hand with `hermes config set <field> <value>`; Hermes rewrites it as a reference. See [environment-variable substitution](https://hermes-agent.nousresearch.com/docs/user-guide/configuration#environment-variable-substitution).
 
 ### API Keys
 
-| Variable | Provider |
-|----------|----------|
-| `OPENROUTER_API_KEY` | OpenRouter |
-| `ANTHROPIC_API_KEY` | Anthropic |
-| `OPENAI_API_KEY` | OpenAI |
-| `DEEPSEEK_API_KEY` | DeepSeek |
-| `GOOGLE_API_KEY` (or `GEMINI_API_KEY`) | Google Gemini |
-| `XAI_API_KEY` | xAI / Grok |
-| `GROQ_API_KEY` | Groq (and STT) |
-| `NOVITA_API_KEY` | Novita AI |
-| `HF_TOKEN` | Hugging Face |
-| `MINIMAX_API_KEY` | MiniMax |
-| `DASHSCOPE_API_KEY` | Alibaba / DashScope |
-| `KIMI_API_KEY` | Kimi / Moonshot |
-| `XIAOMI_API_KEY` | Xiaomi MiMo |
-| `KILOCODE_API_KEY` | Kilo Code |
-| `AI_GATEWAY_API_KEY` | AI Gateway (Vercel) |
-| `OPENCODE_ZEN_API_KEY` | OpenCode Zen |
-| `OPENCODE_GO_API_KEY` | OpenCode Go |
-| `COPILOT_GITHUB_TOKEN` | GitHub Copilot (token auth) |
+Common provider variables include:
 
-Rather than editing `.env` by hand, you can write a key straight to it:
-
-```bash
-hermes config set OPENROUTER_API_KEY sk-...   # writes to .env, not config.yaml
+```text
+OPENROUTER_API_KEY
+ANTHROPIC_API_KEY
+OPENAI_API_KEY
+DEEPSEEK_API_KEY
+GOOGLE_API_KEY
+GEMINI_API_KEY
+XAI_API_KEY
+GROQ_API_KEY
+NOVITA_API_KEY
+HF_TOKEN
+MINIMAX_API_KEY
+DASHSCOPE_API_KEY
+KIMI_API_KEY
+XIAOMI_API_KEY
+KILOCODE_API_KEY
+AI_GATEWAY_API_KEY
+OPENCODE_ZEN_API_KEY
+OPENCODE_GO_API_KEY
+COPILOT_GITHUB_TOKEN
 ```
 
-### Voice & Media
+### Voice and Media
 
 | Variable | Purpose |
-|----------|---------|
+| --- | --- |
 | `VOICE_TOOLS_OPENAI_KEY` | OpenAI TTS and STT |
-| `ELEVENLABS_API_KEY` | ElevenLabs TTS |
-| `MISTRAL_API_KEY` | Mistral STT (Voxtral) |
 
 ### OAuth Providers
 
-OAuth-based providers use a login flow instead of env vars. Manage credentials with `hermes auth` (add, list, remove, reset, status, logout). `hermes model` picks the default provider and model.
+OAuth-based providers use `hermes auth` to add, list, remove, reset, inspect, or log out of credentials. `hermes model` selects the default provider and model.
 
 ### Custom Endpoints
-
-For custom OpenAI-compatible endpoints, use `config.yaml`:
 
 ```yaml
 model:
   base_url: "https://your-endpoint.com/v1"
-  api_key: "your-key"
+  api_key: "${CUSTOM_API_KEY}"
   provider: "custom"
 ```
 
 ### Timeout Overrides
-
-Provider-level timeouts are set per provider and per model:
 
 ```yaml
 providers:
@@ -311,68 +374,57 @@ providers:
         timeout_seconds: 300
 ```
 
-`providers.<id>.request_timeout_seconds` applies to every request for that provider; `providers.<id>.models.<model>.timeout_seconds` narrows it to one model. See the [configuration reference](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
+The provider setting applies to every request for that provider; the model setting narrows the override to one model. See the [provider configuration reference](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
 
-### Full CLI Surface
+## Managed Scope
 
-The `hermes config` subcommands, verified against the [CLI reference](https://hermes-agent.nousresearch.com/docs/reference/cli-commands):
-
-```bash
-hermes config path
-hermes config edit
-hermes config get KEY
-hermes config set KEY VAL
-hermes config unset KEY
-hermes config check
-hermes config migrate
-hermes config env-path
-hermes setup --portal
-hermes chat --checkpoints
-```
-
-`hermes doctor [--fix]` runs diagnostics; `--fix` attempts automatic repairs where possible.
+An administrator can pin specific config and secret values that a standard user cannot override, via a system-level managed directory. See [Managed Scope](https://hermes-agent.nousresearch.com/docs/user-guide/managed-scope).
 
 ## Curator Section
 
-Controls the skill lifecycle manager:
-
-```yaml
-curator:
-  interval_hours: 168   # 7 days by default
-```
-
-Curated skills are stored under `~/.hermes/skills/`; see the [skills documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills).
+The curator's schedule is not documented in the source verified for this refresh, so this guide assigns it no interval. Curated skills live under `~/.hermes/skills/`; see the [configuration reference](https://hermes-agent.nousresearch.com/docs/user-guide/configuration).
 
 ## How This Guide Was Built
 
-This guide is based on the official Hermes Agent documentation: the [configuration user guide](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) and the [CLI reference](https://hermes-agent.nousresearch.com/docs/reference/cli-commands). We did not run every setting on a live install. Cross-checked pages include the [environment variables reference](https://hermes-agent.nousresearch.com/docs/reference/environment-variables), the [checkpoints and rollback guide](https://hermes-agent.nousresearch.com/docs/user-guide/checkpoints-and-rollback), the [installation guide](https://hermes-agent.nousresearch.com/docs/getting-started/installation), the [messaging guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging), and the [voice mode guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/voice-mode).
+This refresh was based on the official [configuration documentation](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) page fetched on 2026-11-18, together with the official pages it links to for delegation and managed scope. It was **not** run hands-on: **no commands were executed on a live install**, and no behavior was benchmarked. Existing guide text was retained only where it did not conflict with the refreshed source.
 
 ## FAQ
 
-**Q: Do I need to restart after every config change?**
-Most config changes take effect on the next session (`/reset` or exit and relaunch). Gateway compression and `context_length` edits hot-reload; display status-bar changes apply on the next session start.
+**Q: Why did a 600-second summary request still abort after 60 seconds?**  
+Because `auxiliary.compression.timeout` and `auxiliary.compression.no_progress_timeout` are independent. The latter defaults to 60 seconds when unset and measures the gap between substantive events. Raise `auxiliary.compression.no_progress_timeout` explicitly; changing only `timeout` does not widen it.
 
-**Q: Where should I put secrets?**
-Always in `~/.hermes/.env`. Never in `config.yaml`. The `.env` file is auto-loaded by Hermes — or write it directly with `hermes config set OPENROUTER_API_KEY …`.
+**Q: Are all compression timeouts the same?**  
+No. `hygiene_timeout_seconds` is the gateway inactivity budget, `hygiene_total_ceiling_seconds` is its absolute cap, and `hygiene_max_turn_hold_seconds` limits how long a turn waits. `context_timeout_seconds` and `context_total_ceiling_seconds` serve the in-agent path. Streamed tokens extend inactivity deadlines, but not absolute ceilings.
 
-**Q: How do I reset a config value to default?**
-Use `hermes config unset KEY`. Setting an empty value stores an empty string and does not restore the default.
+**Q: Which concurrency key should I use?**  
+Use top-level `max_concurrent_sessions`. Hermes accepts `gateway.max_concurrent_sessions` only as a fallback, and the top-level value wins when both exist. A session occupies a slot on its first turn; use `hermes status --full` to inspect holders.
 
-**Q: Why doesn't my agent stop?**
-Because `agent.max_turns` defaults to none. Set a positive integer if you want a cap, keeping in mind the truncation risk documented on the configuration page.
+**Q: Can I switch an existing database from WAL to delete mode while Hermes is running?**  
+No. Hermes never live-downgrades WAL because doing so under open connections can corrupt the database. Stop every user, run `hermes sessions set-journal-mode delete`, and use `hermes doctor` if it reports that the requested mode did not apply.
+
+**Q: Where should provider credentials go?**  
+Use `~/.hermes/.env` and store references with `hermes config set`. The gateway re-reads `.env` each turn; startup-only readers require `/reload` or a restart. Inline credentials still work but are discouraged and are not migrated automatically.
+
+## The Bottom Line
+
+**Verdict:** Hermes configuration is powerful but not uniformly governed. The safest operating pattern is to keep secrets as `.env` references, use the canonical top-level concurrency key, treat compression deadlines as separate gateway and in-agent budgets, and convert SQLite journal modes only while every database user is stopped. For delegation, fail-closed backend behavior is preferable to a silent route change. The values in this refresh come from the official documentation, not from live-install testing.
 
 ## Next Steps
 
 - **[Provider Setup Guide](/blog/provider-setup/)** — configure your LLM
-- **[Security & Privacy](/blog/security-privacy/)** — protection features, including `approvals.mode`
-- **[Memory & Profiles](/blog/memory-profiles/)** — persistence and isolation
-- **[Hermes documentation](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)** — the source for every value on this page
-- **[NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent)** — source and issue tracker
+- **[Security & Privacy](/blog/security-privacy/)** — understand approval and protection settings
+- **[Memory & Profiles](/blog/memory-profiles/)** — configure persistence and isolation
+- **[Official Configuration Reference](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)** — consult the source reference
+- **[Delegation](https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation)** — subagent routing, strategies and child process notifications
+- **[Fallback Providers](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers)** — fallback chains referenced by the compression and delegation sections
+- **[Checkpoints and Rollback](https://hermes-agent.nousresearch.com/docs/user-guide/checkpoints-and-rollback)** — the checkpoint settings in context
+- **[Environment Variables](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)** — the full variable reference
 
 {/* crosslinks */}
 
 ## 📖 Related Reads
 
-- **[ToolBrain](https://toolbrain.net/)** — tool reviews, LLM comparisons, and AI workflow guides
+- **[Provider Setup Guide](/blog/provider-setup/)** — provider and model configuration
+- **[Security & Privacy](/blog/security-privacy/)** — approval modes and safe defaults
+- **[Memory & Profiles](/blog/memory-profiles/)** — persistent memory and profile isolation
 
-*Cross-links automatically generated from Hermes Tutorials.*
