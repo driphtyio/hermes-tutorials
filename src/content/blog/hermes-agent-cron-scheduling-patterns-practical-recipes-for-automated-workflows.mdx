@@ -1,0 +1,179 @@
+---
+title: "Hermes Agent Cron Scheduling Patterns: 7 Practical Recipes for Automated Workflows in 2026"
+description: "Learn the Hermes Agent cron scheduling patterns the official docs describe, from no-agent watchdogs and wakeAgent gates to context_from chains and timezones."
+pubDate: "2026-11-19"
+tags: ["hermes", "tutorial", "cron", "automation"]
+lastVerified: 2026-11-19
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-cron-scheduling-patterns-practical-recipes-for-automated-workflows-1795105140.webp"
+keywords: [hermes cron, hermes cron scheduling, hermes no-agent cron, hermes wakeAgent, hermes context_from]
+---
+
+If you already have a working Hermes install, cron scheduling is mostly a question of which pattern fits the failure you want to catch. The official [Scheduled Tasks (Cron)](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) reference names several patterns, and this post turns them into recipes. If you are new to Hermes scheduling, start with [Hermes profiles and basic cron jobs](/blog/hermes-profiles-cron-guide/) for setup. This post does not repeat that walkthrough.
+
+**Experience and sourcing:** this is a documentation-grounded review of the official Hermes cron pages, written for operators who already run Hermes.
+
+## What Hermes Cron Scheduling Patterns Cover
+
+Hermes cron jobs can run one-shot or recurring tasks, run in no-agent mode with zero LLM calls, or fire on external events through a webhook route with `cron_job` set, as the [Scheduled Tasks (Cron)](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) reference documents. This post turns those documented patterns into five recipes plus two supporting controls.
+
+Schedules come in several formats. One-shot jobs use forms like `in 30m`, intervals use `every 2h`, and cron expressions use `0 9 * * 1-5`. Natural phrases such as `weekdays at 9am` compile to cron expressions and require the croniter package, which is installed by default. Repeat defaults are 1 for one-shot jobs and forever for intervals and cron expressions, and `repeat=N` overrides them.
+
+## Recipe 1: The No-Agent Watchdog — Zero Tokens, Verbatim Stdout
+
+Create a script-only job with `hermes cron create "every 5m" --no-agent --script memory-watchdog.sh --deliver telegram --name "memory-watchdog"`, as the [Script-Only Cron Jobs guide](https://hermes-agent.nousresearch.com/docs/guides/cron-script-only) describes. Stdout is delivered verbatim with no LLM call and zero tokens. Scripts must resolve inside `~/.hermes/scripts/`, and shebangs are not honoured.
+
+Run the create command, then test-fire the job with `hermes cron run <job_id>`. From chat, the agent uses the equivalent call:
+
+```
+cronjob(action="create", schedule="every 5m", script="memory-watchdog.sh", no_agent=True, deliver="telegram", name=...)
+```
+
+The output maps to outcomes as follows:
+
+- Exit 0 with non-empty stdout: delivered verbatim.
+- Exit 0 with empty stdout: silent tick.
+- Exit 0 with `{"wakeAgent": false}` as the last line: silent tick.
+- Non-zero exit: error alert delivered.
+- Script timeout: error alert delivered.
+
+A broken script can look healthy, because empty stdout and a trailing `{"wakeAgent": false}` line both produce silent ticks. Test with `hermes cron run` before you trust silence.
+
+Placement and interpreter rules apply. Path traversal and symlink escapes are rejected. Files ending in `.sh` or `.bash` run under bash, and anything else runs under Hermes' own Python. Cron scripts do not inherit provider credentials from the Hermes process environment.
+
+For a Python script that needs its own environment, pass an interpreter:
+
+```
+hermes cron create "0 8 * * *" --no-agent --script daily-report.py --interpreter ~/venvs/hermes-reporting/bin/python --deliver telegram
+```
+
+The interpreter path must be absolute or `~`-prefixed and must be a Python executable. It is validated at run time, not at creation, and the option applies to Python scripts only.
+
+Delivery targets include `telegram:-1001234567890`, `telegram:-1001234567890:17585` for a forum topic, `discord:#ops`, `slack:#engineering`, `signal:+...`, and `local`, which saves to `~/.hermes/cron/output/`. Use a comma-separated value such as `deliver: "telegram,discord"` for several targets. Bot-token platforms need no running gateway at script time.
+
+## Recipe 2: The wakeAgent Pre-Check Gate — Skip Idle Ticks Entirely
+
+Attach a pre-check `script=` to the job. If its final stdout line is `{"wakeAgent": false}`, the agent is skipped for that tick. The default is true, so an ungated job wakes the LLM on every tick. The [cron reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) names three gate recipes:
+
+- **File-change gate:** compare a file's mtime with a state file.
+- **External-flag gate:** check for a file that a deploy hook drops.
+- **SQL-count gate:** read a `new_rows` count and pass it through `context`.
+
+The JSON must be the final stdout line. A broken configuration can stop a job before dispatch through preflight validation, which is covered in the Guardrails section below.
+
+## Recipe 3: context_from Chaining — Pipe One Job's Output Into the Next
+
+Chain jobs by naming their upstream jobs:
+
+```
+context_from=["ai-news-fetch", "github-prs-fetch"]
+```
+
+The downstream run receives the most recent completed output of each named upstream job. The reference states that chaining does not wait for upstream jobs running in the same tick.
+
+For a one-fire override, append context without changing the stored prompt:
+
+```
+cronjob(action="run", job_id=..., prompt="CONTEXT: ...")
+```
+
+That transient context applies to one fire only.
+
+## Recipe 4: Per-Job Timezones — Wall Clocks That Survive DST
+
+Pin a zone when you create the job:
+
+```
+hermes cron create "0 9 * * 1-5" --timezone America/New_York "<prompt>"
+```
+
+The expression is read as the pinned zone's wall clock, so 09:00 stays 09:00 across that zone's DST changes. Without a pin, the profile `timezone:` setting in config.yaml decides. Interval jobs ignore the pin.
+
+## Recipe 5: Catch-Up Grace — Bounded Lateness for Missed Slots
+
+A missed occurrence runs late only inside half the job's period, clamped to 2 minutes–2 hours. You can set the window explicitly with `--grace-minutes` at create or edit time, using a value from 0 to 1440. A value of `0` means the job never catches up.
+
+The window applies to cron expressions only. Resuming a paused recurring job whose slot came due fires one catch-up run, according to the lifecycle section of the cron reference. That reference also says that `cron.catch_up_missed: false` logs the skip on resume, while its restart-policy section says the same opt-out "does not change resume behavior." The docs conflict here, so test resume on your own install before you rely on either behaviour.
+
+## Supporting Pattern: Pin the Model (and Reasoning Effort) per Job
+
+Model resolution at fire time follows three steps: the per-job pin, then `cron.model` in config.yaml, then the main agent model from `hermes model`. The commands for controlling this are:
+
+```
+hermes cron edit <job_id> --pin
+hermes cron edit <job_id> --provider <p> --model <m>
+hermes cron edit <job_id> --unpin
+hermes config set cron.model <model>
+hermes cron edit <job_id> --reasoning-effort high
+```
+
+Per-job reasoning effort accepts `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, or `ultra`.
+
+## Supporting Pattern: Pause, Cancel, and the Global Emergency Stop
+
+`hermes cron cancel <job>` stops the current run only and leaves the schedule untouched. Script jobs receive SIGTERM followed by SIGKILL on their process tree, and agent jobs are interrupted at the next checkpoint. Cancelled runs send no failure notice and do not count toward the failure streak.
+
+`hermes pause` and `hermes resume` are different. They form a global emergency stop, and while it is engaged no scheduled fire starts. In-flight runs are not killed, and manual `hermes cron run` still executes.
+
+To create a job paused for review, use:
+
+```
+hermes cron create "every 1h" "Post the digest" --paused --paused-reason "Awaiting review"
+```
+
+Then start it with `hermes cron resume <job_id>`.
+
+## Choosing Your Scheduler: No-Agent vs Gated LLM Jobs vs OS Cron
+
+Use no-agent jobs for watchdogs, alerts, and metrics, LLM cron when a message needs reasoning, and OS cron with curl to a webhook when Hermes itself may be down, as the [Script-Only Cron Jobs guide](https://hermes-agent.nousresearch.com/docs/guides/cron-script-only) advises. Hermes' own webhook route with `cron_job` set is the in-Hermes way to fire jobs on external events.
+
+| Approach | Use it for (per docs) | How it fires | LLM and tokens | Output behaviour | Watch-outs (per docs) |
+|---|---|---|---|---|---|
+| No-agent script job (`--no-agent --script ...`) | Watchdogs, alerts, metrics that don't need reasoning | In-gateway scheduler; also runs from a bare `hermes cron tick` | No LLM call, zero tokens | Exit 0 with non-empty stdout is delivered verbatim; empty stdout or trailing `{"wakeAgent": false}` is a silent tick; non-zero exit or timeout is an error alert | Scripts resolve inside `~/.hermes/scripts/`; shebangs not honoured; no provider credentials inherited; `--interpreter` path validated at run time |
+| LLM cron job with wakeAgent gate | Deliveries where the message needs reasoning | Fresh agent session per fire; gateway must be running | LLM call each fire unless the pre-check ends with `{"wakeAgent": false}` (default true) | Delivers to origin chat, local files, or platform targets | Preflight failure sets `blocked_config` with one alert and no LLM call; `context_from` reads only completed upstream output |
+| OS cron + curl to a webhook | Critical host-health watchdogs that must fire when the gateway is down | OS-level crontab, outside the Hermes scheduler | Depends on the receiving endpoint; the cron reference does not cover it | Depends on the receiving endpoint | Runs as an independent OS process that does not depend on Hermes being up; Hermes' own route with `cron_job` set is the in-Hermes event trigger |
+
+The script-only guide says critical system-health watchdogs that must fire even when the gateway is down belong on OS-level cron with curl to a webhook. The in-gateway scheduler suits external monitoring.
+
+`hermes cron tick` runs one scheduler pass and exits, which suits a system crontab. The gateway must be running for agent jobs, while no-agent script jobs still run from a bare tick.
+
+For event-driven fires, a webhook route can set `cron_job` to fire an existing job by ID or name instead of starting a fresh agent session, as the [Webhook Subscriptions](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/webhooks) page describes. The route's prompt template is injected as transient per-run context, and the job's stored prompt, skills, model, and delivery settings still apply. Paused or disabled jobs are not fired, and the POST returns 202 Accepted immediately while the job runs in the background. For more on wiring these together, see [advanced automation with cron, webhooks, and MCP](/blog/advanced-automation/).
+
+## Guardrails: Preflight Validation and Self-Contained Prompts
+
+Hermes checks the API key, attached skills, delivery targets with gateway credentials, and MCP servers in the job's enabled toolsets before dispatch, per the [cron reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron). A failure sets `last_status` to `blocked_config`, delivers one alert, and makes no LLM call. You can disable preflight with `hermes config set cron.preflight false`.
+
+The rest of the guardrails are these:
+
+- **No recursion:** cron-run sessions cannot create cron jobs, because cron management tools are disabled inside cron executions.
+- **Toolsets:** cron jobs use the `cron` platform toolset from `hermes tools`, and `enabled_toolsets=["web","file"]` narrows it. If that toolset configuration cannot be read, the run fails rather than running with every tool.
+- **Workdir:** without `--workdir`, a job runs detached from any repository, so AGENTS.md, CLAUDE.md, and .cursorrules are not read. Use `--workdir /abs/path`, which must be absolute and exist. `--workdir ""` clears it. The `cron.max_parallel_jobs` setting controls concurrency.
+- **Manual runs:** a manual run is asynchronous when called via the agent tool. It is an extra fire and does not spend the `repeat` count.
+- **Self-contained prompts:** the cron reference has a section titled "Self-contained prompts still matter". Jobs that run in fresh sessions need prompts that carry their own context.
+- **Failure handling:** the cron reference has sections on repeated-failure nudges, model-unreachable re-runs, provider usage windows, failure incidents, and `hermes cron doctor`. This post does not describe their thresholds or timings.
+
+For MCP setup context, see [advanced automation with cron, webhooks, and MCP](/blog/advanced-automation/).
+
+## Frequently Asked Questions
+
+These answers cover whether no-agent jobs spend tokens, what happens to missed slots, and how cancel differs from pause. Each draws on the [Scheduled Tasks (Cron)](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) reference and the [Script-Only Cron Jobs](https://hermes-agent.nousresearch.com/docs/guides/cron-script-only) guide.
+
+### Does a no-agent Hermes cron job call the LLM or spend tokens?
+
+No. Per the [Script-Only Cron Jobs guide](https://hermes-agent.nousresearch.com/docs/guides/cron-script-only), no-agent mode runs the script on schedule and delivers its stdout verbatim with no LLM call and zero tokens. Exit 0 with empty stdout or a final `{"wakeAgent": false}` line is a silent tick, while non-zero exits and timeouts send an error alert.
+
+### What happens when a cron job misses its scheduled slot?
+
+A missed cron-expression occurrence runs late only inside half the job's period, clamped to 2 minutes–2 hours, per the [cron reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron). Pass `--grace-minutes` (0–1440) to override it; 0 means never catch up. Resuming a paused recurring job whose slot came due fires one catch-up run unless `cron.catch_up_missed` is false.
+
+### What's the difference between `hermes cron cancel` and `hermes pause`?
+
+`hermes cron cancel <job>` stops only the current run and leaves the schedule untouched, sending no failure notice. `hermes pause` engages a global emergency stop, so no scheduled fire starts, per the [cron reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron). In-flight runs are not killed, and manual `hermes cron run` still executes.
+
+## The Bottom Line
+
+Match each pattern to its failure mode. Use no-agent scripts for watchdogs, wakeAgent gates to skip idle ticks, and context_from chains to compose jobs. Set timezone, model, catch-up grace, and pause controls deliberately so schedules stay predictable. Cancel stops one run, while pause stops all new scheduled fires. The [Scheduled Tasks (Cron)](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) reference and the [Script-Only Cron Jobs](https://hermes-agent.nousresearch.com/docs/guides/cron-script-only) guide remain the source of truth. This post maps them and does not replace them. Setup details stay in [Hermes profiles and basic cron jobs](/blog/hermes-profiles-cron-guide/).
+
+## How This Guide Was Built
+
+This guide was built from the official Hermes documentation pages: the [Scheduled Tasks (Cron)](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) reference, the [Script-Only Cron Jobs (No LLM)](https://hermes-agent.nousresearch.com/docs/guides/cron-script-only) guide, and the [Webhook Subscriptions](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/webhooks) page for event-triggered fires. The author did not run these jobs hands-on in this review. Every command, flag, and behaviour traces to those pages. Where the docs name a feature without publishing its numbers, such as retry counts, failure-streak thresholds, or cooldown durations, this guide names the feature and stops there.
+

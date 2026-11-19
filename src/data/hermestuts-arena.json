@@ -17581,6 +17581,175 @@
       ],
       "stability": {},
       "status": "published"
+    },
+    {
+      "id": "arena-hermes-agent-cron-scheduling-patterns",
+      "match_id": "arena-hermes-agent-cron-scheduling-patterns",
+      "slug": "hermes-agent-cron-scheduling-patterns-practical-recipes-for-automated-workflows",
+      "topic": "Hermes Agent Cron Scheduling Patterns: Practical Recipes for Automated Workflows",
+      "category": "tutorial",
+      "type": "content",
+      "date": "2026-11-19",
+      "timestamp": "2026-11-19T08:28:44.949326",
+      "queue_item": "her-0019",
+      "pipeline": "subagent-arena (cron, unattended)",
+      "winner": "claude-haiku-5-5",
+      "winner_provider": "claude-cli",
+      "winner_family": "claude",
+      "winner_score": 8.33,
+      "shipped_score": 8.18,
+      "pre_edit_score": 8.33,
+      "threshold": 7.5,
+      "threshold_met": true,
+      "threshold_note": "mean >= 7.5 (tb-judge-multipass MEAN_PASS_THRESHOLD). Winner within body cap; mimo-v2.6-flash scored higher (8.38) but is 525 words over the 2,500 cap and was not trimmed (deviation).",
+      "judge": {
+        "model": "qwen3.7-flash",
+        "provider": "tokenharbor",
+        "passes": 3,
+        "rubric": "content"
+      },
+      "judge_windows": {
+        "batch_9_drafts": {
+          "control_pre_edit_claude_haiku": {
+            "mean": 8.33,
+            "spread": 0.1
+          }
+        },
+        "window_2_run1": {
+          "control_pre_edit_claude_haiku": {
+            "mean": 7.83,
+            "spread": 2.5,
+            "note": "noisy, re-judged"
+          },
+          "shipped": {
+            "mean": 8.18,
+            "spread": 0.45
+          }
+        },
+        "window_2_rerun_control": {
+          "control_pre_edit_claude_haiku": {
+            "mean": 8.35,
+            "spread": 0.3
+          }
+        }
+      },
+      "verification_status": "confirmed",
+      "verification_note": "disprove_pass P1: deepseek-v4.1-flash (commandcode, family deepseek, different from winner family claude). 10 of 10 claims confirmed on the shipped text. Verify pack = 55.7 KB of claim-bearing verbatim line ranges from the saved docs (full files in sources/).",
+      "plan_model": "glm-5.3 (cline-pass)",
+      "brief_contract": true,
+      "research_lane": "failed",
+      "research_source": "in-session",
+      "research_note": "Research lane (mimo-v2.6-pro) not dispatched. Facts dossier built in-session with firecrawl-research --save on the official cron, script-only and webhook pages (HTTP 200, not clipped). One GitHub source returned 503 and was discarded.",
+      "queue_topic_note": "her-0022 (MCP) skipped: overlaps build-custom-mcp-server.mdx and mcp-servers-guide.mdx. her-0021 and her-0038 already published; her-0207 write-approval already published 2026-11-01; her-0019 cron patterns chosen.",
+      "builder_lanes_dispatched": 10,
+      "builders_produced_draft": 9,
+      "link_check": "arena-linkcheck: 3 unique external links, 3 OK, 0 DEAD (advisory). Cron policy asks for >= 12 external sources: SHORTFALL. Only 3 primary Hermes doc pages were available.",
+      "qa_model": "claude-sonnet-5-5",
+      "qa_route": "claude-cli (OAuth)",
+      "qa_verdict_note": "QA printed Verdict PASS with 5 defects listed. Treated as FAIL and all 5 applied (catch-up source conflict flagged, one overstated line, filler, a same-tick inference, two empty table cells).",
+      "hero": "Lumenfall FLUX.1-schnell via gen-image-verified.sh",
+      "hero_url": "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-cron-scheduling-patterns-practical-recipes-for-automated-workflows-1795105140.webp",
+      "hero_prompt": "A clean, abstract illustration of interlocking circular rings and small glowing nodes arranged along a soft timeline, suggesting scheduled recurring tasks, with no text, no letters, and no brand logos.",
+      "body_words": 2090,
+      "deviations": [
+        "Research lane (mimo-v2.6-pro) not dispatched: in-session Firecrawl dossier instead (recorded fallback).",
+        "Winner is 2,090 words (within cap); mimo-v2.6-flash (8.38, 3,025 words) was NOT trimmed and re-judged, so it is ineligible here. Trimming would cost mean (-525 words); unmeasured.",
+        "12-external-source policy NOT met: 3 verified URLs. Not padded.",
+        "Plan MUST-NOT item 10 amended before dispatch: external links limited to the 3 Hermes doc URLs (planner had said 2).",
+        "Judge gate uses 7.5 (pre-2026-10-24 prose says 8.0 in the spec file; enforced 7.5 per tb-judge-multipass).",
+        "ling-3.1-flash DNF (empty CC stream, 314s); recorded as DNF, not substituted.",
+        "Leaderboard: additive update for the 4 in-cap scored lanes only (wins/losses/avgScore/bestScore/rank); over-cap and DNF lanes not counted.",
+        "hermes-tuts is not in arena-finalize.py BLOGS: record appended manually with backup; canonical recalc not used.",
+        "Disprove verify pack: 55.7 KB of verbatim claim-bearing line ranges because the full 190 KB source dir overflowed argv."
+      ],
+      "results": [
+        {
+          "model": "claude-haiku-5-5",
+          "provider": "claude-cli",
+          "score": 8.33,
+          "body_words": 2090,
+          "status": "winner",
+          "rank": 1,
+          "judge_windows": {
+            "batch": 8.33,
+            "shipped_window": 8.18,
+            "control_rerun": 8.35
+          }
+        },
+        {
+          "model": "mimo-v2.6-flash",
+          "provider": "opencode-go",
+          "score": 8.38,
+          "body_words": 3025,
+          "status": "over_cap_length",
+          "rank": null
+        },
+        {
+          "model": "minimax-m3.1-flash",
+          "provider": "opencode-go",
+          "score": 8.28,
+          "body_words": 2348,
+          "status": "eligible",
+          "rank": 3
+        },
+        {
+          "model": "gpt-6-luna",
+          "provider": "commandcode",
+          "score": 8.17,
+          "body_words": 2176,
+          "status": "eligible",
+          "rank": 4
+        },
+        {
+          "model": "stealth/glyph-cluster:free",
+          "provider": "commandcode",
+          "score": 8.07,
+          "body_words": 2461,
+          "status": "eligible",
+          "rank": 5
+        },
+        {
+          "model": "beam-free",
+          "provider": "opencode-go",
+          "score": 7.88,
+          "body_words": 2709,
+          "status": "over_cap_length",
+          "rank": null
+        },
+        {
+          "model": "deepseek-v4.1-flash",
+          "provider": "commandcode",
+          "score": 7.93,
+          "body_words": 2770,
+          "status": "over_cap_length",
+          "rank": null
+        },
+        {
+          "model": "glm-5.3-flash",
+          "provider": "opencode-go",
+          "score": 7.9,
+          "body_words": 2905,
+          "status": "over_cap_length",
+          "rank": null
+        },
+        {
+          "model": "muse-spark-1.3-contributor",
+          "provider": "opencode-go",
+          "score": 7.33,
+          "body_words": 2544,
+          "status": "below_gate_and_over_cap",
+          "rank": null
+        },
+        {
+          "model": "ling-3.1-flash",
+          "provider": "tokenharbor",
+          "score": 0.0,
+          "body_words": 0,
+          "status": "dnf_empty_stream",
+          "rank": null
+        }
+      ],
+      "status": "shipped_pending_deploy"
     }
   ],
   "leaderboard": [
@@ -17632,10 +17801,10 @@
       "model": "gpt-6-luna",
       "provider": "commandcode",
       "family": "gpt",
-      "matches": 37,
+      "matches": 38,
       "wins": 5,
-      "losses": 32,
-      "avgScore": 7.82,
+      "losses": 33,
+      "avgScore": 7.83,
       "bestScore": 9.73,
       "rank": 5
     },
@@ -17643,10 +17812,10 @@
       "model": "claude-haiku-5-5",
       "provider": "claude-cli",
       "family": "claude",
-      "matches": 28,
-      "wins": 4,
+      "matches": 29,
+      "wins": 5,
       "losses": 24,
-      "avgScore": 7.72,
+      "avgScore": 7.74,
       "bestScore": 9.15,
       "rank": 6
     },
@@ -17654,10 +17823,10 @@
       "model": "stealth/glyph-cluster:free",
       "provider": "commandcode",
       "family": "stealth",
-      "matches": 17,
+      "matches": 18,
       "wins": 4,
-      "losses": 13,
-      "avgScore": 7.69,
+      "losses": 14,
+      "avgScore": 7.71,
       "bestScore": 8.57,
       "rank": 7
     },
@@ -17731,10 +17900,10 @@
       "model": "minimax-m3.1-flash",
       "provider": "opencode-go",
       "family": "minimax",
-      "matches": 18,
+      "matches": 19,
       "wins": 1,
-      "losses": 17,
-      "avgScore": 7.67,
+      "losses": 18,
+      "avgScore": 7.7,
       "bestScore": 8.7,
       "rank": 14
     },
@@ -17882,8 +18051,8 @@
       "rank": 27
     }
   ],
-  "last_updated": "2026-11-18",
-  "total_matches": 77,
+  "last_updated": "2026-11-19",
+  "total_matches": 78,
   "retired_models": [
     {
       "model": "mimo-v2.5",
