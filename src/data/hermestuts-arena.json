@@ -17750,6 +17750,192 @@
         }
       ],
       "status": "shipped_pending_deploy"
+    },
+    {
+      "id": "arena-build-log-a-hermes-cron-pipeline-that-publishes-a-post-every-morning",
+      "match_id": "arena-build-log-a-hermes-cron-pipeline-that-publishes-a-post-every-morning",
+      "slug": "build-log-a-hermes-cron-pipeline-that-publishes-a-post-every-morning",
+      "topic": "Build Log: A Hermes Cron Job on a Fixed Schedule, Delivered to Telegram",
+      "category": "build-log",
+      "type": "content",
+      "date": "2026-11-19",
+      "timestamp": "2026-11-19T09:06:31.217910",
+      "queue_item": "her-0206",
+      "pipeline": "subagent-arena (cron, unattended)",
+      "winner": "deepseek-v4.1-flash",
+      "winner_provider": "commandcode",
+      "winner_family": "deepseek",
+      "winner_score": 7.17,
+      "shipped_score": 7.55,
+      "pre_edit_score": 7.93,
+      "threshold": 7.5,
+      "threshold_met": true,
+      "threshold_note": "Shipped (QA-remediated, orchestrator-edited) text re-judged 3 passes in fresh dir: mean 7.55 spread 1.2 (>=7.5 gate). Batch mean of the pre-edit draft 7.17 (spread 2.65) and re-judge 7.47 (spread 1.3) are below/near gate. Same-window control of the pre-edit draft: 7.93. Judge means are noisy (see windows).",
+      "judge": {
+        "model": "qwen3.7-flash",
+        "provider": "tokenharbor",
+        "passes": 3,
+        "rubric": "content"
+      },
+      "judge_windows": {
+        "batch_9_drafts": {
+          "deepseek_preedit": 7.17,
+          "spread": 2.65
+        },
+        "rejudge_top3": {
+          "deepseek_preedit": 7.47,
+          "gpt-6-luna": 7.05,
+          "beam-free": 5.37
+        },
+        "shipped_revised_fresh_dir": {
+          "mean": 7.55,
+          "spread": 1.2
+        },
+        "control_preedit_same_window": {
+          "mean": 7.93,
+          "spread": 0.9
+        }
+      },
+      "qa_model": "claude-cli/claude-sonnet-5-5",
+      "qa_result": "FAIL round 1 (10 defects) and FAIL round 2 (7 defects); all defects applied in-session; shipped text NOT re-QA-ed after the fixes",
+      "verification_status": "unevaluated",
+      "verification_note": "disprove_pass not run; validate_judge not run (no ship waiver).",
+      "linkcheck": "revised/draft.mdx: 3 verified OK, 0 dead; policy >=12 external links NOT met (dossier held 2 primary URLs)",
+      "hero": "gen-image-verified.sh Lumenfall FLUX.1-schnell; R2 GET 200",
+      "plan_model": "cline-pass/glm-5.3",
+      "research_lane": "in-session (firecrawl-research --save, 2 docs pages)",
+      "builders_dispatched": 10,
+      "builders_produced_draft": 9,
+      "word_counts": "builder bodies 2166-2805 (code fences excluded); shipped ~2,400 body words",
+      "deviations": [
+        "Queue title said every morning; live schedule is Mon/Thu/Sat 08:00; title and text corrected.",
+        "Shipped text is orchestrator-remediated, not a builder draft.",
+        "Link policy >=12 external not met; 3 verified links."
+      ],
+      "results": [
+        {
+          "model": "gpt-6-luna",
+          "provider": "commandcode",
+          "score": 7.43,
+          "status": "scored",
+          "note": "batch 7.43 spread 0.65; re-judge 7.05 spread 1.4",
+          "rank": 1
+        },
+        {
+          "model": "beam-free",
+          "provider": "opencode-go",
+          "score": 7.32,
+          "status": "scored",
+          "note": "batch 7.32 spread 1.65; re-judge 5.37 spread 3.2",
+          "rank": 2
+        },
+        {
+          "model": "deepseek-v4.1-flash",
+          "provider": "commandcode",
+          "score": 7.17,
+          "status": "scored",
+          "note": "batch 7.17 spread 2.65; re-judge 7.47 spread 1.3; WINNER (pre-edit control 7.93 in judge3 window)",
+          "rank": 3
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "provider": "claude-cli",
+          "score": 6.65,
+          "status": "scored",
+          "note": "batch spread 1.45",
+          "rank": 4
+        },
+        {
+          "model": "glm-5.3-flash",
+          "provider": "opencode-go",
+          "score": 6.37,
+          "status": "scored",
+          "note": "batch spread 3.1; served via zai->commandcode->tokenharbor rescue chain",
+          "rank": 5
+        },
+        {
+          "model": "mimo-v2.6-flash",
+          "provider": "opencode-go",
+          "score": 5.5,
+          "status": "scored",
+          "note": "batch spread 4.0",
+          "rank": 6
+        },
+        {
+          "model": "minimax-m3.1-flash",
+          "provider": "opencode-go",
+          "score": 4.6,
+          "status": "scored",
+          "note": "batch spread 1.35",
+          "rank": 7
+        },
+        {
+          "model": "stealth/glyph-cluster:free",
+          "provider": "commandcode",
+          "score": 3.72,
+          "status": "scored",
+          "note": "batch spread 1.55",
+          "rank": 8
+        },
+        {
+          "model": "muse-spark-1.3-contributor",
+          "provider": "opencode-go",
+          "score": 3.03,
+          "status": "scored",
+          "note": "batch spread 2.6",
+          "rank": 9
+        },
+        {
+          "model": "ling-3.1-flash",
+          "provider": "tokenharbor",
+          "score": 0.0,
+          "status": "dnf",
+          "note": "DNF: network connection lost at 460.8s; recorded, not substituted",
+          "rank": 10
+        }
+      ],
+      "models": {
+        "gpt-6-luna": {
+          "score": 7.43,
+          "status": "scored"
+        },
+        "beam-free": {
+          "score": 7.32,
+          "status": "scored"
+        },
+        "deepseek-v4.1-flash": {
+          "score": 7.17,
+          "status": "scored"
+        },
+        "claude-haiku-5-5": {
+          "score": 6.65,
+          "status": "scored"
+        },
+        "glm-5.3-flash": {
+          "score": 6.37,
+          "status": "scored"
+        },
+        "mimo-v2.6-flash": {
+          "score": 5.5,
+          "status": "scored"
+        },
+        "minimax-m3.1-flash": {
+          "score": 4.6,
+          "status": "scored"
+        },
+        "stealth/glyph-cluster:free": {
+          "score": 3.72,
+          "status": "scored"
+        },
+        "muse-spark-1.3-contributor": {
+          "score": 3.03,
+          "status": "scored"
+        },
+        "ling-3.1-flash": {
+          "score": 0.0,
+          "status": "dnf"
+        }
+      }
     }
   ],
   "leaderboard": [
@@ -17757,10 +17943,10 @@
       "model": "deepseek-v4.1-flash",
       "provider": "commandcode",
       "family": "deepseek",
-      "matches": 55,
-      "wins": 15,
+      "matches": 56,
+      "wins": 16,
       "losses": 40,
-      "avgScore": 8.14,
+      "avgScore": 8.12,
       "bestScore": 9.78,
       "rank": 1
     },
@@ -17768,10 +17954,10 @@
       "model": "glm-5.3-flash",
       "provider": "opencode-go",
       "family": "glm",
-      "matches": 44,
+      "matches": 45,
       "wins": 10,
-      "losses": 34,
-      "avgScore": 8.01,
+      "losses": 35,
+      "avgScore": 7.97,
       "bestScore": 9.75,
       "rank": 2
     },
@@ -17801,10 +17987,10 @@
       "model": "gpt-6-luna",
       "provider": "commandcode",
       "family": "gpt",
-      "matches": 38,
+      "matches": 39,
       "wins": 5,
-      "losses": 33,
-      "avgScore": 7.83,
+      "losses": 34,
+      "avgScore": 7.82,
       "bestScore": 9.73,
       "rank": 5
     },
@@ -17812,10 +17998,10 @@
       "model": "claude-haiku-5-5",
       "provider": "claude-cli",
       "family": "claude",
-      "matches": 29,
+      "matches": 30,
       "wins": 5,
-      "losses": 24,
-      "avgScore": 7.74,
+      "losses": 25,
+      "avgScore": 7.7,
       "bestScore": 9.15,
       "rank": 6
     },
@@ -17823,10 +18009,10 @@
       "model": "stealth/glyph-cluster:free",
       "provider": "commandcode",
       "family": "stealth",
-      "matches": 18,
+      "matches": 19,
       "wins": 4,
-      "losses": 14,
-      "avgScore": 7.71,
+      "losses": 15,
+      "avgScore": 7.5,
       "bestScore": 8.57,
       "rank": 7
     },
@@ -17834,10 +18020,10 @@
       "model": "mimo-v2.6-flash",
       "provider": "opencode-go",
       "family": "mimo",
-      "matches": 22,
+      "matches": 23,
       "wins": 3,
-      "losses": 19,
-      "avgScore": 7.55,
+      "losses": 20,
+      "avgScore": 7.46,
       "bestScore": 8.47,
       "rank": 8
     },
@@ -17856,10 +18042,10 @@
       "model": "muse-spark-1.3-contributor",
       "provider": "opencode-go",
       "family": "muse",
-      "matches": 40,
+      "matches": 41,
       "wins": 2,
-      "losses": 38,
-      "avgScore": 7.63,
+      "losses": 39,
+      "avgScore": 7.52,
       "bestScore": 9.45,
       "rank": 10
     },
@@ -17900,10 +18086,10 @@
       "model": "minimax-m3.1-flash",
       "provider": "opencode-go",
       "family": "minimax",
-      "matches": 19,
+      "matches": 20,
       "wins": 1,
-      "losses": 18,
-      "avgScore": 7.7,
+      "losses": 19,
+      "avgScore": 7.54,
       "bestScore": 8.7,
       "rank": 14
     },
@@ -17977,9 +18163,9 @@
       "model": "beam-free",
       "provider": "opencode-go",
       "family": "beam",
-      "matches": 23,
+      "matches": 24,
       "wins": 0,
-      "losses": 23,
+      "losses": 24,
       "avgScore": 7.33,
       "bestScore": 8.42,
       "rank": 21
@@ -18052,7 +18238,7 @@
     }
   ],
   "last_updated": "2026-11-19",
-  "total_matches": 78,
+  "total_matches": 79,
   "retired_models": [
     {
       "model": "mimo-v2.5",

@@ -1,0 +1,108 @@
+---
+title: "Build Log: A Hermes Cron Job on a Fixed Schedule, Delivered to Telegram"
+description: "A recurring Hermes cron job wakes an agent on Monday, Thursday and Saturday, delivers the result to Telegram, and layers failure handling on top."
+pubDate: "2026-11-19"
+lastVerified: 2026-11-19
+tags: ["hermes", "build-log", "cron", "automation"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/build-log-a-hermes-cron-pipeline-that-publishes-a-post-every-morning-1795107756.webp"
+---
+
+A Hermes cron job can run a prompt-driven agent on a fixed schedule, then return the result to the chat that owns the job. This build log walks through one such job as it is configured on a live host: the schedule, the scheduler's tick cycle, the failure layers, and the restart behaviour. The schedule is Monday, Thursday and Saturday at 08:00, not every morning.
+
+## How This Guide Was Built
+
+This guide is assembled from official documentation and a read-only copy of a live job configuration — we did not run this build ourselves.
+
+The facts come from the [Hermes scheduled-tasks docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) and the [Cron Internals developer guide](https://hermes-agent.nousresearch.com/docs/developer-guide/cron-internals), both fetched on 2026-11-19 with HTTP 200. The job fields and run metadata come from a read-only copy of the live `jobs.json` on the same host, read on the same date. The [Hermes documentation root](https://hermes-agent.nousresearch.com/docs) covers general orientation.
+
+What the sources do not establish: there is no per-job publish script (`script` is null), how many posts one run produces, and how many internal steps the job's prompt contains.
+
+## What the Live Job Runs
+
+The job is a prompt-driven agent run on the schedule `0 8 * * 1,4,6`, which fires at 08:00 on Monday, Thursday and Saturday. Its live state is `enabled: true` and `scheduled`, and its `script` field is null, so the agent receives a prompt and no shell script runs beside it.
+
+```json
+{
+  "name": "Hermes - Tutorial/Guide (Mon/Thu/Sat)",
+  "schedule": "0 8 * * 1,4,6",
+  "enabled": true,
+  "state": "scheduled",
+  "timeout": 1200,
+  "deliver": "origin",
+  "workdir": "/home/techgeek/hermes-tutorials",
+  "profile": "cron",
+  "enabled_toolsets": ["web", "terminal", "file", "delegation"],
+  "skills": ["subagent-arena"],
+  "script": null
+}
+```
+
+Field by field, the schedule is the cadence, `deliver: origin` returns results to the originating chat (Telegram on this host), `profile: cron` is the profile the run uses, and `skills` injects one attached skill into a fresh session. The `timeout` field is discussed in its own section below.
+
+## How the Scheduler Ticks
+
+The gateway's scheduler runs a loop: it loads jobs from `~/.hermes/cron/jobs.json`, checks each `next_run_at`, and starts a fresh `AIAgent` session for every due job, per the [scheduled-tasks docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron). Each session runs the prompt to completion, delivers the final response, and then updates the run metadata and the next scheduled time.
+
+A file lock at `~/.hermes/cron/.tick.lock` prevents overlapping ticks from running the same due batch twice. The lock governs ticks, not restarts. Restart handling belongs to the missed-occurrence contract described below.
+
+## Choosing the Schedule: Cron Expressions and Repeat Defaults
+
+Cron-expression jobs run forever by default, interval jobs run forever, and one-shot jobs run once, per the [scheduled-tasks docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron). The docs give these examples: `0 9 * * *` is daily at 9:00 AM, `0 9 * * 1-5` is weekdays at 9:00 AM, `0 */6 * * *` is every six hours, and `0 0 * * 0` is every Sunday at midnight.
+
+| Schedule type | Documented example | Default repeat | Behaviour |
+|---|---|---|---|
+| One-shot | `in 30m` or an ISO timestamp | 1 | Runs once |
+| Interval | `every 2h` | forever | Runs until removed |
+| Cron expression | `0 8 * * 1,4,6` (this job) | forever | Runs until removed |
+
+The `0 9 * * *` daily example is an illustration. This job uses the numeric weekday list `1,4,6`, and the live record confirms the Monday/Thursday/Saturday cadence through its `next_run_at` of 2026-11-21 at 08:00, a Saturday.
+
+## What the Agent Gets: Fresh Sessions and a Restricted Profile
+
+Each run starts a fresh agent session with the normal static tool list, and the docs say attached skills are injected into that session, per the [scheduled-tasks docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron). The job attaches one skill, `subagent-arena`, and enables four toolsets: web, terminal, file and delegation.
+
+On this host, the `cron` profile rejects `python3 -c`, `bash -c`, heredocs and `execute_code`, and a rejected command rejects the whole shell line it sits in. The Hermes docs sources used here do not describe these rules, so this is an observed restriction on this host, not a documented feature. In practice, checks have to be written to a file and run from there.
+
+## Failure Handling in Layers
+
+The docs define a failed run narrowly: only runtime failures such as an exception, a timeout or an unreachable model mark a run failed, per the [scheduled-tasks docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron). Several layers sit on top of that definition.
+
+Example: the live record shows a failure at 2026-11-09 08:44:08 with the detail `No reply: the turn stopped while a tool result was still pending`. The same record shows `failure_streak: 0` and `last_status: ok` on 2026-11-16.
+
+1. **The `[CRON_FAILURE]` marker.** An agent that finishes but leaves work undone can put `[CRON_FAILURE]` alone on the first line of its reply. The marker is strict: quoting it elsewhere leaves the run successful.
+3. **The repeated-failure nudge.** `failure_streak` counts consecutive failed runs. The default `failure_nudge_threshold` is 3, and any successful run resets the count.
+4. **Failure incidents.** A recurring job that fails with the same error alerts once. Repeats are held back, and `failure_repeat_alert_hours: 6` sends one reminder after six hours still broken.
+5. **Automatic re-runs.** A transient network or DNS error that fails a run before any model call is re-run after 5, 15 and 30 minutes, then the job returns to its normal schedule.
+
+## The Timeout Field and Restart Safety
+
+The job record carries `timeout: 1200`. The Cron Internals guide describes a script timeout (`HERMES_CRON_SCRIPT_TIMEOUT`, default 3600 seconds) that bounds pre-run scripts only. LLM-driven jobs run on a separate inactivity budget, `HERMES_CRON_TIMEOUT`, which defaults to 600 seconds of idle time, with `0` meaning unlimited. The docs do not explain how a per-job `timeout: 1200` field interacts with either setting, and this job has no script.
+
+Restart safety comes from the systemd side. Under systemd, each due job is handed to an external worker launched in a transient user scope, created with `systemd-run --user --scope`, so restarting the gateway mid-job does not kill it, per the [scheduled-tasks docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron). The docs also say hosts without a user systemd session cannot create that scope, so this protection depends on the host.
+
+Missed runs follow a separate rule. The Cron Internals guide says recurring jobs are at-most-once per occurrence: `completed_occurrence()` checks the executions ledger for a completed row with that exact scheduled instant, so a slot that already ran before a restart advances without firing again.
+
+## Tradeoffs This Configuration Makes
+
+- **Calendar schedule vs. interval.** A cron expression pins runs to weekdays and an hour. An interval such as `every 2h` fires on a fixed gap regardless of the calendar.
+- **Origin delivery vs. files or platform targets.** `deliver: origin` returns output to the chat that owns the job. The docs list local files and configured platform targets as the alternatives.
+- **Three days a week, not daily.** The live job runs Monday, Thursday and Saturday, so a schedule that assumes daily runs does not describe this job.
+- **Prompt-driven vs. script-backed.** Behaviour lives in the prompt. The sources do not document the prompt's internal steps, so the job is legible at the configuration level and opaque below it.
+
+## FAQ
+
+### Does this job publish every morning?
+
+No. The live schedule is `0 8 * * 1,4,6`, which fires at 08:00 on Monday, Thursday and Saturday. The docs' "Daily at 9:00 AM" phrase belongs to the `0 9 * * *` example, which is an illustration and not a description of this job.
+
+### What happens to a run if the gateway restarts mid-job?
+
+On systemd hosts the job runs in a transient user scope created with `systemd-run --user --scope`, so a gateway restart does not kill it. Hosts without a user systemd session cannot create that scope, so restart safety depends on the host's setup.
+
+### Is a finished-but-incomplete run a failed run?
+
+Not automatically. Only runtime failures such as exceptions, timeouts or an unreachable model mark a run failed. The agent can put `[CRON_FAILURE]` alone on the first line of its reply to declare incomplete work, and the marker is strict.
+
+## The Bottom Line
+
+A Hermes cron job is a recurring agent run with a fixed schedule, fresh sessions, origin delivery and layered failure handling. The copyable parts are the schedule expression, the `deliver: origin` setting and the failure layers. Adapt the schedule, the skill list and the delivery target to your own work. Do not assume the job's `timeout` field sets the agent's run budget: the docs tie the agent's budget to the inactivity setting, and the `timeout` field is unexplained.
