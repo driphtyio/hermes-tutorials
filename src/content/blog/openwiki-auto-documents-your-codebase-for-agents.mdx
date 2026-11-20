@@ -1,0 +1,106 @@
+---
+title: "OpenWiki: Auto-Documents Your Codebase for Agents"
+description: "OpenWiki writes a Markdown wiki for your repo that coding agents read as context. Here is what it writes, how agents find it, and how it stays current."
+pubDate: "2026-11-20"
+tags: ["openwiki", "documentation", "coding-agents", "markdown", "langchain"]
+keywords: ["openwiki", "auto-documentation", "AGENTS.md", "grounded claims", "codebase wiki", "deep agents"]
+lastVerified: "2026-11-20"
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/openwiki-auto-documents-your-codebase-for-agents-1795193511.webp"
+---
+
+# OpenWiki: Auto-Documents Your Codebase for Agents
+
+**TLDR:** OpenWiki is an MIT-licensed CLI from LangChain that writes and maintains a Markdown wiki in an `openwiki/` directory. The recommended start is `openwiki integrations install <host>` inside your coding agent, which then reads the wiki through a managed block in `AGENTS.md`. The standalone route is `npm install -g openwiki`, then `openwiki --init` and `openwiki --update`. The sources disagree on one default provider; this post treats the current README as correct.
+
+This guide is based on the official OpenWiki README, LangChain's OpenWiki docs, and the July 2026 launch post. We did not install or run OpenWiki hands-on. The facts below come from those sources, fetched on 2026-11-20.
+
+## What OpenWiki is
+
+OpenWiki is a command-line tool that turns a codebase into a linked Markdown wiki the owner keeps in the repository ([README](https://github.com/langchain-ai/openwiki/)). The launch post introduces OpenWiki as built on Deep Agents and, in its first release, focused on codebase wikis ([launch post](https://www.langchain.com/blog/introducing-openwiki-an-open-source-agent-for-repo-documentation)). The README states the core idea: OpenWiki tracks facts back to source evidence so that updates can focus on what changed ([README](https://github.com/langchain-ai/openwiki/)). At the 2026-11-20 fetch, the README showed 18.0k stars and 526 commits ([README](https://github.com/langchain-ai/openwiki/)).
+
+## Install and first run
+
+```bash
+npm install -g openwiki
+```
+
+OpenWiki needs Node.js 22.22.0 or newer ([README](https://github.com/langchain-ai/openwiki/), [quickstart](https://docs.langchain.com/oss/openwiki/quickstart)).
+
+The README's recommended start is inside the coding agent you already use. Install the integration for your agent with `openwiki integrations install <host>`, for example `codex`, `claude`, `opencode`, or `cursor`, then ask the agent to initialize the repository's wiki. In that path OpenWiki uses the agent's own authenticated model session, so there is no separate provider to configure ([README](https://github.com/langchain-ai/openwiki/)).
+
+The standalone CLI is the other path. From the repository root, `openwiki --init` runs an interactive first setup that asks for an inference provider and model, an API key, and an optional LangSmith key ([quickstart](https://docs.langchain.com/oss/openwiki/quickstart)). Provider keys are saved to `~/.openwiki/.env` ([README](https://github.com/langchain-ai/openwiki/)). Telemetry is on by default; set `OPENWIKI_TELEMETRY_DISABLED=1` or `DO_NOT_TRACK=1` to opt out ([README](https://github.com/langchain-ai/openwiki/)).
+
+Runs are resumable. `openwiki/.run.json` checkpoints the page queue and is deleted after a successful finish, so rerunning the same command resumes an interrupted run on a persistent checkout ([code-mode docs](https://docs.langchain.com/oss/openwiki/code-mode)). `OPENWIKI_PAGE_CONCURRENCY` controls how many pages the native CLI writes at once. It defaults to 1 and accepts 1 to 8 ([README](https://github.com/langchain-ai/openwiki/)).
+
+## What files OpenWiki writes
+
+```text
+openwiki/
+  quickstart, architecture, operations pages
+  INSTRUCTIONS.md        # user-authored brief, not rewritten on normal runs
+  .claims/               # claim sidecars
+  .page-manifest.json
+  .last-update.json
+  .run.json              # checkpoint, deleted after success
+AGENTS.md                # created if missing; managed block
+CLAUDE.md                # refreshed only if it already exists
+```
+
+The wiki pages live in `openwiki/` ([code-mode docs](https://docs.langchain.com/oss/openwiki/code-mode)). `openwiki/INSTRUCTIONS.md` is the one file you own: OpenWiki reads it for scope and priorities but does not rewrite it on normal runs ([code-mode docs](https://docs.langchain.com/oss/openwiki/code-mode)). Claim sidecars and the page and update manifests sit beside it ([code-mode docs](https://docs.langchain.com/oss/openwiki/code-mode)).
+
+OpenWiki writes its pointer into `AGENTS.md` inside a managed block, delimited by `<!-- OPENWIKI:START -->` and `<!-- OPENWIKI:END -->` markers. It creates the file if it is missing and rewrites only that block ([code-mode docs](https://docs.langchain.com/oss/openwiki/code-mode), [README](https://github.com/langchain-ai/openwiki/)). `CLAUDE.md` is refreshed only when it already exists; the managed block in it imports `@AGENTS.md`. OpenWiki does not create `CLAUDE.md` when it is absent ([code-mode docs](https://docs.langchain.com/oss/openwiki/code-mode)).
+
+Two output details are worth knowing. Pages use OKF v0.2 front matter, where every concept document needs a non-empty `type` ([README](https://github.com/langchain-ai/openwiki/)). After each run, Mermaid fences are validated, and any that fail are converted to plain text fences ([code-mode docs](https://docs.langchain.com/oss/openwiki/code-mode)). `.openwikiignore` in the repository root uses gitignore-style rules and acts as a read boundary, though the README warns it does not stop a topic from being mentioned if it is inferable from other allowed files ([README](https://github.com/langchain-ai/openwiki/)).
+
+## How an agent finds the wiki
+
+The managed block in `AGENTS.md` tells the agent when to consult the wiki. The README says those instructions use `openwiki_search` and `openwiki_read` for concrete questions. These are local, read-only tools that make no model calls. If they are unavailable, the instructions fall back to reading `openwiki/quickstart.md` ([README](https://github.com/langchain-ai/openwiki/)). Retrieval is optional context: the README says agents are not expected to query the wiki at the start of every task ([README](https://github.com/langchain-ai/openwiki/)).
+
+## Keeping the wiki current
+
+```bash
+openwiki --update
+openwiki visualize openwiki --export docs/openwiki-visualizer
+```
+
+`openwiki --update` checks for repository changes since the last successful run and reconciles stale Claims. Clean updates skip model work and leave wiki content untouched ([README](https://github.com/langchain-ai/openwiki/), [quickstart](https://docs.langchain.com/oss/openwiki/quickstart)). Inside an integrated coding agent, the README's update prompt is: "Update this repository's OpenWiki for changes since its last successful run." ([README](https://github.com/langchain-ai/openwiki/))
+
+For scheduled runs, the repository ships example workflows for GitHub Actions, GitLab CI, and Bitbucket Pipelines that open a documentation pull request ([README](https://github.com/langchain-ai/openwiki/)). Auto-merge needs a token with Contents and Pull requests write permission, because the default `GITHUB_TOKEN` does not start most `pull_request` workflows ([README](https://github.com/langchain-ai/openwiki/)).
+
+`openwiki visualize` serves the wiki as an interactive graph on `127.0.0.1` (default port 4321). Adding `--export <dir>` writes a static site instead ([README](https://github.com/langchain-ai/openwiki/)).
+
+## Grounded Claims
+
+OpenWiki tracks the factual statements behind each page as Grounded Claims. Each Claim points to versioned repository evidence, such as `repo://src/server.ts#L40-L82`. When that evidence changes or disappears, the Claim is flagged so it can be confirmed, revised, or retired ([README](https://github.com/langchain-ai/openwiki/), [code-mode docs](https://docs.langchain.com/oss/openwiki/code-mode)).
+
+The practical effect is that a reader or agent can trace a page statement back to a file range. A statement can also go stale when the code moves, and `openwiki --update` is where that gets reconciled ([code-mode docs](https://docs.langchain.com/oss/openwiki/code-mode)).
+
+## Limits and conflicts in the sources
+
+Repository code wikis are the default. The standalone CLI can also build a personal wiki in `~/.openwiki/wiki` from connectors such as Gmail, Notion, and local git repositories, through `openwiki personal --init` ([README](https://github.com/langchain-ai/openwiki/), [quickstart](https://docs.langchain.com/oss/openwiki/quickstart)). The coding-agent integration is narrower: host-driven runs cover repository code wikis only, not personal brains ([README](https://github.com/langchain-ai/openwiki/)). The launch post describes the first release as focused on codebase wikis ([launch post](https://www.langchain.com/blog/introducing-openwiki-an-open-source-agent-for-repo-documentation)), which is older than the current README.
+
+The sources disagree on the default provider. The launch post says OpenWiki uses OpenRouter with an open model by default ([launch post](https://www.langchain.com/blog/introducing-openwiki-an-open-source-agent-for-repo-documentation)). The current README and quickstart say the onboarding default is OpenAI with `gpt-5.6-terra` ([README](https://github.com/langchain-ai/openwiki/), [quickstart](https://docs.langchain.com/oss/openwiki/quickstart)). This post treats the README and quickstart as current.
+
+We could not fetch the npm package page, so this post cites no download counts. No source reports a benchmark of agent token savings, so none is claimed here.
+
+## FAQ
+
+### Will OpenWiki overwrite my AGENTS.md?
+
+No. OpenWiki rewrites only the block between its start and end markers and creates the file when it is missing. Put custom guidance for the wiki in `openwiki/INSTRUCTIONS.md` instead, which normal runs do not rewrite ([README](https://github.com/langchain-ai/openwiki/), [code-mode docs](https://docs.langchain.com/oss/openwiki/code-mode)).
+
+### Can updates run on a schedule?
+
+Yes. The repository includes example workflows for GitHub Actions, GitLab CI, and Bitbucket Pipelines that open a documentation pull request ([README](https://github.com/langchain-ai/openwiki/)). If you want auto-merge, the token needs Contents and Pull requests write permission.
+
+### Can OpenWiki document more than one codebase?
+
+Yes, with `openwiki link`, which groups existing wikis into a named workspace that agents can search across ([README](https://github.com/langchain-ai/openwiki/)). Coding-agent runs still cover repository code wikis only.
+
+## Sources
+
+- [OpenWiki README](https://github.com/langchain-ai/openwiki/)
+- [OpenWiki quickstart](https://docs.langchain.com/oss/openwiki/quickstart)
+- [OpenWiki code-mode docs](https://docs.langchain.com/oss/openwiki/code-mode)
+- [Launch post by Brace Sproul, July 1, 2026](https://www.langchain.com/blog/introducing-openwiki-an-open-source-agent-for-repo-documentation)
+

@@ -3,7 +3,7 @@
     "name": "Hermes Tutorials Arena",
     "version": "1.0.0",
     "description": "Model-vs-model battles for Hermes Tutorials content and design.",
-    "total_matches": 76
+    "total_matches": 80
   },
   "model_pool": [
     {
@@ -17971,6 +17971,321 @@
           "status": "dnf"
         }
       }
+    },
+    {
+      "id": "arena-openwiki-auto-documents-your-codebase-for-agents",
+      "match_id": "arena-openwiki-auto-documents-your-codebase-for-agents",
+      "slug": "openwiki-auto-documents-your-codebase-for-agents",
+      "topic": "OpenWiki: Auto-Documents Your Codebase for Agents",
+      "category": "build-log",
+      "type": "content",
+      "date": "2026-11-20",
+      "timestamp": "2026-11-20T08:30:00-08:00",
+      "queue_item": "her-0017",
+      "pipeline": "subagent-arena (cron, unattended)",
+      "winner": "beam-free",
+      "winner_provider": "opencode-go",
+      "winner_family": "beam",
+      "winner_score": 8.23,
+      "shipped_score": 8.29,
+      "pre_edit_score": 8.23,
+      "threshold": 7.5,
+      "threshold_met": true,
+      "threshold_note": "gate 7.5 (multipass mean). Shipped text: 5-pass mean 8.29 spread 0.8 (passes 7.8,8.6,8.4,8.15,8.5).",
+      "judge": {
+        "model": "tokenharbor/qwen3.7-flash",
+        "mode": "judge-draft-batch 3-pass + re-judges; final 5-pass",
+        "rubric": "content"
+      },
+      "judge_windows": [
+        {
+          "window": "batch (12 lanes, 3-pass, pre-QA)",
+          "beam-free": 8.23,
+          "note": "winner pre-QA"
+        },
+        {
+          "window": "same-window control (2 drafts, 3-pass)",
+          "control-pre-edit": 7.87,
+          "shipped-after-QA-r1": 7.95
+        },
+        {
+          "window": "final text, 3-pass",
+          "shipped-final": 7.47,
+          "spread": 1.65,
+          "note": "noisy window; re-judged below"
+        },
+        {
+          "window": "final text, 5-pass",
+          "shipped-final": 8.29,
+          "spread": 0.8
+        }
+      ],
+      "qa_model": "claude-cli/claude-sonnet-5-5",
+      "qa_result": "R1 FAIL 8 defects -> fixed; R2 FAIL 5 defects -> fixed; R3 PASS with 3 minor items (1 applied, 2 accepted: cosmetic/tolerated)",
+      "verification_status": "confirmed",
+      "verification_note": "disprove_pass extract/verify on final text; verifier gpt-6-luna via commandcode (family gpt != builder beam). First pass needs_validation on one universal self-claim, reworded to scope; re-verify on final text.",
+      "linkcheck": "winner.mdx: 4 unique external links, OK 4, DEAD 0, BLOCKED 0 (arena-linkcheck.py)",
+      "hero": "gen-image-verified.sh Lumenfall FLUX.1-schnell -> R2 URL HTTP 200",
+      "plan_model": "glm-5.3 via cline-pass (served by zai fallback)",
+      "research_lane": "web_extract in-session dossier (Firecrawl not used); sources S1-S4 fetched 2026-11-20; npm page failed",
+      "builders_dispatched": 12,
+      "builders_produced_draft": 12,
+      "word_counts": {
+        "beam-free body words (shipped)": "approx 1,650 (pre-QA 1,328)"
+      },
+      "deviations": [
+        "hermestuts has no arena-finalize BLOGS entry: recorded by hand-append with backup; canonical recalc_leaderboard used on the live object",
+        "topic from queue her-0017 (P3): the P1/P2 queue items were already published (her-0022/0204/0205/0021/0038/0207/0209) or are proposal-only (her-0210 has no implementation to document)",
+        "Hermes tie-in is limited to AGENTS.md reading; no Hermes-specific integration claimed",
+        "post text edited after QA (QA R1/R2/R3 fixes applied in-session); the disclosure sentence reworded after the final 5-pass window",
+        "source conflict stated in-post: launch post says OpenRouter default; README/quickstart say OpenAI default",
+        "mimo-v2.6-flash load-balanced og->tokenharbor by the runner",
+        "composite scores: batch windows are noisy (spread up to 4.5 on several lanes); only beam-free and muse-ember/haiku are stable (spread <=1.0)"
+      ],
+      "results": [
+        {
+          "model": "beam-free",
+          "model_id": "beam-free",
+          "provider": "opencode-go",
+          "family": "beam",
+          "score": 8.23,
+          "status": "scored",
+          "note": "WINNER. batch 8.23 spread 0.4 (pre-QA text); 5-pass shipped 8.29 spread 0.8",
+          "rank": 1
+        },
+        {
+          "model": "muse-ember",
+          "model_id": "muse-ember",
+          "provider": "commandcode",
+          "family": "muse",
+          "score": 8.08,
+          "status": "scored",
+          "note": "batch 8.08 spread 0.4 (wildcard trial lane, not re-judged: spread <1.5)",
+          "rank": 2
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "model_id": "claude-haiku-5-5",
+          "provider": "claude-cli",
+          "family": "claude",
+          "score": 8.07,
+          "status": "scored",
+          "note": "batch 8.07 spread 1.0 (not re-judged: spread <1.5)",
+          "rank": 3
+        },
+        {
+          "model": "stealth/glyph-cluster:free",
+          "model_id": "stealth/glyph-cluster:free",
+          "provider": "commandcode",
+          "family": "stealth",
+          "score": 7.88,
+          "status": "scored",
+          "note": "batch 7.88 spread 1.15 (not re-judged: spread <1.5)",
+          "rank": 4
+        },
+        {
+          "model": "muse-spark-1.3-contributor",
+          "model_id": "muse-spark-1.3-contributor",
+          "provider": "opencode-go",
+          "family": "muse",
+          "score": 7.57,
+          "status": "scored",
+          "note": "batch 7.57 spread 0.85 batch; re-judge 6.67 spread 2.35",
+          "rank": 5
+        },
+        {
+          "model": "glm-5.3-flash",
+          "model_id": "glm-5.3-flash",
+          "provider": "opencode-go",
+          "family": "glm",
+          "score": 7.5,
+          "status": "scored",
+          "note": "batch 7.50 spread 2.8; re-judge 7.50 spread 3.4 (still noisy, not trusted above the winner)",
+          "rank": 6
+        },
+        {
+          "model": "minimax-m3.1-flash",
+          "model_id": "minimax-m3.1-flash",
+          "provider": "opencode-go",
+          "family": "minimax",
+          "score": 7.18,
+          "status": "scored",
+          "note": "batch 7.18 spread 3.1; re-judge 5.48 spread 4.25 (noisy)",
+          "rank": 7
+        },
+        {
+          "model": "ling-3.1-flash",
+          "model_id": "ling-3.1-flash",
+          "provider": "commandcode",
+          "family": "ling",
+          "score": 6.97,
+          "status": "scored",
+          "note": "batch 6.97 spread 3.0; re-judge 7.88 spread 0.75",
+          "rank": 8
+        },
+        {
+          "model": "deepseek-v4.1-flash",
+          "model_id": "deepseek-v4.1-flash",
+          "provider": "commandcode",
+          "family": "deepseek",
+          "score": 6.02,
+          "status": "scored",
+          "note": "batch 6.02 spread 3.3; re-judge 8.10 spread 1.2 (window-bimodal; re-judge is the later window)",
+          "rank": 9
+        },
+        {
+          "model": "gpt-6-luna",
+          "model_id": "gpt-6-luna",
+          "provider": "commandcode",
+          "family": "gpt",
+          "score": 5.67,
+          "status": "scored",
+          "note": "batch 5.67 spread 4.5; re-judge 6.83 spread 2.95 (noisy)",
+          "rank": 10
+        },
+        {
+          "model": "mimo-v2.6-flash",
+          "model_id": "mimo-v2.6-flash",
+          "provider": "opencode-go",
+          "family": "mimo",
+          "score": 5.53,
+          "status": "scored",
+          "note": "batch 5.53 spread 3.25; re-judge 6.12 spread 3.6 (noisy); load-balanced og->tokenharbor",
+          "rank": 11
+        },
+        {
+          "model": "hy4-flash",
+          "model_id": "hy4-flash",
+          "provider": "commandcode",
+          "family": "tencent",
+          "score": 4.45,
+          "status": "scored",
+          "note": "batch 4.45 spread 3.3; re-judge 6.93 spread 2.2 (noisy)",
+          "rank": 12
+        }
+      ],
+      "models": [
+        {
+          "model": "beam-free",
+          "model_id": "beam-free",
+          "provider": "opencode-go",
+          "family": "beam",
+          "score": 8.23,
+          "status": "scored",
+          "note": "WINNER. batch 8.23 spread 0.4 (pre-QA text); 5-pass shipped 8.29 spread 0.8",
+          "rank": 1
+        },
+        {
+          "model": "muse-ember",
+          "model_id": "muse-ember",
+          "provider": "commandcode",
+          "family": "muse",
+          "score": 8.08,
+          "status": "scored",
+          "note": "batch 8.08 spread 0.4 (wildcard trial lane, not re-judged: spread <1.5)",
+          "rank": 2
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "model_id": "claude-haiku-5-5",
+          "provider": "claude-cli",
+          "family": "claude",
+          "score": 8.07,
+          "status": "scored",
+          "note": "batch 8.07 spread 1.0 (not re-judged: spread <1.5)",
+          "rank": 3
+        },
+        {
+          "model": "stealth/glyph-cluster:free",
+          "model_id": "stealth/glyph-cluster:free",
+          "provider": "commandcode",
+          "family": "stealth",
+          "score": 7.88,
+          "status": "scored",
+          "note": "batch 7.88 spread 1.15 (not re-judged: spread <1.5)",
+          "rank": 4
+        },
+        {
+          "model": "muse-spark-1.3-contributor",
+          "model_id": "muse-spark-1.3-contributor",
+          "provider": "opencode-go",
+          "family": "muse",
+          "score": 7.57,
+          "status": "scored",
+          "note": "batch 7.57 spread 0.85 batch; re-judge 6.67 spread 2.35",
+          "rank": 5
+        },
+        {
+          "model": "glm-5.3-flash",
+          "model_id": "glm-5.3-flash",
+          "provider": "opencode-go",
+          "family": "glm",
+          "score": 7.5,
+          "status": "scored",
+          "note": "batch 7.50 spread 2.8; re-judge 7.50 spread 3.4 (still noisy, not trusted above the winner)",
+          "rank": 6
+        },
+        {
+          "model": "minimax-m3.1-flash",
+          "model_id": "minimax-m3.1-flash",
+          "provider": "opencode-go",
+          "family": "minimax",
+          "score": 7.18,
+          "status": "scored",
+          "note": "batch 7.18 spread 3.1; re-judge 5.48 spread 4.25 (noisy)",
+          "rank": 7
+        },
+        {
+          "model": "ling-3.1-flash",
+          "model_id": "ling-3.1-flash",
+          "provider": "commandcode",
+          "family": "ling",
+          "score": 6.97,
+          "status": "scored",
+          "note": "batch 6.97 spread 3.0; re-judge 7.88 spread 0.75",
+          "rank": 8
+        },
+        {
+          "model": "deepseek-v4.1-flash",
+          "model_id": "deepseek-v4.1-flash",
+          "provider": "commandcode",
+          "family": "deepseek",
+          "score": 6.02,
+          "status": "scored",
+          "note": "batch 6.02 spread 3.3; re-judge 8.10 spread 1.2 (window-bimodal; re-judge is the later window)",
+          "rank": 9
+        },
+        {
+          "model": "gpt-6-luna",
+          "model_id": "gpt-6-luna",
+          "provider": "commandcode",
+          "family": "gpt",
+          "score": 5.67,
+          "status": "scored",
+          "note": "batch 5.67 spread 4.5; re-judge 6.83 spread 2.95 (noisy)",
+          "rank": 10
+        },
+        {
+          "model": "mimo-v2.6-flash",
+          "model_id": "mimo-v2.6-flash",
+          "provider": "opencode-go",
+          "family": "mimo",
+          "score": 5.53,
+          "status": "scored",
+          "note": "batch 5.53 spread 3.25; re-judge 6.12 spread 3.6 (noisy); load-balanced og->tokenharbor",
+          "rank": 11
+        },
+        {
+          "model": "hy4-flash",
+          "model_id": "hy4-flash",
+          "provider": "commandcode",
+          "family": "tencent",
+          "score": 4.45,
+          "status": "scored",
+          "note": "batch 4.45 spread 3.3; re-judge 6.93 spread 2.2 (noisy)",
+          "rank": 12
+        }
+      ]
     }
   ],
   "leaderboard": [
@@ -17978,10 +18293,10 @@
       "model": "deepseek-v4.1-flash",
       "provider": "commandcode",
       "family": "deepseek",
-      "matches": 56,
+      "matches": 57,
       "wins": 16,
-      "losses": 40,
-      "avgScore": 8.12,
+      "losses": 41,
+      "avgScore": 8.08,
       "bestScore": 9.78,
       "rank": 1
     },
@@ -17989,10 +18304,10 @@
       "model": "glm-5.3-flash",
       "provider": "opencode-go",
       "family": "glm",
-      "matches": 45,
+      "matches": 46,
       "wins": 10,
-      "losses": 35,
-      "avgScore": 7.97,
+      "losses": 36,
+      "avgScore": 7.96,
       "bestScore": 9.75,
       "rank": 2
     },
@@ -18022,10 +18337,10 @@
       "model": "gpt-6-luna",
       "provider": "commandcode",
       "family": "gpt",
-      "matches": 39,
+      "matches": 40,
       "wins": 5,
-      "losses": 34,
-      "avgScore": 7.82,
+      "losses": 35,
+      "avgScore": 7.77,
       "bestScore": 9.73,
       "rank": 5
     },
@@ -18033,10 +18348,10 @@
       "model": "claude-haiku-5-5",
       "provider": "claude-cli",
       "family": "claude",
-      "matches": 30,
+      "matches": 31,
       "wins": 5,
-      "losses": 25,
-      "avgScore": 7.7,
+      "losses": 26,
+      "avgScore": 7.71,
       "bestScore": 9.15,
       "rank": 6
     },
@@ -18044,10 +18359,10 @@
       "model": "stealth/glyph-cluster:free",
       "provider": "commandcode",
       "family": "stealth",
-      "matches": 19,
+      "matches": 20,
       "wins": 4,
-      "losses": 15,
-      "avgScore": 7.5,
+      "losses": 16,
+      "avgScore": 7.52,
       "bestScore": 8.57,
       "rank": 7
     },
@@ -18055,10 +18370,10 @@
       "model": "mimo-v2.6-flash",
       "provider": "opencode-go",
       "family": "mimo",
-      "matches": 23,
+      "matches": 24,
       "wins": 3,
-      "losses": 20,
-      "avgScore": 7.46,
+      "losses": 21,
+      "avgScore": 7.38,
       "bestScore": 8.47,
       "rank": 8
     },
@@ -18077,9 +18392,9 @@
       "model": "muse-spark-1.3-contributor",
       "provider": "opencode-go",
       "family": "muse",
-      "matches": 41,
+      "matches": 42,
       "wins": 2,
-      "losses": 39,
+      "losses": 40,
       "avgScore": 7.52,
       "bestScore": 9.45,
       "rank": 10
@@ -18110,10 +18425,10 @@
       "model": "ling-3.1-flash",
       "provider": "tokenharbor",
       "family": "ling",
-      "matches": 8,
+      "matches": 9,
       "wins": 1,
-      "losses": 7,
-      "avgScore": 7.72,
+      "losses": 8,
+      "avgScore": 7.64,
       "bestScore": 8.32,
       "rank": 13
     },
@@ -18121,12 +18436,23 @@
       "model": "minimax-m3.1-flash",
       "provider": "opencode-go",
       "family": "minimax",
-      "matches": 20,
+      "matches": 21,
       "wins": 1,
-      "losses": 19,
-      "avgScore": 7.54,
+      "losses": 20,
+      "avgScore": 7.52,
       "bestScore": 8.7,
       "rank": 14
+    },
+    {
+      "model": "beam-free",
+      "provider": "opencode-go",
+      "family": "beam",
+      "matches": 25,
+      "wins": 1,
+      "losses": 24,
+      "avgScore": 7.37,
+      "bestScore": 8.42,
+      "rank": 15
     },
     {
       "model": "longcat-2.0",
@@ -18137,7 +18463,18 @@
       "losses": 4,
       "avgScore": 8.3,
       "bestScore": 9.67,
-      "rank": 15
+      "rank": 16
+    },
+    {
+      "model": "muse-ember",
+      "provider": "commandcode",
+      "family": "muse",
+      "matches": 1,
+      "wins": 0,
+      "losses": 1,
+      "avgScore": 8.08,
+      "bestScore": 8.08,
+      "rank": 17
     },
     {
       "model": "ling-3.0-flash-fin-free",
@@ -18148,7 +18485,7 @@
       "losses": 2,
       "avgScore": 8.07,
       "bestScore": 8.22,
-      "rank": 16
+      "rank": 18
     },
     {
       "model": "space-bunny-free",
@@ -18159,7 +18496,7 @@
       "losses": 6,
       "avgScore": 8.01,
       "bestScore": 9.13,
-      "rank": 17
+      "rank": 19
     },
     {
       "model": "stealth-glyph-cluster:free",
@@ -18170,7 +18507,7 @@
       "losses": 1,
       "avgScore": 7.83,
       "bestScore": 7.83,
-      "rank": 18
+      "rank": 20
     },
     {
       "model": "cline-pass/minimax-m3",
@@ -18181,7 +18518,7 @@
       "losses": 7,
       "avgScore": 7.75,
       "bestScore": 8.32,
-      "rank": 19
+      "rank": 21
     },
     {
       "model": "omen-alpha",
@@ -18192,18 +18529,7 @@
       "losses": 4,
       "avgScore": 7.54,
       "bestScore": 8.32,
-      "rank": 20
-    },
-    {
-      "model": "beam-free",
-      "provider": "opencode-go",
-      "family": "beam",
-      "matches": 24,
-      "wins": 0,
-      "losses": 24,
-      "avgScore": 7.33,
-      "bestScore": 8.42,
-      "rank": 21
+      "rank": 22
     },
     {
       "model": "cline-pass/qwen3.8-max",
@@ -18214,7 +18540,7 @@
       "losses": 1,
       "avgScore": 7.01,
       "bestScore": 7.01,
-      "rank": 22
+      "rank": 23
     },
     {
       "model": "gemini-3.8-flash-medium",
@@ -18225,7 +18551,7 @@
       "losses": 7,
       "avgScore": 6.82,
       "bestScore": 8.42,
-      "rank": 23
+      "rank": 24
     },
     {
       "model": "minimax-m3.1-flash-free",
@@ -18236,7 +18562,7 @@
       "losses": 2,
       "avgScore": 6.54,
       "bestScore": 7.72,
-      "rank": 24
+      "rank": 25
     },
     {
       "model": "qwen3.8-flash",
@@ -18247,7 +18573,7 @@
       "losses": 2,
       "avgScore": 6.06,
       "bestScore": 6.63,
-      "rank": 25
+      "rank": 26
     },
     {
       "model": "ling-3.0-flash-sante",
@@ -18258,7 +18584,18 @@
       "losses": 1,
       "avgScore": 5.55,
       "bestScore": 5.55,
-      "rank": 26
+      "rank": 27
+    },
+    {
+      "model": "hy4-flash",
+      "provider": "commandcode",
+      "family": "tencent",
+      "matches": 1,
+      "wins": 0,
+      "losses": 1,
+      "avgScore": 4.45,
+      "bestScore": 4.45,
+      "rank": 28
     },
     {
       "model": "pixel-canary",
@@ -18269,11 +18606,11 @@
       "matches": 0,
       "avgScore": 0,
       "bestScore": 0,
-      "rank": 27
+      "rank": 29
     }
   ],
   "last_updated": "2026-11-19",
-  "total_matches": 79,
+  "total_matches": 80,
   "retired_models": [
     {
       "model": "mimo-v2.5",
