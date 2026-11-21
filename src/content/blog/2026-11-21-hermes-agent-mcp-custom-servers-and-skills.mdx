@@ -1,0 +1,260 @@
+---
+title: "Hermes Agent + MCP: How to Connect Custom MCP Servers and Pair Them with Skills (2026)"
+description: "Learn how to declare MCP servers in Hermes Agent config.yaml, filter tools, use lazy start, and pair mcp_ tools with SKILL.md skills in this 2026 guide."
+pubDate: "2026-11-21"
+tags: ["hermes","mcp","skills","tutorial"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-mcp-custom-servers-and-skills-1795278272.webp"
+lastVerified: "2026-11-21"
+---
+
+**TLDR:** Register a custom MCP server under `mcp_servers:` in Hermes Agent’s `config.yaml`, use filtering and lifecycle controls to manage its MCP tools, reload the session, and document the tool names in a `SKILL.md` as an explicitly labeled convention.
+
+Hermes Agent offers a declarative route from a local or remote MCP server to a predictable, server-prefixed tool name. This guide covers registering stdio and HTTP servers, controlling tool exposure, and pairing those names with a Hermes skill without claiming an undocumented automatic binding. Turning Hermes itself into an MCP server with `hermes mcp serve` is outside this guide’s scope.
+
+## How This Guide Was Built
+
+This guide is based on the official Hermes Agent MCP and skills documentation and the MCP specification; we did not run these configurations hands-on. Every key, example, and command below is traceable to those pages, starting with the [Hermes MCP feature guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp).
+
+The evidence base includes Hermes’s [skills documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills), the MCP [architecture overview](https://modelcontextprotocol.io/docs/learn/architecture), the MCP [tools concept](https://modelcontextprotocol.io/docs/concepts/tools), and the [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk). Documented behavior is separated from the skill-pairing convention described below.
+
+## How MCP Fits Together: Host, Client, Server
+
+Hermes acts as the MCP host, and each entry under `mcp_servers:` in `config.yaml` becomes one client connection to a server over stdio or Streamable HTTP, as defined in the [MCP architecture overview](https://modelcontextprotocol.io/docs/learn/architecture); the client maintains the connection while the server provides context and tools.
+
+The host is the application that coordinates an agent’s available capabilities. The client is the connection that manages a particular server. The server exposes tools and context. Hermes’s entries map those roles onto one server declaration per configured endpoint.
+
+For a stdio server, the server runs as a local subprocess on the same machine and communicates through standard input and output. For Streamable HTTP, the server is remote and communication uses HTTP POST, with optional server-sent events, as described in the [Streamable HTTP transport specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http).
+
+That model explains why Hermes can connect to several servers while presenting their tools through one consistent namespace. It also means transport choice and tool filtering are separate concerns: the transport determines how Hermes reaches a server, while filtering determines which of that server’s tools become available.
+
+## Declare a stdio Server in config.yaml
+
+A local stdio server is declared under `mcp_servers:` with `command`, `args`, and `env` keys, exactly as the [Hermes MCP docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp) show for the GitHub server—`command: "npx"`, `args: ["-y", "@modelcontextprotocol/server-github"]`, and a token in `env`—and custom servers wire up the same way. The [MCP reference server implementations](https://github.com/modelcontextprotocol/servers) listed in the MCP architecture overview are one place to find ready-made local servers.
+
+The documented example is:
+
+```yaml
+mcp_servers:
+  github:
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-github"]
+    env:
+      GITHUB_PERSONAL_ACCESS_TOKEN: "***"
+```
+
+For a custom local server, replace the `npx` package and arguments with the command that starts your server. The docs do not describe additional packaging rules for custom servers beyond the `command` and `args` declaration.
+
+That omission matters: there is no documented requirement to expose the server through a particular package layout. The documented contract is simply the executable, its arguments, and any environment variables it needs.
+
+If you are still deciding between local and remote servers, the broader [guide to setting up MCP servers with Hermes Agent](/blog/mcp-servers-guide/) provides additional context for the two supported transport styles.
+
+## Declare an HTTP Server and Use OAuth
+
+A remote server is declared with `url` and `headers`—for example, `url: "https://mcp.example.com/mcp"` with an `Authorization: Bearer` header—and hosted servers requiring OAuth 2.1 use `auth: oauth`, according to the [Hermes MCP docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp), with discovery, PKCE, and refresh handled through the [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk).
+
+The documented HTTP declaration is:
+
+```yaml
+mcp_servers:
+  remote_api:
+    url: "https://mcp.example.com/mcp"
+    headers:
+      Authorization: "Bearer ***"
+```
+
+For a hosted endpoint that requires OAuth 2.1, the server entry also uses `auth: oauth`. Hermes handles OAuth discovery, proof key for code exchange, and token refresh through the MCP Python SDK.
+
+A bearer header and OAuth serve different documented cases. Use `headers` when the endpoint accepts a prepared credential; use `auth: oauth` when the hosted server requires the OAuth flow.
+
+## Tool Names and Filtering
+
+Hermes registers every MCP tool as `mcp_<server_name>_<tool_name>` in the feature guide's notation—`filesystem` plus `read_file` becomes `mcp_filesystem_read_file`—and `tools: include:` or `exclude:` with case-sensitive glob patterns limits what registers, per the [Hermes MCP docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp), making least-privilege filtering a configuration decision.
+
+The second documented naming example combines the `github` server with the `create-issue` tool, producing `mcp_github_create_issue`. The resulting agent-facing name therefore reflects both the configured server key and the tool name supplied by the server.
+
+The two Hermes reference pages do not use the same delimiter. The feature guide documents `mcp_<server_name>_<tool_name>`, while the configuration reference documents `mcp__<server>__<tool>` (for example `mcp__github__create_issue`) and notes that names containing hyphens or dots are sanitized. Until the sources agree, confirm the registered name in your own session before you copy it into a `SKILL.md`.
+
+Filtering works in either direction:
+
+```yaml
+mcp_servers:
+  github:
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-github"]
+    env:
+      GITHUB_PERSONAL_ACCESS_TOKEN: "***"
+    tools:
+      include: [create_issue, list_issues]
+```
+
+An `include` list registers only the named tools. An `exclude` list, such as `exclude: [delete_customer]`, registers everything except the listed tools. Entries can also be case-sensitive glob patterns using `*`, `?`, and `[...]`; the documented example is `include: ["*_dns_*"]`. The configuration reference says filters match the original MCP tool name, with hyphens and dots, rather than the sanitized registered name. If both `include` and `exclude` are set, `include` wins, per the [MCP config reference](https://hermes-agent.nousresearch.com/docs/reference/mcp-config-reference).
+
+Filtering is therefore useful before any broader [approvals and deny rules](/blog/hermes-approvals-deny-guide-2026/) are considered. If a tool should not be exposed to the agent at all, the more direct control is to keep it out of the registered set.
+
+## Lifecycle Keys: Lazy Start, Idle Recycling, Timeouts
+
+The `lazy` setting defaults to false and registers tools from a schema cache before connecting on the first tool call, while `idle_timeout_seconds` defaults to zero and `max_lifetime_seconds` caps server life, according to the [Hermes MCP docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp).
+
+The common configuration keys include:
+
+- `timeout`: timeout for a tool call, in seconds (default `300`).
+- `connect_timeout`: bound for the MCP initialize handshake, in seconds (default `60`).
+- `lazy`: default `false`; register tools from a schema cache at startup and connect on the first tool call. The cache requires one prior live connection.
+- `idle_timeout_seconds`: default `0`, meaning never; recycle an idle stdio server after the specified number of seconds.
+- `max_lifetime_seconds`: recycle a stdio server after this total age (`0` = never).
+- `enabled`: set to `false` to skip the server.
+- `supports_parallel_tool_calls`: if `true`, tools from this server may run concurrently.
+- `single_instance`: if `true` on a stdio server, only one live child may exist system-wide, which suits single-writer datastores.
+
+The documented memory-conscious Playwright configuration uses `@playwright/mcp@latest` with `--headless`, `idle_timeout_seconds: 900`, and `max_lifetime_seconds: 86400`. These values are configuration examples in the documentation, not measured results from this guide.
+
+## When Changes Take Effect: /reload-mcp
+
+After editing MCP configuration, run `/reload-mcp`; otherwise, the session’s tool set remains frozen, and only `/reload-mcp`, `/new`, or context compaction applies the changes, according to the [Hermes MCP documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp), so a full restart is not the documented requirement.
+
+This reload behavior applies to practical changes such as adding a server, removing a server, enabling or disabling an entry, changing a filter, or changing the exposed tool set. Updating the YAML file alone does not alter the tools already available in the current session.
+
+Use `/reload-mcp` for the narrowest documented path. Choose `/new` when starting a new session is appropriate, or use context compaction when that is part of the workflow. The key distinction is that configuration edits and session-visible tool changes are separate events.
+
+## Write a Minimal Custom MCP Server in Python
+
+The [MCP Python SDK README](https://github.com/modelcontextprotocol/python-sdk) shows a complete server in a few lines using `MCPServer("Demo")` and an `@mcp.tool()`-decorated `add` function, with clients discovering it through `tools/list` and invoking it through `tools/call` as described in the [MCP tools concept](https://modelcontextprotocol.io/docs/concepts/tools).
+
+```python
+from mcp.server import MCPServer
+
+mcp = MCPServer("Demo")
+
+
+@mcp.tool()
+def add(a: int, b: int) -> int:
+    """Add two numbers."""
+    return a + b
+```
+
+The SDK README describes its complete server as one tool and one templated resource; the snippet below shows only the tool. The README installs the SDK with `uv add "mcp[cli]"` or `pip install "mcp[cli]"`, and the `cli` extra provides the `mcp dev` command used next. It can be opened with `uv run mcp dev server.py` in the [MCP Inspector](https://github.com/modelcontextprotocol/inspector). The SDK's [get-started guide](https://py.sdk.modelcontextprotocol.io/get-started/) builds a first server step by step and states that every example is exercised by the SDK's test suite through an in-memory client.
+
+At the protocol level, clients discover tools with `tools/list`. Each tool has a `name`, a description, and an `inputSchema`, which describes its parameters as JSON Schema. Clients invoke a selected tool with `tools/call`. A server that declares the tools capability must answer `tools/list`. It sends `notifications/tools/list_changed` only to clients that opted in through a [`subscriptions/listen`](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/subscriptions) request with `toolsListChanged: true`. The [tools specification](https://modelcontextprotocol.io/specification/latest/server/tools) defines these fields, and `tools/list` supports [pagination](https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/pagination).
+
+Once this server is registered under a `mcp_servers` key, Hermes applies the standard namespace rule to its tool name. The [build log for a custom system information MCP server](/blog/build-custom-mcp-server/) offers a separate example of developing a server for a specific local information source.
+
+## Safety: Sanitized Results, Deny Rules, Least Privilege
+
+Hermes strips invisible Unicode TAG characters from tool results, resource content, and tool descriptions, passes vendor `_meta` through, and drops protocol-reserved keys, according to the [Hermes MCP docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp); combining this behavior with `exclude:` filtering and deny rules supports a least-privilege setup.
+
+The sanitized range is Unicode U+E0000–U+E007F. Removing these invisible TAG characters reduces the chance that tool output contains concealed instructions or visually hidden text. Vendor-specific `_meta` data passes through, while protocol-reserved keys are removed.
+
+Three layers are available:
+
+1. **Registration control:** use `tools.include` or `tools.exclude` to limit which MCP tools Hermes registers.
+2. **Server control:** set `enabled: false` when the entire server should be skipped.
+3. **Execution control:** apply deny rules and approval requirements to tools that remain available.
+
+These controls address different questions. Filtering asks whether a tool should exist in the agent’s tool set; a deny rule asks whether an otherwise available action may run; approval rules introduce a deliberate decision point. The [Hermes approvals and deny rules guide](/blog/hermes-approvals-deny-guide-2026/) covers the execution-control layer in more depth.
+
+## Pair a SKILL.md with Your MCP Tools (Our Convention)
+
+A Hermes skill is a directory containing a `SKILL.md` with `name`, `description`, `version`, and optional fields such as `requires_toolsets`, but no documented binding between skills and MCP tools exists, so naming `mcp_<server>_<tool>` in the body is this guide’s convention, per the [Hermes skills documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills).
+
+A local skill normally follows this layout:
+
+```text
+~/.hermes/skills/
+  category/
+    skill-name/
+      SKILL.md
+      references/
+      templates/
+      scripts/
+      assets/
+      examples/
+```
+
+`SKILL.md` is required; the other directories are optional. Its frontmatter includes `name`, `description`, and `version`. Optional metadata includes `platforms` (`macos`, `linux`, or `windows`), `metadata.hermes` fields such as `tags`, `category`, `fallback_for_toolsets`, and `requires_toolsets`, plus configuration entries with a key, description, default, and prompt.
+
+Skills are loaded from `~/.hermes/skills/`, and additional `external_dirs` can be configured. The documented precedence order is project, local, `skills.create_dir`, then external directories. Every installed skill also becomes a `/skill-name` command.
+
+The pairing convention is to write the exact registered tool name in the procedure. For example, a skill can instruct the agent to call the GitHub issue-creation tool by its registered name, `mcp_github_create_issue` in the feature guide's notation or `mcp__github__create_issue` in the configuration reference's notation. Hermes may then use the name naturally, but the skills documentation does not define an automatic skill-to-tool binding.
+
+Treat this as an explicit naming convention rather than a guaranteed capability declaration. For broader guidance on [skill development, testing, and distribution](/blog/hermes-agent-skill-development-build-test-and-distribute-your-own-skills/), see the dedicated companion guide.
+
+## Load the Pair in a Bundle
+
+`hermes bundles create` combines skills into `~/.hermes/skill-bundles/<slug>.yaml`, and the agent receives every listed skill loaded into one user message when the bundle’s slash command is invoked, according to the [Hermes skills documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills); every installed skill also has its own `/skill-name` command.
+
+A bundle contains `name`, `description`, and a required, non-empty `skills` list. It may also contain `instruction`, which is prepended to the loaded skill content. The documented example is:
+
+```bash
+hermes bundles create backend-dev --skill github-code-review --skill test-driven-development --skill github-pr-workflow -d "Backend feature work — review, test, PR workflow"
+```
+
+It is then invoked with:
+
+```text
+/backend-dev refactor the auth middleware
+```
+
+The agent receives all three skills loaded into one user message. A bundle can therefore load both a workflow skill and a skill that names the relevant `mcp_` tools, but the bundle does not create an undocumented binding between those names and the MCP server.
+
+The [skills system overview](/blog/skills-system/) explains how individual skills and bundles fit into the broader Hermes skill-loading model.
+
+## DOCUMENTED vs CONVENTION: What’s Verified Here
+
+The documented path covers `mcp_servers` configuration, stdio and HTTP transports, tool naming, filtering, lifecycle keys, `/reload-mcp`, sanitization, and OAuth, while skill pairing by tool name remains this guide’s convention.
+
+### Documented behavior
+
+The [Hermes MCP documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp) documents:
+
+- The `mcp_servers` configuration key.
+- stdio and HTTP transport declarations.
+- The server-prefixed naming rule (the feature guide and the configuration reference differ on the delimiter).
+- `include` and `exclude` filtering with case-sensitive glob patterns.
+- `timeout`, `connect_timeout`, `lazy`, `idle_timeout_seconds`, `max_lifetime_seconds`, `enabled`, `supports_parallel_tool_calls`, and `single_instance`.
+- `/reload-mcp` and the frozen-session behavior.
+- Result sanitization and OAuth 2.1 support.
+
+The [Hermes skills documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills) documents the `SKILL.md` format, local and external skill directories, precedence, slash commands, and bundles. The MCP specification documents `tools/list`, `tools/call`, `inputSchema`, and `notifications/tools/list_changed`.
+
+### This guide’s convention
+
+The undocumented step is pairing a `SKILL.md` with registered MCP tools by writing names such as `mcp_github_create_issue` in the skill procedure. No automatic binding is documented in either Hermes page.
+
+This distinction affects troubleshooting. If a skill mentions a tool but the tool is absent, first verify that the server is enabled, the tool passed filtering, and the session was reloaded. A successful skill load does not itself guarantee that a named MCP tool exists.
+
+## Troubleshooting
+
+The [Hermes MCP docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp) include dedicated troubleshooting sections for “MCP server not connecting,” “Tools not appearing,” and “A server’s response is too large”—three failure headings the documentation addresses directly.
+
+For **“MCP server not connecting,”** check the server’s `enabled` value, transport-specific fields, command and arguments for stdio, URL and headers for HTTP, and the relevant connection timeout.
+
+For **“Tools not appearing,”** verify that the tool was actually exposed by the server, that it survived `include` or `exclude` filtering, and that `/reload-mcp`, `/new`, or context compaction applied the configuration change.
+
+For **“A server’s response is too large,”** the documentation states that Hermes accepts up to 10 MiB in one HTTP response, or in one SSE event of a streamed response. On the legacy SSE transport (`transport: sse`), the MCP SDK caps each event at 1 MiB, and the docs advise removing `transport: sse` from an entry whose server also serves Streamable HTTP. The documented `timeout` and `connect_timeout` keys control call and handshake timing, not response size.
+
+If the server appears correctly but a skill does not select a tool, remember the boundary: naming a tool in `SKILL.md` is a convention. The tool must already be registered under the expected `mcp_<server_name>_<tool_name>` name.
+
+## FAQ
+
+### Do I have to restart Hermes after changing MCP config?
+
+No. Run `/reload-mcp` after editing `mcp_servers` in `config.yaml`. The [Hermes MCP documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp) states that a session’s tool set is frozen otherwise, and `/reload-mcp`, `/new`, or context compaction are the documented ways changes take effect; a full restart is not mentioned as required.
+
+### What’s the difference between stdio and HTTP MCP servers in Hermes?
+
+A stdio server is a local subprocess declared with `command`, `args`, and `env`, such as `npx` with `@modelcontextprotocol/server-github`. An HTTP server is a remote endpoint declared with `url` and `headers`, such as an Authorization bearer value. Both register tools under a server-prefixed name, and the Hermes reference pages disagree on the delimiter (see the tool-names section above), according to the [Hermes MCP documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp).
+
+### Is a skill automatically bound to an MCP tool?
+
+No. Neither the Hermes MCP page nor the [Hermes skills documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills) documents a binding between a skill and an MCP tool. Writing a name such as `mcp_github_create_issue` inside `SKILL.md` is a convention used to tell the agent when to act; it is not a documented feature.
+
+### How do I register only some of a server’s tools?
+
+Use `tools:` with `include:` to register only listed tools or `exclude:` to register everything except them. Entries can be case-sensitive glob patterns using `*`, `?`, and `[...]`, such as `include: ["*_dns_*"]`. The [Hermes MCP documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp) describes this filtering as a configuration-level least-privilege control.
+
+## The Bottom Line
+
+Hermes provides a documented, declarative path from `config.yaml` to namespaced MCP tools with filtering, lazy start, idle recycling, and session reloads; the only undocumented step is the skill pairing, which this guide labels as a convention, while everything else can be verified in the [official MCP documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp).
+
+For a 2026 Hermes and MCP workflow, this approach is recommended for developers who want predictable server declarations, explicit tool exposure, and repeatable skill procedures. Start with the smallest server that exposes the tools you need, restrict those tools at registration, and use `SKILL.md` names to teach the agent when those already-registered tools are appropriate.
+
