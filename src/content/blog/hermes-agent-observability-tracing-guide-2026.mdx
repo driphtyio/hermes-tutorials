@@ -1,0 +1,150 @@
+---
+title: "Hermes Agent Observability: Trace, Debug, and Monitor Agent Runs (2026)"
+description: "A documentation-based guide to tracing, debugging, and monitoring Hermes Agent runs with observer hooks, Langfuse, NeMo Relay, and OpenTelemetry."
+pubDate: 2026-11-23
+tags: ["observability", "tracing", "langfuse", "opentelemetry", "debugging", "tutorial"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-observability-tracing-guide-2026-1795452001.webp"
+lastVerified: "2026-11-23"
+---
+
+## Why Unattended Hermes Runs Need Traces, Not Log Tails
+
+Unattended Hermes runs need observability because a log tail cannot reconstruct a turn across model calls, tools, retries, and subagents; the observer hook contract exposes read-only telemetry for those events without changing runtime behaviour [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks). That matters when a cron job or background session finishes without a human watching the command stream [Hermes Cron Scheduling Patterns](/blog/hermes-agent-cron-scheduling-patterns-practical-recipes-for-automated-workflows/).
+
+Logs answer “what printed”; traces answer “which turn, request, tool, or child agent consumed this run.” Hermes defines turn and request correlation IDs, while Langfuse and Relay expose those relationships as queryable traces or trajectory files [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks), [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse), [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay).
+
+## What Observability Surfaces Hermes Exposes
+
+Hermes exposes four practical observability surfaces: the read-only hook contract, the official Langfuse plugin, direct NeMo Relay recording, and the third-party hermes-telemetry plugin, each with different outputs and setup costs [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks), [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse), [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay), [hermes-telemetry](https://hermes-agent.nousresearch.com/docs/plugins/hermes-telemetry). Use the table as a selection map, not a ranking, because each option answers a different debugging question [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks).
+
+| Surface | What it is | Output | Setup effort | Best for |
+|---|---|---|---|---|
+| Observer hooks | Read-only telemetry contract that reconstructs execution without changing runtime behaviour [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks) | API, tool, auxiliary-call, and correlation events [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks) | Plugin or integration work [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks) | Custom backends and backend-neutral instrumentation [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks) |
+| Langfuse plugin | Official plugin migrated from core `observability/langfuse` [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse) | Turn spans, API generations, tool and subagent observations [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse) | Install plus credentials [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse) | Hosted trace review and token/cost breakdowns [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse) |
+| NeMo Relay | Directly supported Hermes recording integration with no separate daemon [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay) | ATOF JSONL, ATIF trajectory JSON, OTLP traces [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay) | TOML config plus optional collector [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay) | Structured trajectories, custom collectors, offline analysis [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay) |
+| hermes-telemetry | Third-party observability and budget-guardrail plugin [hermes-telemetry](https://hermes-agent.nousresearch.com/docs/plugins/hermes-telemetry) | Local SQLite records plus `/stats` and `/budget` [hermes-telemetry](https://hermes-agent.nousresearch.com/docs/plugins/hermes-telemetry) | Plugin install [hermes-telemetry](https://hermes-agent.nousresearch.com/docs/plugins/hermes-telemetry) | Local spend tracking and budget enforcement [hermes-telemetry](https://hermes-agent.nousresearch.com/docs/plugins/hermes-telemetry) |
+
+## The Observer Hook Contract: The Read-Only Event Surface
+
+The observer hook contract is the read-only event surface Hermes plugins use to reconstruct execution, and it reports what happened rather than replacing provider requests, tool arguments, or execution callbacks [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks). It is backend-neutral and names Langfuse, OpenTelemetry-style collectors, and NeMo Relay as supported integration targets, and plugins register the callbacks from `register(ctx)` as described in the [plugin developer guide](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins) [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks).
+
+- API hooks are `pre_api_request`, `post_api_request`, and `api_request_error`; auxiliary variants `pre_auxiliary_call` and `post_auxiliary_call` add `aux_task` for titling, compression, MoA, and vision [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks), [Hermes Context Compaction Guide](/blog/hermes-agent-context-compaction-guide/).
+- Tool hooks are `pre_tool_call`, `post_tool_call`, and `transform_tool_result`; the last fires after `post_tool_call` and before the result is appended to model context [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks), [Hermes Tool Execution Pipeline](/blog/hermes-tool-execution-pipeline/).
+- `post_tool_call` statuses are `ok`, `error`, `blocked`, and `cancelled`; blocked and cancelled paths still emit events so plugins can close spans cleanly [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks).
+- Correlation fields include `session_id`, `task_id`, `turn_id`, `api_request_id`, `api_call_count`, `tool_call_id`, parent and child session IDs, parent and child subagent IDs, and `parent_turn_id`; `api_request_id` is opaque and must not be parsed [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks).
+- `pre_api_request` records platform, model, provider, base URL, API mode, counts, approximate input tokens, request size, max tokens, and start time; `post_api_request` adds duration, finish reason, response model, usage, content size, and tool-call count [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks).
+- `api_request_error` adds status code, retry count, max retries, retryability, reason, and a structured error; callbacks are fail-open because Hermes catches exceptions, logs a warning, and continues the loop [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks).
+
+## The Official Langfuse Plugin: From Install to First Trace
+
+The official Langfuse plugin is a documented path from a Hermes run to a turn-level trace, mapping one span per turn, one generation per API call, and one observation per tool call and subagent [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse). It migrated automatically from the former core `observability/langfuse` package, is maintained in the [Hermes Official Plugins repository](https://github.com/NousResearch/hermes-official-plugins), and installs from the [plugin catalog](https://hermes-agent.nousresearch.com/docs/plugins) [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse).
+
+Install with `hermes plugins install langfuse`, or per profile with `hermes -p <profile> plugins install langfuse`; Python needs only the `langfuse` SDK [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse).
+
+```bash
+hermes plugins install langfuse
+export HERMES_LANGFUSE_PUBLIC_KEY="<public-key>"
+export HERMES_LANGFUSE_SECRET_KEY="<secret-key>"
+export HERMES_LANGFUSE_BASE_URL="<base-url>"
+```
+
+Set `HERMES_LANGFUSE_PUBLIC_KEY`, `HERMES_LANGFUSE_SECRET_KEY`, and `HERMES_LANGFUSE_BASE_URL`; standard SDK names are accepted too, but Hermes-prefixed names win [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse).
+
+Langfuse cost breakdowns come from Hermes pricing, split into input, output, cache read, cache write, and reasoning tokens; reasoning is reported as `output_reasoning_tokens` and left out of `output`, so per-type counts add up [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse), [Token Cost Optimization](/blog/token-cost-optimization/).
+
+Root traces carry `platform:<name>` and `trigger:cron|interactive`, with `cron-job:<job-id>` for cron; metadata names the profile, and kanban worker turns carry `kanban_task_id` and `kanban_run_id` [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse).
+
+Capture modes are `metadata` for shape and size stubs, `sanitized` by default for pattern-redacted content then truncation, and `full` for raw opt-in capture; redaction runs before truncation, is recorded as `metadata.capture_mode`, and is pattern-based defense in depth, not a DLP guarantee [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse).
+
+`HERMES_LANGFUSE_SAMPLE_RATE=0.5` samples individual turns, not conversations; `HERMES_LANGFUSE_MAX_CHARS` defaults to 12000 and `HERMES_LANGFUSE_MAX_DEPTH` defaults to 4 [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse).
+
+End-user attribution is opt-in and sends the sender’s platform ID unhashed even when `privacy.redact_pii` is on [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse). Export uses a bounded background queue, so turn completion, API errors, and session rotation do not wait for `flush()`; there is no offline spool, and a full queue, failed export, or abrupt kill can lose telemetry [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse), [Hermes Background Processes Guide](/blog/hermes-background-processes-guide/). Missing SDK, missing credentials, and transient Langfuse errors become a no-op with one warning, and the agent loop is unaffected [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse). Disable with `hermes plugins disable langfuse` or remove with `hermes plugins remove langfuse` [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse).
+
+## NeMo Relay: Session Records Without a Separate Daemon
+
+NeMo Relay is supported directly by Hermes, so it needs no separate Relay daemon, no `nemo-relay run`, and no observability plugin before it can record sessions, turns, model calls, tools, and child agents [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay). It emits ATOF events, ATIF trajectories, and OpenTelemetry/OTLP traces for different analysis paths [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay).
+
+Relay records session and turn start/end, parent-child links, outcomes, working directories, model requests and responses, timing, retries and fallbacks as separate provider attempts under the same logical model call, token usage, cost, tool calls, streaming lifecycle, delegated child agents, and skills, memory, and MCP calls as ordinary tool records [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay).
+
+ATOF is incremental JSONL scope events for inspecting recorded fields or building custom collectors; ATIF is completed trajectory JSON for offline analysis, eval, or training datasets and is not a replayable recording; OTLP sends traces to a collector, and completed spans can appear before the session ends [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay).
+
+```toml
+[[components]]
+kind = "observability"
+enabled = true
+
+[components.config.atof]
+enabled = true
+
+[[components.config.atof.sinks]]
+type = "file"
+output_directory = "./hermes-relay"
+filename = "events.jsonl"
+```
+
+Select that file with `export HERMES_NEMO_RELAY_PLUGINS_TOML="$PWD/relay-plugins.toml"` and run `hermes chat --oneshot -q "..."` [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay). If no file appears, use `hermes doctor` and `hermes logs --level WARNING`; a Relay init failure does not necessarily stop Hermes answering [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay).
+
+For automation that reacts to tool events rather than exporting traces, the separate [event hooks](https://hermes-agent.nousresearch.com/docs/user-guide/features/hooks) surface is the place to start. `OTEL_SDK_DISABLED=true` disables Relay’s OTLP exporters but not ATOF or ATIF, and `hermes migrate relay --all-profiles` replaces the old `observability/nemo_relay` plugin plus the old `HERMES_NEMO_RELAY_ATOF_*` and `_ATIF_*` environment variables [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay). For local Phoenix, Relay docs give `docker run -d --rm --name hermes-relay-phoenix -p 127.0.0.1:6006:6006 arizephoenix/phoenix:latest` [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay).
+
+## hermes-telemetry: Local Budgets and Slash Commands
+
+hermes-telemetry is a third-party observability and budget-guardrail plugin that records tokens, cost, latency, tool calls per session and cron job, then exposes `/stats` and `/budget` over local SQLite data [hermes-telemetry](https://hermes-agent.nousresearch.com/docs/plugins/hermes-telemetry). Its default enforce mode writes daily and monthly budgets on first load, while observe mode records without enforcing; the soft and hard thresholds are spelled out in the [hermes-telemetry budget guide](https://nujovich.github.io/hermes-telemetry/guides/budgets/) [hermes-telemetry](https://hermes-agent.nousresearch.com/docs/plugins/hermes-telemetry).
+
+It stores records in `~/.hermes/telemetry/telemetry.db` using WAL mode and records sender and profile IDs without message text; failed API calls retain only a truncated provider error message up to 500 characters [hermes-telemetry](https://hermes-agent.nousresearch.com/docs/plugins/hermes-telemetry). Pricing comes from the public OpenRouter model list on first load and at most once a day [hermes-telemetry](https://hermes-agent.nousresearch.com/docs/plugins/hermes-telemetry), [OpenRouter Model List](https://openrouter.ai/api/v1/models).
+
+Default enforce mode writes a $5/day and $100/month global budget; a hard breach blocks every further tool call and pauses the over-budget cron job until the window resets, but it cannot abort a model call already in flight, which still completes and is billed [hermes-telemetry](https://hermes-agent.nousresearch.com/docs/plugins/hermes-telemetry). Set `plugins.entries.hermes-telemetry.settings.mode` to `observe` to record without enforcement, and note that the optional standalone dashboard binds 127.0.0.1 with no authentication [hermes-telemetry](https://hermes-agent.nousresearch.com/docs/plugins/hermes-telemetry).
+
+## OpenTelemetry GenAI Conventions and the Meaning of “Off”
+
+The community [hermes-otel](https://github.com/briancaffey/hermes-otel) plugin, which is maintained by its author rather than by Nous Research, maps Hermes runs into OpenTelemetry GenAI semantic conventions, with `gen_ai.*` attributes and metrics such as `gen_ai.client.token.usage` and `gen_ai.client.operation.duration` [Telemetry.dev Hermes Integration](https://telemetry.dev/docs/integrations/hermes-agent). Setting `content_capture` to `off` suppresses captured content, but metadata such as tool outcomes, command targets, token counts, model names, timings, metrics, and truncated errors can still be exported [Telemetry.dev Hermes Integration](https://telemetry.dev/docs/integrations/hermes-agent).
+
+The span tree runs from an agent or cron turn to `llm.{model}`, then `api.{model}` for an HTTP request, then `tool.{name}`, with `approval.{pattern}` and `subagent.{role}` for approvals and child runs [Telemetry.dev Hermes Integration](https://telemetry.dev/docs/integrations/hermes-agent). `content_capture` accepts `full` — the default, which sends the complete prompt including the system prompt and every message, plus the complete response, on every API call — `preview` clipped to 1,200 characters each by default, and `off`; older `capture_previews: false` still means off, while explicit `content_capture` wins, and `capture_logs` plus `capture_sender_id` are off by default [Telemetry.dev Hermes Integration](https://telemetry.dev/docs/integrations/hermes-agent).
+
+Even with `content_capture: "off"`, tool names, outcomes, and inferred `hermes.tool.command` or `hermes.tool.target` values are still sent, and those fields can contain shell commands, file paths, or URLs; token counts, model and provider names, timings, all metrics, and error text cut to 500 characters also remain [Telemetry.dev Hermes Integration](https://telemetry.dev/docs/integrations/hermes-agent). Langfuse accepts OTLP natively, so OpenTelemetry-instrumented apps or collectors can ship spans to its OTLP endpoint [Langfuse OpenTelemetry Integration](https://langfuse.com/integrations/native/opentelemetry).
+
+## A Derived Five-Step Method for Debugging a Slow Run
+
+Our derived five-step method starts by locating the correct turn, then compares parent and child durations, follows logical model calls into retries, inspects tool spans, and descends into subagents [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks), [Telemetry.dev Hermes Integration](https://telemetry.dev/docs/integrations/hermes-agent). It is a documentation-based procedure derived from documented hook fields, Langfuse tags, and OpenTelemetry span conventions [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks), [Telemetry.dev Hermes Integration](https://telemetry.dev/docs/integrations/hermes-agent).
+
+- Find the turn: filter by `trigger:cron`, `platform:<name>`, profile metadata, or `turn_id` [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse).
+- Compare the turn root span with children to see whether time went to model calls or tools [Telemetry.dev Hermes Integration](https://telemetry.dev/docs/integrations/hermes-agent).
+- Follow `llm.{model}` to `api.{model}` children; multiple `api` children under one logical call point to retries or provider fallbacks [Telemetry.dev Hermes Integration](https://telemetry.dev/docs/integrations/hermes-agent), [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay).
+- Inspect `tool.{name}` spans for long durations and `blocked` or `cancelled` status [Telemetry.dev Hermes Integration](https://telemetry.dev/docs/integrations/hermes-agent), [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks).
+- For multi-agent runs, descend into `subagent.{role}` children and their own agent spans [Telemetry.dev Hermes Integration](https://telemetry.dev/docs/integrations/hermes-agent), [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse).
+
+## What You Cannot See and Four Claims That Are False
+
+Hermes observability has real blind spots: Relay does not record slash commands, message delivery, voice transcription, scheduler bookkeeping, or external MCP server internals and subprocesses [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay).
+
+- **False claim: full-session recording.** Relay omits slash commands, message delivery, voice transcription, scheduler bookkeeping, and external MCP internals or subprocesses [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay).
+- **False claim: nothing leaves when content capture is off.** Tool names, outcomes, inferred command and target fields, counts, model names, timings, metrics, and truncated errors still leave [Telemetry.dev Hermes Integration](https://telemetry.dev/docs/integrations/hermes-agent).
+- **False claim: sanitized traces are safe to share.** Hermes calls sanitized mode pattern-based defense in depth, not a DLP guarantee, and redaction is pattern-based before truncation [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse).
+- **False claim: budget enforcement stops all spend.** hermes-telemetry can block later tool calls and pause an over-budget cron job, but an in-flight model call still completes and is billed [hermes-telemetry](https://hermes-agent.nousresearch.com/docs/plugins/hermes-telemetry).
+
+## FAQ
+
+The FAQ resolves the practical questions readers ask before enabling instrumentation: coverage, privacy, and budget enforcement, with answers grounded in the Hermes observer, Langfuse, Relay, telemetry, and OpenTelemetry documentation [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks), [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse), [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay), [Telemetry.dev Hermes Integration](https://telemetry.dev/docs/integrations/hermes-agent).
+
+### Does Hermes observability capture every action in a session?
+
+No. NeMo Relay explicitly does not record slash commands, message delivery, voice transcription, scheduler bookkeeping, or external MCP server internals and subprocesses [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay). Observer hooks report agent execution events read-only, and Langfuse plugin traces are scoped to turns, API calls, tools, and subagents [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks), [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse).
+
+### Does `content_capture: "off"` mean nothing leaves the machine?
+
+No. With `content_capture` set to `off`, Hermes can still export tool names and outcomes, inferred command and target attributes, token counts, model and provider names, timings, all metrics, and error text truncated to 500 characters [Telemetry.dev Hermes Integration](https://telemetry.dev/docs/integrations/hermes-agent). Even `hermes.tool.command` and `hermes.tool.target` can contain shell commands, file paths, or URLs [Telemetry.dev Hermes Integration](https://telemetry.dev/docs/integrations/hermes-agent).
+
+### Does a budget breach stop all Hermes spend?
+
+No. hermes-telemetry default enforce mode blocks every further tool call and pauses the over-budget cron job until the window resets, but it cannot abort a model call already in flight; that response still completes and is billed [hermes-telemetry](https://hermes-agent.nousresearch.com/docs/plugins/hermes-telemetry). observe mode records usage without enforcing [hermes-telemetry](https://hermes-agent.nousresearch.com/docs/plugins/hermes-telemetry).
+
+## The Bottom Line
+
+The bottom line is to choose the surface that matches the question: hooks for backend-neutral instrumentation, Langfuse for turn-level traces and costs, NeMo Relay for structured trajectories and OTLP, and hermes-telemetry for local budgets [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks), [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse), [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay), [hermes-telemetry](https://hermes-agent.nousresearch.com/docs/plugins/hermes-telemetry).
+
+Start with Langfuse if you need a first trace quickly, add Relay when you need ATOF, ATIF, or OTLP outputs, and use hermes-telemetry when local budget records matter more than hosted trace review [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse), [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay), [hermes-telemetry](https://hermes-agent.nousresearch.com/docs/plugins/hermes-telemetry). Treat privacy and delivery caveats as design constraints, not footnotes [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse), [Telemetry.dev Hermes Integration](https://telemetry.dev/docs/integrations/hermes-agent).
+
+## How This Guide Was Built
+
+This guide is documentation-based: it uses only the supplied Hermes and integration documentation, labels the five-step debugging sequence as our derivation, and does not report hands-on testing, benchmarks, latency figures, or release claims [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks), [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse), [NeMo Relay](https://hermes-agent.nousresearch.com/docs/integrations/nemo-relay).
+
+The evidence base covers the observer contract, official plugin docs, Relay docs, third-party telemetry docs, and OpenTelemetry and Langfuse integration docs; commands, environment variables, modes, limits, and caveats are kept to what those pages state [Hermes Observer Hooks](https://hermes-agent.nousresearch.com/docs/developer-guide/observer-hooks), [Official Langfuse Plugin](https://hermes-agent.nousresearch.com/docs/plugins/langfuse), [hermes-telemetry](https://hermes-agent.nousresearch.com/docs/plugins/hermes-telemetry), [Langfuse OpenTelemetry Integration](https://langfuse.com/integrations/native/opentelemetry).
