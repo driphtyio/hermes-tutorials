@@ -308,3 +308,14 @@ Choose a hosted bot when you want packaged review behavior immediately. Copilot 
 ## How This Guide Was Built
 
 This article was assembled from the official documentation pages linked throughout the text, including Hermes Agent, GitHub CLI, GitHub REST API, pre-commit, Ruff, ESLint, Semgrep, Danger JS, CodeRabbit, and GitHub Copilot code review. The tools were not installed or run hands-on for this article. Commands are shown as instructions for the reader, and `lastVerified` reflects documentation review, not testing.
+
+<!-- crosslinks -->
+
+## 📖 Related Reads
+
+- **[CodeIntel Log](https://codeintel.xyz/)** — code quality, debugging, and software engineering benchmarks
+- **[ToolBrain](https://toolbrain.net/)** — tool reviews, LLM comparisons, and AI workflow guides
+- **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools, agents, and APIs
+- **[NiteAgent](https://niteagent.com/)** — AI agent development, frameworks, and production patterns
+
+*Cross-links automatically generated from Hermes Tutorials.*
