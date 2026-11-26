@@ -1,0 +1,186 @@
+---
+title: "Hermes Agent Structured Output: JSON Extraction With Plugins, Tool Schemas, and the API Server (2026)"
+description: "Three routes to machine-readable JSON from Hermes Agent, showing where each one validates output, plus a runnable Python validator with a bounded retry loop."
+pubDate: 2026-11-26
+tags: ["hermes-agent", "structured-output", "json-schema", "plugins", "api-server", "python"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-structured-output-json-1795710397.webp"
+lastVerified: 2026-11-26
+---
+
+If your Hermes Agent workflow ends in a chatty paragraph that you then regex apart for ticket IDs, task owners, or review scores, every prompt change becomes a parsing bug waiting to happen. Hermes Agent offers three routes to machine-readable output, and each one puts the validation boundary in a different place. This guide walks through the plugin lane, tool schemas, and the API server, then gives you one standalone Python validator you can run against sample replies. It enforces a schema, extracts JSON from fenced or mixed prose, and retries with the errors fed back.
+
+## How This Guide Was Built
+
+Official Hermes Agent documentation pages were fetched on 2026-11-26, all returning HTTP 200, and the full docs corpus was searched for the string `response_format`. The only code executed for this post is the standalone Python validator below, run against three sample model replies; no Hermes instance was run.
+
+The pages consulted include the [plugin LLM access reference](https://hermes-agent.nousresearch.com/docs/developer-guide/plugin-llm-access), the [API server reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server), the [adding-providers page](https://hermes-agent.nousresearch.com/docs/developer-guide/adding-providers), and the [adding-tools page](https://hermes-agent.nousresearch.com/docs/developer-guide/adding-tools). Validation behaviour comes from the [jsonschema validation guide](https://python-jsonschema.readthedocs.io/en/stable/validate/) and the [Python json module docs](https://docs.python.org/3/library/json.html). Open gaps are named where they apply.
+
+## The Three Routes to Structured Output
+
+Hermes Agent has three routes to structured output: a host-validated plugin call through `ctx.llm.complete_structured()`, typed tool schemas that constrain what the model sends into your tools, and the API server, where your client must request and check JSON itself. The [plugin LLM access reference](https://hermes-agent.nousresearch.com/docs/developer-guide/plugin-llm-access) and the [API server reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server) define the boundaries.
+
+| Route | Plugin `complete_structured(json_schema=...)` | Tool `schema["parameters"]` | API server `/v1/chat/completions` |
+|---|---|---|---|
+| What it types | Model output (the reply) | Model input (tool arguments) | Nothing built in |
+| How JSON is requested | Host sends `response_format`; re-parses code-fenced replies | Schema is the tool contract shown to the model | Prompt instruction only; `response_format` not documented |
+| Where validation happens | Host-side, via `jsonschema` if installed | Your handler (returns a JSON string) | Client-side, in your code |
+
+Only the plugin call validates the reply on the host. It is easy to assume that a schema in a tool definition also checks what the model says back. It does not.
+
+## Route 1: ctx.llm.complete_structured() — the schema-validated lane
+
+`ctx.llm.complete_structured()` is the documented plugin call that asks the provider for JSON via `response_format`, re-parses code-fenced replies locally, and validates against your `json_schema` on the host side when the optional `jsonschema` package is installed.
+
+Plugins are the place to start when you are [extending your Hermes agent with plugins](/blog/hermes-plugins/). A plugin gets `ctx.llm`, which the docs call "the supported way for a plugin to make an LLM call." It comes in four shapes: `complete()`, `complete_structured()`, `acomplete()`, and `acomplete_structured()`.
+
+The structured call accepts `instructions`, `input` (typed text or image blocks), an optional `json_schema`, `json_mode`, `schema_name`, `system_prompt`, `temperature`, `max_tokens`, `timeout`, `purpose`, and `task`. Passing `json_schema` triggers the parsed result and validation. `json_mode=True` without a schema only asks for JSON; it does not check the shape. The docs describe the mechanism directly: when either option is supplied, "the host requests JSON output via `response_format`, parses it locally as a fallback, and validates against your schema if `jsonschema` is installed."
+
+### How the host asks for JSON: json_schema, json_mode, and code-fence recovery
+
+- Passing `json_schema` makes the host send `response_format` to the provider and return a parsed object.
+- Passing `json_mode=True` with no schema asks for JSON anyway, with no shape check.
+- If the provider wraps its JSON in a code fence, the host re-parses the fenced body locally.
+- Your own code can do the same recovery. The validator in Route 3 strips fences and falls back to `json.JSONDecoder().raw_decode`.
+
+The docs' worked example, `/paste-to-tasks`, defines `_TASKS_SCHEMA` as an object with a `tasks` array. Each item requires `action` and may carry `owner` and `due` (an ISO date or empty). The call uses `temperature=0.0, max_tokens=512`, branches on `if result.parsed is None:`, and returns `result.text` as the fallback. The companion repository, [hermes-example-plugins](https://github.com/NousResearch/hermes-example-plugins), includes [plugin-llm-example](https://github.com/NousResearch/hermes-example-plugins/tree/main/plugin-llm-example) for image input. It is not bundled with hermes-agent.
+
+### Reading PluginLlmStructuredResult and staying inside the trust gate
+
+The call returns `PluginLlmStructuredResult(text, provider, model, agent_id, usage, parsed, content_type, audit)`. When `result.content_type == "json"`, `result.parsed` is a Python object matching the schema. When the reply is not JSON, `result.parsed` is `None`. The call raises `ValueError` on empty inputs and on schema-validation failure. `PluginLlmTrustError` fires when the trust gate denies an override. The `purpose` string appears in `agent.log` and `result.audit`, and `schema_name` appears in `audit` when supplied.
+
+The host owns credentials, and the docs say the plugin never sees a token. Provider fallback applies on 5xx and 429 responses. Timeouts fall back to `auxiliary.<task>.timeout`, then the global auxiliary default. The trust gate defaults to using whatever the user is already using. To allow overrides, opt in per plugin in `config.yaml` under `plugins: entries: <plugin>: llm:` with `allow_provider_override`, `allowed_providers`, `allow_model_override`, `allowed_models`, `allow_agent_id_override`, or `allow_profile_override`. The [configuration reference](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) covers the file. Request-shaping arguments such as `temperature` are always allowed, because they do not pick credentials or routes.
+
+## Route 2: Tool schemas type the model's input, not its output
+
+Tool schemas constrain the arguments the model sends into your handler: `schema["parameters"]` is JSON Schema with `type`, `properties`, `required`, `enum`, and `default`, per the [plugins guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/plugins) and the [adding-tools guide](https://hermes-agent.nousresearch.com/docs/developer-guide/adding-tools), so they do not type the model's reply.
+
+Register a tool with `ctx.register_tool(name=..., toolset=..., schema=..., handler=...)`. One `register(ctx)` can register a tool and a `post_tool_call` hook, covered in the [hooks guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/hooks). Put the model-facing description in `schema["description"]`. The docs say `ctx.register_tool(description=...)` is registry metadata only and is not copied into a schema that lacks `description`. Core tools use `registry.register(name, toolset, schema, handler, check_fn, requires_env)` from `tools.registry`, and a handler returns a JSON string such as `json.dumps({"error": ...})`.
+
+Handlers run when the agent calls them, inside [the Hermes tool execution pipeline](/blog/hermes-tool-execution-pipeline/). Validate arguments there and return a JSON error rather than leaving the failure unstructured.
+
+Tool `parameters` constrain what the model sends you. They do not constrain what it sends back. If you need the reply shaped, use the plugin call in Route 1 or validate it in your client.
+
+## Route 3: The API server — prompt for JSON, validate client-side
+
+The Hermes API server documents `POST /v1/chat/completions` at `http://localhost:8642/v1` with no `response_format` field, so JSON from this route comes from a prompt instruction that your client validates. The [API server reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server) does not check the schema for you.
+
+Enable the server by setting `API_SERVER_ENABLED=true` and `API_SERVER_KEY` in `~/.hermes/.env`, with optional `API_SERVER_CORS_ORIGINS`. Start it with `hermes gateway`, which logs `[API Server] API server listening on http://127.0.0.1:8642`. Clients use the base URL `http://localhost:8642/v1`. Chat Completions is stateless: the full conversation travels in the `messages` array on every request. A successful reply is a `chat.completion` object, and your parser reads `choices[].message.content` and `usage`. The server also exposes skills and toolsets discovery; see [the Hermes skills system](/blog/skills-system/) before you wire it into a client.
+
+### What's documented (and the response_format gap)
+
+No `response_format` field is documented for `/v1/chat/completions`. A search of the full docs corpus (the 6.6 MB `/docs/llms-full.txt`) finds that string only in the TTS opus-to-MP3 fallback, in the provider capability tables, and on the plugin LLM page. That makes this route prompt-plus-client-side-validation. Ask for a JSON object in the instruction, parse the content, and validate it yourself.
+
+Two error shapes are documented. `Idempotency-Key` is supported on `/v1/chat/completions` and `/v1/responses`; a conflict returns HTTP 409 `admission_conflict`, and on a stream it arrives as the last chunk with `finish_reason: "error"`. A turn that exhausts its budget is covered in the Traps section. Error shapes beyond those two are not documented in the pages fetched.
+
+### A bounded retry loop you can run
+
+This validator is the only code executed for this post. It uses stdlib `json` and `re`, plus `jsonschema`. It runs on embedded sample replies, not a live server. To use it against a real endpoint, point `ask` at `/v1/chat/completions` and return `choices[0].message.content`.
+
+````python
+import json, re
+import jsonschema
+from jsonschema import Draft202012Validator
+
+SCHEMA = {"type": "object", "additionalProperties": False, "required": ["ticket_id", "severity", "summary"],
+          "properties": {"ticket_id": {"type": "string", "pattern": r"^TCK-\d{4}$"},
+                         "severity": {"type": "string", "enum": ["low", "medium", "high"]},
+                         "summary": {"type": "string", "minLength": 10, "maxLength": 200}}}
+
+def extract_json(text):
+    for body in re.findall(r"```json\s*(.*?)```", text, re.S) + [text]:
+        try:
+            return json.loads(body)
+        except ValueError:
+            pass
+        try:
+            return json.JSONDecoder().raw_decode(body, max(body.find("{"), 0))[0]
+        except ValueError:
+            pass
+    raise ValueError("no JSON object found in reply")
+
+def schema_errors(obj):
+    errors = Draft202012Validator(SCHEMA).iter_errors(obj)
+    return sorted((".".join(map(str, e.absolute_path)) or "<root>", e.message) for e in errors)
+
+def structured_extract(ask, prompt, attempts=3):
+    last = "no attempts made"
+    for n in range(1, attempts + 1):
+        reply = ask(prompt)
+        try:
+            obj = extract_json(reply)
+            errors = schema_errors(obj)
+            if not errors:
+                return n, obj
+            last = "; ".join(f"{path}: {msg}" for path, msg in errors)
+        except ValueError:
+            last = "reply was not JSON"
+        prompt += f"\nPrevious attempt failed: {last}. Return corrected JSON only."
+    raise jsonschema.ValidationError(last)
+
+if __name__ == "__main__":
+    replies = iter([
+        '```json\n{"ticket_id": "TCK-1042", "severity": "urgent", "summary": "Login fails on Safari"}\n```\nHope this helps!',
+        '{"ticket_id": "1042", "severity": "high"}',
+        '{"ticket_id": "TCK-1042", "severity": "high", "summary": "Login fails on Safari"}',
+    ])
+    attempts, obj = structured_extract(lambda _: next(replies), "Extract the support ticket.")
+    print(f"attempts={attempts}\n{json.dumps(obj, separators=(',', ':'), sort_keys=True)}")
+    try:
+        structured_extract(lambda _: "Sorry, I cannot produce JSON.", "Extract the support ticket.")
+    except jsonschema.ValidationError as exc:
+        print(f"bounded failure after 3 attempts: {exc.message}")
+````
+
+`extract_json` tries each fenced `json` body, then the raw text. It uses `json.loads` first and falls back to `raw_decode`, which ignores trailing prose. `schema_errors` returns sorted `(absolute_path, message)` pairs from `Draft202012Validator(...).iter_errors(...)`, so the output is deterministic. `structured_extract` feeds each failure back into the prompt and stops after three attempts.
+
+The first sample reply fails the `severity` enum even though its JSON is fenced and followed by prose. The second has a malformed `ticket_id` and no `summary`. The third passes on attempt three. The script prints `attempts=3` and a compact, key-sorted object, then reports the bounded failure for the prose-only reply. It exits 0.
+
+## Traps That Break Structured Output
+
+The four traps are a schema check that is silently skipped without `jsonschema`, confusing `parsed is None` with validation errors, providers that reject `json_schema`, and `finish_reason: "length"` truncation on the API server, as documented in the [plugin LLM access reference](https://hermes-agent.nousresearch.com/docs/developer-guide/plugin-llm-access) and the [API server reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server). If a failure matches none of these, start with [the Hermes troubleshooting guide](/blog/troubleshooting/).
+
+### Missing jsonschema silently skips validation
+
+The plugin docs say a mismatched reply raises `ValueError` only when the optional `jsonschema` package is installed. Without it, the host logs a debug line and skips strict validation, so the schema is not checked. Nothing in the result tells you the check was skipped, so verify that `jsonschema` is present in the environment that runs your plugin. The standalone validator imports `jsonschema` at the top, so a missing package stops it immediately instead of passing unchecked data. The [jsonschema package page](https://pypi.org/project/jsonschema/) lists the distribution.
+
+### parsed is None is not the same failure as ValueError
+
+`result.parsed is None` means the reply was not JSON at all. A `ValueError` means the reply parsed but failed `json_schema`, or that the inputs were empty. These call for different fixes. Branch on `content_type`, catch `ValueError` separately, and keep the `if result.parsed is None:` fallback from the `/paste-to-tasks` example for non-JSON replies only. Treating both as "no result" hides schema drift, and `PluginLlmTrustError` is a third, separate failure.
+
+### Some providers reject json_schema outright
+
+The [adding-providers page](https://hermes-agent.nousresearch.com/docs/developer-guide/adding-providers) defines `unsupported_response_formats` as the response_format types an API rejects outright. Auxiliary requests omit those formats instead of paying a guaranteed 400. DeepSeek's entry is `("json_schema",)`. For such a provider, JSON has to come from the prompt and local parsing, and the docs do not describe per-provider plugin-lane behaviour beyond that omit-and-fallback. Provider setup details are in [how to configure providers](/blog/provider-setup/).
+
+### finish_reason: "length" means the budget ran out
+
+A turn that exhausts its iteration budget (`agent.max_turns`) still answers with the agent's wrap-up of what it found. On Chat Completions, that text arrives with `finish_reason: "length"` and `hermes.error_code: "iteration_budget_exhausted"`. Responses reports `status: "incomplete"`. The wrap-up is prose about the search, so run it through the validator before you trust it. Check the finish reason before parsing, and retry or fail rather than treating truncated text as a result.
+
+## FAQ
+
+### Does the Hermes Agent API server support response_format for JSON output?
+
+No, not as far as the documentation shows. The [API server reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server) documents no `response_format` field for `/v1/chat/completions`. A search of the full docs corpus found the string only in the TTS fallback, the provider capability tables, and the plugin LLM page. Prompt for JSON and validate the reply in your own client.
+
+### What happens if the jsonschema package isn't installed?
+
+The host still requests JSON, but the schema is not checked. The [plugin LLM access reference](https://hermes-agent.nousresearch.com/docs/developer-guide/plugin-llm-access) says the host logs a debug line and skips strict validation. Install `jsonschema` to get a `ValueError` on mismatch. The standalone validator in this post imports it directly, so it fails at startup without the package.
+
+### Why is result.parsed None instead of an exception?
+
+`None` signals that the reply was not JSON at all. Schema mismatches raise `ValueError` when `jsonschema` is installed, so the two failures are separate. Check `result.content_type == "json"` and handle the `None` branch explicitly, as the `/paste-to-tasks` example does by returning `result.text`.
+
+### Can I still get JSON from a provider that rejects json_schema, like DeepSeek?
+
+Yes, but not through a `response_format` of type `json_schema`. The [adding-providers page](https://hermes-agent.nousresearch.com/docs/developer-guide/adding-providers) lists DeepSeek's `("json_schema",)` as unsupported, and Hermes omits that format rather than triggering a 400. Ask for a JSON object in the prompt, parse it locally, and validate it against your schema.
+
+### What does finish_reason: "length" mean on the API server?
+
+It means the turn exhausted its iteration budget, `agent.max_turns`, and the server still returned the agent's wrap-up of its findings. Chat Completions sets `hermes.error_code` to `iteration_budget_exhausted`. Treat that text as possibly incomplete, and run it through your validator before using it.
+
+## The Bottom Line
+
+For schema-checked output, the plugin lane is the only documented route where the host validates the reply. `ctx.llm.complete_structured()` requests JSON, re-parses fenced replies, and raises on mismatches when `jsonschema` is installed. Install that package and branch on `content_type` rather than on `parsed` alone.
+
+On the API server, the caller owns validation. Chat Completions has no documented `response_format`, so prompt for the shape and validate it with a bounded retry loop like the one above. Tool schemas type input, not output: `schema["parameters"]` tells the model what arguments to send your handler, and it never checks what the model replies.
+
+Two gaps remain open. No latency or token-overhead measurement has been published for structured versus free-form calls, so measure that in your own environment before you commit to a route. Error shapes beyond `admission_conflict` and `iteration_budget_exhausted` are not documented in the pages fetched, so write your client to treat anything else as an unknown failure.
