@@ -184,3 +184,12 @@ For schema-checked output, the plugin lane is the only documented route where th
 On the API server, the caller owns validation. Chat Completions has no documented `response_format`, so prompt for the shape and validate it with a bounded retry loop like the one above. Tool schemas type input, not output: `schema["parameters"]` tells the model what arguments to send your handler, and it never checks what the model replies.
 
 Two gaps remain open. No latency or token-overhead measurement has been published for structured versus free-form calls, so measure that in your own environment before you commit to a route. Error shapes beyond `admission_conflict` and `iteration_budget_exhausted` are not documented in the pages fetched, so write your client to treat anything else as an unknown failure.
+
+{/* crosslinks */}
+
+## 📖 Related Reads
+
+- **[CodeIntel Log](https://codeintel.xyz/)** — code quality, debugging, and software engineering benchmarks
+- **[ToolBrain](https://toolbrain.net/)** — tool reviews, LLM comparisons, and AI workflow guides
+
+*Cross-links automatically generated from Hermes Tutorials.*
