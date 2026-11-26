@@ -1,0 +1,225 @@
+---
+title: "Build Log: Giving Hermes Cron Jobs an Attention Budget"
+description: "Hermes cron jobs can gate notifications in two places: before the run, to skip pointless agent turns, and after it, to suppress answers nobody needs to read."
+pubDate: "2026-11-26"
+lastVerified: "2026-11-26"
+tags: ["hermes", "build-log", "cron", "notifications"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/build-log-giving-hermes-cron-jobs-an-attention-budget-admission-gate-for-notifications-1795713015.webp"
+---
+
+Twenty cron jobs is a hobby. Sixty is a paging system you never asked for. The trouble is rarely that Hermes cannot fire a job on schedule — it is that every fire ends in a message, and a channel that speaks whether or not anything changed teaches you to stop reading it. The fix is a budget: **an attention budget has two halves — decide BEFORE the run whether this fire has anything to say, and decide AFTER the run whether the answer deserves a push; everything else, dedup, cooldowns and escalation, is bookkeeping around those two decisions.** This post walks the five layers that implement that budget in [Hermes Agent](https://github.com/NousResearch/hermes-agent), from delivery targets up to event-triggered jobs.
+
+## How This Guide Was Built
+
+This guide's provenance is stated rather than implied, because it was assembled from primary Hermes documentation instead of a live build session. The [cron reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) and the [cron troubleshooting guide](https://hermes-agent.nousresearch.com/docs/guides/cron-troubleshooting) carry the behavioural claims, and the sections below annotate them for operators running large fleets.
+
+The guide is assembled from the official Hermes cron documentation and the cron troubleshooting guide, with a third-party best-practices page used as commentary and a local `jobs.json` census read as configuration evidence. No build or test was run by the author, and the census numbers later in this post describe a config file, not measured behaviour.
+
+## Layer 0: Decide Where Output Goes Before You Decide Anything Else
+
+Layer 0 is about delivery targets, because a job that writes only to local files cannot interrupt anyone while a job that reports to its origin channel will. The `deliver:` field, [documented in the cron reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron), picks the lane before any content decision is made.
+
+The defaults do most of the work: `"origin"` on messaging platforms and `"local"` on the CLI. That means a job created from a Telegram chat inherits a chat delivery target silently, which is exactly how a fleet ends up noisy. Audit-only jobs — health probes, metric snapshots, anything you read on demand — belong on `local` from the start. If the scheduling half of the pipeline is still being wired, our [cron pipeline build log](/blog/build-log-a-hermes-cron-pipeline-that-publishes-a-post-every-morning/) covers that side of the setup.
+
+| `deliver:` value | Where the output lands |
+| --- | --- |
+| `"origin"` | Back to where the job was created — default on messaging platforms |
+| `"local"` | Local files only, under `~/.hermes/cron/output/` — default on CLI |
+| `"telegram"` | The Telegram home channel, via `TELEGRAM_HOME_CHANNEL` |
+| `"telegram:123456"` | A specific Telegram chat by ID |
+| `"telegram:-100123:17585"` | A specific Telegram topic, as `chat_id:thread_id` |
+| `"bot-chat"` | This profile's canonical Bot Chat; the bot reads the output and responds |
+| `"all"` | Every connected home channel, resolved at fire time |
+| `"telegram,discord"` | A specific set of channels |
+| `"origin,all"` | The origin plus every other connected channel |
+
+The table is representative rather than exhaustive: every connected platform — `discord`, `slack`, `email`, `sms` and more — has an equivalent target in the [cron reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron). Two rules sit underneath it. Delivery is automatic: the agent's final response goes to the configured target and the agent does not send messages itself, so there is nothing to call in the cron prompt. And delivered output is secret-redacted on the way out on every lane — a redactor failure replaces the payload rather than sending it unscanned.
+
+### Turning off the push without turning off the message
+
+Even a `local`-adjacent brief that lands in Telegram will buzz a phone. Cron output is a *final* delivery rather than a progress message, so by default it is sent with the platform's notification flag set. On Telegram that means the brief triggers a push even when the adapter's notification mode is `important`, which otherwise sends with `disable_notification=true` — and users in that mode report the silent brief as "never delivered."
+
+```yaml
+# ~/.hermes/config.yaml
+cron:
+  delivery:
+    notify: false   # default: true
+```
+
+The flag rides both the text send and any media attachments, so a run never pushes for one and stays silent for the other. This is the bluntest instrument in the budget: it changes the volume of every message rather than deciding which messages exist.
+
+## Layer 1: The Pre-Run Gate — Decide Before the Agent Wakes
+
+Layer 1 is a pre-run gate, a cheap script that executes before the agent and can veto the agent turn for that tick. Attaching `script=` lets the script emit `{"wakeAgent": false}`, as the [cron reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron) documents, so a poll with nothing new costs nothing.
+
+The contract is narrow and worth stating precisely. The JSON goes on the **final stdout line**. When `wakeAgent` is omitted, the default is `true`. When it is `false`, cron skips the **agent run** for that tick — not the scheduler tick, and not the schedule itself. The job still fires on time; it simply does not spend an inference call deciding there was nothing to say. This is the mechanism that makes a one-minute poll affordable.
+
+### The three documented gate recipes
+
+The docs name three patterns. The **file-change gate** compares a feed's mtime against a state file; the **external-flag gate** watches for a marker file dropped by a deploy hook or CI job; the **SQL-count gate** counts new rows and passes the count forward. The file-change version is given verbatim:
+
+```bash
+#!/usr/bin/env bash
+# ~/.hermes/scripts/feed-changed.sh
+FEED="$HOME/data/feed.json"
+STATE="$HOME/.hermes/scripts/.feed-changed.last"
+test -f "$FEED" || { echo '{"wakeAgent": false}'; exit 0; }
+mtime=$(stat -c %Y "$FEED")
+last=$(cat "$STATE" 2>/dev/null || echo 0)
+if [ "$mtime" -le "$last" ]; then
+  echo '{"wakeAgent": false}'
+else
+  echo "$mtime" > "$STATE"
+  echo '{"wakeAgent": true}'
+fi
+```
+
+The SQL-count gate does the same job against a database you own, and passes the delta through `context` so the agent starts with the number already in hand:
+
+```python
+print(json.dumps({"wakeAgent": True, "context": {"new_issues": latest - prev}}))
+```
+
+The docs credit this recipe set to an exploration in [pull request #2654](https://github.com/NousResearch/hermes-agent/pull/2654), which proposed SQL, file and command triggers as a parallel mechanism; the `script` plus `wakeAgent` gate already covered all three cases at zero token cost, so the work landed as documentation instead.
+
+### The `state.db` warning
+
+One warning deserves its own paragraph. Hermes's own `~/.hermes/state.db` is an internal schema that changes between releases, and the docs say plainly not to query it from a pre-run gate. Point the gate at your own database or feed instead. A gate that breaks when the platform reshuffles its internals is worse than no gate, because it fails silently in the direction of "nothing changed."
+
+## Layer 2: The Post-Run Gate — `[SILENT]` and What Counts as Silent
+
+Layer 2 is the post-run gate, where the agent's own final response decides whether a push happens at all. A reply containing `[SILENT]` is still written to `~/.hermes/cron/output/` for audit, but nothing is sent to the target, per the [cron reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron).
+
+The marker is stricter than most people assume. A whole reply that is a *damaged* marker stays silent, which is generous in the safe direction; a reply with any other words in it is delivered, which is generous in the loud direction. The audit path is `~/.hermes/cron/output/{job_id}/{timestamp}.md`, so a suppressed run is still reviewable after the fact.
+
+| Response content | Delivered? |
+| --- | --- |
+| `[SILENT]` and nothing else | Silent |
+| `[SLENT]`, `[SLIENT]` — dropped, extra or swapped letters | Silent |
+| `[SILENT` — missing closing bracket | Silent |
+| `[ SILENT ]` — padding or invisible characters inside the brackets | Silent |
+| `` `[SILENT]` `` — code-formatted | Silent |
+| `[` or `[SIL` — cut off mid-marker | Silent |
+| `[SILENT] extra words` — any other words around it | Delivered |
+| `[URGENT]` — a different bracketed word | Delivered |
+| `[SILVER]` — a different bracketed word | Delivered |
+
+**Failed jobs always deliver regardless of the `[SILENT]` marker.** Only successful runs can be silenced. That single carve-out is what makes silent-by-default defensible: the marker suppresses *good news you did not need*, never *bad news you did*.
+
+### `[CRON_FAILURE]` and the `no_agent` contract
+
+Only runtime failures — exceptions, timeouts, an unreachable model — mark a run as failed automatically. When the agent finishes its turn but the work did not get done, it can declare the run failed by putting `[CRON_FAILURE]` alone on the **first line**, followed by the explanation. The marker is strict: mentioning or quoting `[CRON_FAILURE]` anywhere else leaves the run successful.
+
+Script-only jobs ignore the marker entirely, because they have their own channel: `no_agent` jobs signal failure with a non-zero exit code. The full semantics are worth memorising, since they are the cheapest layer of the whole budget. Script stdout, trimmed, is delivered verbatim as the message. Empty stdout is a silent tick — the watchdog pattern, "only say something when something is wrong." A non-zero exit or a timeout produces an error alert, so a broken watchdog cannot fail silently. `{"wakeAgent": false}` on the last line is also a silent tick, the same gate LLM jobs use. No tokens, no model, no provider fallback are involved.
+
+Two constraints keep it honest. `script` is always a **file**, never a command line — `--script "echo hi"` is refused at creation — and scripts must resolve inside `$HERMES_HOME/scripts/`. The subprocess environment is sanitized, so provider API credentials and other Hermes-managed secrets are not inherited by cron scripts. The [script-only guide](https://hermes-agent.nousresearch.com/docs/guides/cron-script-only) covers watchdogs, CI hooks and periodic metrics as the three canonical uses.
+
+That closes the second half of the thesis. Decide before the run whether this fire has anything to say; decide after the run whether the answer deserves a push; everything that follows is bookkeeping.
+
+## Layer 3: Dedup, Cooldowns and Escalation
+
+Layer 3 is bookkeeping around the two gates: failure streaks, incident deduplication, retry ladders and quota holds, all described in the [cron reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron). None of it decides whether a fire has something to say, but it decides how often you hear the same bad news.
+
+Each job tracks a `failure_streak` — consecutive failed runs, and delivery failures do not count toward it. When a recurring job's streak reaches the threshold, the failure message gains a review nudge telling you the job has failed N runs in a row and suggesting you fix, pause or remove it. Any successful run resets the streak, and one-shot jobs never nudge.
+
+```yaml
+# ~/.hermes/config.yaml
+cron:
+  failure_nudge_threshold: 3      # default; 0 disables the nudge
+  failure_repeat_alert_hours: 6   # example value: one reminder ping after this long, then silent again; 0 = alert on every failing run
+```
+
+Incidents are the stronger form. A recurring job that keeps failing with the *same* error alerts you once, not on every run: each failure is recorded as a durable incident keyed by the job plus a normalized signature of the error text, with case, whitespace and measured durations such as `idle for 603s` ignored. The first failure of a signature is always delivered; repeats are withheld while the incident sits in `alerted`. The lifecycle runs `detected` → `alerted` → `resolved` or `closed`. A successful run marks every open incident for that job `resolved` — but acknowledged (`closed`) incidents are the exception: a success leaves them alone, and a repeat stays silent. Inspect and acknowledge with `hermes cron incidents`, `hermes cron incidents --state alerted` and `hermes cron incidents ack <id>`.
+
+Around that core sit four smaller behaviours. A job whose pre-dispatch validation fails gets `last_status: blocked_config`, **one** alert (not one per tick) and no LLM call at all; the next healthy run clears the state so a future break alerts again. Disable the check with `cron.preflight: false`. A recurring job that fails with a transient network or DNS error before a single model call is re-run automatically after **5, 15 and 30 minutes** before falling back to the normal schedule, spend-neutral because zero API calls were made, with the interim failure notice suppressed; `cron.retry_unreachable: false` turns that off; if your jobs also walk provider fallback chains, our [provider fallback routing build log](/blog/build-log-routing-hermes-cron-jobs-to-free-providers-with-fallbacks/) covers the delivery side of that tradeoff. A job parked by a closed provider usage window stores `quota_hold_until`, and nothing fires or alerts before it. And a run that succeeds but never reaches the target records `last_status: delivery_failed` with the reason in `last_delivery_error` — never a plain `ok`, and never counted toward the streak. A delivery with positive adapter evidence is logged as delivered; a result carrying `success` but neither piece of evidence is accepted but recorded as `last_delivery_unverified`.
+
+## Layer 4: Observability — Doctor, Runs and Incidents
+
+Layer 4 is observability, and `hermes cron doctor` is the read-only check that prints grouped per-job findings and exits 1 while any of them stands. It never mutates jobs or state, according to the [cron reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron), and its findings are the fastest way to find a job that has quietly stopped firing.
+
+The checks cover a last run that failed, a last delivery that failed, a late or caught-up dispatch, a scheduled fire that could not reach the runner, a missing script, a `no_agent` job with no script, a `workdir` that no longer exists, and — the important one — a `next_run_at` that is missing or parked in the past beyond the fifteen-minute ticker grace window. That last finding is the "job is silently not firing" signal, and it is the failure a notification budget is most likely to create.
+
+Catch-up deserves its own note. A missed occurrence runs late only inside a window of half the job's period, clamped to 2 minutes–2 hours. `--grace-minutes` overrides that between 0 and 1440, where `0` means never catch up, and `cron.catch_up_missed: false` opts out globally. Crucially, a successful catch-up does **not** clear the lateness warning — only the next on-time dispatch does. Pair `hermes cron doctor` with `hermes cron runs` for the per-run history, and treat the exit code as a gate in your own monitoring — the same signals a [dedicated cron health-monitor job](/blog/hermes-cron-health-monitor-build-log/) turns into a schedule of its own.
+
+## Layer 5 (Optional): Fire on the Event, Not the Clock
+
+Layer 5 is optional and replaces clock polling with events, because a webhook route's `cron_job` field fires an existing cron job the moment an event arrives. The schedule stays as a fallback sweep, as the [webhooks guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/webhooks) describes, so you poll less and fire on the event.
+
+Set `cron_job` on a route and the rendered `prompt` becomes transient per-run context while the job's own prompt, skills, model and delivery settings still apply. The job fires through the same at-most-once claim the scheduler uses, so a webhook burst cannot double-fire a job that is already running. For rapid distinct events on the same logical entity, `coalesce` debounces them into one agent run with `window_seconds` (default 30) and `max_wait_seconds` (default 300); it applies to agent-mode routes only and is mutually exclusive with `deliver_only` and `cron_job`. Subscriptions are created with `hermes webhook subscribe ... --cron-job "pr-review-sweeper"`, and the job reference is validated at creation, so typos surface immediately.
+
+## Reading a Real Fleet: What 176 Jobs Look Like in `jobs.json`
+
+The census is a read of `~/.hermes/cron/jobs.json`, the job store named in the [cron documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron), and not a benchmark. It shows 176 job records, `deliver` set to `origin` for 174 and `local` for 2, with 118 `no_agent` script jobs.
+
+Two jobs currently carry `failure_streak > 0`, none carry `last_delivery_unverified`, and 112 of the 176 records carry a `script` field. Read as configuration rather than behaviour, the shape is instructive: two thirds of the fleet already sits in the cheapest layer, where the script decides whether to speak and no model is involved. The `origin` dominance is the risk — 174 jobs inherit a chat target, and only the post-run gate stands between them and your phone. The same tree also holds a `~/.hermes/cron/admissions/` directory of per-fire receipt JSON, which is internal state rather than a documented public interface; treat it as something to observe, not something to script against.
+
+## Worked Examples
+
+Worked examples make both gates concrete: a `no_agent` watchdog created with `--no-agent --script`, and a gated LLM job whose prompt ends by asking for `[SILENT]` when nothing is wrong. The [script-only cron guide](https://hermes-agent.nousresearch.com/docs/guides/cron-script-only) covers the first pattern in full.
+
+```bash
+hermes cron create "every 5m" \
+  --no-agent \
+  --script memory-watchdog.sh \
+  --deliver telegram \
+  --name "memory-watchdog"
+```
+
+The script has exactly three states, and each maps to a delivery outcome. It prints a line — that line is the message, verbatim, no model in the loop. It prints nothing — silent tick, nothing sent, which is the whole watchdog pattern. It exits non-zero or times out — an error alert is delivered, so the watchdog cannot die quietly. Because the subprocess environment is sanitized, the script cannot leak provider credentials even if it dumps its own environment.
+
+The LLM-side version is a prompt contract rather than a script. Give the job a narrow remit and an explicit exit condition: *"Check if nginx is running. If everything is healthy, respond with only [SILENT]. Otherwise, report the issue."* Add a pre-run `script=` gate in front of it when the check itself is cheap, and the pair becomes: the script decides whether the agent wakes, the agent decides whether the answer ships.
+
+## Failure Modes to Watch For
+
+Failure modes are the ways an attention budget fails open or fails shut — a job that always speaks, a job muted forever by a stale state file, and a job that reports success while doing nothing. The [cron troubleshooting guide](https://hermes-agent.nousresearch.com/docs/guides/cron-troubleshooting) names several of these.
+
+**The always-on notifier** is a job whose prompt never produces `[SILENT]` because nothing in the prompt asks for it. The troubleshooting guide has a dedicated "job runs but you never receive the message" section with a `[SILENT]` usage check and a response-wrapping check — both worth reading in the inverse direction, since a prompt that wraps its answer in prose will always deliver.
+
+**The muted watchdog** is a pre-run gate whose state file stops advancing. If the file is deleted, recreated with an older mtime, or written by a process that never updates it, the gate returns `{"wakeAgent": false}` forever and the job looks healthy while saying nothing. `hermes cron doctor` will not catch this, because the job is firing on time; only an occasional forced run or a state-file timestamp check will.
+
+**The phantom success** is the reverse: a job that reports `ok` while its delivery never landed. That is what `last_delivery_unverified` exists to surface, and why `last_status: delivery_failed` is never recorded as a plain `ok`. A fleet with zero unverified deliveries is not necessarily healthy — it may simply never have been checked.
+
+## The Tradeoffs of a Tight Budget
+
+Tradeoffs are real, because every gate adds a moving part: a per-tick script costs a subprocess, a stale state file can mute a job indefinitely, and silent-by-default can hide a genuinely silent failure. The [third-party cron design commentary](https://www.corpusiq.io/docs/hermes/best-practices/cron-design) frames the same pressure as alert fatigue.
+
+The per-tick script cost is small but not zero, and it is paid on every fire whether or not anything changed — which is precisely the point, since a subprocess is cheaper than an agent turn by orders of magnitude. The stale-state risk is the one that bites: a gate is a cache with no expiry, and a cache that says "nothing changed" is indistinguishable from a system where nothing changed. The silent-by-default risk is structural, and the only real defence is the audit path plus `hermes cron doctor` in your monitoring loop. A budget without an audit trail is just a mute button. For the cadence choices underneath all of this, the [cron scheduling recipes](/blog/hermes-agent-cron-scheduling-patterns-practical-recipes-for-automated-workflows/) and the [cron job patterns guide](/blog/cron-job-patterns-2026/) are the companion reading.
+
+## FAQ
+
+Frequently asked questions about Hermes cron attention budgets cover the details readers ask about most: whether `[SILENT]` can hide failures, how `no_agent` jobs signal errors, what `wakeAgent` actually skips, and how catch-up windows affect late runs. Each answer below is self-contained, with the relevant documentation linked in the [cron reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron).
+
+### Can `[SILENT]` suppress a failure alert?
+
+No. Failed jobs always deliver regardless of the `[SILENT]` marker, and only successful runs can be silenced. If a run raises an exception, times out, or cannot reach the model, the delivery happens even when the response body contains the marker. To declare a non-runtime failure, put `[CRON_FAILURE]` alone on the first line.
+
+### What does `{"wakeAgent": false}` actually skip?
+
+It skips the agent run for that tick, not the scheduler tick and not the schedule. The job still fires on time and the pre-check script still executes; Hermes simply does not invoke the model. When `wakeAgent` is omitted from the final stdout line, the default is `true`, so the agent runs as usual.
+
+### How do `no_agent` jobs report errors?
+
+Through the exit code. A `no_agent` job delivers trimmed stdout verbatim, treats empty stdout as a silent tick, and turns a non-zero exit or a timeout into an error alert. It ignores `[CRON_FAILURE]` entirely, because the script's exit status is the signal. The script must be a file under `$HERMES_HOME/scripts/`; inline commands are refused at creation.
+
+### How late can a missed cron run be caught up?
+
+A missed occurrence runs late only inside a window of half the job's period, clamped to 2 minutes–2 hours. `--grace-minutes` overrides that between 0 and 1440, where `0` means never catch up, and `cron.catch_up_missed: false` opts out globally. A successful catch-up does not clear the lateness warning in `hermes cron doctor`.
+
+### Why does a silent brief show up as "never delivered" on Telegram?
+
+Because the adapter's `important` notification mode sends with `disable_notification=true`, and users interpret the resulting absence of a push as a missing message. Cron output is a final delivery and sets the platform notification flag by default; `cron.delivery.notify: false` restores silent sends, and the flag rides both text and media attachments.
+
+## The Bottom Line
+
+The bottom line is that an attention budget is two decisions plus a pile of bookkeeping, and the two decisions are the pre-run gate and the post-run gate, both documented in the [cron reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron). Get those right and dedup, cooldowns and escalation become tuning rather than rescue work.
+
+The checklist, in the order the layers apply:
+
+- **Target:** every job's `deliver:` is a deliberate choice, not an inherited default. Audit-only jobs go to `local`.
+- **Volume:** `cron.delivery.notify: false` if the platform push is the problem rather than the message count.
+- **Pre-run:** frequent polls carry a `script=` gate that emits `{"wakeAgent": false}` when nothing changed — and it queries your data, never `~/.hermes/state.db`.
+- **Post-run:** every LLM job's prompt names its silent condition explicitly, and the answer is checked against the damaged-marker rules.
+- **Failure:** the `[SILENT]` carve-out is trusted — failed jobs always deliver — and `[CRON_FAILURE]` sits alone on the first line when the work did not get done.
+- **Dedup:** `failure_nudge_threshold` and `failure_repeat_alert_hours` are set, and incidents are acknowledged rather than re-read.
+- **Health:** `hermes cron doctor` runs on a schedule of its own, and its exit code is wired into monitoring.
+- **Audit:** `~/.hermes/cron/output/{job_id}/{timestamp}.md` is where suppressed runs go to be reviewed, and it is the only thing standing between a tight budget and a mute button.
