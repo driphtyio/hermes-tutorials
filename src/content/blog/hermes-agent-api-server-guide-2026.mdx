@@ -255,3 +255,12 @@ The turn hit its `agent.max_turns` iteration budget. The text is the agent wrap-
 ### How do I get the agent's tools to run on my laptop instead of the API-server host?
 
 The current API server cannot do that. Each request creates a server-side `AIAgent` and tools execute where the server runs, so a laptop pointed at a remote server still triggers remote execution. If local tools are needed today, run Hermes locally against a pure LLM provider or an OpenAI-compatible model proxy such as vLLM, LiteLLM, Ollama, llama.cpp, or OpenRouter. A split-runtime mode is tracked in issue #18715 and not the behaviour of the current API server, as documented in the [Open WebUI integration guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/open-webui).
+
+{/* crosslinks */}
+
+## 📖 Related Reads
+
+- **[NoCode Insider](https://nocodeinsider.com/)** — AI workflow automation with no-code tools, agents, and APIs
+- **[ToolBrain](https://toolbrain.net/)** — tool reviews, LLM comparisons, and AI workflow guides
+
+*Cross-links automatically generated from Hermes Tutorials.*
