@@ -1,0 +1,257 @@
+---
+title: "Run Hermes Agent as an API Server and Put Open WebUI on It"
+description: "Run Hermes Agent as a secure OpenAI-compatible API server and connect Open WebUI for a polished web chat interface with streaming, tools and troubleshooting."
+pubDate: 2026-11-27
+slug: hermes-agent-api-server-guide-2026
+tags: ["hermes-agent", "api-server", "open-webui", "tutorial", "self-hosted"]
+heroImage: "https://pub-0066f5275194430aa9f985cb23278abe.r2.dev/hermes-agent-api-server-guide-2026-1795798477.webp"
+lastVerified: 2026-11-27
+---
+
+Hermes Agent's API server exposes a running agent as an OpenAI-compatible backend that any chat frontend can drive — and because it is an agent runtime, not an LLM proxy, every tool call executes on the API-server host. That single fact should drive where the server is deployed, how it is secured, and how responses are read. This guide shows how to enable the server, verify it, and put a polished Open WebUI interface over it.
+
+**How this guide was built:** This article is documentation-based. It was built from Hermes Agent's [API server reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server) and [Open WebUI integration guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/open-webui), fetched 2026-11-27, together with the reference pages those two documents link to. No live Hermes instance was driven while writing it.
+
+## The API server is an agent runtime, not an LLM proxy
+
+Each API request spawns a dedicated server-side AIAgent on the machine hosting Hermes, and all terminal, file, browser, and local MCP tool calls execute there. A laptop pointed at a remote server never runs tools locally. Deploy the server where tool access is safe, or run Hermes locally for local tools.
+
+The [API server reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server) states it plainly: each request creates a server-side `AIAgent` on the API-server host, and terminal commands, file operations, web search, memory, skills, browser tools, and local MCP tools all run where that server runs. The [Open WebUI integration guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/open-webui) gives the canonical example: if a laptop points Open WebUI or another [OI]-compatible client at a Hermes API server on a remote machine, `pwd`, file tools, browser tools, local MCP tools, and other workspace tools run on the remote API-server host, not on the laptop.
+
+That leads to a simple deployment rule. Place the API server on the machine whose filesystem, credentials, network, and browser context the agent is allowed to touch. Do not expose a home-server agent to the internet and then act surprised when `rm`, shell scripts, or browser automation affect that host. Streaming makes the location visible: tool progress indicators appear inline so frontends can show what the agent is doing on the server.
+
+If the goal is for tools to run on a laptop while the model runs elsewhere, the current API server cannot do that. The documented local-tools alternative is to run Hermes locally against a pure LLM provider or an OpenAI-compatible model proxy such as vLLM, LiteLLM, Ollama, llama.cpp, or OpenRouter. A split-runtime mode for remote brain with local hands is tracked in issue #18715 and not the behaviour of the current API server, as noted in the [Open WebUI integration guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/open-webui) and the [issue tracker](https://github.com/NousResearch/hermes-agent/issues/18715).
+
+## What you're exposing: the OpenAI-compatible surface
+
+The server presents Hermes through OpenAI-compatible chat, responses, runs, jobs, sessions, models, capabilities, health, skills, and toolset endpoints, backed by your configured provider and tool backends. Set up access once with hermes setup --portal, then any compatible frontend can use the agent as its backend model.
+
+Hermes itself needs a configured provider and tool backends for the API server to be useful. A Nous Portal subscription handles both — 300+ models plus web, image, TTS, and browser via the Tool Gateway. Run this once before starting the API server, as described in the [API server reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server):
+
+```bash
+hermes setup --portal
+```
+
+For background on those backends, see the [Tool Gateway](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway) and [fallback providers](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers) documentation. Once configured, the API server presents the agent through several endpoint families. Chat and Responses cover conversational use, Runs cover asynchronous and controllable execution, Jobs mirror `hermes cron`, Sessions expose stored transcripts, and Models, Capabilities, Health, Skills, and Toolsets cover discovery and operations. The same server also backs gateway proxy mode: when another Hermes gateway instance sets `GATEWAY_PROXY_URL` to point at this API server, it forwards messages here instead of running its own agent, which suits cases such as a Docker container handling Matrix encryption that relays to a host-side agent.
+
+| Method & path | What it does | Notes for integrators |
+|---|---|---|
+| POST /v1/chat/completions | Standard OpenAI-compatible Chat Completions | Stateless; send full history in `messages`; recommended default |
+| POST /v1/responses | [OI]-compatible Responses API | Server-side state via `previous_response_id`, named `conversation`; `GET` and `DELETE /v1/responses/{id}` manage stored responses |
+| GET /v1/models | Lists the agent as an available model | Advertises profile name or `hermes-agent`; cheap compat surface with no pricing or capability enrichment |
+| GET /api/model/options | Curated provider and model inventory | Includes capability hints and pricing metadata; `?refresh=1` probes fully and busts cache |
+| GET /v1/capabilities | Machine-readable feature and endpoint discovery | Bearer auth required |
+| GET /health and GET /v1/health | Liveness check | Returns `{"status": "ok"}` |
+| GET /health/detailed | Authenticated readiness check | Reports config, state database, model, disk, gateway, runs, and delegations; degraded still returns HTTP 200, so read `status` and `readiness.checks` |
+| Runs family | `POST /v1/runs`, `GET /v1/runs/{id}`, `GET /v1/runs/{id}/events` SSE, POST stop, approval, clarify, resolve-unknown | Use `X-Hermes-Session-Key` for conversation continuity; idempotency ledger retained 24h, retry returns 202 with `Idempotency-Replayed: true` |
+| Jobs family | GET and POST /api/jobs, GET, PATCH, and `DELETE /api/jobs/{id}`, POST pause, resume, and run | Body accepts same shape as `hermes cron` — prompt, schedule, skills, provider override, delivery target |
+| Sessions family | GET and POST /api/sessions, GET, PATCH, and `DELETE /api/sessions/{id}`, GET messages, POST fork, POST chat, POST chat stream | Transcript CRUD plus direct chat entry points |
+| GET /v1/skills and GET /v1/toolsets | Read-only capability enumeration | Lets clients discover skills without asking the model |
+
+## Enabling the API server
+
+Enable the server with two variables in ~/.hermes/.env, or with hermes config set, which routes flags to config.yaml and secrets to .env. API_SERVER_KEY is mandatory even on loopback. Restart the gateway after changes so the new values load before verification begins.
+
+The fastest route is `~/.hermes/.env`, exactly as documented in the [API server reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server):
+
+```env
+API_SERVER_ENABLED=true
+API_SERVER_KEY=change-me-local-dev
+# Optional: only if a browser must call Hermes directly
+# API_SERVER_CORS_ORIGINS=http://localhost:3000
+```
+
+The CLI route from the [Open WebUI integration guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/open-webui) is equivalent. `hermes config set` auto-routes the flag to `config.yaml` and the secret to `~/.hermes/.env`:
+
+```bash
+hermes config set API_SERVER_ENABLED true
+hermes config set API_SERVER_KEY your-secret-key
+# If the gateway is already running:
+hermes gateway stop && hermes gateway
+```
+
+`API_SERVER_KEY` is required for every deployment, including the default loopback bind on `127.0.0.1`. There is no anonymous mode because the server grants full toolset access including terminal commands. Keep the key in `.env`, not in `config.yaml`, and restart the gateway after changing either file so the new values take effect.
+
+## Start the gateway and verify it
+
+Starting hermes gateway loads the API server alongside other gateway services and prints its listening address for confirmation. A health check plus an authenticated models request then separates configuration problems from authentication problems, giving you a clear restart or fix the key next step.
+
+Start the gateway:
+
+```bash
+hermes gateway
+# expected output line: [API Server] API server listening on http://127.0.0.1:8642
+```
+
+That listening line confirms the host and port from configuration. The defaults are host `127.0.0.1`, localhost only by default, and port `8642`. If the line is absent, the API server did not enable.
+
+Run the verification pair from the [Open WebUI integration guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/open-webui):
+
+```bash
+curl -s http://127.0.0.1:8642/health
+# {"status": "ok", ...}
+
+curl -s -H "Authorization: Bearer your-secret-key" http://127.0.0.1:8642/v1/models
+```
+
+Read the pair as a two-fault diagnostic. If `/health` fails, the gateway did not pick up `API_SERVER_ENABLED=true` — restart it. If `/v1/models` returns `401`, the `Authorization` header does not match `API_SERVER_KEY`. An optional third check lists the machine-readable feature surface:
+
+```bash
+curl -s -H "Authorization: Bearer your-secret-key" http://127.0.0.1:8642/v1/capabilities
+```
+
+For an end-to-end smoke test from the [API server reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server):
+
+```bash
+curl http://localhost:8642/v1/chat/completions \
+  -H "Authorization: Bearer change-me-local-dev" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "hermes-agent", "messages": [{"role": "user", "content": "Hello!"}]}'
+```
+
+## Connecting Open WebUI
+
+Open WebUI connects server-to-server using the Hermes base URL and API key, either from environment variables on first launch or from the admin Connections screen. Use host.docker.internal inside Docker so the container reaches the host, and disable the empty Ollama backend to keep the model picker clean.
+
+Use the exact container invocation from the [Open WebUI integration guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/open-webui). The project itself lives at [open-webui/open-webui](https://github.com/open-webui/open-webui):
+
+```bash
+docker run -d -p 3000:8080 \
+  -e OPENAI_API_BASE_URL=http://host.docker.internal:8642/v1 \
+  -e OPENAI_API_KEY=your-secret-key \
+  -e ENABLE_OLLAMA_API=false \
+  --add-host=host.docker.internal:host-gateway \
+  -v open-webui:/app/backend/data \
+  --name open-webui \
+  --restart always \
+  ghcr.io/open-webui/open-webui:main
+```
+
+`OPENAI_API_BASE_URL` must include the `/v1` suffix. `OPENAI_API_KEY` must exactly match `API_SERVER_KEY`. `ENABLE_OLLAMA_API=false` suppresses the default Ollama backend, which would otherwise show up empty and clutter the model picker. `--add-host=host.docker.internal:host-gateway` lets the container resolve the host gateway, because plain `localhost` inside the container points at the container itself. The named volume preserves settings, and restart always keeps the UI up across reboots.
+
+A compose equivalent uses the same image, `ports: "3000:8080"`, volume `open-webui:/app/backend/data`, the same three environment variables, `extra_hosts: host.docker.internal:host-gateway`, and `restart: always`, followed by `docker compose up -d`.
+
+First launch takes 15–30 seconds because Open WebUI downloads sentence-transformer embedding models of about 150MB the first time it starts. The first user to open `http://localhost:3000` becomes admin. The agent appears in the model dropdown named after the profile, or `hermes-agent` for the default profile.
+
+To connect through the UI instead, follow Profile avatar to Admin Settings to Connections to the OpenAI-compatible API section, select the wrench icon for Manage, choose + Add New Connection, enter URL `http://host.docker.internal:8642/v1`, set API Key to the exact `API_SERVER_KEY`, select the checkmark to verify, then Save. Environment variables only take effect on first launch; after that, connection settings persist in the internal database, so later key or URL changes must be made in that Connections screen.
+
+## Connecting other OpenAI-compatible frontends
+
+Any OpenAI-compatible frontend follows the same base-URL-plus-key pattern, differing only in where that pair is entered in its own settings. The table below gives the documented mechanism for each supported client, from desktop apps to the Python SDK and plain curl for direct testing.
+
+All of these speak the OpenAI-compatible format to `http://localhost:8642/v1` or the corresponding host address with the same bearer key. Only Open WebUI has a step-by-step guide in the Hermes docs; the rest have one documented connection mechanism each, summarized from the [API server reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server).
+
+| Frontend | Stars, as published by the Hermes docs | How to point it at Hermes |
+|---|---|---|
+| Open WebUI | 126k | Full guide; base URL plus key via env vars or Connections screen |
+| NextChat | 87k | BASE_URL env var |
+| LobeChat | 73k | Custom provider endpoint |
+| AnythingLLM | 56k | Generic OpenAI-compatible provider |
+| ChatBox | 39k | API Host setting |
+| LibreChat | 34k | Custom endpoint in librechat.yaml |
+| Jan | 26k | Remote model config |
+| HF Chat-UI | 8k | OPENAI_BASE_URL |
+| big-AGI | 7k | Custom endpoint |
+| OpenAI Python SDK | — | `base_url="http://localhost:8642/v1"` |
+| curl | — | Direct HTTP requests with Authorization bearer header |
+
+Star counts above are docs-published figures from the Hermes documentation, not live counts. They are included here for identification only.
+
+## Chat Completions or the Responses API?
+
+Chat Completions keeps conversation state on the client and works by default, while Responses can keep server-side state with previous_response_id and named conversations. Open WebUI still sends full history even in Responses mode, so choose Responses mainly for server-side state or its structured event stream.
+
+Chat Completions at `POST /v1/chat/completions` is stateless: the full conversation goes in each request via `messages`. It is the recommended default and works out of the box in Open WebUI. The Responses API at `POST /v1/responses` supports server-side state via `previous_response_id` and named conversations via the `conversation` parameter, with GET and DELETE by id for stored responses. Stored responses persist in SQLite across gateway restarts, capped at 100 entries with LRU eviction.
+
+Open WebUI currently manages conversation history client-side even in Responses mode — it sends the full message history in each request rather than using `previous_response_id`. The main advantage of Responses mode in Open WebUI today is the structured event stream, per the [Open WebUI integration guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/open-webui). To switch, go to Admin Settings to Connections to the OpenAI-compatible section to Manage, edit the connection, set API Type to Responses (Experimental), then Save.
+
+Per-request model control is available on chat, responses, runs, and session-chat endpoints through `model`, `provider`, and `model_options`. Precedence is session `/model` override first, then a static `model_routes` alias, then direct request model and provider, then global config and environment defaults. Bare `model` values on OpenAI-compatible endpoints are opt-in: a `model` sent without a `provider` is ignored unless `gateway.platforms.api_server.direct_model_requests: true` is set. Requests with an explicit `provider`, and native runs and session-chat endpoints, always honour the requested model. When a frontend sends a `system` message or `instructions` field, Hermes layers it on top of the core system prompt while keeping tools, memory, and skills intact.
+
+| Consideration | Chat Completions | Responses |
+|---|---|---|
+| Status in Open WebUI | Default | Experimental toggle |
+| Endpoint | POST /v1/chat/completions | POST /v1/responses |
+| Who holds conversation state | Client sends full messages array | Server-side via `previous_response_id`, though Open WebUI currently sends full history even in Responses mode |
+| Streaming events | `chat.completion.chunk` plus `hermes.tool.progress` | `response.created`, `response.output_text.delta`, `response.completed`, structured function_call items |
+| Iteration-budget exhaustion signaled as | `finish_reason: "length"` plus `hermes.error_code: "iteration_budget_exhausted"` | `status: "incomplete"` |
+| Pick it when | Broad compatibility is needed and default behavior is fine | Server-side state or structured event stream is wanted from custom code |
+
+## Streaming, tool progress, and reading finish_reason correctly
+
+Both APIs stream over server-sent events with ten-second keepalive comments, custom tool-progress events, and reasoning output for live frontends. Read finish_reason carefully because iteration-budget exhaustion still returns a usable wrap-up, while cancelled and error mean failure and finalization alone proves nothing.
+
+All SSE streams emit a `: keepalive` comment line whenever no event has been sent for 10 seconds, so long tool calls do not trip client idle timeouts. Custom parsers must skip lines starting with `:`. For Chat Completions the stream uses standard `chat.completion.chunk` events plus the custom `hermes.tool.progress` event for tool-start user experience. That progress layer can be disabled with `gateway.platforms.api_server.tool_progress_events: false`, which defaults to true and applies to Chat Completions only. Responses uses native event types such as `response.created`, `response.output_text.delta`, `response.output_item.added`, `response.output_item.done`, and `response.completed`. Reasoning streams as `choices[0].delta.reasoning_content` in Chat Completions and as native `reasoning` output items in Responses, advertised as `features.reasoning_streaming: true`.
+
+Images are supported inline: a user message `content` array may mix `text` and `image_url` parts, with remote http and https URLs and `data:image` URLs both accepted. Uploaded files and non-image `data:` URLs return `400 unsupported_content_type`. There is no file-upload path through the API.
+
+Finish vocabulary matters because agent turns can be long. A turn that exhausts `agent.max_turns` still answers with a wrap-up of what was found; Chat Completions marks it `finish_reason: "length"` with `hermes.error_code: "iteration_budget_exhausted"`, while Responses reports `status: "incomplete"`. Treat that text as a usable answer to a task that stopped short, not as a cancellation. Chat Completions uses `"cancelled"` for interrupted turns and `"error"` for failures, never a successful `"stop"`. An assistant finalization frame is not itself proof of successful execution. Idempotency keys add safety on retries: chat and responses accept `Idempotency-Key`. An exact retry replays the original answer; changing an identity field is a conflict that returns 409, except on a streaming Chat Completions request, whose stream has already opened with 200 and carries the refusal in its final chunk with `finish_reason: "error"`. Runs keep a separate ledger: an identical retry returns the original run id with 202 and `Idempotency-Replayed: true`, and keys are retained for 24 hours.
+
+## Security, CORS, and multi-user setups
+
+The API key is required on every deployment because the server exposes the full Hermes toolset including terminal execution. Open WebUI needs no CORS as a server-to-server client. Use per-profile keys and ports for multi-user hosts, respect the concurrent-run cap, and scope memory with session keys.
+
+Bearer authentication uses the `Authorization` header and the value from `API_SERVER_KEY`. All responses carry `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`. CORS is off by default. The [Open WebUI integration guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/open-webui) is explicit: Open WebUI talks to Hermes server-to-server, so `API_SERVER_CORS_ORIGINS` is not needed for this integration. Enable CORS only when a browser must call Hermes directly, keep origins narrow, and note the documented behavior: preflights include `Access-Control-Max-Age: 600`, SSE responses carry CORS headers for browser EventSource clients, and `X-Hermes-Session-Id` and `Idempotency-Key` are allowed headers.
+
+Configuration lives in environment variables and `config.yaml`, with environment taking precedence. The block is also accepted under `gateway.platforms.api_server:` or a top-level `platforms.api_server:` section, as documented in the [API server reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server):
+
+```yaml
+gateway:
+  api_server:
+    enabled: true
+    host: 127.0.0.1          # localhost only by default
+    port: 8642
+    key: your-secret-key     # prefer ~/.hermes/.env for secrets
+    cors_origins: []         # only when a browser must call Hermes directly
+    model_name: hermes-agent # defaults to the profile name
+    max_concurrent_runs: 10          # 0 disables the cap; over-cap → 429
+    history_tool_output_max_chars: 0 # 0 = tool output stored verbatim
+```
+
+| Env var | Default | config.yaml key | What it does |
+|---|---|---|---|
+| API_SERVER_ENABLED | false | `enabled` | Turns the server on inside the gateway |
+| API_SERVER_PORT | 8642 | `port` | Listening port |
+| API_SERVER_HOST | 127.0.0.1, localhost only by default | `host` | Bind address |
+| API_SERVER_KEY | required | `key` | Bearer credential; prefer `.env` for secrets |
+| API_SERVER_CORS_ORIGINS | none | `cors_origins` | Allowed browser origins; leave empty for server-to-server use |
+| API_SERVER_MODEL_NAME | profile name | `model_name` | Advertised model name in /v1/models |
+| — | 10 | `max_concurrent_runs` | Shared cap across OpenAI-compatible, Runs, and session-chat endpoints; 0 disables; over-cap returns 429 Too many concurrent runs (max N) |
+| — | 0 | `history_tool_output_max_chars` | Caps stored tool output; 0 stores verbatim; enabling also trims replay on chained turns |
+
+Environment variables take precedence over `config.yaml`, and alternate nesting under `gateway.platforms.api_server` or `platforms.api_server` is accepted. The concurrent-run cap is shared across OpenAI-compatible, Runs, and session-chat endpoints; cron-triggered runs use cron limits instead. Stored history can grow because each Responses snapshot embeds cumulative history including tool output verbatim, so large outputs can make a single store write several hundred kilobytes unless the history cap trims entries with a `...[N more chars]` marker.
+
+For multi-user hosts, use one profile per user as described in the [profiles](https://hermes-agent.nousresearch.com/docs/user-guide/profiles) documentation. Write `API_SERVER_ENABLED`, `API_SERVER_PORT`, and `API_SERVER_KEY` into each profile `.env`, pick ports at 8650 and above because 8644, 8645, and 8646 are reserved for webhook adapter, wecom-callback, and msgraph-webhook, start each with `hermes -p <name> gateway`, and add one connection per profile in Open WebUI. `API_SERVER_MODEL_NAME` overrides the advertised model name per profile. For memory scoping across shared frontends, send `X-Hermes-Session-Key` as a stable per-channel identifier independent of the rotating transcript-scoped `X-Hermes-Session-Id`; it allows up to 256 characters without control characters and is echoed back on JSON and SSE responses.
+
+## Common mistakes and troubleshooting
+
+Most failures come from a missing /v1 suffix, a key mismatch after Open WebUI persisted its first connection, Docker localhost confusion, or mistaking tool execution time for a hang. The catalog below pairs each symptom with its documented cause and fix, including concurrency rejections and cluttered model pickers.
+
+Missing `/v1` suffix: the connection test may pass but no models load. Cause is a base URL such as `http://host.docker.internal:8642` without the version prefix. Fix by using `http://host.docker.internal:8642/v1` in both environment variables and the admin Connections screen.
+
+Key mismatch after first launch: `/v1/models` returns 401 or chats fail after a key rotation. Cause is Open WebUI persisting connection settings in its internal database, so later `.env` edits have no effect. Fix by updating the key in Admin Settings to Connections to Manage and saving, ensuring it exactly matches `API_SERVER_KEY`.
+
+Empty Ollama backend cluttering the picker: an extra empty model entry appears beside Hermes. Cause is the default Ollama backend remaining enabled. Fix with `ENABLE_OLLAMA_API=false` on first launch, or disable it in settings.
+
+Docker `localhost` confusion: the frontend cannot reach Hermes, or health checks fail from inside containers. Cause is `localhost` resolving to the container loopback rather than the host. Fix with `http://host.docker.internal:8642/v1`. Docker Desktop resolves that hostname for containers, and the `docker run` above passes `--add-host=host.docker.internal:host-gateway` to be explicit. On Linux without Docker Desktop, where the hostname does not resolve by default, pass `--add-host=host.docker.internal:host-gateway`, or use `--network=host` with `http://localhost:8642/v1`, or the bridge IP `http://172.17.0.1:8642/v1`.
+
+Slow responses because tools are executing: a simple greeting takes much longer than expected, or streaming shows tool progress for an extended period. Cause is server-side tool execution — web search, shell, files, or browser steps running on the API-server host. Fix by reading progress events, narrowing the prompt, or moving the server closer to the resources it needs rather than treating the delay as a network fault.
+
+429 concurrency rejection: new requests fail with Too many concurrent runs (max N). Cause is the shared `max_concurrent_runs` cap, default 10, being reached. Fix by waiting and retrying, raising the cap, or setting it to 0 to disable the limit where appropriate.
+
+Gateway did not pick up settings: `/health` fails after editing `.env` or `config.yaml`. Cause is the running gateway still using old values. Fix with `hermes gateway stop && hermes gateway` and rechecking the listening line.
+
+## FAQ
+
+These three answers cover the questions that recur when the agent-runtime model meets real deployments. They clarify when CORS matters, why iteration-budget exhaustion looks like truncation but remains useful, and why tools cannot currently run on the client laptop instead of the server host.
+
+### Do I need to set API_SERVER_CORS_ORIGINS to connect Open WebUI?
+
+No. Open WebUI talks to Hermes server-to-server, so CORS, which is off by default, is irrelevant for this integration, as stated in the [Open WebUI integration guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/open-webui). CORS matters only when a browser must call Hermes directly. When enabled, preflights get `Access-Control-Max-Age: 600`, SSE responses carry CORS headers for browser EventSource, and `X-Hermes-Session-Id` and `Idempotency-Key` are allowed headers. Leave origins empty for Open WebUI and keep any browser allowance narrow.
+
+### Why did my answer come back with finish_reason: 'length' and hermes.error_code: 'iteration_budget_exhausted'?
+
+The turn hit its `agent.max_turns` iteration budget. The text is the agent wrap-up of what it found before stopping, so treat it as a usable answer to a task that stopped short, not as a cancellation, per the [API server reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server). The Responses API reports the same condition as `status: "incomplete"`. Polling and SSE agree on cancelled and failed states, while an assistant finalization frame alone does not prove success. To go further, break the task into smaller steps or adjust the turn budget.
+
+### How do I get the agent's tools to run on my laptop instead of the API-server host?
+
+The current API server cannot do that. Each request creates a server-side `AIAgent` and tools execute where the server runs, so a laptop pointed at a remote server still triggers remote execution. If local tools are needed today, run Hermes locally against a pure LLM provider or an OpenAI-compatible model proxy such as vLLM, LiteLLM, Ollama, llama.cpp, or OpenRouter. A split-runtime mode is tracked in issue #18715 and not the behaviour of the current API server, as documented in the [Open WebUI integration guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/open-webui).

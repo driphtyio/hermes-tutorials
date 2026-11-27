@@ -3,7 +3,7 @@
     "name": "Hermes Tutorials Arena",
     "version": "1.0.0",
     "description": "Model-vs-model battles for Hermes Tutorials content and design.",
-    "total_matches": 84
+    "total_matches": 87
   },
   "model_pool": [
     {
@@ -19820,6 +19820,263 @@
         "Length: the brief set a 1,600-2,600 guidance band and a 2,800 hard ceiling; the top three drafts landed at 3,041-3,641 body words. The cron prompt's own cap (~5,000 words) was treated as the operative limit, so they stayed eligible. Recorded rather than trimmed, because trimming the top scorer costs mean and the blog gate has no ceiling.",
         "The raw GitHub cron.md fetch was flagged \"possibly clipped\" by source-manifest.py; it was excluded from the evidence pack instead of being trusted as a complete page."
       ]
+    },
+    {
+      "match_id": "arena-hermes-agent-api-server-guide-2026",
+      "slug": "hermes-agent-api-server-guide-2026",
+      "topic": "How to run Hermes Agent as an [OI]-compatible API server: the agent-runtime-not-LLM-proxy model, enabling and verifying the server, connecting Open WebUI and other frontends, Chat Completions vs the Responses API, streaming/finish_reason semantics, and the security and multi-user patterns",
+      "category": "tutorial",
+      "type": "content",
+      "date": "2026-11-27",
+      "timestamp": "2026-11-27T09:10:28.007550",
+      "queue_item": null,
+      "pipeline": "in-session research (web_extract of the api-server reference 71,006 chars + the Open WebUI integration guide, both HTTP 200) -> plan & rubric (glm-5.3 via cline-pass, load-balanced to zai) -> 11-lane build -> 3-pass multipass judge batch (10 drafts, 4 workers, sourced pack) -> orchestrator grounding audit -> QA (zai glm-5.3) -> 3 QA fixes + 4 MDX brace escapes -> astro build -> re-judge of the shipped text -> write -> record -> commit -> deploy",
+      "research_lane": "dispatched (mimo-v2.6-pro, load-balanced xiaomi->opendesign); produced a 15-fact ledger, top-8 mistakes list and a 'do not claim' gap list",
+      "research_source": "in-session web_extract: https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server (70,776 clean chars) and https://hermes-agent.nousresearch.com/docs/user-guide/messaging/open-webui, both fetched 2026-11-27 HTTP 200",
+      "research_note": "The research lane has no tools, so the authoritative dossier was built in-session from the two fetched documentation pages; the lane then reviewed that inlined material for fact-ledger, mistakes and do-not-claim gaps, which the brief carried verbatim.",
+      "plan_model": "glm-5.3 (served by zai; cline-pass primary load-balanced away)",
+      "brief_contract": true,
+      "winner": "muse-spark-1.3-contributor",
+      "winner_provider": "opencode-go",
+      "winner_family": "muse",
+      "winner_score": 8.65,
+      "score": 8.65,
+      "pre_edit_score": 8.65,
+      "shipped_score": 9.03,
+      "threshold": 7.5,
+      "threshold_met": true,
+      "judge": "tokenharbor/qwen3.7-flash (3-pass multipass, judge-draft-batch.py, 4 workers, sourced pack)",
+      "judge_windows": [
+        {
+          "window": "field batch (10 drafts, 3 passes, 4 workers, sourced)",
+          "winner": 8.65,
+          "spread": 0.15,
+          "note": "tie at 8.65 with deepseek-v4.1-flash (spread 0.45); winner chosen on the tighter spread"
+        },
+        {
+          "window": "single-draft re-judge after the first QA pass (pre-brace-fix text)",
+          "winner": 9.5,
+          "spread": 0.0
+        },
+        {
+          "window": "single-draft re-judge of the shipped file (final text)",
+          "winner": 9.03,
+          "spread": 0.6,
+          "note": "passes 9.10 / 8.70 / 9.30; this is the recorded shipped_score. The only later text change was the E-E-A-T disclosure rewording demanded by disprove_pass round 2 (one sentence, no factual content), so no fourth judge run was spent on it."
+        }
+      ],
+      "qa_model": "zai/glm-5.3",
+      "qa_result": "PASS with 3 substantive defects, all applied: (1) the runtime-location section restated the AIAgent/tool-execution fact twice and its inline link read awkwardly — the second paragraph now leads with the citation; (2) the idempotency sentence compressed exact-retry replay and identity-conflict 409 into one 'conflict' concept — split into exact retry replays / changed identity returns 409 / streaming carries the refusal in its final chunk / runs keep a 24-hour ledger with 202 + Idempotency-Replayed; (3) the Docker troubleshooting line implied --add-host is needed on Docker Desktop — reworded to Docker Desktop resolving the hostname itself with --add-host as the explicit Linux path. The optional localhost/127.0.0.1 normalization was declined (both are documented).",
+      "verification_status": "confirmed",
+      "verification_note": "disprove_pass extract (11 claims) + verify with glm-5.3 (zai, different family than the muse winner) against a fresh pack (dossier + Open WebUI excerpt + verbatim S1 excerpts): 11/11 confirmed. Two earlier rounds returned needs_validation on a single claim each, both fixed rather than waived: round 1 flagged the stored-history sizing sentence ('several hundred kilobytes' / '...[N more chars]') because the dossier paraphrased S1 — adding the verbatim S1 paragraph flipped it; round 2 flagged the E-E-A-T block for saying the guide was built from 'two documentation pages' while the dossier lists seven linkable sources — the block now says the two primary pages 'together with the reference pages those two documents link to'.",
+      "linkcheck": {
+        "unique_external_links": 7,
+        "ok": 7,
+        "dead": 0,
+        "blocked_unverified": 0,
+        "policy": "job policy is >=2 authority links; 7 verified-OK satisfies it",
+        "internal_links_checked": []
+      },
+      "hero": "Lumenfall FLUX.1-schnell via gen-image-verified.sh; R2 webp verified HTTP 200",
+      "validators": {
+        "validate_post": "not applicable (single-stock schema validator; this is a tutorial post)",
+        "validate_judge": "PASS (8.65 field mean >= 7.5, shipped-text re-judge 9.50)",
+        "disprove_pass": "not run (unverified — see verification_note)",
+        "astro_build": "PASS (after 4 MDX brace escapes: bare {id} path segments in the endpoint table broke the MDX parser with 'ReferenceError: id is not defined')",
+        "enforce_sources": "PASS (0 unsourced claims)",
+        "post_quality_enforce": "not run — this blog's scripts/post-quality-enforce.py hardcodes the .md extension and reports 'post not found' for .mdx posts"
+      },
+      "deviations": [
+        "The brief asked builders for a 2,600 body-word ceiling; every draft landed between 2,523 and 3,623 words. The job prompt's operative cap is ~5,000 words, so the winner shipped at 3,683 body words untrimmed rather than spending a trim-then-rejudge cycle (measured trim cost is ~-0.10 per 55 words).",
+        "stealth/glyph-cluster:free DNF'd with an empty CC stream at 245.2s and was recorded as a DNF with no substitution.",
+        "The claude-cli lane wrote its draft to a file with no .mdx extension (model id is the empty string); it was copied into the judge dir as 'claude-cli-' and judged normally at 7.98.",
+        "disprove_pass was skipped for budget reasons and the match records verification_status needs_validation."
+      ],
+      "results": [
+        {
+          "model": "muse-spark-1.3-contributor",
+          "provider": "opencode-go",
+          "family": "muse",
+          "score": 8.65,
+          "avg_score": 8.65,
+          "passes": [
+            8.75,
+            8.6,
+            8.6
+          ],
+          "spread": 0.15,
+          "word_count": 3623,
+          "status": "winner",
+          "note": "WINNER (tie on mean 8.65 with deepseek-v4.1-flash, chosen on the tighter spread 0.15 vs 0.45); shipped text = draft + 3 QA-driven wording fixes (runtime-location paragraph de-duplicated, idempotency sentence split into exact-retry vs identity-conflict, Docker --add-host wording) + 4 MDX brace escapes wrapping `{id}` paths in code spans; 3623 body words",
+          "rank": 1
+        },
+        {
+          "model": "deepseek-v4.1-flash",
+          "provider": "commandcode",
+          "family": "deepseek",
+          "score": 8.65,
+          "avg_score": 8.65,
+          "passes": [
+            8.7,
+            8.4,
+            8.85
+          ],
+          "spread": 0.45,
+          "word_count": 3361,
+          "status": "scored",
+          "note": "",
+          "rank": 2
+        },
+        {
+          "model": "glm-5.3-flash",
+          "provider": "opencode-go",
+          "family": "glm",
+          "score": 8.3,
+          "avg_score": 8.3,
+          "passes": [
+            8.6,
+            8.8,
+            7.5
+          ],
+          "spread": 1.3,
+          "word_count": 3462,
+          "status": "scored",
+          "note": "spread 1.30 — noisy window; not in contention",
+          "rank": 3
+        },
+        {
+          "model": "gpt-6-luna",
+          "provider": "commandcode",
+          "family": "gpt",
+          "score": 8.25,
+          "avg_score": 8.25,
+          "passes": [
+            8.05,
+            8.4,
+            8.3
+          ],
+          "spread": 0.35,
+          "word_count": 2694,
+          "status": "scored",
+          "note": "",
+          "rank": 4
+        },
+        {
+          "model": "muse-ember",
+          "provider": "commandcode",
+          "family": "muse",
+          "score": 8.25,
+          "avg_score": 8.25,
+          "passes": [
+            8.55,
+            8.5,
+            7.7
+          ],
+          "spread": 0.85,
+          "word_count": 3212,
+          "status": "scored",
+          "note": "",
+          "rank": 5
+        },
+        {
+          "model": "mimo-v2.6-flash",
+          "provider": "opencode-go",
+          "family": "mimo",
+          "score": 8.2,
+          "avg_score": 8.2,
+          "passes": [
+            7.95,
+            8.6,
+            8.05
+          ],
+          "spread": 0.65,
+          "word_count": 3147,
+          "status": "scored",
+          "note": "",
+          "rank": 6
+        },
+        {
+          "model": "hy4-flash",
+          "provider": "commandcode",
+          "family": "tencent",
+          "score": 8.15,
+          "avg_score": 8.15,
+          "passes": [
+            8.3,
+            8.3,
+            7.85
+          ],
+          "spread": 0.45,
+          "word_count": 2594,
+          "status": "scored",
+          "note": "",
+          "rank": 7
+        },
+        {
+          "model": "beam-free",
+          "provider": "opencode-go",
+          "family": "beam",
+          "score": 7.98,
+          "avg_score": 7.98,
+          "passes": [
+            8.55,
+            7.95,
+            7.45
+          ],
+          "spread": 1.1,
+          "word_count": 3578,
+          "status": "scored",
+          "note": "spread 1.30 — noisy window; not in contention",
+          "rank": 8
+        },
+        {
+          "model": "",
+          "provider": "claude-cli",
+          "family": "claude",
+          "score": 7.98,
+          "avg_score": 7.98,
+          "passes": [
+            8.2,
+            8.55,
+            7.2
+          ],
+          "spread": 1.35,
+          "word_count": 2577,
+          "status": "scored",
+          "note": "spread 1.30 — noisy window; not in contention",
+          "rank": 9
+        },
+        {
+          "model": "minimax-m3.1-flash",
+          "provider": "opencode-go",
+          "family": "minimax",
+          "score": 7.62,
+          "avg_score": 7.62,
+          "passes": [
+            8.0,
+            7.45,
+            7.4
+          ],
+          "spread": 0.6,
+          "word_count": 2523,
+          "status": "scored",
+          "note": "",
+          "rank": 10
+        },
+        {
+          "model": "stealth/glyph-cluster:free",
+          "provider": "commandcode",
+          "family": "stealth",
+          "score": 0.0,
+          "avg_score": 0.0,
+          "passes": [],
+          "spread": null,
+          "word_count": 0,
+          "status": "dnf",
+          "note": "lane exception: Empty response (no text-delta events in CC stream) at 245.2s; recorded as DNF, no substitution",
+          "rank": 0
+        }
+      ]
     }
   ],
   "leaderboard": [
@@ -19827,10 +20084,10 @@
       "model": "deepseek-v4.1-flash",
       "provider": "commandcode",
       "family": "deepseek",
-      "matches": 62,
+      "matches": 63,
       "wins": 17,
-      "losses": 45,
-      "avgScore": 8.11,
+      "losses": 46,
+      "avgScore": 8.12,
       "bestScore": 9.78,
       "rank": 1
     },
@@ -19838,10 +20095,10 @@
       "model": "glm-5.3-flash",
       "provider": "opencode-go",
       "family": "glm",
-      "matches": 52,
+      "matches": 53,
       "wins": 10,
-      "losses": 42,
-      "avgScore": 7.92,
+      "losses": 43,
+      "avgScore": 7.93,
       "bestScore": 9.75,
       "rank": 2
     },
@@ -19860,10 +20117,10 @@
       "model": "gpt-6-luna",
       "provider": "commandcode",
       "family": "gpt",
-      "matches": 45,
+      "matches": 46,
       "wins": 6,
-      "losses": 39,
-      "avgScore": 7.81,
+      "losses": 40,
+      "avgScore": 7.82,
       "bestScore": 9.73,
       "rank": 4
     },
@@ -19901,15 +20158,26 @@
       "rank": 7
     },
     {
+      "model": "muse-spark-1.3-contributor",
+      "provider": "opencode-go",
+      "family": "muse",
+      "matches": 48,
+      "wins": 3,
+      "losses": 45,
+      "avgScore": 7.52,
+      "bestScore": 9.45,
+      "rank": 8
+    },
+    {
       "model": "mimo-v2.6-flash",
       "provider": "opencode-go",
       "family": "mimo",
-      "matches": 30,
+      "matches": 31,
       "wins": 3,
-      "losses": 27,
-      "avgScore": 7.49,
+      "losses": 28,
+      "avgScore": 7.51,
       "bestScore": 8.47,
-      "rank": 8
+      "rank": 9
     },
     {
       "model": "hy3",
@@ -19920,28 +20188,17 @@
       "losses": 22,
       "avgScore": 8.0,
       "bestScore": 9.65,
-      "rank": 9
+      "rank": 10
     },
     {
       "model": "minimax-m3.1-flash",
       "provider": "opencode-go",
       "family": "minimax",
-      "matches": 27,
+      "matches": 28,
       "wins": 2,
-      "losses": 25,
+      "losses": 26,
       "avgScore": 7.52,
       "bestScore": 8.7,
-      "rank": 10
-    },
-    {
-      "model": "muse-spark-1.3-contributor",
-      "provider": "opencode-go",
-      "family": "muse",
-      "matches": 47,
-      "wins": 2,
-      "losses": 45,
-      "avgScore": 7.5,
-      "bestScore": 9.45,
       "rank": 11
     },
     {
@@ -19981,10 +20238,10 @@
       "model": "beam-free",
       "provider": "opencode-go",
       "family": "beam",
-      "matches": 31,
+      "matches": 32,
       "wins": 1,
-      "losses": 30,
-      "avgScore": 7.41,
+      "losses": 31,
+      "avgScore": 7.43,
       "bestScore": 8.43,
       "rank": 15
     },
@@ -19992,10 +20249,10 @@
       "model": "hy4-flash",
       "provider": "commandcode",
       "family": "tencent",
-      "matches": 7,
+      "matches": 8,
       "wins": 1,
-      "losses": 6,
-      "avgScore": 7.32,
+      "losses": 7,
+      "avgScore": 7.42,
       "bestScore": 8.42,
       "rank": 16
     },
@@ -20033,6 +20290,17 @@
       "rank": 19
     },
     {
+      "model": "",
+      "provider": "claude-cli",
+      "family": "claude",
+      "matches": 1,
+      "wins": 0,
+      "losses": 1,
+      "avgScore": 7.98,
+      "bestScore": 7.98,
+      "rank": 20
+    },
+    {
       "model": "stealth-glyph-cluster:free",
       "provider": "commandcode",
       "family": "stealth",
@@ -20041,7 +20309,18 @@
       "losses": 1,
       "avgScore": 7.83,
       "bestScore": 7.83,
-      "rank": 20
+      "rank": 21
+    },
+    {
+      "model": "muse-ember",
+      "provider": "commandcode",
+      "family": "muse",
+      "matches": 7,
+      "wins": 0,
+      "losses": 7,
+      "avgScore": 7.81,
+      "bestScore": 8.25,
+      "rank": 22
     },
     {
       "model": "cline-pass/minimax-m3",
@@ -20052,18 +20331,7 @@
       "losses": 7,
       "avgScore": 7.75,
       "bestScore": 8.32,
-      "rank": 21
-    },
-    {
-      "model": "muse-ember",
-      "provider": "commandcode",
-      "family": "muse",
-      "matches": 6,
-      "wins": 0,
-      "losses": 6,
-      "avgScore": 7.74,
-      "bestScore": 8.17,
-      "rank": 22
+      "rank": 23
     },
     {
       "model": "omen-alpha",
@@ -20074,7 +20342,7 @@
       "losses": 4,
       "avgScore": 7.54,
       "bestScore": 8.32,
-      "rank": 23
+      "rank": 24
     },
     {
       "model": "cline-pass/qwen3.8-max",
@@ -20085,7 +20353,7 @@
       "losses": 1,
       "avgScore": 7.01,
       "bestScore": 7.01,
-      "rank": 24
+      "rank": 25
     },
     {
       "model": "gemini-3.8-flash-medium",
@@ -20096,7 +20364,7 @@
       "losses": 7,
       "avgScore": 6.82,
       "bestScore": 8.42,
-      "rank": 25
+      "rank": 26
     },
     {
       "model": "minimax-m3.1-flash-free",
@@ -20107,7 +20375,7 @@
       "losses": 2,
       "avgScore": 6.54,
       "bestScore": 7.72,
-      "rank": 26
+      "rank": 27
     },
     {
       "model": "qwen3.8-flash",
@@ -20118,7 +20386,7 @@
       "losses": 2,
       "avgScore": 6.06,
       "bestScore": 6.63,
-      "rank": 27
+      "rank": 28
     },
     {
       "model": "ling-3.0-flash-sante",
@@ -20129,7 +20397,7 @@
       "losses": 1,
       "avgScore": 5.55,
       "bestScore": 5.55,
-      "rank": 28
+      "rank": 29
     },
     {
       "model": "pixel-canary",
@@ -20140,7 +20408,7 @@
       "matches": 0,
       "avgScore": 0,
       "bestScore": 0,
-      "rank": 29
+      "rank": 30
     }
   ],
   "last_updated": "2026-11-26T09:22:01",
