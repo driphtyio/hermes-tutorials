@@ -1,4 +1,4 @@
-// AUTO-GENERATED from NousResearch/hermes-agent GitHub releases (62 releases, 2026-03-12..2026-11-25).
+// AUTO-GENERATED from NousResearch/hermes-agent GitHub releases (63 releases, 2026-03-12..2026-11-28).
 // Regenerate via scripts/gen-changelog.py — do not hand-edit entries.
 export interface ChangelogLink {
   url: string;
@@ -20,6 +20,42 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  {
+    "tag": "canary.20261128T064458Z-v0.23.5",
+    "version": "v0.23.5",
+    "codename": "",
+    "date": "2026-11-28",
+    "summary": "",
+    "highlights": [],
+    "prs": "",
+    "url": "https://github.com/NousResearch/hermes-agent/releases/tag/canary.20261128T064458Z-v0.23.5",
+    "compare": "https://github.com/NousResearch/hermes-agent/compare/v0.23.5...canary.20261128T064458Z-v0.23.5",
+    "links": [
+      {
+        "url": "https://github.com/NousResearch/hermes-agent/releases/tag/canary.20261128T064458Z-v0.23.5",
+        "label": "Release notes (canary.20261128T064458Z-v0.23.5)"
+      }
+    ],
+    "body": "## Downloads\n\n### Hermes Desktop\n\n| OS | Architecture | Download |\n|---|---|---|\n| macOS | Apple Silicon (M-series) | [DMG](https://hermes-assets.nousresearch.com/releases/tag/canary.20261128T064458Z-v0.23.5/HermesBundled-0.23.5%2Bcanary.20261128T064458Z-mac-arm64.dmg) |\n| Windows | x86 (64-bit) | [MSIX](https://hermes-assets.nousresearch.com/releases/tag/canary.20261128T064458Z-v0.23.5/HermesBundled-0.23.5%2Bcanary.20261128T064458Z-win-x64.msix) |\n| Windows | ARM (arm64 / aarch64) | [MSIX](https://hermes-assets.nousresearch.com/releases/tag/canary.20261128T064458Z-v0.23.5/HermesBundled-0.23.5%2Bcanary.20261128T064458Z-win-arm64.msix) |\n\n### Native install/chat smoke\n\nDownload availability is independent of smoke status. Each result covers all native legs in that format group. Linux AppImages and unsigned Store envelopes are not install-smoked. No-upload dry tags have no download handoff and are not smoke-qualified.\n\n| Packages | Smoke status |\n|---|---|\n| macOS DMG + ZIP (arm64) | Passed |\n| Windows MSIX (arm64) | Passed |\n| Windows MSIX (x64) | Passed |\n\n## ✨ Features\n\n- Desktop): run 120s default-plugins preflight before local gateway and pause renderer boot timer ([`2c5b8d4d`](https://github.com/NousResearch/hermes-agent/commit/2c5b8d4db4127b7bc74ff3b364e92f90d83065f1)) — @unsupportedpastels\n- Docker): run bounded default-plugins preflight in stage2-hook.sh ([`8537fa24`](https://github.com/NousResearch/hermes-agent/commit/8537fa24bc90b0ad0d835795338d9fcf7e389aa5)) — @unsupportedpastels\n- Plugins): add bounded default-plugins preflight, detached ensure handoff, and non-blocking CLI recheck ([`3fb80357`](https://github.com/NousResearch/hermes-agent/commit/3fb80357150c667f0b9e674df18fcd7712f9c741)) — @unsupportedpastels\n- Pm,ci): skip venv rebuild for core-satisfied plugins and lint default catalog entries ([`e4e693f9`](https://github.com/NousResearch/hermes-agent/commit/e4e693f95f1c73f5b8c52cff4d0f4a9a4a22608c)) — @unsupportedpastels\n\n## 🔧 Improvements\n\n- Desktop): give the AppImage client its own deps type ([`ee7a38e3`](https://github.com/NousResearch/hermes-agent/commit/ee7a38e39abc99585f267c553b0f1d1d8ee0dd05)) — @BearHuddleston\n\n## 🐛 Bug Fixes\n\n- Desktop): report no update when an AppImage apply finds none ([`cc780589`](https://github.com/NousResearch/hermes-agent/commit/cc780589f79f009a83e98fb77ff449e518b45e9c)) — @BearHuddleston\n- Pm): the refresh fallback records a stale stamp so the selection rebuilds once its cause clears ([`c2b4337d`](https://github.com/NousResearch/hermes-agent/commit/c2b4337df0f11ad6251c0751a10b2b9f5cbf8086)) — @IAvecilla\n- Pm): a failed refresh check boots the image environment, never the previous generation ([`c9a9b665`](https://github.com/NousResearch/hermes-agent/commit/c9a9b665b664a83d41acd880b376f72a6afb78d3)) — @IAvecilla\n- Docker): an image upgrade no longer fills the data volume rebuilding the image's own extras ([`61db459d`](https://github.com/NousResearch/hermes-agent/commit/61db459da4e71e3a3f7fbd961d334b515720a4a8)) — @IAvecilla\n- Cli): resume a source launch through this install's own command ([`30bff5e4`](https://github.com/NousResearch/hermes-agent/commit/30bff5e45c389bdc3b6cd42515ab5bb8f2f083d6)) — @kshitijk4poor\n- Credential-pool): name a credential-wide Anthropic bench in its error, and gate aux by the requested model ([`32877ea7`](https://github.com/NousResearch/hermes-agent/commit/32877ea71abce01d3145342eb7c71716952061ac)) — @kshitijk4poor\n- Pm): read installed git directly and mark new Windows tests for Windows CI ([`dfba8ce6`](https://github.com/NousResearch/hermes-agent/commit/dfba8ce66ec1f79300dc7c845d28ace26e09123e)) — @unsupportedpastels\n- Pm): prepend installed git to PATH in managed_environment ([`ab7e0f33`](https://github.com/NousResearch/hermes-agent/commit/ab7e0f33d43ebfbcb3b3c666942eb3a512923686)) — @unsupportedpastels\n- Plugins): mark ambiguous card results as uncertain ([`67c06749`](https://github.com/NousResearch/hermes-agent/commit/67c067495dbe2bb133cfb1bfcc8ba5281d15da50)) — @victor-kyriazakos\n- Dashboard-auth): a sign-in started on another host completes on the configured public URL ([`1ff7b194`](https://github.com/NousResearch/hermes-agent/commit/1ff7b19489a4378b00e1b231d362b6509dcbe5fe)) — @IAvecilla\n- Credential-pool): a spent plan window reads as a rate limit on every surface ([`2c8c70f3`](https://github.com/NousResearch/hermes-agent/commit/2c8c70f370c87d4d5f8f128bf8127537143a7017)) — @kshitijk4poor\n- Gateway-migrate): deduplicate system launchd check and record unknown stop state ([`1d15aad1`](https://github.com/NousResearch/hermes-agent/commit/1d15aad1dfa8e9e5fcbd2082cad5666a0907a07d)) — @unsupportedpastels\n- Gateway-migrate): quote launchd recovery commands and handle edge states ([`39afb63b`](https://github.com/NousResearch/hermes-agent/commit/39afb63b224997e653c7279bd9b2693f8bfee0fc)) — @unsupportedpastels\n- Desktop): keep an AppImage path that already has the download's name ([`e46007af`](https://github.com/NousResearch/hermes-agent/commit/e46007afa3c6be25baca3ada1f573aaddd1d15ee)) — @BearHuddleston\n\n## 📚 Documentation\n\n- Catalog): document default: true foreground preflight, CLI recheck, and fail-open behavior ([`4b44cd08`](https://github.com/NousResearch/hermes-agent/commit/4b44cd08715cbc483ce78e10ea0db5df5da1979d)) — @unsupportedpastels\n\n## 🧪 Tests\n\n- Plugins): share the dashboard moved-home tests' setup ([`7e8980cf`](https://github.com/NousResearch/hermes-agent/commit/7e8980cfb58103bd4134517db2f8cae5aea01be6)) — @BearHuddleston\n- Pm): pin the rebuild headroom once the uv cache is merged; document the restart fallback ([`b03f0e16`](https://github.com/NousResearch/hermes-agent/commit/b03f0e161a353368f667ce6025f9465353cac2c5)) — @IAvecilla\n- Ci): run the symlinked temp dir render test on Linux only ([`6480cb87`](https://github.com/NousResearch/hermes-agent/commit/6480cb870d50cbb720d386b620eb7458c35ec9be)) — @BearHuddleston\n- Pm): cover plugin publication recovery through long_root ([`d728e406`](https://github.com/NousResearch/hermes-agent/commit/d728e4062a3fb05842835622278a65c6bf0053c9)) — @unsupportedpastels\n- Dashboard-auth): pin the desktop start, the Webapp's own public URL and the first forwarded host ([`326540ab`](https://github.com/NousResearch/hermes-agent/commit/326540ab08334a5c57d66e768927bec1109b8d76)) — @IAvecilla\n- Gateway): auth fixtures start sign-in on the public host, as the proxy in front forwards it ([`4c6f80d9`](https://github.com/NousResearch/hermes-agent/commit/4c6f80d901aaaf2e28518a7a98e5e86521bb5c1d)) — @IAvecilla\n\n## 🏗️ Infrastructure\n\n- Contributors): map basil.dog@outlook.com to freqyfreqy ([`bea751bb`](https://github.com/NousResearch/hermes-agent/commit/bea751bbdbdf1f5e2f7801d739a03f48c58228db)) — @kshitijk4poor\n\n## 📦 Other Changes\n\n- Style(tests): separate card overlay fixtures ([`539f0937`](https://github.com/NousResearch/hermes-agent/commit/539f0937bf09cc1b1150676bea3326a6a81e20df)) — @victor-kyriazakos\n- Plugin-catalog: bump memtomem to 0.1.29 (memtomem 0.7.14) ([`337903ee`](https://github.com/NousResearch/hermes-agent/commit/337903eeffd696cf73936a3a00af08b43feb2028)) — @memtomem\n\n## 👥 Contributors\n\nThank you to everyone who contributed to this release!\n\n- @unsupportedpastels (12 commits)\n- @IAvecilla (7 commits)\n- @BearHuddleston (6 commits)\n- @kshitijk4poor (4 commits)\n- @victor-kyriazakos (2 commits)\n- @memtomem (1 commit)\n- @kvnloo (1 commit)\n\n**Full Changelog**: [canary.20261127T064803Z-v0.23.4...canary.20261128T064458Z-v0.23.5](https://github.com/NousResearch/hermes-agent/compare/canary.20261127T064803Z-v0.23.4...canary.20261128T064458Z-v0.23.5)"
+  },
+  {
+    "tag": "v0.23.5",
+    "version": "v0.23.5",
+    "codename": "",
+    "date": "2026-11-28",
+    "summary": "Patch release. This tag rolls up the ~338 PRs merged since v0.23.4 into a stable release for the GitHub release (CLI and installers), the Microsoft Store app, Docker and Hermes Cloud. Full curated notes for this window ship with v0.24.0.",
+    "highlights": [],
+    "prs": "338",
+    "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.5",
+    "compare": "https://github.com/NousResearch/hermes-agent/compare/canary.20261125T064800Z-v0.23.4...v0.23.5",
+    "links": [
+      {
+        "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.5",
+        "label": "Release notes (v0.23.5)"
+      }
+    ],
+    "body": "> Patch release. This tag rolls up the ~338 PRs merged since v0.23.4 into a stable release for the GitHub release (CLI and installers), the Microsoft Store app, Docker and Hermes Cloud. Full curated notes for this window ship with v0.24.0.\n\n## About this release\n\nAlso in the window, undocumented here on purpose: the CLI and TUI support the OSC 7577 program resume protocol, idle gateway chats compact in the background on every route, `read_file` tails with a negative offset and lists directories, `search_files` says when a content search is the whole answer, a bounded default-plugins preflight before the local gateway starts (Desktop, Docker and CLI), plugin OAuth entries that can pin their redirect URI, the Solstice provider moved to the stateless Interactions API, new plugin API surfaces (turn origin, how a session was created, cron scheduling, gateway silence helpers), the dashboard's \"your dashboard is moving\" notice, raw arrow keys working in the sessions and plugins pickers, and a long series of fixes that keep plugin work bound to the right profile when a profile is renamed, moved or removed.\n\n**Full curated release notes for this window ship with v0.24.0**, which will document everything from v0.23.0 onward — highlights, feature areas, and complete contributor credits. Nothing in this window is skipped.\n## Updating\n\n- Microsoft Store app: updates through the Store.\n- Desktop app installed from the installer (.exe / .dmg): no change in this release; it updates with the next bundled release.\n- CLI: `hermes update`, or re-run the installer one-liner.\n- Docker / Hermes Cloud: `nousresearch/hermes-agent:stable` (or `:latest`).\n\n**Full Changelog**: [v0.23.4...v0.23.5](https://github.com/NousResearch/hermes-agent/compare/v0.23.4...v0.23.5)"
+  },
   {
     "tag": "canary.20261125T064800Z-v0.23.4",
     "version": "v0.23.4",
@@ -245,7 +281,7 @@ export const changelog: ChangelogEntry[] = [
     "highlights": [],
     "prs": "",
     "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1%2Bcanary.20261114T064334Z",
-    "compare": "https://github.com/NousResearch/hermes-agent/compare/v0.23.1+canary.20261113T064447Z...v0.23.1+canary.20261114T064334Z",
+    "compare": "https://github.com/NousResearch/hermes-agent/compare/v0.23.1...v0.23.1+canary.20261114T064334Z",
     "links": [
       {
         "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1%2Bcanary.20261114T064334Z",
@@ -253,24 +289,6 @@ export const changelog: ChangelogEntry[] = [
       }
     ],
     "body": "## Downloads\n\n### Hermes Desktop\n\n| OS | Architecture | Download |\n|---|---|---|\n| macOS | Apple Silicon (M-series) | [DMG](https://hermes-assets.nousresearch.com/releases/tag/v0.23.1%2Bcanary.20261114T064334Z/HermesBundled-0.23.1%2Bcanary.20261114T064334Z-mac-arm64.dmg) |\n| Windows | x86 (64-bit) | [MSIX](https://hermes-assets.nousresearch.com/releases/tag/v0.23.1%2Bcanary.20261114T064334Z/HermesBundled-0.23.1%2Bcanary.20261114T064334Z-win-x64.msix) |\n| Windows | ARM (arm64 / aarch64) | [MSIX](https://hermes-assets.nousresearch.com/releases/tag/v0.23.1%2Bcanary.20261114T064334Z/HermesBundled-0.23.1%2Bcanary.20261114T064334Z-win-arm64.msix) |\n\n### Native install/chat smoke\n\nDownload availability is independent of smoke status. Each result covers all native legs in that format group. Linux bundles are disabled; unsigned Store envelopes are not install-smoked. No-upload dry tags have no download handoff and are not smoke-qualified.\n\n| Packages | Smoke status |\n|---|---|\n| macOS DMG + ZIP (arm64) | Passed |\n| Windows MSIX (arm64) | Passed |\n| Windows MSIX (x64) | Passed |\n\n**Full Changelog**: [v0.23.1+canary.20261113T064447Z...v0.23.1+canary.20261114T064334Z](https://github.com/NousResearch/hermes-agent/compare/v0.23.1+canary.20261113T064447Z...v0.23.1+canary.20261114T064334Z)"
-  },
-  {
-    "tag": "v0.23.1+canary.20261113T064447Z",
-    "version": "v0.23.1",
-    "codename": "",
-    "date": "2026-11-13",
-    "summary": "",
-    "highlights": [],
-    "prs": "",
-    "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1%2Bcanary.20261113T064447Z",
-    "compare": "https://github.com/NousResearch/hermes-agent/compare/v0.23.1...v0.23.1+canary.20261113T064447Z",
-    "links": [
-      {
-        "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1%2Bcanary.20261113T064447Z",
-        "label": "Release notes (v0.23.1+canary.20261113T064447Z)"
-      }
-    ],
-    "body": "## Downloads\n\n### Hermes Desktop\n\n| OS | Architecture | Download |\n|---|---|---|\n| macOS | Apple Silicon (M-series) | [DMG](https://hermes-assets.nousresearch.com/releases/tag/v0.23.1%2Bcanary.20261113T064447Z/HermesBundled-0.23.1%2Bcanary.20261113T064447Z-mac-arm64.dmg) |\n| Windows | x86 (64-bit) | [MSIX](https://hermes-assets.nousresearch.com/releases/tag/v0.23.1%2Bcanary.20261113T064447Z/HermesBundled-0.23.1%2Bcanary.20261113T064447Z-win-x64.msix) |\n| Windows | ARM (arm64 / aarch64) | [MSIX](https://hermes-assets.nousresearch.com/releases/tag/v0.23.1%2Bcanary.20261113T064447Z/HermesBundled-0.23.1%2Bcanary.20261113T064447Z-win-arm64.msix) |\n\n### Native install/chat smoke\n\nDownload availability is independent of smoke status. Each result covers all native legs in that format group. Linux bundles are disabled; unsigned Store envelopes are not install-smoked. No-upload dry tags have no download handoff and are not smoke-qualified.\n\n| Packages | Smoke status |\n|---|---|\n| macOS DMG + ZIP (arm64) | Passed |\n| Windows MSIX (arm64) | Passed |\n| Windows MSIX (x64) | Passed |\n\n**Full Changelog**: [v0.23.1+canary.20261112T064528Z...v0.23.1+canary.20261113T064447Z](https://github.com/NousResearch/hermes-agent/compare/v0.23.1+canary.20261112T064528Z...v0.23.1+canary.20261113T064447Z)"
   },
   {
     "tag": "v0.23.1",
